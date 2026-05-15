@@ -5,8 +5,9 @@ use std::{
         Arc, Weak,
         atomic::{AtomicU64, Ordering},
     },
-    time::Instant,
 };
+
+use vox_types::time::Instant;
 
 use futures_util::future::{AbortHandle, Abortable};
 use futures_util::stream::{FuturesUnordered, StreamExt as _};
@@ -992,7 +993,7 @@ mod tests {
             replenisher.on_item_consumed();
         }
         assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(20), rx.recv())
+            vox_types::time::tokio::timeout(std::time::Duration::from_millis(20), rx.recv())
                 .await
                 .is_err(),
             "should not emit credit before reaching the batch threshold"
@@ -2007,7 +2008,7 @@ impl DriverCaller {
 
         // Allocate a request ID.
         let req_id = self.shared.request_ids.lock().alloc();
-        let request_started_at = std::time::Instant::now();
+        let request_started_at = Instant::now();
         if let Some(observer) = &self.shared.observer {
             observer.driver_event(DriverEvent::RequestStarted {
                 connection_id: self.sender.connection_id(),
