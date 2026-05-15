@@ -7,6 +7,7 @@ import {
   type ConnectionSettings,
   type RequestMessage,
   type ChannelMessage,
+  type SchemaMessage,
   type Message,
   type Metadata,
   type MetadataEntry,
@@ -925,10 +926,31 @@ class SessionCore {
         await this.handleRequestMessage(message.connection_id, message.payload.value);
         return;
 
+      case "SchemaMessage":
+        this.handleSchemaMessage(message.connection_id, message.payload.value);
+        return;
+
       case "ChannelMessage":
         this.handleChannelMessage(message.connection_id, message.payload.value);
         return;
 
+    }
+  }
+
+  private handleSchemaMessage(
+    connectionId: bigint,
+    schemaMessage: SchemaMessage,
+  ): void {
+    const connection = this.getConnection(connectionId);
+    const direction = schemaMessage.direction.tag === "Args" ? "args" : "response";
+    try {
+      connection.getSchemaTracker().recordReceived(
+        schemaMessage.method_id,
+        direction,
+        schemaMessage.schemas,
+      );
+    } catch (error) {
+      throw SessionError.protocol(error instanceof Error ? error.message : String(error));
     }
   }
 

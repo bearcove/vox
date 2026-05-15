@@ -600,6 +600,9 @@ fn mark_tail_calls(program: &mut DecodeProgram) {
                 }
                 DecodeOp::BranchOnVariant { variant_blocks, .. } => {
                     for (_, vb) in variant_blocks.iter() {
+                        if *vb == usize::MAX {
+                            continue;
+                        }
                         if tail_blocks.insert(*vb) {
                             changed = true;
                         }
