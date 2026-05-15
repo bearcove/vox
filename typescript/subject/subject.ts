@@ -52,6 +52,7 @@ class TestbedService implements TestbedHandler {
     for (let i = 0; i < count; i++) {
       await output.send(i);
     }
+    output.close();
   }
 
   // Echo methods
