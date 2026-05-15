@@ -40,6 +40,10 @@ pub struct vox_swift_layout_arena {
 /// Create a fresh layout arena. Pair with
 /// [`vox_swift_layout_arena_destroy_v1`] to release the storage and every
 /// `*const ValueLayout` ever allocated through it.
+///
+/// # Safety
+/// The returned pointer must be released exactly once with
+/// [`vox_swift_layout_arena_destroy_v1`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn vox_swift_layout_arena_create_v1() -> *mut vox_swift_layout_arena {
     let arena = Box::new(LayoutArena::new());

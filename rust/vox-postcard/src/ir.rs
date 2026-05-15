@@ -596,9 +596,7 @@ fn mark_tail_calls(program: &mut DecodeProgram) {
             let op = program.blocks[block_idx].ops[pos].clone();
             match op {
                 DecodeOp::AllocBoxed { body_block, .. } => {
-                    if tail_blocks.insert(body_block) {
-                        changed = true;
-                    }
+                    changed |= tail_blocks.insert(body_block);
                 }
                 DecodeOp::BranchOnVariant { variant_blocks, .. } => {
                     for (_, vb) in variant_blocks.iter() {
@@ -608,14 +606,10 @@ fn mark_tail_calls(program: &mut DecodeProgram) {
                     }
                 }
                 DecodeOp::ReadListLen { empty_block, .. } => {
-                    if tail_blocks.insert(empty_block) {
-                        changed = true;
-                    }
+                    changed |= tail_blocks.insert(empty_block);
                 }
                 DecodeOp::DecodeOption { some_block, .. } => {
-                    if tail_blocks.insert(some_block) {
-                        changed = true;
-                    }
+                    changed |= tail_blocks.insert(some_block);
                 }
                 DecodeOp::DecodeResult {
                     ok_block,
@@ -635,9 +629,7 @@ fn mark_tail_calls(program: &mut DecodeProgram) {
                     }
                 }
                 DecodeOp::Jump { block_id } => {
-                    if tail_blocks.insert(block_id) {
-                        changed = true;
-                    }
+                    changed |= tail_blocks.insert(block_id);
                 }
                 _ => {}
             }

@@ -14,8 +14,7 @@ use facet::Facet;
 #[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 use facet_core::ConstTypeId;
 use facet_core::PtrConst;
-use moire::sync::{Notify, Semaphore};
-use tokio::sync::TryAcquireError;
+use moire::sync::{Notify, Semaphore, TryAcquireError};
 
 use crate::{Backing, ChannelClose, ChannelItem, ChannelReset, Metadata, Payload, SelfRef};
 use crate::{
