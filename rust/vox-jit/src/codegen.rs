@@ -5393,7 +5393,7 @@ mod tests {
     };
     use vox_types::{
         BindingDirection, CborPayload, ConnectionId, Message, MessagePayload, MetadataEntry,
-        MethodId, RequestBody, RequestCall, RequestId,
+        MethodId, RequestBody, RequestCall, RequestId, VoxError,
     };
 
     fn compile_shape<T: Facet<'static>>() -> Result<(), CodegenError> {
@@ -5641,6 +5641,34 @@ mod tests {
         tag: u32,
     }
 
+    #[derive(Facet, Debug, PartialEq, Clone)]
+    #[repr(u8)]
+    enum Reason {
+        Plain,
+        WithMessage { message: String },
+    }
+
+    #[derive(Facet, Debug, PartialEq, Clone)]
+    struct ComplexInner {
+        a: u64,
+        b: String,
+        maybe_reason: Option<Reason>,
+        maybe_pid: Option<u32>,
+        maybe_stamp: Option<u64>,
+    }
+
+    fn populated_complex_inner() -> ComplexInner {
+        ComplexInner {
+            a: 42,
+            b: "hello".to_string(),
+            maybe_reason: Some(Reason::WithMessage {
+                message: "boom".to_string(),
+            }),
+            maybe_pid: Some(1234),
+            maybe_stamp: Some(123_456_789_000),
+        }
+    }
+
     #[test]
     fn compile_enum_unit_variants() {
         compile_shape::<Color>().expect("Color should compile");
@@ -5714,6 +5742,70 @@ mod tests {
         let bytes = reflective_encode_static(&value);
         let decoded = jit_decode_value::<WithOptionStruct>(&bytes).expect("JIT decode failed");
         assert_eq!(decoded, value, "Option<struct> None round-trip mismatch");
+    }
+
+    #[test]
+    fn decode_roundtrip_option_of_enum_with_data_variant() {
+        let value = Some(Reason::WithMessage {
+            message: "boom".to_string(),
+        });
+        let bytes = reflective_encode_static(&value);
+        let decoded = jit_decode_value::<Option<Reason>>(&bytes).expect("JIT decode failed");
+        assert_eq!(decoded, value, "Option<enum> round-trip mismatch");
+    }
+
+    #[test]
+    fn decode_roundtrip_complex_struct_with_nested_options() {
+        let value = populated_complex_inner();
+        let bytes = reflective_encode_static(&value);
+        let decoded = jit_decode_value::<ComplexInner>(&bytes).expect("JIT decode failed");
+        assert_eq!(decoded, value, "complex struct round-trip mismatch");
+    }
+
+    #[test]
+    fn decode_roundtrip_result_option_complex_struct_none() {
+        let value: Result<Option<ComplexInner>, u16> = Ok(None);
+        let bytes = reflective_encode_static(&value);
+        let decoded = jit_decode_value::<Result<Option<ComplexInner>, u16>>(&bytes)
+            .expect("JIT decode failed");
+        assert_eq!(
+            decoded, value,
+            "Result<Option<struct>> None round-trip mismatch"
+        );
+    }
+
+    #[test]
+    fn decode_roundtrip_vox_result_option_enum_with_data_variant() {
+        let expected = Some(Reason::WithMessage {
+            message: "boom".to_string(),
+        });
+        let wire: Result<Option<Reason>, VoxError> = Ok(expected.clone());
+        let bytes = reflective_encode_static(&wire);
+        let decoded = jit_decode_value::<Result<Option<Reason>, VoxError>>(&bytes)
+            .expect("JIT decode failed");
+        let Ok(decoded) = decoded else {
+            panic!("decoded value should be Ok: {decoded:?}");
+        };
+        assert_eq!(
+            decoded, expected,
+            "Vox Result<Option<enum>> round-trip mismatch"
+        );
+    }
+
+    #[test]
+    fn decode_roundtrip_vox_result_option_complex_struct_none() {
+        let expected = None;
+        let wire: Result<Option<ComplexInner>, VoxError> = Ok(expected.clone());
+        let bytes = reflective_encode_static(&wire);
+        let decoded = jit_decode_value::<Result<Option<ComplexInner>, VoxError>>(&bytes)
+            .expect("JIT decode failed");
+        let Ok(decoded) = decoded else {
+            panic!("decoded value should be Ok: {decoded:?}");
+        };
+        assert_eq!(
+            decoded, expected,
+            "Vox Result<Option<struct>> None round-trip mismatch"
+        );
     }
 
     #[test]
@@ -6110,6 +6202,30 @@ mod tests {
         assert_eq!(
             jit_bytes, ref_bytes,
             "JIT and reflective encode disagree for Option<struct> None"
+        );
+    }
+
+    #[test]
+    fn encode_roundtrip_option_of_enum_with_data_variant() {
+        let value = Some(Reason::WithMessage {
+            message: "boom".to_string(),
+        });
+        let jit_bytes = jit_encode_value(&value).expect("JIT encode failed");
+        let ref_bytes = reflective_encode(&value);
+        assert_eq!(
+            jit_bytes, ref_bytes,
+            "JIT and reflective encode disagree for Option<enum> Some"
+        );
+    }
+
+    #[test]
+    fn encode_roundtrip_complex_struct_with_nested_options() {
+        let value = populated_complex_inner();
+        let jit_bytes = jit_encode_value(&value).expect("JIT encode failed");
+        let ref_bytes = reflective_encode(&value);
+        assert_eq!(
+            jit_bytes, ref_bytes,
+            "JIT and reflective encode disagree for complex nested options"
         );
     }
 

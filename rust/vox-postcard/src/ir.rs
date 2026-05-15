@@ -3807,8 +3807,19 @@ fn lower_encode_option(
 ) -> Result<(), EncodeLowerError> {
     let some_block = program.new_block();
 
+    let is_niche_optimized = shape
+        .layout
+        .sized_layout()
+        .ok()
+        .zip(opt_def.t.layout.sized_layout().ok())
+        .is_some_and(|(option_layout, inner_layout)| option_layout.size() == inner_layout.size());
+
     let fallback = match calibrate_option_layout(shape, opt_def) {
-        Some(layout) if !layout.tag_bytes.is_empty() => {
+        // Same-size Option<T> layouts are niche-optimized. The decode path can
+        // safely write calibrated None bytes and then overwrite the slot for
+        // Some, but encode cannot classify arbitrary Some values from the None
+        // bytes alone. Use facet's option vtable oracle for these layouts.
+        Some(layout) if !is_niche_optimized && !layout.tag_bytes.is_empty() => {
             program.emit(
                 block,
                 EncodeOp::EncodeOptionCalibrated {
