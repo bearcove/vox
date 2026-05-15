@@ -216,11 +216,7 @@ export type SessionAcceptOutcome =
   | { tag: "Established"; session: Session }
   | { tag: "Resumed" };
 
-export type SessionConduitKind = "bare" | "stable";
-
 export interface SessionTransportOptions extends SessionBuilderOptions {
-  transport?: SessionConduitKind;
-  conduit?: SessionConduitKind;
 }
 
 const DEFAULT_CHANNEL_CAPACITY = 16;
@@ -284,7 +280,6 @@ async function makeInitiatorEstablishedTransport(
   transport: SessionTransport,
   options: SessionTransportOptions,
 ): Promise<EstablishedTransport> {
-  const conduitKind = options.transport ?? options.conduit ?? "bare";
   const localSettings: ConnectionSettings = {
     parity: { tag: "Odd" },
     max_concurrent_requests: options.maxConcurrentRequests ?? 64,
@@ -293,15 +288,9 @@ async function makeInitiatorEstablishedTransport(
 
   if (isLinkSource(transport)) {
     const attachment = await transport.nextLink();
-    await requestTransportMode(attachment.link, conduitKind);
+    await requestTransportMode(attachment.link);
     const handshake = await handshakeAsInitiator(attachment.link, localSettings, true, null, options.metadata ?? []);
     const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
-
-    // StableConduit removed; "stable" mode now falls through to bare.
-    if (conduitKind === "stable") {
-      const bareConduit = new BareConduit(attachment.link, messagePlan);
-      return { conduit: bareConduit, handshake };
-    }
 
     // For resumable bare sessions: build a recoverConduit that reconnects,
     // re-handshakes with the stored resume key, and returns a fresh conduit.
@@ -328,7 +317,7 @@ async function makeInitiatorEstablishedTransport(
 
           try {
             const newAttachment = await (transport as LinkSource).nextLink();
-            await requestTransportMode(newAttachment.link, conduitKind);
+            await requestTransportMode(newAttachment.link);
             const newHandshake = await handshakeAsInitiator(
               newAttachment.link,
               localSettings,
@@ -404,16 +393,9 @@ async function makeInitiatorEstablishedTransport(
     };
   }
 
-  await requestTransportMode(transport, conduitKind);
+  await requestTransportMode(transport);
   const handshake = await handshakeAsInitiator(transport, localSettings, true, null, options.metadata ?? []);
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
-  // StableConduit removed; "stable" requests now fall through to bare.
-  if (conduitKind === "stable") {
-    return {
-      conduit: new BareConduit(transport, messagePlan),
-      handshake,
-    };
-  }
 
   return {
     conduit: new BareConduit(transport, messagePlan),
@@ -428,7 +410,7 @@ async function makeAcceptorEstablishedTransport(
   const attachment = isLinkSource(transport)
     ? await transport.nextLink()
     : { link: transport };
-  const requestedMode = await acceptTransportMode(attachment.link);
+  await acceptTransportMode(attachment.link);
 
   const localSettings: ConnectionSettings = {
     parity: { tag: "Even" },
@@ -445,14 +427,6 @@ async function makeAcceptorEstablishedTransport(
     options.metadata ?? [],
   );
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
-
-  // StableConduit removed; "stable" acceptors now route through bare.
-  // The peer's leading ClientHello bytes (if any) are consumed and
-  // discarded so the bare framing can take over cleanly.
-  if (requestedMode === "stable") {
-    const _maybeClientHello = await attachment.link.recv();
-    void _maybeClientHello;
-  }
 
   return {
     conduit: new BareConduit(attachment.link, messagePlan),

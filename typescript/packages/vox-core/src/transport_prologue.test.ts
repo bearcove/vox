@@ -67,14 +67,7 @@ describe("transport prologue", () => {
   it("accepts bare mode", async () => {
     const [initiator, acceptor] = memoryLinkPair();
     const accepted = acceptTransportMode(acceptor);
-    await requestTransportMode(initiator, "bare");
-    await expect(accepted).resolves.toBe("bare");
-  });
-
-  it("accepts stable mode", async () => {
-    const [initiator, acceptor] = memoryLinkPair();
-    const accepted = acceptTransportMode(acceptor);
-    await requestTransportMode(initiator, "stable");
-    await expect(accepted).resolves.toBe("stable");
+    await requestTransportMode(initiator);
+    await expect(accepted).resolves.toBeUndefined();
   });
 });
