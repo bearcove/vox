@@ -124,6 +124,7 @@ class TestbedService implements TestbedHandler {
     for (let i = 0; i < count; i++) {
       await output.send(i);
     }
+    output.close();
   }
 
   async echo(message: string): Promise<string> {
@@ -184,6 +185,7 @@ class TestbedService implements TestbedHandler {
     for await (const s of input) {
       await output.send(s);
     }
+    output.close();
   }
 
   echoPoint(point: Point): Point {
@@ -307,6 +309,7 @@ class TestbedService implements TestbedHandler {
     for (let i = 0; i < count; i++) {
       await output.send(i);
     }
+    output.close();
   }
 
   allColors(): Color[] {
