@@ -290,7 +290,7 @@ pub enum DecodeOp {
     BranchOnVariant {
         tag_offset: usize,
         tag_width: TagWidth,
-        /// variant_table[remote_index] = Some(local_index) or None
+        /// `variant_table[remote_index] = Some(local_index) or None`
         variant_table: Vec<Option<usize>>,
         /// per-variant: (local_discriminant_value, block_id)
         variant_blocks: Vec<(u64, usize)>,
@@ -3119,8 +3119,8 @@ pub unsafe fn slow_path_decode_raw(
 /// This is the correctness oracle path — it must agree with the reflective
 /// interpreter for all valid inputs.
 ///
-/// Pass `cal` to enable the calibrated fast path for opaque types (Vec<T>,
-/// String). Pass `None` to use zero-filled fallbacks for those ops.
+/// Pass `cal` to enable the calibrated fast path for opaque types (`Vec<T>`,
+/// `String`). Pass `None` to use zero-filled fallbacks for those ops.
 pub fn from_slice_ir<T>(
     input: &[u8],
     plan: &TranslationPlan,

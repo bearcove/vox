@@ -466,7 +466,7 @@ fn codec_error_to_status(err: postcard_codec::CodecError) -> vox_swift_status_t 
 
 /// Encode the value at `value_ptr` (matching `layout`) into a freshly
 /// allocated buffer returned through `out_bytes`. The caller must
-/// release the buffer with [`vox_swift_owned_bytes_free_v1`].
+/// release the buffer with `vox_swift_owned_bytes_free_v1`.
 ///
 /// # Safety
 /// `layout` must be a live `*const ValueLayout`. `value_ptr` must point

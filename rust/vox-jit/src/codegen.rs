@@ -11,7 +11,7 @@
 //!   - All scalar primitives (bool, u8–u64, i8–i64, f32, f64)
 //!   - Structs and tuples (field reads in remote wire order)
 //!   - Fixed-size arrays (unrolled element decode)
-//!   - Vec<u8> and String via calibrated opaque descriptors
+//!   - `Vec<u8>` and `String` via calibrated opaque descriptors
 //!   - SlowPath ops (delegates back to the IR interpreter)
 //!
 //! Unsupported ops cause `compile_decode` to return `Err(CodegenError::UnsupportedOp)`
