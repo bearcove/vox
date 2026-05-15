@@ -510,27 +510,33 @@ class SessionCore {
     result: Deferred<void>;
   }> = [];
   private resumeWaiter: ((request: { conduit: Conduit<Message>; result: Deferred<void> } | null) => void) | null = null;
+  private readonly localRootSettings: ConnectionSettings;
+  private readonly peerRootSettings: ConnectionSettings;
+  private readonly onConnection?: (connection: ConnectionHandle) => void | Promise<void>;
 
   constructor(
     conduit: Conduit<Message>,
-    private readonly localRootSettings: ConnectionSettings,
-    private readonly peerRootSettings: ConnectionSettings,
+    localRootSettings: ConnectionSettings,
+    peerRootSettings: ConnectionSettings,
     peerSupportsRetry: boolean,
     resumable: boolean,
     sessionResumeKey: Uint8Array | null,
     recoverConduit: (() => Promise<Conduit<Message>>) | undefined,
-    private readonly onConnection?: (connection: ConnectionHandle) => void | Promise<void>,
+    onConnection?: (connection: ConnectionHandle) => void | Promise<void>,
     onConnectivityChange?: (state: SessionConnectivity) => void,
     keepaliveIntervalMs = 0,
     keepaliveTimeoutMs = 0,
   ) {
     this.conduit = conduit;
+    this.localRootSettings = localRootSettings;
+    this.peerRootSettings = peerRootSettings;
     this.peerSupportsRetry = peerSupportsRetry;
     this.resumable = resumable;
     this.sessionResumeKey = sessionResumeKey?.slice() ?? null;
     this.recoverConduit = recoverConduit;
     this.nextConnectionId = firstIdForParity(localRootSettings.parity);
     this.sessionHandle = new SessionHandle(this);
+    this.onConnection = onConnection;
     this.onConnectivityChange = onConnectivityChange;
     this.keepaliveIntervalMs = keepaliveIntervalMs;
     this.keepaliveTimeoutMs =
@@ -1088,7 +1094,11 @@ class SessionCore {
 }
 
 export class SessionHandle {
-  constructor(private readonly core: SessionCore) {}
+  private readonly core: SessionCore;
+
+  constructor(core: SessionCore) {
+    this.core = core;
+  }
 
   openConnection(
     settings: ConnectionSettings = this.core.defaultConnectionSettings(),
@@ -1137,13 +1147,24 @@ export class ConnectionHandle {
   private flushPromise: Promise<void> | null = null;
   private flushRequested = false;
 
+  private readonly session: SessionCore;
+  readonly id: bigint;
+  readonly localSettings: ConnectionSettings;
+  readonly peerSettings: ConnectionSettings;
+  readonly peerSupportsRetry: boolean;
+
   constructor(
-    private readonly session: SessionCore,
-    readonly id: bigint,
-    readonly localSettings: ConnectionSettings,
-    readonly peerSettings: ConnectionSettings,
-    readonly peerSupportsRetry: boolean,
+    session: SessionCore,
+    id: bigint,
+    localSettings: ConnectionSettings,
+    peerSettings: ConnectionSettings,
+    peerSupportsRetry: boolean,
   ) {
+    this.session = session;
+    this.id = id;
+    this.localSettings = localSettings;
+    this.peerSettings = peerSettings;
+    this.peerSupportsRetry = peerSupportsRetry;
     this.role = roleFromParity(localSettings.parity);
     this.channelAllocator = new ChannelIdAllocator(this.role);
     this.channelRegistry = new ChannelRegistry(undefined, () => {
@@ -1575,7 +1596,11 @@ export class ConnectionHandle {
 }
 
 class ConnectionHandleCaller implements Caller {
-  constructor(private readonly connection: ConnectionHandle) {}
+  private readonly connection: ConnectionHandle;
+
+  constructor(connection: ConnectionHandle) {
+    this.connection = connection;
+  }
 
   call(request: CallerRequest): Promise<unknown> {
     return this.connection.call(request);
@@ -1595,7 +1620,11 @@ class ConnectionHandleCaller implements Caller {
 }
 
 export class Session {
-  private constructor(private readonly core: SessionCore) {}
+  private readonly core: SessionCore;
+
+  private constructor(core: SessionCore) {
+    this.core = core;
+  }
 
   private resumeKey(): Uint8Array | null {
     return this.core.sessionResumeKeyValue();
@@ -1645,12 +1674,11 @@ export class Session {
 
 class PrefetchedConduit implements Conduit<Message> {
   private first: Message | null;
+  private readonly inner: Conduit<Message>;
 
-  constructor(
-    first: Message,
-    private readonly inner: Conduit<Message>,
-  ) {
+  constructor(first: Message, inner: Conduit<Message>) {
     this.first = first;
+    this.inner = inner;
   }
 
   send(item: Message): Promise<void> {

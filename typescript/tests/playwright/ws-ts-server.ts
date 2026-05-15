@@ -36,8 +36,10 @@ class NodeWsLink implements Link {
   private pendingMessages: Uint8Array[] = [];
   private waitingResolve: ((payload: Uint8Array | null) => void) | null = null;
   private closed = false;
+  private readonly ws: WebSocket;
 
-  constructor(private readonly ws: WebSocket) {
+  constructor(ws: WebSocket) {
+    this.ws = ws;
     ws.on("message", (data: RawData) => {
       const payload = rawDataToUint8Array(data);
       this.lastReceived = payload;
