@@ -5635,6 +5635,12 @@ mod tests {
         label: String,
     }
 
+    #[derive(Facet, Debug, PartialEq, Clone)]
+    struct WithOptionStruct {
+        maybe_inner: Option<Inner>,
+        tag: u32,
+    }
+
     #[test]
     fn compile_enum_unit_variants() {
         compile_shape::<Color>().expect("Color should compile");
@@ -5683,6 +5689,31 @@ mod tests {
         let decoded = from_slice_ir::<WithOption>(&bytes, &plan, &registry, Some(&cal))
             .expect("IR decode failed");
         assert_eq!(decoded, value, "IR option/string round-trip mismatch");
+    }
+
+    #[test]
+    fn decode_roundtrip_option_of_struct() {
+        let value = WithOptionStruct {
+            maybe_inner: Some(Inner {
+                x: -42,
+                label: "hello".to_string(),
+            }),
+            tag: 0x1234_5678,
+        };
+        let bytes = reflective_encode_static(&value);
+        let decoded = jit_decode_value::<WithOptionStruct>(&bytes).expect("JIT decode failed");
+        assert_eq!(decoded, value, "Option<struct> round-trip mismatch");
+    }
+
+    #[test]
+    fn decode_roundtrip_option_of_struct_none() {
+        let value = WithOptionStruct {
+            maybe_inner: None,
+            tag: 0xDEAD_BEEF,
+        };
+        let bytes = reflective_encode_static(&value);
+        let decoded = jit_decode_value::<WithOptionStruct>(&bytes).expect("JIT decode failed");
+        assert_eq!(decoded, value, "Option<struct> None round-trip mismatch");
     }
 
     #[test]
@@ -6049,6 +6080,37 @@ mod tests {
                 "JIT and reflective encode disagree for {v:?}"
             );
         }
+    }
+
+    #[test]
+    fn encode_roundtrip_option_of_struct() {
+        let value = WithOptionStruct {
+            maybe_inner: Some(Inner {
+                x: -42,
+                label: "hello".to_string(),
+            }),
+            tag: 0x1234_5678,
+        };
+        let jit_bytes = jit_encode_value(&value).expect("JIT encode failed");
+        let ref_bytes = reflective_encode(&value);
+        assert_eq!(
+            jit_bytes, ref_bytes,
+            "JIT and reflective encode disagree for Option<struct> Some"
+        );
+    }
+
+    #[test]
+    fn encode_roundtrip_option_of_struct_none() {
+        let value = WithOptionStruct {
+            maybe_inner: None,
+            tag: 0xDEAD_BEEF,
+        };
+        let jit_bytes = jit_encode_value(&value).expect("JIT encode failed");
+        let ref_bytes = reflective_encode(&value);
+        assert_eq!(
+            jit_bytes, ref_bytes,
+            "JIT and reflective encode disagree for Option<struct> None"
+        );
     }
 
     #[test]
