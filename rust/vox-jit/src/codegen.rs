@@ -971,7 +971,7 @@ impl<'a, 'b> EmitCtx<'a, 'b> {
     fn read_varint_i64(&mut self) -> Result<Value, CodegenError> {
         let z = self.read_varint_u64()?;
         // zigzag decode: (z >> 1) ^ -(z & 1)
-        let half = self.b.ins().sshr_imm(z, 1);
+        let half = self.b.ins().ushr_imm(z, 1);
         let lsb = self.b.ins().band_imm(z, 1);
         let neg_lsb = self.b.ins().ineg(lsb);
         Ok(self.b.ins().bxor(half, neg_lsb))
