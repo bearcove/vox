@@ -4734,21 +4734,29 @@ fn emit_encode_option(
 ) -> Result<(), CodegenError> {
     let opt_ptr = ectx.src_at(src_offset);
 
-    // Call is_some_fn(opt_ptr) -> bool
+    // Route through Rust-side trampolines: facet's vtable fns take `PtrConst`
+    // (16 bytes), and we can't model that as a single pointer-sized AbiParam.
+    // On Windows x64 a direct call_indirect blows up because 16-byte structs
+    // pass via hidden pointer; the trampoline takes a thin `*const u8` and
+    // builds the PtrConst on the Rust side where rustc handles the ABI.
     let call_conv = ectx.b.func.signature.call_conv;
     let is_some_sig = ectx.b.func.import_signature(Signature {
-        params: vec![AbiParam::new(ectx.ptr_ty)],
+        params: vec![AbiParam::new(ectx.ptr_ty), AbiParam::new(ectx.ptr_ty)],
         returns: vec![AbiParam::new(types::I8)],
         call_conv,
     });
-    let is_some_callee = ectx
+    let is_some_fn_ptr = ectx
         .b
         .ins()
         .iconst(ectx.ptr_ty, is_some_fn as *const () as i64);
-    let is_some_call = ectx
-        .b
-        .ins()
-        .call_indirect(is_some_sig, is_some_callee, &[opt_ptr]);
+    let is_some_callee = ectx.b.ins().iconst(
+        ectx.ptr_ty,
+        crate::helpers::vox_jit_option_is_some_raw as *const () as i64,
+    );
+    let is_some_call =
+        ectx.b
+            .ins()
+            .call_indirect(is_some_sig, is_some_callee, &[opt_ptr, is_some_fn_ptr]);
     let is_some = ectx.b.inst_results(is_some_call)[0];
 
     let some_block = ectx.fresh_block();
@@ -4772,18 +4780,23 @@ fn emit_encode_option(
 
     let call_conv = ectx.b.func.signature.call_conv;
     let get_value_sig = ectx.b.func.import_signature(Signature {
-        params: vec![AbiParam::new(ectx.ptr_ty)],
+        params: vec![AbiParam::new(ectx.ptr_ty), AbiParam::new(ectx.ptr_ty)],
         returns: vec![AbiParam::new(ectx.ptr_ty)],
         call_conv,
     });
-    let get_value_callee = ectx
+    let get_value_fn_ptr = ectx
         .b
         .ins()
         .iconst(ectx.ptr_ty, get_value_fn as *const () as i64);
-    let get_value_call = ectx
-        .b
-        .ins()
-        .call_indirect(get_value_sig, get_value_callee, &[opt_ptr]);
+    let get_value_callee = ectx.b.ins().iconst(
+        ectx.ptr_ty,
+        crate::helpers::vox_jit_option_get_value_raw as *const () as i64,
+    );
+    let get_value_call = ectx.b.ins().call_indirect(
+        get_value_sig,
+        get_value_callee,
+        &[opt_ptr, get_value_fn_ptr],
+    );
     let inner_ptr = ectx.b.inst_results(get_value_call)[0];
 
     // Inline the some_block_ir ops with src_ptr = inner_ptr
@@ -5127,15 +5140,25 @@ fn emit_encode_borrow_pointer(
     let ptr = ectx.src_at(src_offset);
     let call_conv = ectx.b.func.signature.call_conv;
     let sig = ectx.b.func.import_signature(Signature {
-        params: vec![AbiParam::new(ectx.ptr_ty)],
+        params: vec![AbiParam::new(ectx.ptr_ty), AbiParam::new(ectx.ptr_ty)],
         returns: vec![AbiParam::new(ectx.ptr_ty)],
         call_conv,
     });
-    let callee = ectx
+    // Route through a Rust trampoline — `BorrowFn` takes and returns
+    // `PtrConst` (16 bytes), which we can't model as a single
+    // pointer-sized AbiParam. See `vox_jit_option_is_some_raw`.
+    let borrow_fn_ptr = ectx
         .b
         .ins()
         .iconst(ectx.ptr_ty, borrow_fn as *const () as i64);
-    let call = ectx.b.ins().call_indirect(sig, callee, &[ptr]);
+    let callee = ectx.b.ins().iconst(
+        ectx.ptr_ty,
+        crate::helpers::vox_jit_borrow_raw as *const () as i64,
+    );
+    let call = ectx
+        .b
+        .ins()
+        .call_indirect(sig, callee, &[ptr, borrow_fn_ptr]);
     let inner_ptr = ectx.b.inst_results(call)[0];
 
     let saved_src = ectx.src_ptr;
@@ -5165,16 +5188,24 @@ fn emit_write_byte_slice(
     let slice_ptr = ectx.src_at(src_offset);
     let call_conv = ectx.b.func.signature.call_conv;
 
+    // Route through Rust trampolines — `SliceLenFn` takes `PtrConst` and
+    // `SliceAsPtrFn` takes and returns `PtrConst` (16 bytes), which we can't
+    // model as a single pointer-sized AbiParam. See `vox_jit_option_is_some_raw`.
+
     let len_sig = ectx.b.func.import_signature(Signature {
-        params: vec![AbiParam::new(ectx.ptr_ty)],
+        params: vec![AbiParam::new(ectx.ptr_ty), AbiParam::new(ectx.ptr_ty)],
         returns: vec![AbiParam::new(ectx.ptr_ty)],
         call_conv,
     });
-    let len_callee = ectx.b.ins().iconst(ectx.ptr_ty, len_fn as *const () as i64);
+    let len_fn_ptr = ectx.b.ins().iconst(ectx.ptr_ty, len_fn as *const () as i64);
+    let len_callee = ectx.b.ins().iconst(
+        ectx.ptr_ty,
+        crate::helpers::vox_jit_slice_len_raw as *const () as i64,
+    );
     let len_call = ectx
         .b
         .ins()
-        .call_indirect(len_sig, len_callee, &[slice_ptr]);
+        .call_indirect(len_sig, len_callee, &[slice_ptr, len_fn_ptr]);
     let len = ectx.b.inst_results(len_call)[0];
     let len64 = if ectx.ptr_ty == types::I64 {
         len
@@ -5184,18 +5215,22 @@ fn emit_write_byte_slice(
     ectx.call_write_varint(len64);
 
     let data_sig = ectx.b.func.import_signature(Signature {
-        params: vec![AbiParam::new(ectx.ptr_ty)],
+        params: vec![AbiParam::new(ectx.ptr_ty), AbiParam::new(ectx.ptr_ty)],
         returns: vec![AbiParam::new(ectx.ptr_ty)],
         call_conv,
     });
-    let data_callee = ectx
+    let as_ptr_fn_ptr = ectx
         .b
         .ins()
         .iconst(ectx.ptr_ty, as_ptr_fn as *const () as i64);
+    let data_callee = ectx.b.ins().iconst(
+        ectx.ptr_ty,
+        crate::helpers::vox_jit_slice_as_ptr_raw as *const () as i64,
+    );
     let data_call = ectx
         .b
         .ins()
-        .call_indirect(data_sig, data_callee, &[slice_ptr]);
+        .call_indirect(data_sig, data_callee, &[slice_ptr, as_ptr_fn_ptr]);
     let data = ectx.b.inst_results(data_call)[0];
     ectx.call_push_bytes(data, len);
     Ok(())
