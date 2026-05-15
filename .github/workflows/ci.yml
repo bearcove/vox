@@ -217,7 +217,7 @@ jobs:
         run: cargo xtask codegen --typescript
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter "@bearcove/vox-playwright-tests" exec playwright install --with-deps chromium
 
       - name: Run TypeScript browser tests
         run: pnpm --filter "@bearcove/vox-playwright-tests" run test
@@ -350,7 +350,7 @@ jobs:
         run: pnpm install
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter "@bearcove/vox-wasm-playwright-tests" exec playwright install --with-deps chromium
 
       - name: Run Wasm browser tests
         run: pnpm --filter "@bearcove/vox-wasm-playwright-tests" run test
