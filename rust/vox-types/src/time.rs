@@ -1,7 +1,7 @@
 //! Cross-platform time primitives.
 //!
 //! On native targets these are re-exports of `std::time` and `tokio::time`. On
-//! `wasm32-unknown-unknown` they come from [`wasmtimer`], because both
+//! `wasm32-unknown-unknown` they come from `wasmtimer`, because both
 //! `std::time::Instant::now()` and tokio's time driver are unsupported there.
 
 #[cfg(not(target_arch = "wasm32"))]
