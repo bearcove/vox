@@ -19,9 +19,10 @@ use vox_types::{
     ChannelCreditReplenisherHandle, ChannelEventContext, ChannelId, ChannelItem,
     ChannelLivenessHandle, ChannelMailboxReceiver, ChannelMailboxSender, ChannelMessage,
     ChannelRetryMode, ChannelSink, ConnectionId, CreditSink, Handler, IdAllocator,
-    IncomingChannelMessage, MaybeSend, MaybeSync, Payload, ReplySink, RequestBody, RequestCall,
-    RequestId, RequestMessage, RequestResponse, SelfRef, TrySendError, TxError, VoxError,
-    channel_mailbox, ensure_operation_id, metadata_channel_retry_mode, metadata_operation_id,
+    IncomingChannelMessage, MaybeSend, MaybeSendFuture, MaybeSync, Payload, ReplySink, RequestBody,
+    RequestCall, RequestId, RequestMessage, RequestResponse, SelfRef, TrySendError, TxError,
+    VoxError, channel_mailbox, ensure_operation_id, metadata_channel_retry_mode,
+    metadata_operation_id,
 };
 use vox_types::{
     ChannelCloseReason, ChannelDebugContext, ChannelDirection, ChannelEvent, ChannelResetReason,
@@ -75,7 +76,7 @@ struct InFlightHandler {
 /// `Stage<Future, Output>` plus does scheduler registration), this drops
 /// the `Stage` overhead and the `set_stage` memcpy that fires on
 /// `Running → Finished` transitions.
-type HandlerFut = Abortable<Pin<Box<dyn Future<Output = RequestId> + Send + 'static>>>;
+type HandlerFut = Abortable<Pin<Box<dyn MaybeSendFuture<Output = RequestId> + 'static>>>;
 
 #[derive(Clone, Copy, Debug)]
 enum ChannelRuntimeTeardown {
@@ -1124,8 +1125,12 @@ impl ReplySink for DriverReplySink {
             sender.prepare_response_for_method(self.request_id, self.method_id, &mut response);
 
             let schemas_for_wire = std::mem::take(&mut response.schemas);
+            #[cfg(not(target_arch = "wasm32"))]
             let encoded_bytes: Vec<u8> =
                 vox_jit::encode!(&response).expect("JIT encode failed for response store");
+            #[cfg(target_arch = "wasm32")]
+            let encoded_bytes: Vec<u8> =
+                vox_postcard::to_vec(&response).expect("postcard encode failed for response store");
             let encoded_for_store: PostcardPayload = encoded_bytes.into();
             response.schemas = schemas_for_wire;
 
@@ -2922,7 +2927,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 RequestDebugState::Dispatching,
             );
             let (abort, abort_reg) = AbortHandle::new_pair();
-            let handler_fut: Pin<Box<dyn Future<Output = RequestId> + Send + 'static>> =
+            let handler_fut: Pin<Box<dyn MaybeSendFuture<Output = RequestId> + 'static>> =
                 Box::pin(async move {
                     vox_types::dlog!(
                         "[driver] handler start: req={:?} method={:?}",
