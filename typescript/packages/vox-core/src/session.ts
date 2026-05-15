@@ -238,7 +238,6 @@ function isLinkSource(value: SessionTransport): value is LinkSource {
   return typeof (value as LinkSource).nextLink === "function";
 }
 
-// @ts-expect-error unused
 function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   if (left.length !== right.length) {
     return false;
@@ -1598,7 +1597,6 @@ class ConnectionHandleCaller implements Caller {
 export class Session {
   private constructor(private readonly core: SessionCore) {}
 
-  // @ts-expect-error unused
   private resumeKey(): Uint8Array | null {
     return this.core.sessionResumeKeyValue();
   }
@@ -1645,7 +1643,6 @@ export class Session {
   }
 }
 
-// @ts-expect-error unused
 class PrefetchedConduit implements Conduit<Message> {
   private first: Message | null;
 
@@ -1678,7 +1675,6 @@ class PrefetchedConduit implements Conduit<Message> {
   }
 }
 
-// @ts-expect-error unused
 function randomSessionResumeKey(): Uint8Array {
   const bytes = new Uint8Array(16);
   const cryptoApi = globalThis.crypto;
