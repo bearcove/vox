@@ -8586,7 +8586,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI32(val, into: &buf) })
       do {
         try await handler.generate(count: count, output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -8625,7 +8624,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI32(val, into: &buf) })
       do {
         try await handler.generateRetryNonIdem(count: count, output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -8664,7 +8662,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI32(val, into: &buf) })
       do {
         try await handler.generateRetryIdem(count: count, output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -8711,7 +8708,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeString(val, into: &buf) })
       do {
         try await handler.transform(input: input, output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -8749,7 +8745,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI32(val, into: &buf) })
       do {
         try await handler.postReplyGenerate(output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -8796,7 +8791,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI64(val, into: &buf) })
       do {
         try await handler.postReplySum(input: input, result: result)
-        result.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
@@ -9461,7 +9455,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         serialize: { val, buf in encodeI32(val, into: &buf) })
       do {
         try await handler.generateLarge(count: count, output: output)
-        output.close()
         taskSender(
           .response(
             requestId: requestId, payload: encodeResultOkUnit(), methodId: methodId,
