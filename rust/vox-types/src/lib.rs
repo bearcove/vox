@@ -165,7 +165,7 @@ pub struct WithTracker<T> {
     pub tracker: std::sync::Arc<SchemaRecvTracker>,
     /// Descriptors that arrived with this response frame (`SCM_RIGHTS`).
     /// The generated client installs these as the
-    /// [`provide_fds`](crate::provide_fds) source around the typed-return
+    /// [`provide_fds`] source around the typed-return
     /// decode. `()` off-Unix.
     pub fds: crate::FrameFds,
 }

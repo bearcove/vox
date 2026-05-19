@@ -9,7 +9,7 @@
 //!
 //! The send/recv side-channel is plumbed through two thread-locals
 //! ([`collect_fds`] / [`provide_fds`]), installed around (de)serialization —
-//! exactly the shape of the channel binder in [`crate::channel`].
+//! exactly the shape of the channel binder in [`mod@crate::channel`].
 //!
 //! [`Fd`] itself is Unix-only (codegen refuses it for non-local / non-Rust
 //! targets). [`FrameFds`], [`collect_fds`] and [`provide_fds`] are portable
