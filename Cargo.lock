@@ -1131,9 +1131,9 @@ dependencies = [
 
 [[package]]
 name = "facet-error"
-version = "0.46.3"
+version = "0.46.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec96d76935100e42d8826dd4e296776b76e858525178b8dafac58abf84ad79ca"
+checksum = "9adc600ea018a663b8aca5bd26813986b6f8d985d54a436b95bafd9c8d9be54f"
 dependencies = [
  "facet",
 ]
