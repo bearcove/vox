@@ -30,7 +30,7 @@
     "@bearcove/vox-tcp": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22",
+    "@types/node": "^25.0.0",
     "vitest": "^2.1.0"
   },
   "license": "MIT OR Apache-2.0",
