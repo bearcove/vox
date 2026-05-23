@@ -51,150 +51,27 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 # Type identity
 
-> r[schema.type-id]
->
-> A type ID is a `u64` content hash — a deterministic structural hash
-> of a type *declaration's* compact-wire-level definition. For generic types,
-> the hash is of the declaration (with type variable slots), not of any
-> specific instantiation. The same declaration always produces the same
-> hash, regardless of which connection, session, process, or language
-> produced it. On the wire, a type ID is encoded as a little-endian `u64`.
+Telex defines the universal content-hash mechanism that gives every type
+declaration a stable `u64` identity. See `r[telex.type-id]` for the
+umbrella rule, `r[telex.type-id.hash]` for the canonical-byte-sequence
+algorithm, and `r[telex.type-id.hash.typeref]`,
+`r[telex.type-id.hash.primitives]`, `r[telex.type-id.hash.struct]`,
+`r[telex.type-id.hash.enum]`, `r[telex.type-id.hash.container]`, and
+`r[telex.type-id.hash.tuple]` for the per-kind hash inputs. Recursive
+types follow `r[telex.hash.recursive]`. Vox's `TypeSchemaId` is the
+`u64` content hash defined by those rules.
 
-> r[schema.type-id.hash]
->
-> The content hash of a type declaration is computed by feeding a
-> canonical byte sequence into blake3, then taking the first 8 bytes
-> of the output as a little-endian `u64`. The canonical byte sequence
-> is constructed by updating the hasher with the components described
-> below.
->
->   * **Strings** (field names, variant names, tag strings, type parameter
->     names) are fed as their byte length as a `u32` in little-endian
->     order, followed by the raw UTF-8 bytes. The length prefix ensures
->     the encoding is injective — no two different type structures
->     produce the same byte sequence.
->   * **`u64` values** (array lengths) are fed as 8 bytes in
->     little-endian order.
->   * **`u32` values** (variant indices) are fed as 4 bytes in
->     little-endian order.
->   * **TypeRef values** are fed according to `r[schema.type-id.hash.typeref]`.
->
-> Implementations MUST produce identical hashes for structurally
-> identical type declarations regardless of the source language.
->
-> For recursive types, see `r[schema.hash.recursive]`.
-
-> r[schema.type-id.hash.typeref]
->
-> A `TypeRef` is fed into the hasher as follows:
->
->   * **`Concrete` without args:** the tag `"concrete"` then the
->     type's content hash (8 bytes, little-endian)
->   * **`Concrete` with args:** the tag `"concrete"` then the type's
->     content hash (8 bytes, little-endian), then the tag `"args"`,
->     then each argument's `TypeRef` encoding in order (recursive)
->   * **`Var`:** the tag `"var"` then the parameter name
->     (length-prefixed UTF-8 string)
-
-## Primitive type hashes
-
-The hash input for a primitive type is a single tag string. Because the
-hash operates at the compact-wire encoding level — not at the source-language
-type level — Rust newtypes, TypeScript type aliases, and other
-language-level wrappers over the same underlying type all produce the
-same hash. For example, `struct UserId(u64)` and `struct PostId(u64)`
-both hash as `u64`.
-
-> r[schema.type-id.hash.primitives]
->
-> The hash of a primitive type is `blake3(len(tag) || tag)[0..8]` where
-> `len(tag)` is the tag's byte length as a `u32` LE, and `tag` is one
-> of the following UTF-8 strings:
->
-> | Compact type | Tag string |
-> |--------------|------------|
-> | bool          | `"bool"`   |
-> | u8            | `"u8"`     |
-> | u16           | `"u16"`    |
-> | u32           | `"u32"`    |
-> | u64           | `"u64"`    |
-> | u128          | `"u128"`   |
-> | i8            | `"i8"`     |
-> | i16           | `"i16"`    |
-> | i32           | `"i32"`    |
-> | i64           | `"i64"`    |
-> | i128          | `"i128"`   |
-> | f32           | `"f32"`    |
-> | f64           | `"f64"`    |
-> | char          | `"char"`   |
-> | string        | `"string"` |
-> | unit          | `"unit"`   |
-> | never         | `"never"`  |
-> | bytes         | `"bytes"`   |
-> | payload       | `"payload"` |
->
-> These 19 hashes are constants. Implementations MAY precompute them.
-
-## Struct hashes
-
-> r[schema.type-id.hash.struct]
->
-> To hash a struct, update the hasher with:
->
->   1. The tag `"struct"`
->   2. The type name (length-prefixed UTF-8 string)
->   3. The number of type parameters as a `u32` (4 bytes, LE)
->   4. Each type parameter name (length-prefixed UTF-8 string), in order
->   5. For each field, in declaration order:
->      a. The field name (length-prefixed UTF-8 string)
->      b. The field's `TypeRef` (see `r[schema.type-id.hash.typeref]`)
-
-## Enum hashes
-
-> r[schema.type-id.hash.enum]
->
-> To hash an enum, update the hasher with:
->
->   1. The tag `"enum"`
->   2. The type name (length-prefixed UTF-8 string)
->   3. The number of type parameters as a `u32` (4 bytes, LE)
->   4. Each type parameter name (length-prefixed UTF-8 string), in order
->   5. For each variant, in declaration order:
->      a. The variant name (length-prefixed UTF-8 string)
->      b. The variant index as a `u32` (4 bytes, little-endian)
->      c. The payload tag: `"unit"`, `"newtype"`, `"tuple"`, or `"struct"`
->      d. For newtype payloads: the inner `TypeRef`
->      e. For tuple payloads: each element's `TypeRef`, in order
->      f. For struct payloads: each field as in `r[schema.type-id.hash.struct]`
->         step 5 (name then TypeRef, in order)
-
-## Container hashes
-
-> r[schema.type-id.hash.container]
->
-> To hash a container type, update the hasher with:
->
->   * **List:** `"list"` then the element `TypeRef`
->   * **Set:** `"set"` then the element `TypeRef`
->   * **Option:** `"option"` then the element `TypeRef`
->   * **Array:** `"array"` then the element `TypeRef`, then the length
->     as a `u64` (8 bytes, little-endian)
->   * **Map:** `"map"` then the key `TypeRef`, then the value `TypeRef`
-
-## Tuple hashes
-
-> r[schema.type-id.hash.tuple]
->
-> To hash a tuple, update the hasher with:
->
->   1. The tag `"tuple"`
->   2. Each element's `TypeRef`, in order
+Vox extends the Telex hash with one additional kind — channels — and
+constrains *where* a type ID is valid through per-connection scoping.
 
 ## Channel hashes
 
 > r[schema.type-id.hash.channel]
 >
-> To hash a channel type, update the hasher with:
+> Channels are a Vox RPC concept and not part of the Telex tag vocabulary,
+> so Telex's hash rules do not cover them directly. To hash a channel type,
+> use the same canonical-byte-sequence machinery as `r[telex.type-id.hash]`
+> and feed the hasher with:
 >
 >   1. The tag `"channel"`
 >   2. The direction: `"send"` or `"recv"`
@@ -239,103 +116,6 @@ need to send it on connection 1" — the proxy would break. A never saw
 connection 0's schemas; it only sees connection 1. Each connection is
 an independent communication channel that may reach a different peer,
 so schema state must be tracked independently per connection.
-
-# Hashing recursive types
-
-Non-recursive types have straightforward content hashes — hash the
-structure, reference child types by their hashes. Recursive types
-create a cycle: the hash of `TreeNode` depends on the hash of
-`Vec<TreeNode>`, which depends on the hash of `TreeNode`.
-
-The solution is a three-step algorithm that computes preliminary
-hashes to establish a canonical ordering, then derives final hashes
-from that ordering.
-
-> r[schema.hash.recursive]
->
-> To compute content hashes for a mutually recursive group of types:
->
->   1. **Preliminary hashes.** Hash each type in the group using the
->      normal rules (see `r[schema.type-id.hash]`), except that any
->      reference to another type in the same recursive group is replaced
->      with 8 zero bytes (the **sentinel**). References to types outside
->      the group use their real content hashes as normal. The result is
->      one preliminary hash per type.
->
->   2. **Deduplication.** If two types in the group have identical
->      canonical byte sequences (the full input to blake3 from step 1),
->      they are structurally identical at the compact-wire level and MUST be
->      deduplicated — collapsed to a single entry before proceeding.
->      (Type identity is structural; two nominal types with the same
->      compact-wire-level structure are the same type.)
->
->   3. **Canonical ordering.** Sort the (now-unique) types by their
->      preliminary hash (ascending, unsigned integer comparison). In the
->      unlikely event that two types have the same preliminary hash but
->      different canonical byte sequences (a 64-bit collision), break the
->      tie by lexicographic comparison of their canonical byte sequences.
->
->   4. **Final hashes.** Compute the **group hash** as
->      `blake3(preliminary_hash_0 || preliminary_hash_1 || ...)[0..8]`
->      where the preliminary hashes are concatenated in canonical order.
->      Then each type's final content hash is
->      `blake3(group_hash || index)[0..8]` where `index` is the type's
->      position in the canonical order, encoded as a `u64` in
->      little-endian order.
->
-> These final hashes are the types' `TypeSchemaId`s — plain `u64` values,
-> indistinguishable from non-recursive type hashes. No special
-> representation is needed on the wire or in data structures.
-
-> r[schema.hash.recursive.non-recursive]
->
-> A non-recursive type does not participate in this algorithm. Its
-> content hash is computed directly from its structure as described
-> in `r[schema.type-id.hash]`.
-
-Example: a recursive tree type.
-
-```
-// All strings are length-prefixed: len(s) as u32 LE, then UTF-8 bytes.
-// L("foo") = 03 00 00 00 "foo"
-//
-// Step 1: preliminary hash
-//   TreeNode: blake3(L("struct") || L("label") || hash(string)
-//                    || L("children") || hash_of(list, SENTINEL))
-//   → preliminary_hash = 0xABCD...
-//
-// Step 2: deduplication (only one type, nothing to dedup)
-//
-// Step 3: canonical order (only one type, so trivial)
-//   [TreeNode]
-//
-// Step 4: final hash
-//   group_hash = blake3(preliminary_hash)[0..8]
-//   TreeNode.type_id = blake3(group_hash || 0u64)[0..8]
-```
-
-Example: mutually recursive types.
-
-```
-// Expr { body: ExprBody }
-// ExprBody { Literal(u64), Add(Expr, Expr) }
-//
-// Step 1: preliminary hashes (recursive refs → sentinel)
-//   Expr:     blake3(L("struct") || L("body") || SENTINEL)         → 0x1111...
-//   ExprBody: blake3(L("enum") || L("Literal") || 0u32 || L("newtype") || hash(u64)
-//                    || L("Add") || 1u32 || L("struct") || L("left") || SENTINEL
-//                    || L("right") || SENTINEL)                    → 0x2222...
-//
-// Step 2: deduplication (both types are structurally distinct, nothing to dedup)
-//
-// Step 3: canonical order (sort by preliminary hash)
-//   [Expr (0x1111), ExprBody (0x2222)]
-//
-// Step 4: final hashes
-//   group_hash = blake3(0x1111... || 0x2222...)[0..8]
-//   Expr.type_id     = blake3(group_hash || 0u64)[0..8]
-//   ExprBody.type_id = blake3(group_hash || 1u64)[0..8]
-```
 
 # Schema format
 
@@ -840,36 +620,36 @@ and cached for the connection lifetime.
 
 > r[schema.translation.field-matching]
 >
-> Fields MUST be matched by name, not by position. For each field in the
-> local type, the translation plan looks up the corresponding field in the
-> remote schema by name. If found, the plan records the remote field's
-> position so the deserializer knows which compact field to read.
+> Fields are matched by name, not by position — the wire-level requirement
+> is pinned in `r[telex.translation.name-matching]`. Vox's plan-builder
+> applies this rule when constructing a translation plan from a remote
+> schema and a local type.
 
 > r[schema.translation.skip-unknown]
 >
-> If the remote schema contains fields that do not exist in the local type,
-> those fields MUST be skipped during deserialization. Compact Telex
-> struct and enum payload fields are length-prefixed
-> (see `r[telex.skip.struct-field]` and `r[telex.skip.enum-field]`), so skipping
-> an unknown field MUST NOT require recursively interpreting that field.
+> Fields present in the remote schema but absent from the local type MUST be
+> skipped during deserialization. The wire-level skip is a fixed-width
+> length read — see `r[telex.skip.struct-field]` and
+> `r[telex.skip.enum-field]`. Vox's plan-builder records "skip" entries for
+> unmatched remote fields when it constructs the plan.
 
 > r[schema.translation.fill-defaults]
 >
-> If the local type contains fields that do not exist in the remote schema,
-> those fields MUST be filled with their default values. Whether a field
-> has a default is determined by the **local** type definition (e.g. a
-> `#[facet(default)]` annotation in Rust, or equivalent in other
-> languages) — this information is not part of the remote schema.
-> Local fields without default values that are missing from the remote
-> schema cause a translation plan error
-> (see `r[schema.errors.missing-required]`).
+> Local fields absent from the remote schema MUST be filled with their
+> default values — the wire-level rule is `r[telex.translation.default-fill]`.
+> Whether a local field has a default is a property of the local type
+> definition (e.g. `#[facet(default)]` in Rust, or equivalent in other
+> languages) and is not carried in the remote schema. Local fields without
+> a default that are missing from the remote schema cause a translation
+> plan error (see `r[schema.errors.missing-required]`).
 
 > r[schema.translation.reorder]
 >
-> If fields exist in both the local and remote types but in different order,
-> the translation plan MUST handle the reordering. The deserializer reads
-> compact bytes in remote field order but writes values into local field
-> positions.
+> When fields exist in both schemas but in different declaration order, the
+> translation plan MUST reorder during decode. This is a direct consequence
+> of `r[telex.translation.name-matching]` — the plan remaps remote positions
+> to local field offsets, then the compiled decoder writes each remote field
+> into its local slot.
 
 > r[schema.translation.type-compat]
 >
@@ -898,9 +678,10 @@ This allows adding variants to an enum without breaking existing peers.
 
 > r[schema.translation.enum]
 >
-> Enum variants MUST be matched by name, not by variant index. The
-> translation plan maps remote variant names to local variant indices and
-> records how to deserialize each variant's payload.
+> Enum variants are matched by name, not by variant index — the wire-level
+> requirement is `r[telex.translation.name-matching]` applied to enums.
+> Vox's plan-builder maps remote variant names to local variant indices
+> and records how to deserialize each variant's payload.
 
 > r[schema.translation.enum.unknown-variant]
 >

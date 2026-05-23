@@ -255,15 +255,45 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.aggregate.set]
 >
-> Sets are encoded as `[count: u32 LE][element bytes...]`. The element order
-> MUST be deterministic for a given set value and schema. A receiver MUST NOT
-> depend on set element order for semantics.
+> Sets are encoded as `[count: u32 LE][element bytes...]`. Element bytes MUST
+> appear in ascending lexicographic order of each element's compact-mode
+> encoded byte form. Duplicate elements MUST be rejected by both encoders
+> (refuse to emit) and decoders (refuse to accept). This canonical form is
+> what makes two encoders produce byte-identical output for the same set
+> value and schema, and what lets sets participate in content addressing.
 
 > r[telex.aggregate.map]
 >
 > Maps are encoded as `[count: u32 LE][key value pairs...]`. Keys are encoded
 > with the same value codec as any other value; map keys are not restricted to
-> strings.
+> strings. Entries MUST appear in ascending lexicographic order of each key's
+> compact-mode encoded byte form. Duplicate keys MUST be rejected by both
+> encoders and decoders.
+
+> r[telex.aggregate.set-map.canonical]
+>
+> The ordering rule for sets and maps is byte-level, not value-level. It
+> applies even when an in-memory container (for example, a `BTreeMap<u32, _>`)
+> already iterates in some natural order, because little-endian byte order
+> does not in general preserve numeric order. Implementations MAY exploit a
+> type-specific ordering when the schema guarantees it yields the same
+> ordering as the byte-level rule; otherwise they MUST sort by encoded bytes
+> before emitting.
+
+> r[telex.aggregate.set-map.float-keys]
+>
+> Floats compare by their IEEE 754 little-endian byte pattern in this
+> ordering, not by numeric value. Because of that:
+>
+> - `NaN` values MUST be rejected as set elements or map keys; they would
+>   otherwise compare unequal to themselves and break the duplicate-rejection
+>   rule.
+> - Positive and negative zero have distinct byte patterns and are therefore
+>   distinct set elements / map keys.
+>
+> Encoders that cannot guarantee NaN-freedom up-front MUST check at encode
+> time. Decoders MUST reject any set or map whose float element/key payload
+> is a NaN bit pattern.
 
 > r[telex.aggregate.array]
 >
@@ -408,6 +438,252 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > a slower fallback path or onto a different backend than identity decoding
 > uses.
 
+# Type identity
+
+> r[telex.type-id]
+>
+> A type ID is a `u64` content hash — a deterministic structural hash of a
+> type *declaration's* compact-wire-level definition. For generic types, the
+> hash is of the declaration (with type variable slots), not of any specific
+> instantiation. The same declaration always produces the same hash regardless
+> of which connection, session, process, or language produced it. On the wire,
+> a type ID is encoded as a little-endian `u64`.
+>
+> A protocol built on Telex MAY extend this hash to cover its own type kinds
+> outside the Telex tag vocabulary; the Vox RPC layer does so for channel
+> types in `r[schema.type-id.hash.channel]`.
+
+> r[telex.type-id.hash]
+>
+> The content hash of a type declaration is computed by feeding a canonical
+> byte sequence into blake3, then taking the first 8 bytes of the output as a
+> little-endian `u64`. The canonical byte sequence is constructed by updating
+> the hasher with the components described below.
+>
+>   * **Strings** (field names, variant names, tag strings, type parameter
+>     names) are fed as their byte length as a `u32` in little-endian
+>     order, followed by the raw UTF-8 bytes. The length prefix ensures
+>     the encoding is injective — no two different type structures
+>     produce the same byte sequence.
+>   * **`u64` values** (array lengths) are fed as 8 bytes in
+>     little-endian order.
+>   * **`u32` values** (variant indices) are fed as 4 bytes in
+>     little-endian order.
+>   * **TypeRef values** are fed according to `r[telex.type-id.hash.typeref]`.
+>
+> Implementations MUST produce identical hashes for structurally
+> identical type declarations regardless of the source language.
+>
+> For recursive types, see `r[telex.hash.recursive]`.
+
+> r[telex.type-id.hash.typeref]
+>
+> A `TypeRef` is fed into the hasher as follows:
+>
+>   * **`Concrete` without args:** the tag `"concrete"` then the
+>     type's content hash (8 bytes, little-endian)
+>   * **`Concrete` with args:** the tag `"concrete"` then the type's
+>     content hash (8 bytes, little-endian), then the tag `"args"`,
+>     then each argument's `TypeRef` encoding in order (recursive)
+>   * **`Var`:** the tag `"var"` then the parameter name
+>     (length-prefixed UTF-8 string)
+
+## Primitive type hashes
+
+The hash input for a primitive type is a single tag string. Because the
+hash operates at the compact-wire encoding level — not at the source-language
+type level — Rust newtypes, TypeScript type aliases, and other
+language-level wrappers over the same underlying type all produce the
+same hash. For example, `struct UserId(u64)` and `struct PostId(u64)`
+both hash as `u64`.
+
+> r[telex.type-id.hash.primitives]
+>
+> The hash of a primitive type is `blake3(len(tag) || tag)[0..8]` where
+> `len(tag)` is the tag's byte length as a `u32` LE, and `tag` is one
+> of the following UTF-8 strings:
+>
+> | Compact type | Tag string |
+> |--------------|------------|
+> | bool          | `"bool"`   |
+> | u8            | `"u8"`     |
+> | u16           | `"u16"`    |
+> | u32           | `"u32"`    |
+> | u64           | `"u64"`    |
+> | u128          | `"u128"`   |
+> | i8            | `"i8"`     |
+> | i16           | `"i16"`    |
+> | i32           | `"i32"`    |
+> | i64           | `"i64"`    |
+> | i128          | `"i128"`   |
+> | f32           | `"f32"`    |
+> | f64           | `"f64"`    |
+> | char          | `"char"`   |
+> | string        | `"string"` |
+> | unit          | `"unit"`   |
+> | never         | `"never"`  |
+> | bytes         | `"bytes"`   |
+> | payload       | `"payload"` |
+>
+> These 19 hashes are constants. Implementations MAY precompute them.
+
+## Struct hashes
+
+> r[telex.type-id.hash.struct]
+>
+> To hash a struct, update the hasher with:
+>
+>   1. The tag `"struct"`
+>   2. The type name (length-prefixed UTF-8 string)
+>   3. The number of type parameters as a `u32` (4 bytes, LE)
+>   4. Each type parameter name (length-prefixed UTF-8 string), in order
+>   5. For each field, in declaration order:
+>      a. The field name (length-prefixed UTF-8 string)
+>      b. The field's `TypeRef` (see `r[telex.type-id.hash.typeref]`)
+
+## Enum hashes
+
+> r[telex.type-id.hash.enum]
+>
+> To hash an enum, update the hasher with:
+>
+>   1. The tag `"enum"`
+>   2. The type name (length-prefixed UTF-8 string)
+>   3. The number of type parameters as a `u32` (4 bytes, LE)
+>   4. Each type parameter name (length-prefixed UTF-8 string), in order
+>   5. For each variant, in declaration order:
+>      a. The variant name (length-prefixed UTF-8 string)
+>      b. The variant index as a `u32` (4 bytes, little-endian)
+>      c. The payload tag: `"unit"`, `"newtype"`, `"tuple"`, or `"struct"`
+>      d. For newtype payloads: the inner `TypeRef`
+>      e. For tuple payloads: each element's `TypeRef`, in order
+>      f. For struct payloads: each field as in `r[telex.type-id.hash.struct]`
+>         step 5 (name then TypeRef, in order)
+
+## Container hashes
+
+> r[telex.type-id.hash.container]
+>
+> To hash a container type, update the hasher with:
+>
+>   * **List:** `"list"` then the element `TypeRef`
+>   * **Set:** `"set"` then the element `TypeRef`
+>   * **Option:** `"option"` then the element `TypeRef`
+>   * **Array:** `"array"` then the element `TypeRef`, then the length
+>     as a `u64` (8 bytes, little-endian)
+>   * **Map:** `"map"` then the key `TypeRef`, then the value `TypeRef`
+
+## Tuple hashes
+
+> r[telex.type-id.hash.tuple]
+>
+> To hash a tuple, update the hasher with:
+>
+>   1. The tag `"tuple"`
+>   2. Each element's `TypeRef`, in order
+
+Content hashes give type IDs a universal meaning. A peer that receives
+a schema tagged with a content hash it has already seen — from this
+connection, a previous connection, or even a persistent store — knows
+it already has that schema.
+
+# Hashing recursive types
+
+Non-recursive types have straightforward content hashes — hash the
+structure, reference child types by their hashes. Recursive types
+create a cycle: the hash of `TreeNode` depends on the hash of
+`Vec<TreeNode>`, which depends on the hash of `TreeNode`.
+
+The solution is a three-step algorithm that computes preliminary
+hashes to establish a canonical ordering, then derives final hashes
+from that ordering.
+
+> r[telex.hash.recursive]
+>
+> To compute content hashes for a mutually recursive group of types:
+>
+>   1. **Preliminary hashes.** Hash each type in the group using the
+>      normal rules (see `r[telex.type-id.hash]`), except that any
+>      reference to another type in the same recursive group is replaced
+>      with 8 zero bytes (the **sentinel**). References to types outside
+>      the group use their real content hashes as normal. The result is
+>      one preliminary hash per type.
+>
+>   2. **Deduplication.** If two types in the group have identical
+>      canonical byte sequences (the full input to blake3 from step 1),
+>      they are structurally identical at the compact-wire level and MUST be
+>      deduplicated — collapsed to a single entry before proceeding.
+>      (Type identity is structural; two nominal types with the same
+>      compact-wire-level structure are the same type.)
+>
+>   3. **Canonical ordering.** Sort the (now-unique) types by their
+>      preliminary hash (ascending, unsigned integer comparison). In the
+>      unlikely event that two types have the same preliminary hash but
+>      different canonical byte sequences (a 64-bit collision), break the
+>      tie by lexicographic comparison of their canonical byte sequences.
+>
+>   4. **Final hashes.** Compute the **group hash** as
+>      `blake3(preliminary_hash_0 || preliminary_hash_1 || ...)[0..8]`
+>      where the preliminary hashes are concatenated in canonical order.
+>      Then each type's final content hash is
+>      `blake3(group_hash || index)[0..8]` where `index` is the type's
+>      position in the canonical order, encoded as a `u64` in
+>      little-endian order.
+>
+> These final hashes are the types' content IDs — plain `u64` values,
+> indistinguishable from non-recursive type hashes. No special
+> representation is needed on the wire or in data structures.
+
+> r[telex.hash.recursive.non-recursive]
+>
+> A non-recursive type does not participate in this algorithm. Its
+> content hash is computed directly from its structure as described
+> in `r[telex.type-id.hash]`.
+
+Example: a recursive tree type.
+
+```
+// All strings are length-prefixed: len(s) as u32 LE, then UTF-8 bytes.
+// L("foo") = 03 00 00 00 "foo"
+//
+// Step 1: preliminary hash
+//   TreeNode: blake3(L("struct") || L("label") || hash(string)
+//                    || L("children") || hash_of(list, SENTINEL))
+//   → preliminary_hash = 0xABCD...
+//
+// Step 2: deduplication (only one type, nothing to dedup)
+//
+// Step 3: canonical order (only one type, so trivial)
+//   [TreeNode]
+//
+// Step 4: final hash
+//   group_hash = blake3(preliminary_hash)[0..8]
+//   TreeNode.type_id = blake3(group_hash || 0u64)[0..8]
+```
+
+Example: mutually recursive types.
+
+```
+// Expr { body: ExprBody }
+// ExprBody { Literal(u64), Add(Expr, Expr) }
+//
+// Step 1: preliminary hashes (recursive refs → sentinel)
+//   Expr:     blake3(L("struct") || L("body") || SENTINEL)         → 0x1111...
+//   ExprBody: blake3(L("enum") || L("Literal") || 0u32 || L("newtype") || hash(u64)
+//                    || L("Add") || 1u32 || L("struct") || L("left") || SENTINEL
+//                    || L("right") || SENTINEL)                    → 0x2222...
+//
+// Step 2: deduplication (both types are structurally distinct, nothing to dedup)
+//
+// Step 3: canonical order (sort by preliminary hash)
+//   [Expr (0x1111), ExprBody (0x2222)]
+//
+// Step 4: final hashes
+//   group_hash = blake3(0x1111... || 0x2222...)[0..8]
+//   Expr.type_id     = blake3(group_hash || 0u64)[0..8]
+//   ExprBody.type_id = blake3(group_hash || 1u64)[0..8]
+```
+
 # Bootstrap and schema payloads
 
 > r[telex.bootstrap.self-describing]
@@ -461,7 +737,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > framing. It MUST NOT alter the bytes a Telex encoder produced — after
 > decompression a receiver MUST see the exact byte stream the encoder
 > emitted — and it MUST NOT alter the type-ID hashes of schemas it carries
-> (see `r[schema.type-id.hash]` for the hash definition).
+> (see `r[telex.type-id.hash]` for the hash definition).
 
 > r[telex.compression.modes]
 >
