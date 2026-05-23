@@ -255,39 +255,53 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.aggregate.set]
 >
-> Sets are encoded as `[count: u32 LE][element bytes...]`. Element bytes MUST
-> appear in ascending lexicographic order of each element's compact-mode
-> encoded byte form. Duplicate elements MUST be rejected by both encoders
-> (refuse to emit) and decoders (refuse to accept). This canonical form is
-> what makes two encoders produce byte-identical output for the same set
-> value and schema, and what lets sets participate in content addressing.
+> Sets are encoded as `[count: u32 LE][element bytes...]`. Duplicate elements
+> MUST be rejected by both encoders (refuse to emit) and decoders (refuse to
+> accept) regardless of mode.
+>
+> - **Compact mode.** Element bytes MUST appear in ascending lexicographic
+>   order of each element's compact-mode encoded byte form. This canonical
+>   form is what makes two encoders produce byte-identical output for the
+>   same set value and schema, and what lets compact set bytes participate
+>   in content addressing.
+> - **Self-describing mode.** Element order is implementation-defined and
+>   need not be canonical. Self-describing transport carries bootstrap and
+>   schema values whose identity comes from structural mechanisms
+>   (`r[telex.type-id.hash]`) and not from their encoded bytes, so byte
+>   canonicity in self-describing mode is not load-bearing.
 
 > r[telex.aggregate.map]
 >
 > Maps are encoded as `[count: u32 LE][key value pairs...]`. Keys are encoded
 > with the same value codec as any other value; map keys are not restricted to
-> strings. Entries MUST appear in ascending lexicographic order of each key's
-> compact-mode encoded byte form. Duplicate keys MUST be rejected by both
-> encoders and decoders.
+> strings. Duplicate keys MUST be rejected by both encoders and decoders
+> regardless of mode.
+>
+> - **Compact mode.** Entries MUST appear in ascending lexicographic order
+>   of each key's compact-mode encoded byte form.
+> - **Self-describing mode.** Entry order is implementation-defined, on the
+>   same reasoning as `r[telex.aggregate.set]`.
 
 > r[telex.aggregate.set-map.canonical]
 >
-> The ordering rule for sets and maps is byte-level, not value-level. It
-> applies even when an in-memory container (for example, a `BTreeMap<u32, _>`)
-> already iterates in some natural order, because little-endian byte order
-> does not in general preserve numeric order. Implementations MAY exploit a
-> type-specific ordering when the schema guarantees it yields the same
-> ordering as the byte-level rule; otherwise they MUST sort by encoded bytes
-> before emitting.
+> The compact-mode ordering rule for sets and maps is byte-level, not
+> value-level. It applies even when an in-memory container (for example, a
+> `BTreeMap<u32, _>`) already iterates in some natural order, because
+> little-endian byte order does not in general preserve numeric order.
+> Implementations MAY exploit a type-specific ordering when the schema
+> guarantees it yields the same ordering as the byte-level rule; otherwise
+> they MUST sort by encoded compact bytes before emitting.
 
 > r[telex.aggregate.set-map.float-keys]
 >
-> Floats compare by their IEEE 754 little-endian byte pattern in this
-> ordering, not by numeric value. Because of that:
+> When `f32` or `f64` appears as a set element or map key, the
+> duplicate-rejection rule uses the IEEE 754 little-endian byte pattern as
+> the equality predicate (and, in compact mode, the lex-ordering predicate).
+> Because of that:
 >
-> - `NaN` values MUST be rejected as set elements or map keys; they would
->   otherwise compare unequal to themselves and break the duplicate-rejection
->   rule.
+> - `NaN` values MUST be rejected as set elements or map keys in either
+>   mode; they would otherwise compare unequal to themselves and break the
+>   duplicate-rejection rule.
 > - Positive and negative zero have distinct byte patterns and are therefore
 >   distinct set elements / map keys.
 >
@@ -448,10 +462,22 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > instantiation. The same declaration always produces the same hash regardless
 > of which connection, session, process, or language produced it. On the wire,
 > a type ID is encoded as a little-endian `u64`.
+
+> r[telex.type-id.reserved-kinds]
 >
-> A protocol built on Telex MAY extend this hash to cover its own type kinds
-> outside the Telex tag vocabulary; the Vox RPC layer does so for channel
-> types in `r[schema.type-id.hash.channel]`.
+> The hash mechanism takes a kind tag string per `r[telex.type-id.hash]`. The
+> following kind tag strings are reserved and MUST NOT be defined or
+> redefined by any party other than the spec listed:
+>
+> | Kind tag | Reserved for | Defined in |
+> |----------|--------------|------------|
+> | `"channel"` | Vox RPC protocol | `r[schema.type-id.hash.channel]` |
+>
+> Telex itself does not specify how to hash a reserved-kind value because
+> the kinds are outside the Telex tag vocabulary — a Telex-only
+> implementation has no need to hash them. A protocol that consumes those
+> kinds is responsible for defining the canonical byte sequence its kind
+> feeds to the hasher.
 
 > r[telex.type-id.hash]
 >
@@ -490,12 +516,15 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 ## Primitive type hashes
 
-The hash input for a primitive type is a single tag string. Because the
-hash operates at the compact-wire encoding level — not at the source-language
-type level — Rust newtypes, TypeScript type aliases, and other
-language-level wrappers over the same underlying type all produce the
-same hash. For example, `struct UserId(u64)` and `struct PostId(u64)`
-both hash as `u64`.
+The hash input for a primitive type is a single tag string. Wrappers that
+the source-language schema-extraction layer marks as *transparent* (for
+example `#[facet(transparent)]` in Rust, or an opaque-but-transparent
+TypeScript type alias) flatten to the inner type's hash. Ordinary
+single-field wrappers do not — a plain `struct UserId(u64)` and
+`struct PostId(u64)` are distinct nominal types that schema-extract as
+one-element tuples, and hash via `r[telex.type-id.hash.tuple]`, not as
+`u64`. Flattening is opt-in so the source language can preserve newtype
+distinctions across the wire by default.
 
 > r[telex.type-id.hash.primitives]
 >
