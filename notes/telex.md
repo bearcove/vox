@@ -2,7 +2,11 @@
 
 Written down so the cbor/postcard split stops being re-litigated, and
 so the `SkipValue` cliff (found below) gets fixed at the root instead
-of papered over.
+of papered over. The normative format definition lives at
+[docs/content/telex/_index.md](../docs/content/telex/_index.md); this
+note is the rationale and migration plan that sits behind it. The
+name is deliberately not Vox-branded — Telex is the message format
+beneath Vox and can be specified independently from the RPC layer.
 
 ## Thesis
 
@@ -79,13 +83,12 @@ decodes on the IR interpreter — not just that field.
 
 The asymmetry is the dangerous part. Look at what emits each op:
 
-- `SkipValue` (`vox-postcard/src/ir.rs:1333`) — emitted for a
-  *remote* field with no local counterpart. "The peer is newer than
-  me."
-- `WriteDefault` (`vox-postcard/src/ir.rs:1346`) — emitted for a
-  *local* field with no remote counterpart. "I am newer than the
-  peer." `WriteDefault` **is** JIT-compilable; it is not in the
-  unsupported list.
+- `SkipValue` (emitted from `lower_struct` in
+  `vox-postcard/src/ir.rs`) — emitted for a *remote* field with no
+  local counterpart. "The peer is newer than me."
+- `WriteDefault` (same site) — emitted for a *local* field with no
+  remote counterpart. "I am newer than the peer." `WriteDefault`
+  **is** JIT-compilable; it is not in the unsupported list.
 
 So evolution is asymmetric on the fast path. If *you* added a field,
 you JIT fine. If the *peer* added a field, every message from them
@@ -122,19 +125,29 @@ The only thing frozen-forever is the **tag vocabulary**: a small
 fixed table of major types (scalar widths, list, map, struct,
 enum-variant, option, …) sized to facet's `Def` / `ScalarType`.
 That table is the eternal contract and is enumerated in the Telex
-spec. Everything else — `Schema`, `HandshakeMessage`, every user type
-— evolves.
+spec under `telex.tags`. Everything else — `Schema`,
+`HandshakeMessage`, every user type — evolves.
+
+The frozen-forever part still has an escape hatch. A future facet
+`ScalarType` or shape that does not fit the original table uses an
+**extension tag** (`telex.tags.extension`): old decoders preserve the
+payload as an opaque extension value in the generic value tree
+instead of failing. So the contract is "the assigned tag IDs do not
+change", not "the set of representable values is fixed forever".
 
 "What format is the schema sent in?" — the self-describing mode of
 Telex. That is the whole answer.
 
 Meta-schema evolution then falls out: a peer sends its schemas in
 self-describing mode → the receiver decodes them to a generic
-`Value` tree with *no* schema → then tolerantly deserializes that
-`Value` into its *own* `Schema` type (extra fields ignored, missing
-ones defaulted — facet already does this). The same machinery
-reconciles `HandshakeMessage`. No version byte gates anything; the
-handshake is itself evolvable.
+`Value` tree with *no* schema → then materializes that `Value` into
+its *own* `Schema` type. The materialization rules are pinned in
+`telex.schema.tolerant-materialization`: extra remote fields are
+ignored, missing local fields use defaults when available, and
+*incompatible field shapes are reported as errors before payload
+translation begins* — it is name-tolerant, not shape-tolerant. The
+same machinery reconciles `HandshakeMessage`. No version byte gates
+anything; the handshake is itself evolvable.
 
 This keeps the self-describing / compact split that cbor/postcard
 draw today. We just stop paying for it with two codecs.
@@ -243,10 +256,13 @@ Target for Telex:
 2. **Two executors of that IR.** The portable IR interpreter (wasm,
    plus native's can't-compile fallback) and the Cranelift JIT
    (native accelerator). Same lowering, same semantics, everywhere.
-3. **Demote the reflective `from_slice_with_plan` to a CI-only
+3. **Demote the reflective `from_slice_with_plan` to a reference
    oracle.** It is valuable *as* an oracle precisely because it does
    not share lowering with the JIT/interpreter — a lowering bug
-   cannot fool all three. It should not be a shipped code path.
+   cannot fool all three (`telex.oracle.reflective`,
+   `telex.decoder.equivalence`). It stays in-tree to enforce decoder
+   equivalence in tests; it is not selected by any production
+   transport.
 
 ## Compression
 
@@ -265,6 +281,14 @@ None today. Add it, negotiated:
 - Fixed-width framing + streaming compression is synergistic: the
   uncompressed local path is fast, and the compressed remote path
   compresses *better* than varint postcard would have.
+- Streaming is stateful per link. A message captured from the middle
+  of a compressed stream is not independently decompressible without
+  all preceding bytes — see `telex.compression.stream-state`. Tools
+  that want to replay individual frames (oracles, fuzz reducers,
+  on-disk capture) must either disable compression on that link or
+  record explicit compression checkpoints. This is the price of the
+  stream-state win above; it is paid once at tooling time, not on
+  the hot path.
 - Browser caveat: `CompressionStream` gives gzip/deflate natively and
   Brotli decode in recent browsers, but Brotli *encode* in wasm is
   heavy. A small symmetric zstd-wasm is probably the pragmatic pick.
@@ -274,26 +298,40 @@ None today. Add it, negotiated:
 
 **Dies:**
 
-- The `facet-cbor` crate.
+- The `facet-cbor` crate, and every call site of `facet_cbor::to_vec`
+  / `facet_cbor::from_slice` — currently `vox-core` (handshake),
+  `vox-schema` (`to_cbor`/`from_cbor`, `CborPayload`), `vox-codegen`,
+  `vox-types`. Each becomes a Telex self-describing call.
 - `CborPayload` and the two-pass decode.
-- `to_cbor` / `from_cbor` in `vox-schema`.
-- `from_slice_with_plan` as a *shipped* path (kept as a CI oracle).
-- `TRANSPORT_VERSION` hard-reject — replaced by schema-reconciliation
-  negotiation.
+- `from_slice_with_plan` as a shipped path (kept in-tree as the
+  reference oracle for `telex.decoder.equivalence`, never selected by
+  a transport).
 - The per-wire-field "which format goes here?" decision.
+- `TRANSPORT_VERSION`'s hard-reject behaviour in
+  `vox-core/src/transport_prologue.rs`, replaced by
+  schema-reconciliation negotiation. This change is at the *vox*
+  protocol layer, motivated by Telex but not specified by it — the
+  Telex spec covers value framing, not transport prologue.
 
 **Stays / ported:**
 
 - The meta-schema bootstrap — becomes load-bearing.
 - `TranslationPlan` / `build_plan` — format-agnostic, reconciles by
   name. Consumed only at decoder-build time.
-- The IR (`vox-postcard/src/ir.rs`) — moves to the format crate,
-  retargeted to fixed-width.
-- The JIT — retargets to the new IR, gets simpler and faster
-  (fixed-width = straight-line codegen).
 - `vox-schema`'s `Schema` model — basis for the self-describing tag
   set and the bootstrap.
 - The opaque `Payload` mechanism.
+- The JIT — retargets to the new IR, gets simpler and faster
+  (fixed-width = straight-line codegen). Cranelift stays in
+  `vox-jit`; that crate remains native-only.
+
+**The format crate.** Concretely, `vox-postcard` is renamed to
+`telex` and retargeted to the new wire (fixed-width, length-prefixed,
+self-describing mode folded in). Its existing IR stays where it is
+(`telex/src/ir.rs`), and the IR lowering plus the IR interpreter
+currently in `vox-jit` *move into* `telex` so wasm can build them.
+After the rename, the `telex` crate builds for wasm; `vox-jit` keeps
+only the Cranelift backend.
 
 It is a wire break — a coordinated protocol bump. That is acceptable;
 vox values small code over backwards compatibility, and the browser
@@ -301,6 +339,36 @@ cannot introspect the current wire anyway, so nothing observable is
 lost. It is evolution of `vox-postcard` into Telex (drop the
 postcard-spec constraints, go fixed-width, fold in self-describing
 mode, delete `facet-cbor`), not a from-scratch codec.
+
+## Migration order
+
+The spec is detailed enough to code against; the order matters
+because half of the wins (wasm parity, no-evolution-fallback) cannot
+be observed until prerequisites land.
+
+1. **Move IR lowering and the IR interpreter out of `vox-jit` into
+   `vox-postcard`.** No wire change. The IR type already lives in
+   `vox-postcard`; this just colocates its executors so the crate
+   builds for wasm. After this step, wasm and native run the same
+   interpreter against the same lowering — the first place divergence
+   stops being possible.
+2. **Rename `vox-postcard` → `telex` and retarget the wire to the
+   spec.** Fixed-width LE, length-prefixed aggregates, native facet
+   data model, self-describing mode added alongside compact mode.
+   Single coordinated wire break; no co-existence window with the old
+   wire is planned, per the "wire break is acceptable" framing above.
+3. **Replace `facet-cbor` call sites with Telex self-describing
+   mode.** Handshake (`vox-core`), schema payloads (`vox-schema`),
+   plus the `vox-codegen` and `vox-types` uses. Delete `facet-cbor`
+   when the last call site is gone.
+4. **Replace `TRANSPORT_VERSION` hard-reject with schema-
+   reconciliation negotiation** at the vox-protocol layer. This is a
+   vox change, not a Telex change; sequenced last because the
+   tolerant materialization path it depends on (step 2) must already
+   be exercised end-to-end.
+
+Step 1 is a no-op for the user-visible protocol and unblocks the
+rest. Steps 2–4 land together as the wire break.
 
 ## Anti-patterns
 
@@ -322,19 +390,27 @@ mode, delete `facet-cbor`), not a from-scratch codec.
 
 ## Open questions
 
-- Length-prefix width — `u32` is simplest; `u16` is enough for most
-  aggregates but caps them. Probably `u32`, uniform.
-- Prefix *all* struct/enum fields, or only those that could ever be
-  skip targets? The encoder cannot know at encode time which fields a
-  future peer will lack, so in practice: prefix all struct/enum
-  fields.
+(Length-prefix width and "prefix all struct/enum fields" are no
+longer open — pinned by `telex.length.u32` and
+`telex.aggregate.field-prefix` respectively.)
+
 - Compression library for the browser side — zstd-wasm vs. relying on
   `CompressionStream`. Drives the native choice too (keep it
   symmetric).
-- Meta-schema evolution corner: a remote `Schema` carrying a field
-  whose *type* the local build does not understand. The generic
-  `Value` decode handles it structurally; confirm the tolerant
-  deserialize into local `Schema` degrades cleanly.
+- Implementation-level: does `facet`'s deserialize-into-local-type
+  path actually satisfy `telex.schema.tolerant-materialization`
+  end-to-end today? The spec rule pins the semantics — extras
+  ignored, missing defaulted, incompatible-shape errors reported —
+  but the load-bearing meta-schema bootstrap depends on that
+  capability existing in practice against real cross-version `Schema`
+  shapes. First thing to prove out; everything downstream presumes
+  it.
+- Meta-schema corner: a remote `Schema` carrying a field whose *type*
+  the local build does not understand. `telex.schema.unknown-type`
+  says preserve as a generic value, fail translation-plan
+  construction for payloads that require it. Confirm the generic-
+  `Value` decode handles unknown extension tags via
+  `telex.tags.extension` without poisoning the rest of the message.
 
 ## Relationship to codec-architecture.md
 
