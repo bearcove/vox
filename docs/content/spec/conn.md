@@ -155,7 +155,7 @@ weight = 11
 > The requested wire compression mode is an exact request. `none` is the
 > baseline mode and MUST be supported. Any compressed mode MUST be named in the
 > transport prologue before compressed bytes are sent
-> (see `r[wire.compression.modes]`).
+> (see `r[telex.compression.modes]`).
 
 > r[transport.prologue.accept]
 >
@@ -185,7 +185,7 @@ weight = 11
 
 > r[conduit]
 >
-> Conduits provide compact `vox-wire` serialization/deserialization on top of links.
+> Conduits provide compact Telex serialization/deserialization on top of links.
 > Sending is split into synchronous preparation and asynchronous enqueue.
 
 > r[conduit.typeplan]
@@ -314,14 +314,14 @@ starts only after that conduit has been selected and initialized.
 > (see `r[schema.format.delivery]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
-> They are self-describing `vox-wire` handshake structs exchanged before the
+> They are self-describing Telex handshake structs exchanged before the
 > compact `MessagePayload` enum is used (see `r[session.handshake]`).
 
 > r[session.handshake]
 >
 > To establish a session on top of an existing conduit, a three-step
-> self-describing `vox-wire` handshake MUST be performed. The handshake
-> messages are self-describing structs, NOT compact `vox-wire`
+> self-describing Telex handshake MUST be performed. The handshake
+> messages are self-describing structs, NOT compact Telex
 > `MessagePayload` variants. This is the bootstrap: it establishes the
 > schemas needed to interpret the compact
 > `MessagePayload` enum that follows.
@@ -345,19 +345,19 @@ starts only after that conduit has been selected and initialized.
 >    - **`LetsGo`**: confirms compatibility; the session is established
 >    - **`Sorry`**: rejects the session
 
-> r[session.handshake.cbor]
+> r[session.handshake.self-describing]
 >
 > All handshake messages (`Hello`, `HelloYourself`, `LetsGo`, `Sorry`) MUST
-> be encoded in self-describing `vox-wire` mode
-> (see `r[wire.bootstrap.self-describing]`). Self-describing mode does not
+> be encoded in self-describing Telex mode
+> (see `r[telex.bootstrap.self-describing]`). Self-describing mode does not
 > require a schema to parse, avoiding the chicken-and-egg problem of needing a
 > schema to read a schema. After `LetsGo`, all subsequent communication is
-> compact `vox-wire` `MessagePayload` values, deserialized using translation
+> compact Telex `MessagePayload` values, deserialized using translation
 > plans built from the schemas exchanged in the handshake.
 
 > r[session.handshake.sorry]
 >
-> `Sorry` MUST contain a structured self-describing `vox-wire` description of
+> `Sorry` MUST contain a structured self-describing Telex description of
 > the incompatibility:
 > which variants or fields the rejecting peer requires that the other peer's
 > schema does not provide. After sending or receiving `Sorry`, the session

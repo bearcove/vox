@@ -1328,7 +1328,7 @@ mod tests {
         assert_ne!(id, SchemaHash(43));
     }
 
-    // r[verify schema.principles.cbor]
+    // r[verify schema.principles.self-describing]
     // r[verify schema.format.self-contained]
     #[test]
     fn cbor_round_trip() {

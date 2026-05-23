@@ -5,7 +5,7 @@
 //
 // Encoder: produces facet-cbor-compatible CBOR for sending schema payloads.
 
-// r[impl schema.principles.cbor]
+// r[impl schema.principles.self-describing]
 
 // ============================================================================
 // CBOR Encoding

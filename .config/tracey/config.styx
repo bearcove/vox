@@ -26,4 +26,29 @@ specs (
             }
         )
     }
+    {
+        name telex
+        include (docs/content/telex/_index.md)
+        impls (
+            {
+                name rust
+                include (rust/**/*.rs)
+                exclude (rust-legacy/**/*.rs)
+            }
+            {
+                name swift
+                include (swift/vox-runtime/**/*.swift)
+            }
+            {
+                name typescript
+                include (
+                    typescript/packages/vox-core/src/session.ts
+                    typescript/packages/vox-core/src/stable_conduit.ts
+                    typescript/packages/vox-core/src/driver.ts
+                    typescript/packages/vox-core/src/channeling/registry.ts
+                    typescript/packages/vox-core/src/channeling/registry.test.ts
+                )
+            }
+        )
+    }
 )

@@ -88,7 +88,7 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 }
 
 // r[impl session.handshake]
-// r[impl session.handshake.cbor]
+// r[impl session.handshake.self-describing]
 /// Perform the CBOR handshake as the initiator.
 ///
 /// Three-step exchange:
@@ -162,7 +162,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 }
 
 // r[impl session.handshake]
-// r[impl session.handshake.cbor]
+// r[impl session.handshake.self-describing]
 /// Perform the CBOR handshake as the acceptor.
 ///
 /// Three-step exchange:

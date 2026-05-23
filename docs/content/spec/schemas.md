@@ -1,22 +1,22 @@
 +++
 title = "Schema Exchange"
-description = "Backwards-compatible type evolution for compact vox-wire values"
+description = "Backwards-compatible type evolution for compact Telex values"
 weight = 15
 +++
 
-Compact `vox-wire` is Vox's steady-state data format. It is compact and fast,
+Compact Telex is Vox's steady-state data format. It is compact and fast,
 but positional: fields are identified by their order in the sender schema, not
 by name in the byte stream. This means that adding, removing, or reordering
 fields changes the byte layout, and a peer reading with a different type
 definition would silently misinterpret the data without schema exchange.
 
 Schema exchange solves this without making compact values self-describing.
-Peers describe their types to each other using self-describing `vox-wire`
+Peers describe their types to each other using self-describing Telex
 schema payloads, and the receiving side builds a **translation plan** that maps
 remote field positions to local field positions before deserializing compact
 bytes.
 
-The result: compact `vox-wire` remains the fast path for serialization and
+The result: compact Telex remains the fast path for serialization and
 deserialization, but peers with different versions of the same types can
 communicate safely. Incompatibilities are detected early — when the
 translation plan is built — not mid-stream when a field has the wrong value.
@@ -35,13 +35,13 @@ translation plan is built — not mid-stream when a field has the wrong value.
 > is about to send data of a type the other side has not seen, it sends the
 > schema first. The receiver never requests schemas — the sender pushes them.
 
-> r[schema.principles.cbor]
+> r[schema.principles.self-describing]
 >
-> Schemas MUST be encoded using self-describing `vox-wire`
-> (see `r[wire.schema.self-describing]`). Self-describing mode does not require
+> Schemas MUST be encoded using self-describing Telex
+> (see `r[telex.schema.self-describing]`). Self-describing mode does not require
 > a schema to parse, avoiding the chicken-and-egg problem of needing a schema
-> to read a schema. Compact `vox-wire` is used for data; self-describing
-> `vox-wire` is used for metadata about data.
+> to read a schema. Compact Telex is used for data; self-describing
+> Telex is used for metadata about data.
 
 > r[schema.principles.once-per-type]
 >
@@ -339,12 +339,12 @@ Example: mutually recursive types.
 
 # Schema format
 
-A schema describes a single type. Schemas are self-describing `vox-wire`
+A schema describes a single type. Schemas are self-describing Telex
 values and self-contained — every type referenced by a schema is either a
 primitive or is referenced by its `TypeSchemaId` (a `u64` content hash).
 
 The following Rust declarations define the schema data model. Other
-language implementations must produce equivalent self-describing `vox-wire`
+language implementations must produce equivalent self-describing Telex
 encodings.
 
 ```rust
@@ -377,7 +377,7 @@ enum TypeRef {
     Var(String),
 }
 
-/// The primitive types of compact vox-wire encoding.
+/// The primitive types of compact Telex encoding.
 ///
 /// These are leaves in the type graph — they have no child types.
 /// Language-level wrappers (Rust newtypes, TypeScript type aliases)
@@ -521,12 +521,12 @@ Their element/key/value references use `TypeRef` like any other type
 reference, but they do not need explicit `type_params` because their
 generic structure is implicit in the `SchemaKind` variant.
 
-The normative rules below define the self-describing `vox-wire` encoding of
+The normative rules below define the self-describing Telex encoding of
 these types.
 
 > r[schema.format]
 >
-> A schema MUST be a self-describing `vox-wire` struct containing:
+> A schema MUST be a self-describing Telex struct containing:
 >
 >   * `id` — a `u64` type declaration content hash
 >   * `type_params` — a list of type parameter names.
@@ -657,7 +657,7 @@ enum BindingDirection {
     Response,
 }
 
-/// The self-describing vox-wire payload carried by a SchemaMessage.
+/// The self-describing Telex payload carried by a SchemaMessage.
 struct SchemaPayload {
     /// All schemas needed by the receiver that have not been
     /// previously sent on this connection.
@@ -680,7 +680,7 @@ struct SchemaPayload {
 > r[schema.format.delivery]
 >
 > Application-level schemas are delivered as a standalone `SchemaMessage`
-> containing a self-describing `vox-wire` `SchemaPayload`. The payload MUST
+> containing a self-describing Telex `SchemaPayload`. The payload MUST
 > include:
 >
 >   * All schemas needed for the method's types that have not been
@@ -736,7 +736,7 @@ Each peer maintains two sets per connection:
 Schema exchange operates at two levels:
 
 1. **Protocol level (per-session):** The `MessagePayload` schema is
-   exchanged during the self-describing `vox-wire` handshake
+   exchanged during the self-describing Telex handshake
    (see `r[session.handshake]`).
    This allows the protocol framing itself to evolve without breaking
    changes.
@@ -832,7 +832,7 @@ difference.
 
 When a peer receives a schema for a remote type that it will deserialize
 into a local type, it builds a **translation plan**. The translation plan
-is a recipe for reading compact `vox-wire` bytes written by the remote type
+is a recipe for reading compact Telex bytes written by the remote type
 and populating the fields of the local type.
 
 Translation plans are built once per (remote type ID, local type) pair
@@ -848,9 +848,9 @@ and cached for the connection lifetime.
 > r[schema.translation.skip-unknown]
 >
 > If the remote schema contains fields that do not exist in the local type,
-> those fields MUST be skipped during deserialization. Compact `vox-wire`
+> those fields MUST be skipped during deserialization. Compact Telex
 > struct and enum payload fields are length-prefixed
-> (see `r[wire.skip.struct-field]` and `r[wire.skip.enum-field]`), so skipping
+> (see `r[telex.skip.struct-field]` and `r[telex.skip.enum-field]`), so skipping
 > an unknown field MUST NOT require recursively interpreting that field.
 
 > r[schema.translation.fill-defaults]
@@ -887,7 +887,7 @@ and cached for the connection lifetime.
 > r[schema.translation.serialization-unchanged]
 >
 > Schema exchange does NOT affect serialization. A peer always serializes
-> using its own local type definition and compact `vox-wire`. The translation
+> using its own local type definition and compact Telex. The translation
 > plan applies only on the deserialization side — the receiver adapts to the
 > sender's layout.
 
@@ -1064,7 +1064,7 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 > r[schema.interaction.retry]
 >
 > Operation stores MUST store schemas alongside serialized payloads.
-> A sealed operation contains compact `vox-wire` bytes that are only
+> A sealed operation contains compact Telex bytes that are only
 > meaningful together with the schemas that describe them. When replaying
 > a sealed response, the replaying peer MUST send schemas for the
 > response types on the current connection if they have not already been

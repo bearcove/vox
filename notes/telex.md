@@ -1,4 +1,4 @@
-# vox-wire: one binary format
+# Telex: one binary format
 
 Written down so the cbor/postcard split stops being re-litigated, and
 so the `SkipValue` cliff (found below) gets fixed at the root instead
@@ -9,7 +9,7 @@ of papered over.
 vox uses two binary formats today — `facet-cbor` for the
 self-describing parts (handshake, schema payloads) and `vox-postcard`
 for everything else. That split is not load-bearing. It should
-collapse into **one format, `vox-wire`, with two framing modes** that
+collapse into **one format, Telex, with two framing modes** that
 share a single value codec:
 
 - **self-describing mode** — structural tags inline, decodable with
@@ -22,7 +22,7 @@ Same leaf encoding in both. The only difference is whether the tag
 stream is interleaved. One parser, one serializer, one IR, one error
 type, one fuzz target — for one format.
 
-And `vox-wire` is **fixed-width little-endian**, with a **native
+And Telex is **fixed-width little-endian**, with a **native
 facet data model**, designed so schema evolution stays on the
 compiled fast path instead of falling off it.
 
@@ -100,7 +100,7 @@ of time. Emitting that recursive walk as Cranelift IR is essentially
 reimplementing the interpreter inside codegen, so it was punted — a
 reasonable punt, with an invisible cost.
 
-`vox-wire` removes the punt's cause. See "Length-prefixed
+Telex removes the punt's cause. See "Length-prefixed
 aggregates" below.
 
 ## Self-describing is the fixpoint
@@ -124,7 +124,7 @@ enum-variant, option, …) sized to facet's `Def` / `ScalarType`.
 `Schema`, `HandshakeMessage`, every user type — evolves.
 
 "What format is the schema sent in?" — the self-describing mode of
-`vox-wire`. That is the whole answer.
+Telex. That is the whole answer.
 
 Meta-schema evolution then falls out: a peer sends its schemas in
 self-describing mode → the receiver decodes them to a generic
@@ -156,13 +156,13 @@ wrong on three axes:
   bytes → compressors love them. Varint is *anti-synergistic* with
   the compression we want to add (below).
 
-So `vox-wire` integers and lengths are fixed-width little-endian.
+So Telex integers and lengths are fixed-width little-endian.
 Enum discriminants too.
 
 ### Native facet data model
 
 Postcard's wire spec was designed around serde's ~29 data types. A
-custom format is not bound by that. `vox-wire` encodes facet's `Def`
+custom format is not bound by that. Telex encodes facet's `Def`
 / `ScalarType` directly, with canonical encodings for things serde
 has no slot for: `Decimal128`, `Date` / `Time` / `DateTime` /
 `Duration` as first-class scalars, n-dimensional arrays with a shape
@@ -233,7 +233,7 @@ run different implementations of the same wire semantics, which can
 silently diverge. Encode has the same split (`serialize.rs`
 reflective vs. JIT).
 
-Target for `vox-wire`:
+Target for Telex:
 
 1. **One IR.** Move IR lowering and the IR interpreter out of
    `vox-jit` into the format crate so they build for wasm.
@@ -295,7 +295,7 @@ None today. Add it, negotiated:
 It is a wire break — a coordinated protocol bump. That is acceptable;
 vox values small code over backwards compatibility, and the browser
 cannot introspect the current wire anyway, so nothing observable is
-lost. It is evolution of `vox-postcard` into `vox-wire` (drop the
+lost. It is evolution of `vox-postcard` into Telex (drop the
 postcard-spec constraints, go fixed-width, fold in self-describing
 mode, delete `facet-cbor`), not a from-scratch codec.
 
@@ -315,7 +315,7 @@ mode, delete `facet-cbor`), not a from-scratch codec.
   (varint compresses *worse*); local traffic does not care. Varint
   only costs us — zero-copy, JIT quality, compression ratio.
 - **A separate self-describing codec.** Self-describing is a *mode*
-  of `vox-wire`, sharing its leaf encoding — not another crate.
+  of Telex, sharing its leaf encoding — not another crate.
 
 ## Open questions
 
@@ -341,7 +341,7 @@ calibrated layout data + direct stores, no helper-call dispatch,
 the *wire-format* half. They are complementary:
 
 - `SkipValue → UnsupportedOp` is exactly the kind of fallback that
-  note wants gone. `vox-wire`'s length-prefixed framing is the
+  note wants gone. Telex's length-prefixed framing is the
   wire-format change that makes the skip op mechanically compilable,
   so "the IR is the full path" can actually hold.
 - Both point at the same IR (`vox-postcard::ir`) and want it
