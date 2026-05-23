@@ -15,6 +15,8 @@ It has two framing modes:
 
 The two modes share the same scalar and byte-level leaf encoding. The only
 difference is whether the structural tag stream is present in the bytes.
+The name is deliberately not Vox-branded: Telex is the message format beneath
+Vox, and can be specified independently from the Vox RPC protocol.
 
 # Format contract
 
@@ -78,6 +80,13 @@ difference is whether the structural tag stream is present in the bytes.
 > assigns a different width. Length fields count bytes for byte regions and
 > elements for element-counted aggregates.
 
+> r[telex.length.canonical-width]
+>
+> Length and count widths are part of the canonical Telex byte format. An
+> encoder MUST NOT choose a narrower width for small values, schemas, local
+> transports, or uncompressed links. Compression, when used, happens below
+> Telex value framing and MUST NOT change the uncompressed Telex bytes.
+
 > r[telex.length.bounds]
 >
 > A decoder MUST reject a value whose length or count would read past the input,
@@ -139,52 +148,78 @@ assigned bytes are the permanent bootstrap contract for Telex.
 >
 > Self-describing mode MUST use the following tag byte assignments:
 >
-> | Tag | Meaning |
-> |-----|---------|
-> | `0x00` | unit |
-> | `0x01` | bool |
-> | `0x02` | u8 |
-> | `0x03` | u16 |
-> | `0x04` | u32 |
-> | `0x05` | u64 |
-> | `0x06` | u128 |
-> | `0x07` | i8 |
-> | `0x08` | i16 |
-> | `0x09` | i32 |
-> | `0x0A` | i64 |
-> | `0x0B` | i128 |
-> | `0x0C` | f32 |
-> | `0x0D` | f64 |
-> | `0x0E` | char |
-> | `0x0F` | string |
-> | `0x10` | bytes |
-> | `0x11` | payload |
-> | `0x12` | list |
-> | `0x13` | set |
-> | `0x14` | map |
-> | `0x15` | array |
-> | `0x16` | n-dimensional array |
-> | `0x17` | tuple |
-> | `0x18` | struct |
-> | `0x19` | enum variant |
-> | `0x1A` | option none |
-> | `0x1B` | option some |
-> | `0x1C` | dynamic value |
+> | Tag | Telex kind | Facet source |
+> |-----|------------|--------------|
+> | `0x00` | unit | `ScalarType::Unit`; unit struct/variant payloads |
+> | `0x01` | bool | `ScalarType::Bool` |
+> | `0x02` | u8 | `ScalarType::U8` |
+> | `0x03` | u16 | `ScalarType::U16` |
+> | `0x04` | u32 | `ScalarType::U32` |
+> | `0x05` | u64 | `ScalarType::U64` |
+> | `0x06` | u128 | `ScalarType::U128` |
+> | `0x07` | i8 | `ScalarType::I8` |
+> | `0x08` | i16 | `ScalarType::I16` |
+> | `0x09` | i32 | `ScalarType::I32` |
+> | `0x0A` | i64 | `ScalarType::I64` |
+> | `0x0B` | i128 | `ScalarType::I128` |
+> | `0x0C` | f32 | `ScalarType::F32` |
+> | `0x0D` | f64 | `ScalarType::F64` |
+> | `0x0E` | char | `ScalarType::Char` |
+> | `0x0F` | string | `ScalarType::Str`, `ScalarType::String`, `ScalarType::CowStr` |
+> | `0x10` | bytes | byte slices, byte vectors, and schema `bytes` primitives |
+> | `0x11` | payload | schema opaque payload primitive |
+> | `0x12` | list | `Def::List`, `Def::Slice`, and `Type::Sequence(SequenceType::Slice)` |
+> | `0x13` | set | `Def::Set` |
+> | `0x14` | map | `Def::Map` |
+> | `0x15` | array | `Def::Array` and `Type::Sequence(SequenceType::Array)` |
+> | `0x16` | n-dimensional array | `Def::NdArray` |
+> | `0x17` | tuple | `StructKind::Tuple`, `StructKind::TupleStruct`, and schema tuples |
+> | `0x18` | struct | `Type::User(UserType::Struct(_))` with named fields |
+> | `0x19` | enum variant | `Type::User(UserType::Enum(_))` and `Def::Result` |
+> | `0x1A` | option none | `Def::Option` |
+> | `0x1B` | option some | `Def::Option` |
+> | `0x1C` | dynamic value | `Def::DynamicValue` |
+> | `0x80..0xFF` | extension | future Telex extension tags |
 >
-> Tag bytes not listed here are invalid and MUST NOT be emitted.
+> Tags `0x1D..0x7F` are reserved and MUST NOT be emitted. Tags
+> `0x80..0xFF` MUST follow the extension envelope defined by
+> `r[telex.tags.extension]`.
 
 > r[telex.tags.scalar-payload]
 >
 > For scalar tags, the tag byte is followed by the same scalar payload bytes
 > used in compact mode.
 
+> r[telex.tags.extension]
+>
+> Extension tags (`0x80..0xFF`) MUST be followed by:
+>
+> ```text
+> extension_id: u32 LE
+> payload_len: u32 LE
+> payload_bytes: [u8; payload_len]
+> ```
+>
+> A decoder that does not understand an extension tag or extension ID MUST
+> preserve the payload as an opaque extension value in the generic value tree.
+> It MUST NOT silently drop the payload.
+
 > r[telex.tags.forward-contract]
 >
-> The tag vocabulary is the self-describing bootstrap contract. Evolving
-> protocol structs, schema structs, or application structs MUST NOT require
-> adding a tag byte. If a new facet shape needs a wire representation, the
-> representation MUST be expressible through the existing structural tags or
-> require an explicit new transport mode.
+> The non-extension tag vocabulary is the self-describing bootstrap contract.
+> The meaning of tags `0x00..0x1C` MUST NOT change. Evolving protocol structs,
+> schema structs, or application structs MUST NOT require adding a tag byte.
+> A future Facet scalar or shape that cannot be represented through existing
+> tags MAY use an extension tag, but old decoders will materialize it only as
+> an opaque extension value.
+
+> r[telex.tags.unsupported-facet]
+>
+> Facet scalar and shape variants not listed in `r[telex.tags]` do not have an
+> implicit Telex representation. In particular, `usize`, `isize`, network
+> address scalars, `ConstTypeId`, raw pointers, function pointers, unions, and
+> undefined shapes MUST either be mapped by an explicit schema-defined type or
+> rejected before encoding.
 
 # Aggregate encoding
 
@@ -260,6 +295,13 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > `field_len` counts only `field_value`, not the length prefix. This prefix is
 > required for every struct field, even when the sender believes all receivers
 > know the field.
+
+> r[telex.aggregate.field-prefix]
+>
+> Compact struct fields and compact enum tuple/struct payload fields MUST
+> always carry the `u32` field-length prefix. Encoders MUST NOT omit it when
+> local and remote schemas are identical, when a field is fixed-width, or when
+> the selected link is local or uncompressed.
 
 > r[telex.aggregate.enum.compact]
 >
@@ -341,11 +383,26 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > decodes the bytes into a generic value tree, then tolerantly deserializes
 > that value into its local schema data model.
 
+> r[telex.value.generic]
+>
+> A self-describing decoder MUST be able to materialize a generic value tree
+> containing all known Telex primitives and aggregates, plus opaque extension
+> values for unknown extension tags. The generic value tree is the only input
+> required to materialize handshake and schema values into local types.
+
 > r[telex.schema.meta-evolution]
 >
 > The schema data model itself is allowed to evolve. Extra fields in a remote
 > schema value MUST be ignored when deserializing into an older local schema
 > model, and missing fields MUST be filled from local defaults when available.
+
+> r[telex.schema.tolerant-materialization]
+>
+> Materializing a generic schema value into the local schema data model MUST
+> match struct fields and enum variants by name. Extra remote fields MUST be
+> ignored, missing local fields MUST use defaults when available, and missing
+> required fields or incompatible field shapes MUST be reported before compact
+> payload translation begins.
 
 > r[telex.schema.unknown-type]
 >
@@ -364,9 +421,10 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.compression.modes]
 >
-> The baseline compression mode is `none`. A compressed transport mode MUST
-> name its algorithm explicitly in the transport prologue before compressed
-> bytes are sent.
+> The baseline compression mode is `none`. Any compressed mode MUST name its
+> algorithm explicitly in a dedicated transport-prologue compression field
+> before compressed bytes are sent. Compression MUST NOT be encoded by
+> overloading the conduit or transport mode field.
 
 > r[telex.compression.streaming]
 >
@@ -375,18 +433,29 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > loses the recurring schema and field-layout context that makes fixed-width
 > Telex bytes compress well.
 
-# Portable IR and oracle
-
-> r[telex.ir.portable]
+> r[telex.compression.stream-state]
 >
-> The format crate MUST own the translation IR lowering and the portable IR
-> interpreter so native and WASM targets execute the same wire semantics.
+> A streaming compressed link has compression state scoped to the link
+> attachment. A message captured from the middle of that stream is not
+> independently decompressible unless the capture also includes all preceding
+> compressed bytes or an explicit compression checkpoint. Tools that require
+> independently decodable messages MUST disable compression or record such
+> checkpoints.
 
-> r[telex.ir.jit]
+# Decoder conformance
+
+> r[telex.decoder.equivalence]
 >
-> The native JIT lowers the portable IR to machine code. It MUST preserve the
-> same observable decode result and error classification as the portable IR
-> interpreter.
+> All conforming Telex decoders for the same target type, remote schema, local
+> schema, and translation plan MUST produce the same decoded value or the same
+> error classification, regardless of whether they are reflective, interpreted,
+> JIT-compiled, or otherwise optimized.
+
+> r[telex.decoder.compat-ops]
+>
+> A conforming compact decoder MUST implement the schema-evolution operations
+> required by this chapter, including skip, default-fill, and reorder. These
+> operations are part of normal Telex semantics, not optional slow paths.
 
 > r[telex.oracle.reflective]
 >

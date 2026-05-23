@@ -29,12 +29,12 @@ compiled fast path instead of falling off it.
 ## What we have today
 
 - `facet-cbor` (`rust/facet-cbor/`) — self-describing. Used by the
-  handshake (`vox-core/src/handshake.rs:54-78`) and for schema
+  handshake (`rust/vox-core/src/handshake.rs`) and for schema
   payloads embedded in messages (`CborPayload`, `vox-schema`
   `to_cbor`/`from_cbor`).
 - `vox-postcard` (`rust/vox-postcard/`) — non-self-describing. Used
   for every RPC message. It has `serialize`, `deserialize`, `plan`
-  (translation plans), `ir` (4358 LOC), `raw`, `scatter`, plus a JIT
+  (translation plans), `ir` (~4k LOC), `raw`, `scatter`, plus a JIT
   backend in `vox-jit`.
 
 `vox-postcard` is **already not postcard**. Translation plans, an IR,
@@ -62,7 +62,8 @@ Where the split hurts:
 
 ## The cliff: SkipValue falls off the JIT
 
-This is the finding that triggered the pivot. `vox-jit/src/codegen.rs:1364`:
+This is the finding that triggered the pivot. `DecodeOp::SkipValue`
+in `rust/vox-jit/src/codegen.rs`:
 
 ```rust
 DecodeOp::SkipValue { .. } => {
@@ -120,8 +121,9 @@ construction* — every value carries its own structural tag.
 The only thing frozen-forever is the **tag vocabulary**: a small
 fixed table of major types (scalar widths, list, map, struct,
 enum-variant, option, …) sized to facet's `Def` / `ScalarType`.
-~20 entries. That table is the eternal contract. Everything else —
-`Schema`, `HandshakeMessage`, every user type — evolves.
+That table is the eternal contract and is enumerated in the Telex
+spec. Everything else — `Schema`, `HandshakeMessage`, every user type
+— evolves.
 
 "What format is the schema sent in?" — the self-describing mode of
 Telex. That is the whole answer.
@@ -198,7 +200,8 @@ Evolution stays plan-based, **by field name**, exactly as today:
   is right.
 - **The plan never survives to decode time.** On native it is
   consumed when the decoder is built — `prepare_decoder`
-  (`vox-jit/src/lib.rs:93`) lowers `plan → IR → machine code` once at
+  (`Runtime::prepare_decoder` in `rust/vox-jit/src/lib.rs`) lowers
+  `plan → IR → machine code` once at
   conduit construction. Every `recv` after is a bare fn-ptr call.
   Keep it that way; never interpret a plan per message on native.
 - **The JIT must compile every evolution op** — skip, default-fill,
@@ -216,7 +219,7 @@ what that happens to be at the identity end of the range.
 ## One IR, two executors
 
 There are three decode engines today, gated by `CodecMode` in
-`vox-jit/src/lib.rs:281` (`try_decode_owned`):
+`Runtime::try_decode_owned`:
 
 - **Jit** — `plan → IR → Cranelift → machine code`. Native default.
 - **Interp** — `from_slice_ir`, `plan → IR → interpreted`. Shares
@@ -249,8 +252,8 @@ Target for Telex:
 
 None today. Add it, negotiated:
 
-- Negotiated at the transport prologue (there is already a `mode`
-  byte, currently only `Bare`) or in `connection_settings`.
+- Negotiated with a dedicated transport-prologue compression field,
+  distinct from the conduit/transport mode.
 - Local / in-process / loopback → **off**. Bandwidth there is
   effectively infinite; compression is pure CPU cost.
 - Remote → **on**. Streaming zstd (or brotli) over the link byte

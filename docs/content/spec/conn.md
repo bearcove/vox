@@ -140,7 +140,8 @@ weight = 11
 >   * a transport-prologue magic number
 >   * a transport-prologue version
 >   * the requested conduit mode
->   * the requested wire compression mode
+>   * the requested wire compression mode as a field distinct from the conduit
+>     mode
 
 > r[transport.prologue.requested-mode]
 >
