@@ -22,10 +22,12 @@ Vox, and can be specified independently from the Vox RPC protocol.
 
 > r[telex.format]
 >
-> Vox implementations MUST use Telex as the value format for protocol
-> messages, handshake values, schema payloads, and application payloads. A
-> conforming implementation MUST NOT require a second value codec to decode one
-> logical Vox message.
+> Telex defines a single value codec for every value it transports —
+> bootstrap values, schema payloads, and application payloads alike. A
+> Telex-compliant implementation MUST NOT require a separate value codec to
+> decode any logical Telex message; the two framing modes
+> (`r[telex.mode.self-describing]`, `r[telex.mode.compact]`) share one
+> implementation per `r[telex.one-codec]`.
 
 > r[telex.modes]
 >
@@ -49,10 +51,13 @@ Vox, and can be specified independently from the Vox RPC protocol.
 
 > r[telex.mode.compact]
 >
-> Compact mode MUST be decoded only with an agreed local schema, a remote
-> schema, and the translation plan between them. Compact bytes MUST NOT contain
-> field names, type names, or structural tags except for the scalar bytes and
-> compact aggregate framing defined here.
+> Compact mode is decoded against an agreed local schema, a remote schema, and
+> the translation plan between them. The compact codec's own framing — scalar
+> bytes in their declared widths, aggregate counts, and per-field length
+> prefixes — MUST NOT contain field names, type names, or structural tag bytes.
+> Bytes *inside* a length-prefixed region are opaque to the compact codec; in
+> particular, a dynamic-value field's prefixed bytes are decoded as a
+> self-described Telex value per `r[telex.aggregate.dynamic-value]`.
 
 > r[telex.one-codec]
 >
@@ -187,8 +192,21 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.tags.scalar-payload]
 >
-> For scalar tags, the tag byte is followed by the same scalar payload bytes
-> used in compact mode.
+> For scalar tags (`0x00` through `0x11`), the tag byte is followed by the
+> same scalar payload bytes used in compact mode.
+
+> r[telex.tags.aggregate-payload]
+>
+> For aggregate tags (list `0x12`, set `0x13`, map `0x14`, array `0x15`,
+> n-dimensional array `0x16`, tuple `0x17`, struct `0x18`, enum variant
+> `0x19`, option some `0x1B`, dynamic value `0x1C`), the tag byte is followed
+> by the body defined in `r[telex.aggregate.*]` for that kind. Within a
+> self-describing aggregate body, every element, key, value, and field-value
+> is itself a self-described Telex value beginning with its own tag byte. The
+> sole exceptions are field and variant *names* in
+> `r[telex.aggregate.struct.self-describing]` and
+> `r[telex.aggregate.enum.self-describing]`, which are emitted as raw
+> length-prefixed UTF-8 without the string tag.
 
 > r[telex.tags.extension]
 >
@@ -255,10 +273,15 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.aggregate.nd-array]
 >
-> N-dimensional arrays carry a shape header followed by contiguous element
-> bytes: `[rank: u32 LE][dim_0: u64 LE]...[dim_n: u64 LE][element bytes...]`.
+> N-dimensional arrays carry a shape header followed by element bytes:
+> `[rank: u32 LE][dim_0: u64 LE]...[dim_{rank-1}: u64 LE][element bytes...]`.
 > The product of the dimensions is the element count and MUST be checked for
 > overflow.
+>
+> - **Compact mode.** Element bytes are the elements in row-major order, each
+>   at its declared width (homogeneous element type from the schema).
+> - **Self-describing mode.** Element bytes are self-described values in
+>   row-major order, with element count equal to the product of dimensions.
 
 > r[telex.aggregate.tuple]
 >
@@ -327,9 +350,22 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.aggregate.dynamic-value]
 >
-> A dynamic value is encoded as one nested self-described value. This is true in
-> both modes: compact mode reaches the dynamic-value field from schema, then
-> the field payload switches to a nested self-describing value.
+> A dynamic value carries an arbitrary Telex value whose concrete type is not
+> fixed by the surrounding schema. Its content is always one self-described
+> value beginning with a tag byte from `r[telex.tags]`.
+>
+> - **Self-describing mode.** Encoded as `0x1C [inner tag] [inner body]`. The
+>   outer `0x1C` marks the field as "any type" rather than a concrete shape;
+>   the inner tag and body are a regular self-described value.
+> - **Compact mode.** The dynamic-value field is reached via the standard
+>   per-field length prefix (`r[telex.aggregate.field-prefix]`), and the
+>   prefixed bytes are themselves a self-described value:
+>   `[field_len: u32 LE] [inner tag] [inner body]`. No outer `0x1C` — the
+>   "this field is dynamic" information comes from the schema.
+>
+> A dynamic-value field is the only place compact bytes contain a
+> self-describing tag stream; the field-length prefix isolates it from the
+> compact codec, which only reads the length and the bytes beyond.
 
 # Skipping and schema evolution
 
@@ -358,24 +394,30 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.translation.compiled]
 >
-> On native targets, the translation plan MUST be consumed when the decoder is
-> built. The hot receive path MUST NOT interpret a translation plan per
-> message.
+> A translation plan MUST be consumed when the decoder for a given
+> (remote schema, local type) pair is built. The hot decode path MUST NOT
+> interpret a translation plan per message. This applies to every conforming
+> Telex decoder — interpreted, JIT-compiled, or any other backend.
 
 > r[telex.translation.no-evolution-fallback]
 >
-> Skip, default-fill, and reorder are normal schema-evolution operations. A
-> native decoder MUST be able to compile all three for compact Telex
-> values. Encountering an evolved but compatible schema MUST NOT force the
-> entire message onto an interpreter path.
+> Skip, default-fill, and reorder are normal schema-evolution operations and
+> part of the standard compact decode path. A conforming compact decoder MUST
+> handle all three at the same level as identity (non-evolved) decoding.
+> Encountering an evolved but compatible schema MUST NOT force a decoder onto
+> a slower fallback path or onto a different backend than identity decoding
+> uses.
 
 # Bootstrap and schema payloads
 
 > r[telex.bootstrap.self-describing]
 >
-> Session handshake messages MUST be encoded in self-describing mode. The
-> handshake MUST NOT depend on a compiled-in schema version shared by both
-> peers.
+> Bootstrap messages — those that establish the schema agreement between two
+> peers before any compact value can be exchanged — MUST be encoded in
+> self-describing mode. The bootstrap exchange MUST NOT depend on a
+> compiled-in schema version shared by both peers; the receiver materializes
+> bootstrap values from the generic value tree (`r[telex.value.generic]`)
+> per `r[telex.schema.tolerant-materialization]`.
 
 > r[telex.schema.self-describing]
 >
@@ -415,16 +457,20 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.compression]
 >
-> Wire compression is negotiated for a link attachment below Vox value framing.
-> Compression, when enabled, wraps the byte stream carrying link payloads; it
-> MUST NOT change individual value encodings or schema hashes.
+> Wire compression is an optional byte-stream wrapper *below* Telex value
+> framing. It MUST NOT alter the bytes a Telex encoder produced — after
+> decompression a receiver MUST see the exact byte stream the encoder
+> emitted — and it MUST NOT alter the type-ID hashes of schemas it carries
+> (see `r[schema.type-id.hash]` for the hash definition).
 
 > r[telex.compression.modes]
 >
-> The baseline compression mode is `none`. Any compressed mode MUST name its
-> algorithm explicitly in a dedicated transport-prologue compression field
-> before compressed bytes are sent. Compression MUST NOT be encoded by
-> overloading the conduit or transport mode field.
+> The default compression mode is `none`. When a compressed mode is enabled,
+> the algorithm MUST be identified explicitly in a dedicated negotiation
+> field, distinct from any other transport choice. Compression selection
+> MUST NOT be inferred from a different field or encoded by overloading a
+> field that names another orthogonal choice (for example, a transport-mode
+> or conduit-mode field).
 
 > r[telex.compression.streaming]
 >
