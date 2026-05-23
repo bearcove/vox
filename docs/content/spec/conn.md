@@ -140,6 +140,7 @@ weight = 11
 >   * a transport-prologue magic number
 >   * a transport-prologue version
 >   * the requested conduit mode
+>   * the requested wire compression mode
 
 > r[transport.prologue.requested-mode]
 >
@@ -149,23 +150,31 @@ weight = 11
 >   * `bare`
 >   * `stable`
 
+> r[transport.prologue.compression]
+>
+> The requested wire compression mode is an exact request. `none` is the
+> baseline mode and MUST be supported. Any compressed mode MUST be named in the
+> transport prologue before compressed bytes are sent
+> (see `r[wire.compression.modes]`).
+
 > r[transport.prologue.accept]
 >
 > The acceptor MUST reply with either:
 >
->   * `TransportAccept`, acknowledging the requested conduit mode, or
+>   * `TransportAccept`, acknowledging the requested conduit and compression
+>     modes, or
 >   * `TransportReject`, refusing the request
 
 > r[transport.prologue.no-fallback]
 >
-> If the acceptor does not support the requested conduit mode, it MUST reject
-> the transport prologue. It MUST NOT silently fall back to a different conduit
-> mode.
+> If the acceptor does not support the requested conduit mode or compression
+> mode, it MUST reject the transport prologue. It MUST NOT silently fall back
+> to a different conduit or compression mode.
 
 > r[transport.prologue.post-accept]
 >
 > After `TransportAccept`, all subsequent payloads on that link attachment are
-> interpreted according to the selected conduit mode.
+> interpreted according to the selected conduit mode and wire compression mode.
 
 > r[transport.prologue.reject-close]
 >
@@ -176,7 +185,7 @@ weight = 11
 
 > r[conduit]
 >
-> Conduits provide Postcard serialization/deserialization on top of links.
+> Conduits provide compact `vox-wire` serialization/deserialization on top of links.
 > Sending is split into synchronous preparation and asynchronous enqueue.
 
 > r[conduit.typeplan]
@@ -203,6 +212,13 @@ transport prologue.
 `StableConduit` continuity does not, by itself, answer what happens to an RPC
 whose outcome is now ambiguous. Operation-level retry and session resumption
 semantics are defined in [Retry](./retry/).
+
+> r[stable.link-source]
+>
+> A stable conduit that reconnects MUST be driven by a link source that can
+> produce fresh link attachments for the same endpoint and role. Each
+> attachment produced by the source MUST start at the transport prologue; no
+> conduit or session state may be smuggled through the link source itself.
 
 > r[conduit.split]
 >
@@ -291,20 +307,23 @@ starts only after that conduit has been selected and initialized.
 >   * CloseChannel
 >   * ResetChannel
 >   * GrantCredit
+>   * SchemaMessage
 >
-> Schemas are not a standalone message type. They are delivered inline
-> with `Request` and `Response` payloads (see `r[schema.format.delivery]`).
+> Application-level schemas are delivered by standalone `SchemaMessage`
+> payloads before the `Request` or `Response` payloads that need them
+> (see `r[schema.format.delivery]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
-> They are CBOR-encoded handshake structs exchanged before the postcard
-> `MessagePayload` enum is used (see `r[session.handshake]`).
+> They are self-describing `vox-wire` handshake structs exchanged before the
+> compact `MessagePayload` enum is used (see `r[session.handshake]`).
 
 > r[session.handshake]
 >
-> To establish a session on top of an existing conduit, a three-step CBOR
-> handshake MUST be performed. The handshake messages are CBOR-encoded
-> structs, NOT postcard-encoded `MessagePayload` variants. This is the
-> bootstrap: it establishes the schemas needed to interpret the postcard
+> To establish a session on top of an existing conduit, a three-step
+> self-describing `vox-wire` handshake MUST be performed. The handshake
+> messages are self-describing structs, NOT compact `vox-wire`
+> `MessagePayload` variants. This is the bootstrap: it establishes the
+> schemas needed to interpret the compact
 > `MessagePayload` enum that follows.
 >
 > 1. The initiator sends a **`Hello`** containing:
@@ -312,7 +331,7 @@ starts only after that conduit has been selected and initialized.
 >    - `connection_settings`: limits for the root connection
 >    - `message_payload_schemas`: a self-contained set of schemas describing
 >      the initiator's `MessagePayload` enum and all types it references
->      (the postcard enum used for all subsequent communication)
+>      (the compact enum used for all subsequent communication)
 >
 > 2. The acceptor adopts the opposite parity, compares the `MessagePayload`
 >    schemas, and replies with one of:
@@ -329,15 +348,17 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.cbor]
 >
 > All handshake messages (`Hello`, `HelloYourself`, `LetsGo`, `Sorry`) MUST
-> be CBOR-encoded. CBOR is self-describing and does not require a schema to
-> parse, avoiding the chicken-and-egg problem of needing a schema to read a
-> schema. After `LetsGo`, all subsequent communication is postcard-encoded
-> `MessagePayload` values, deserialized using translation plans built from
-> the schemas exchanged in the handshake.
+> be encoded in self-describing `vox-wire` mode
+> (see `r[wire.bootstrap.self-describing]`). Self-describing mode does not
+> require a schema to parse, avoiding the chicken-and-egg problem of needing a
+> schema to read a schema. After `LetsGo`, all subsequent communication is
+> compact `vox-wire` `MessagePayload` values, deserialized using translation
+> plans built from the schemas exchanged in the handshake.
 
 > r[session.handshake.sorry]
 >
-> `Sorry` MUST contain a structured CBOR description of the incompatibility:
+> `Sorry` MUST contain a structured self-describing `vox-wire` description of
+> the incompatibility:
 > which variants or fields the rejecting peer requires that the other peer's
 > schema does not provide. After sending or receiving `Sorry`, the session
 > MUST NOT proceed and the conduit SHOULD be closed.
@@ -381,6 +402,14 @@ starts only after that conduit has been selected and initialized.
 > in-flight request attempts or in-flight response deliveries on the failed
 > attachment. If an unresolved operation continues after session resumption, it
 > does so by creating a new request attempt for the same operation.
+
+> r[retry.channel.disconnect.closes]
+>
+> When a conduit disconnect invalidates a session attachment, all channel
+> handles tied to that attachment MUST be closed or reset locally. If an
+> idempotent method is retried after resume and carries channel arguments, the
+> retry allocates fresh channel IDs and fresh handles for the new request
+> attempt.
 
 > r[session.parity]
 >

@@ -1,21 +1,22 @@
 +++
 title = "Schema Exchange"
-description = "Backwards-compatible type evolution without changing the wire format"
-weight = 14
+description = "Backwards-compatible type evolution for compact vox-wire values"
+weight = 15
 +++
 
-Postcard is vox's data wire format. It is compact and fast, but positional —
-fields are identified by their order, not by name. This means that adding,
-removing, or reordering fields changes the byte layout, and a peer reading
-with a different type definition silently misinterprets the data.
+Compact `vox-wire` is Vox's steady-state data format. It is compact and fast,
+but positional: fields are identified by their order in the sender schema, not
+by name in the byte stream. This means that adding, removing, or reordering
+fields changes the byte layout, and a peer reading with a different type
+definition would silently misinterpret the data without schema exchange.
 
-Schema exchange solves this without replacing postcard. The data bytes stay
-the same. What changes is that peers describe their types to each other
-using self-describing schemas, and the receiving side builds a **translation
-plan** that maps remote field positions to local field positions before
-deserializing.
+Schema exchange solves this without making compact values self-describing.
+Peers describe their types to each other using self-describing `vox-wire`
+schema payloads, and the receiving side builds a **translation plan** that maps
+remote field positions to local field positions before deserializing compact
+bytes.
 
-The result: postcard remains the fast path for serialization and
+The result: compact `vox-wire` remains the fast path for serialization and
 deserialization, but peers with different versions of the same types can
 communicate safely. Incompatibilities are detected early — when the
 translation plan is built — not mid-stream when a field has the wrong value.
@@ -36,10 +37,11 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 > r[schema.principles.cbor]
 >
-> Schemas MUST be encoded using CBOR (RFC 8949). CBOR is self-describing
-> and does not require a schema to parse — avoiding the chicken-and-egg
-> problem of needing a schema to read a schema. Postcard is used for data;
-> CBOR is used for metadata about data.
+> Schemas MUST be encoded using self-describing `vox-wire`
+> (see `r[wire.schema.self-describing]`). Self-describing mode does not require
+> a schema to parse, avoiding the chicken-and-egg problem of needing a schema
+> to read a schema. Compact `vox-wire` is used for data; self-describing
+> `vox-wire` is used for metadata about data.
 
 > r[schema.principles.once-per-type]
 >
@@ -52,12 +54,11 @@ translation plan is built — not mid-stream when a field has the wrong value.
 > r[schema.type-id]
 >
 > A type ID is a `u64` content hash — a deterministic structural hash
-> of a type *declaration's* postcard-level definition. For generic types,
+> of a type *declaration's* compact-wire-level definition. For generic types,
 > the hash is of the declaration (with type variable slots), not of any
 > specific instantiation. The same declaration always produces the same
 > hash, regardless of which connection, session, process, or language
-> produced it. On the wire (CBOR), a type ID is encoded as a CBOR
-> unsigned integer.
+> produced it. On the wire, a type ID is encoded as a little-endian `u64`.
 
 > r[schema.type-id.hash]
 >
@@ -98,7 +99,7 @@ translation plan is built — not mid-stream when a field has the wrong value.
 ## Primitive type hashes
 
 The hash input for a primitive type is a single tag string. Because the
-hash operates at the postcard encoding level — not at the source-language
+hash operates at the compact-wire encoding level — not at the source-language
 type level — Rust newtypes, TypeScript type aliases, and other
 language-level wrappers over the same underlying type all produce the
 same hash. For example, `struct UserId(u64)` and `struct PostId(u64)`
@@ -110,8 +111,8 @@ both hash as `u64`.
 > `len(tag)` is the tag's byte length as a `u32` LE, and `tag` is one
 > of the following UTF-8 strings:
 >
-> | Postcard type | Tag string |
-> |---------------|------------|
+> | Compact type | Tag string |
+> |--------------|------------|
 > | bool          | `"bool"`   |
 > | u8            | `"u8"`     |
 > | u16           | `"u16"`    |
@@ -128,10 +129,11 @@ both hash as `u64`.
 > | char          | `"char"`   |
 > | string        | `"string"` |
 > | unit          | `"unit"`   |
+> | never         | `"never"`  |
 > | bytes         | `"bytes"`   |
 > | payload       | `"payload"` |
 >
-> These 18 hashes are constants. Implementations MAY precompute them.
+> These 19 hashes are constants. Implementations MAY precompute them.
 
 ## Struct hashes
 
@@ -173,6 +175,7 @@ both hash as `u64`.
 > To hash a container type, update the hasher with:
 >
 >   * **List:** `"list"` then the element `TypeRef`
+>   * **Set:** `"set"` then the element `TypeRef`
 >   * **Option:** `"option"` then the element `TypeRef`
 >   * **Array:** `"array"` then the element `TypeRef`, then the length
 >     as a `u64` (8 bytes, little-endian)
@@ -261,10 +264,10 @@ from that ordering.
 >
 >   2. **Deduplication.** If two types in the group have identical
 >      canonical byte sequences (the full input to blake3 from step 1),
->      they are structurally identical at the postcard level and MUST be
+>      they are structurally identical at the compact-wire level and MUST be
 >      deduplicated — collapsed to a single entry before proceeding.
 >      (Type identity is structural; two nominal types with the same
->      postcard-level structure are the same type.)
+>      compact-wire-level structure are the same type.)
 >
 >   3. **Canonical ordering.** Sort the (now-unique) types by their
 >      preliminary hash (ascending, unsigned integer comparison). In the
@@ -336,20 +339,21 @@ Example: mutually recursive types.
 
 # Schema format
 
-A schema describes a single type. Schemas are CBOR-encoded and
-self-contained — every type referenced by a schema is either a primitive
-or is referenced by its `TypeSchemaId` (a `u64` content hash).
+A schema describes a single type. Schemas are self-describing `vox-wire`
+values and self-contained — every type referenced by a schema is either a
+primitive or is referenced by its `TypeSchemaId` (a `u64` content hash).
 
 The following Rust declarations define the schema data model. Other
-language implementations must produce equivalent CBOR encodings.
+language implementations must produce equivalent self-describing `vox-wire`
+encodings.
 
 ```rust
-/// A content hash that uniquely identifies a type's postcard-level
+/// A content hash that uniquely identifies a type's compact-wire-level
 /// structure. Computed via blake3, truncated to 64 bits.
 ///
 /// The same type always produces the same TypeSchemaId regardless of
-/// connection, session, process, or language. On the wire (CBOR),
-/// a TypeSchemaId is encoded as a CBOR unsigned integer.
+/// connection, session, process, or language. On the wire, a TypeSchemaId is
+/// encoded as a little-endian u64.
 ///
 /// For generic types, the TypeSchemaId identifies the *declaration*
 /// (e.g. `Result`), not a specific instantiation (e.g. `Result<u32, E>`).
@@ -373,7 +377,7 @@ enum TypeRef {
     Var(String),
 }
 
-/// The primitive types of the postcard encoding.
+/// The primitive types of compact vox-wire encoding.
 ///
 /// These are leaves in the type graph — they have no child types.
 /// Language-level wrappers (Rust newtypes, TypeScript type aliases)
@@ -389,12 +393,13 @@ enum PrimitiveType {
     /// representation of "nothing." A zero-element tuple is not valid;
     /// use Unit instead.
     Unit,
+    /// The never type — no value can be encoded.
+    Never,
     /// A raw byte sequence (`Vec<u8>`, `&[u8]`).
     Bytes,
     /// An opaque payload — a length-prefixed byte sequence whose
-    /// length prefix is a little-endian u32 (not a varint like other
-    /// postcard sequences). Used for protocol extensions where the
-    /// sender must reserve space before writing the payload.
+    /// length prefix is a little-endian u32. Used for protocol extensions
+    /// where the sender must reserve space before writing the payload.
     Payload,
 }
 
@@ -421,10 +426,11 @@ enum SchemaKind {
     /// elements — use `PrimitiveType::Unit` for the zero case.
     Tuple { elements: Vec<TypeRef> },
 
-    /// A variable-length homogeneous sequence (`Vec<T>`, `HashSet<T>`,
-    /// etc.). Sets and lists have the same postcard encoding and are
-    /// not distinguished at the schema level.
+    /// A variable-length ordered homogeneous sequence (`Vec<T>`, `[T]`, etc.).
     List { element: TypeRef },
+
+    /// A variable-length unordered homogeneous collection with unique elements.
+    Set { element: TypeRef },
 
     /// A variable-length collection of key-value pairs.
     Map { key: TypeRef, value: TypeRef },
@@ -470,7 +476,7 @@ struct FieldSchema {
 struct VariantSchema {
     /// The variant name. Used for matching across schema versions.
     name: String,
-    /// The postcard variant index (varint ordinal on the wire).
+    /// The compact-wire variant index (`u32` on the wire).
     index: u32,
     /// The variant's payload shape.
     payload: VariantPayload,
@@ -510,36 +516,37 @@ reference the same `Result` schema — only the type arguments at the use
 site differ. This is more efficient on the wire and enables cross-language
 matching where different languages may format generic type names differently.
 
-Container types (`List`, `Map`, `Array`, `Option`) are built-in generics.
+Container types (`List`, `Set`, `Map`, `Array`, `Option`) are built-in generics.
 Their element/key/value references use `TypeRef` like any other type
 reference, but they do not need explicit `type_params` because their
 generic structure is implicit in the `SchemaKind` variant.
 
-The normative rules below define the CBOR encoding of these types.
+The normative rules below define the self-describing `vox-wire` encoding of
+these types.
 
 > r[schema.format]
 >
-> A schema MUST be a CBOR map containing:
+> A schema MUST be a self-describing `vox-wire` struct containing:
 >
->   * `id` — a CBOR unsigned integer (the type declaration's content hash)
->   * `type_params` — a CBOR array of type parameter names (UTF-8 strings).
+>   * `id` — a `u64` type declaration content hash
+>   * `type_params` — a list of type parameter names.
 >     Empty array for non-generic types. MAY be omitted if empty.
->   * `kind` — one of: `"struct"`, `"enum"`, `"tuple"`, `"list"`, `"map"`,
->     `"array"`, `"option"`, `"channel"`, `"primitive"`
+>   * `kind` — one of: `"struct"`, `"enum"`, `"tuple"`, `"list"`, `"set"`,
+>     `"map"`, `"array"`, `"option"`, `"channel"`, `"primitive"`
 >   * Kind-specific fields as defined below
 
 > r[schema.format.type-id]
 >
-> A `TypeSchemaId` MUST be encoded as a CBOR unsigned integer.
+> A `TypeSchemaId` MUST be encoded as a `u64`.
 
 > r[schema.format.type-ref]
 >
 > A `TypeRef` MUST be encoded as one of:
 >
->   * A CBOR map `{"concrete": type_id}` — a non-generic concrete type
->   * A CBOR map `{"concrete": type_id, "args": [type_ref, ...]}` — a
+>   * A struct variant `{"concrete": type_id}` — a non-generic concrete type
+>   * A struct variant `{"concrete": type_id, "args": [type_ref, ...]}` — a
 >     generic type with type arguments (each argument is itself a `TypeRef`)
->   * A CBOR map `{"var": name}` — a reference to a type parameter of
+>   * A struct variant `{"var": name}` — a reference to a type parameter of
 >     the enclosing schema's `type_params` list, by name (UTF-8 string)
 
 > r[schema.format.primitive]
@@ -549,8 +556,8 @@ The normative rules below define the CBOR encoding of these types.
 >   * `kind`: `"primitive"`
 >   * `primitive_type`: one of `"bool"`, `"u8"`, `"u16"`, `"u32"`,
 >     `"u64"`, `"u128"`, `"i8"`, `"i16"`, `"i32"`, `"i64"`, `"i128"`,
->     `"f32"`, `"f64"`, `"char"`, `"string"`, `"unit"`, `"bytes"`,
->     `"payload"`
+>     `"f32"`, `"f64"`, `"char"`, `"string"`, `"unit"`, `"never"`,
+>     `"bytes"`, `"payload"`
 
 > r[schema.format.struct]
 >
@@ -558,13 +565,13 @@ The normative rules below define the CBOR encoding of these types.
 >
 >   * `kind`: `"struct"`
 >   * `name`: the type name (UTF-8 string, MUST NOT be empty)
->   * `fields`: a CBOR array of field descriptors, each a map with:
+>   * `fields`: a list of field descriptors, each a struct with:
 >     - `name`: field name (UTF-8 string)
 >     - `type_ref`: a `TypeRef` (see `r[schema.format.type-ref]`)
->     - `required`: a CBOR boolean — `true` if the field has no default
+>     - `required`: a boolean — `true` if the field has no default
 >       value, `false` if it does
 >
-> Fields MUST be listed in declaration order (which is also postcard
+> Fields MUST be listed in declaration order (which is also compact-wire
 > serialization order).
 
 > r[schema.format.enum]
@@ -573,9 +580,9 @@ The normative rules below define the CBOR encoding of these types.
 >
 >   * `kind`: `"enum"`
 >   * `name`: the type name (UTF-8 string, MUST NOT be empty)
->   * `variants`: a CBOR array of variant descriptors, each a map with:
+>   * `variants`: a list of variant descriptors, each a struct with:
 >     - `name`: variant name (UTF-8 string)
->     - `index`: the postcard variant index (`u32`)
+>     - `index`: the compact-wire variant index (`u32`)
 >     - `payload`: one of:
 >       - `"unit"` — no payload
 >       - `{"newtype": type_ref}` — single value
@@ -587,21 +594,21 @@ The normative rules below define the CBOR encoding of these types.
 >
 > Container schemas MUST contain:
 >
->   * `kind`: `"list"`, `"map"`, `"array"`, or `"option"`
->   * `element`: a `TypeRef` (for list, array, option)
+>   * `kind`: `"list"`, `"set"`, `"map"`, `"array"`, or `"option"`
+>   * `element`: a `TypeRef` (for list, set, array, option)
 >   * `key` and `value`: `TypeRef`s (for map)
 >   * `length`: a `u64` (for array only)
 >
-> Sets (`HashSet<T>`, `BTreeSet<T>`, etc.) have the same postcard encoding
-> as lists and MUST use `kind: "list"`. The schema does not distinguish
-> between ordered and unordered sequences.
+> Sets (`HashSet<T>`, `BTreeSet<T>`, etc.) MUST use `kind: "set"`. Lists and
+> sets have distinct schema kinds even if an implementation stores both as
+> homogeneous sequences internally.
 
 > r[schema.format.tuple]
 >
 > A tuple schema MUST contain:
 >
 >   * `kind`: `"tuple"`
->   * `elements`: a CBOR array of `TypeRef`s, one per element, in order
+>   * `elements`: a list of `TypeRef`s, one per element, in order
 >
 > The `elements` array MUST contain at least one element. A zero-element
 > tuple is not valid — use `PrimitiveType::Unit` instead.
@@ -650,7 +657,7 @@ enum BindingDirection {
     Response,
 }
 
-/// The CBOR-encoded payload carried by a SchemaMessage.
+/// The self-describing vox-wire payload carried by a SchemaMessage.
 struct SchemaPayload {
     /// All schemas needed by the receiver that have not been
     /// previously sent on this connection.
@@ -673,7 +680,8 @@ struct SchemaPayload {
 > r[schema.format.delivery]
 >
 > Application-level schemas are delivered as a standalone `SchemaMessage`
-> containing a CBOR-encoded `SchemaPayload`. The payload MUST include:
+> containing a self-describing `vox-wire` `SchemaPayload`. The payload MUST
+> include:
 >
 >   * All schemas needed for the method's types that have not been
 >     previously sent on this connection
@@ -728,7 +736,8 @@ Each peer maintains two sets per connection:
 Schema exchange operates at two levels:
 
 1. **Protocol level (per-session):** The `MessagePayload` schema is
-   exchanged during the CBOR handshake (see `r[session.handshake]`).
+   exchanged during the self-describing `vox-wire` handshake
+   (see `r[session.handshake]`).
    This allows the protocol framing itself to evolve without breaking
    changes.
 
@@ -823,8 +832,8 @@ difference.
 
 When a peer receives a schema for a remote type that it will deserialize
 into a local type, it builds a **translation plan**. The translation plan
-is a recipe for reading postcard bytes written by the remote type and
-populating the fields of the local type.
+is a recipe for reading compact `vox-wire` bytes written by the remote type
+and populating the fields of the local type.
 
 Translation plans are built once per (remote type ID, local type) pair
 and cached for the connection lifetime.
@@ -834,14 +843,15 @@ and cached for the connection lifetime.
 > Fields MUST be matched by name, not by position. For each field in the
 > local type, the translation plan looks up the corresponding field in the
 > remote schema by name. If found, the plan records the remote field's
-> position so the deserializer knows which postcard field to read.
+> position so the deserializer knows which compact field to read.
 
 > r[schema.translation.skip-unknown]
 >
 > If the remote schema contains fields that do not exist in the local type,
-> those fields MUST be skipped during deserialization. The translation plan
-> records how many bytes to skip for each unknown remote field, based on
-> the remote field's type schema.
+> those fields MUST be skipped during deserialization. Compact `vox-wire`
+> struct and enum payload fields are length-prefixed
+> (see `r[wire.skip.struct-field]` and `r[wire.skip.enum-field]`), so skipping
+> an unknown field MUST NOT require recursively interpreting that field.
 
 > r[schema.translation.fill-defaults]
 >
@@ -858,7 +868,7 @@ and cached for the connection lifetime.
 >
 > If fields exist in both the local and remote types but in different order,
 > the translation plan MUST handle the reordering. The deserializer reads
-> postcard bytes in remote field order but writes values into local field
+> compact bytes in remote field order but writes values into local field
 > positions.
 
 > r[schema.translation.type-compat]
@@ -877,8 +887,8 @@ and cached for the connection lifetime.
 > r[schema.translation.serialization-unchanged]
 >
 > Schema exchange does NOT affect serialization. A peer always serializes
-> using its own local type definition and postcard. The translation plan
-> applies only on the deserialization side — the receiver adapts to the
+> using its own local type definition and compact `vox-wire`. The translation
+> plan applies only on the deserialization side — the receiver adapts to the
 > sender's layout.
 
 # Enum evolution
@@ -1054,7 +1064,7 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 > r[schema.interaction.retry]
 >
 > Operation stores MUST store schemas alongside serialized payloads.
-> A sealed operation contains postcard-encoded bytes that are only
+> A sealed operation contains compact `vox-wire` bytes that are only
 > meaningful together with the schemas that describe them. When replaying
 > a sealed response, the replaying peer MUST send schemas for the
 > response types on the current connection if they have not already been
@@ -1070,4 +1080,4 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 > r[schema.interaction.metadata]
 >
 > Metadata is unaffected by schema exchange. Metadata key-value pairs are
-> not typed in the postcard sense and do not participate in schema exchange.
+> not typed in the compact-wire sense and do not participate in schema exchange.

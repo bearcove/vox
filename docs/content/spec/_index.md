@@ -9,6 +9,7 @@ The Vox specification defines the protocol and runtime model across layers:
 - Requests and channels
 - Connections and sessions
 - Transport prologue and conduit selection
+- Wire value encoding
 - Conduit behavior
 - Retry semantics and operation continuity
 - Link transports (stream and WebSocket)
