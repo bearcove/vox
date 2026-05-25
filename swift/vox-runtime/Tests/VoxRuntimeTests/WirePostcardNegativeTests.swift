@@ -70,7 +70,7 @@
     @Suite(.serialized)
     struct WirePostcardNegativeTests {
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsTrailingBytes() {
             var bytes = Message.protocolError(description: "bad frame sequence").encode()
             bytes.append(0xFF)
@@ -80,7 +80,7 @@
         }
 
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsUnknownPayloadVariant() {
             expectWireError(.unknownVariant(11)) {
                 _ = try Message.decode(fromBytes: [0, 11])
@@ -88,7 +88,7 @@
         }
 
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsTruncatedStringField() {
             let truncatedProtocolError: [UInt8] = [0, 0, 3, 0x41, 0x42]
             expectWireError(.truncated) {
@@ -97,7 +97,7 @@
         }
 
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsInvalidParityVariant() {
             let bytes: [UInt8] = [0, 1, 3, 1, 0]
             expectWireError(.unknownVariant(3)) {
@@ -106,7 +106,7 @@
         }
 
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsOverflowingU32Field() {
             var bytes: [UInt8] = []
             var buf = ByteBufferAllocator().buffer(capacity: 16)
@@ -123,7 +123,7 @@
         }
 
         // r[verify session.message]
-        // r[verify session.message.payloads]
+        // r[verify session.message.payloads+2]
         @Test func wireDecodeRejectsInvalidUtf8InStringField() {
             let bytes: [UInt8] = [0, 0, 2, 0xC3, 0x28]
             expectWireError(.invalidUtf8) {

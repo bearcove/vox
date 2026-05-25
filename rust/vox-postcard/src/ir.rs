@@ -1,4 +1,4 @@
-// r[impl schema.translation.skip-unknown]
+// r[impl schema.translation.skip-unknown+2]
 // r[impl schema.translation.reorder]
 // r[impl schema.translation.enum]
 // r[impl schema.translation.enum.unknown-variant]
@@ -192,7 +192,7 @@ pub enum DecodeOp {
     // Skip operations (remote fields absent in local type)
     // -----------------------------------------------------------------------
 
-    // r[impl schema.translation.skip-unknown]
+    // r[impl schema.translation.skip-unknown+2]
     /// Skip one postcard value described by a pre-resolved schema kind.
     /// The kind is stored inline so the interpreter does not need a registry.
     SkipValue { kind: SchemaKind },
@@ -1269,7 +1269,7 @@ fn lower_result(
 }
 
 // r[impl schema.translation.reorder]
-// r[impl schema.translation.skip-unknown]
+// r[impl schema.translation.skip-unknown+2]
 #[allow(clippy::too_many_arguments)]
 fn lower_struct(
     plan: &TranslationPlan,

@@ -78,7 +78,7 @@ structstruck::strike! {
         /// Message payload
         pub payload:
             #[repr(u8)]
-            // r[impl session.message.payloads]
+            // r[impl session.message.payloads+2]
             pub enum MessagePayload<'payload> {
                 // ========================================================================
                 // Control (conn 0 only)

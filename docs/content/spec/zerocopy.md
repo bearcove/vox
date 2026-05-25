@@ -155,8 +155,8 @@ insert_anchor_links = "left"
 
 > r[zerocopy.framing.value]
 >
-> The user's Rust value is serialized using compact Telex.
-> Compact Telex produces a compact binary encoding that supports zero-copy
+> The user's Rust value is serialized using compact Binette.
+> Compact Binette produces a compact binary encoding that supports zero-copy
 > deserialization — string and byte slice fields can borrow directly from
 > the input buffer.
 >
@@ -169,9 +169,9 @@ insert_anchor_links = "left"
 > the boundary where erased payload behavior is applied:
 >
 > - **Outgoing (`Message<'call>`):** the opaque adapter maps the payload to
->   `(PtrConst, Shape, Option<TypePlanCore>)`, and compact Telex
+>   `(PtrConst, Shape, Option<TypePlanCore>)`, and compact Binette
 >   serializes that mapped value.
-> - **Incoming (`Message<'static>` inside `SelfRef`):** compact Telex
+> - **Incoming (`Message<'static>` inside `SelfRef`):** compact Binette
 >   decodes the payload byte sequence and materializes deferred payload state
 >   as either a borrowed byte slice (when input backing is stable) or owned
 >   bytes.
@@ -210,7 +210,7 @@ insert_anchor_links = "left"
 > - `ack: Option<u32>` — highest sequence number received from the peer
 > - `item: T` — the actual value
 >
-> The entire `Frame<T>` is serialized in one compact Telex pass — there
+> The entire `Frame<T>` is serialized in one compact Binette pass — there
 > is no separate header serialization step. The conduit framing fields are just
 > the first fields of the serialized output. The conduit maintains a
 > replay buffer of serialized frame bytes for retransmission after
@@ -300,7 +300,7 @@ insert_anchor_links = "left"
 > - **BareConduit** serializes `T` into one owned outbound buffer.
 > - **StableConduit** serializes `Frame<T>` into one owned outbound buffer.
 >
-> In both cases, compact Telex writes the output into the prepared buffer
+> In both cases, compact Binette writes the output into the prepared buffer
 > owned by the conduit. There is no intermediate re-serialization between layers —
 > value encoding and conduit framing are a single serialization pass, and the
 > link applies transport framing (length prefix, WebSocket frame boundary,
@@ -317,7 +317,7 @@ insert_anchor_links = "left"
 > r[zerocopy.scatter]
 >
 > Serializing into a prepared outbound buffer requires knowing the total
-> encoded size before allocating that buffer. Compact Telex encoding
+> encoded size before allocating that buffer. Compact Binette encoding
 > is sequential and deterministic, so the serializer can compute the
 > exact output size and collect copy instructions without writing to a
 > final destination buffer.

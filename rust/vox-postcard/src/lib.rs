@@ -510,7 +510,7 @@ mod tests {
         ));
     }
 
-    // r[verify schema.translation.skip-unknown]
+    // r[verify schema.translation.skip-unknown+2]
     #[test]
     fn translation_remote_has_extra_field() {
         // Remote has fields [x, y, z], local only has [x, z]
@@ -664,7 +664,7 @@ mod tests {
         );
     }
 
-    // r[verify schema.translation.skip-unknown]
+    // r[verify schema.translation.skip-unknown+2]
     #[test]
     fn translation_skip_complex_field() {
         // Remote has an extra Vec<String> field that local doesn't have

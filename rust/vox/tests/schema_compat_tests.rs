@@ -158,7 +158,7 @@ async fn v1_client_v2_server_fills_default() {
     server_task.abort();
 }
 
-// r[verify schema.translation.skip-unknown]
+// r[verify schema.translation.skip-unknown+2]
 #[tokio::test]
 async fn v2_client_v1_server_skips_unknown_field() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -318,7 +318,7 @@ impl evolved_v1::ConfigService for ConfigServiceV1 {
 }
 
 // r[verify schema.translation.fill-defaults]
-// r[verify schema.translation.skip-unknown]
+// r[verify schema.translation.skip-unknown+2]
 // r[verify schema.translation.reorder]
 #[tokio::test]
 async fn evolved_schema_combined_changes() {

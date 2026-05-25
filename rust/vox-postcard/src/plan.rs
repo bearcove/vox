@@ -158,7 +158,7 @@ pub fn build_identity_plan(shape: &'static Shape) -> TranslationPlan {
 /// both. This avoids mismatches between schema representation and raw
 /// Shape inspection.
 // r[impl schema.translation.field-matching]
-// r[impl schema.translation.skip-unknown]
+// r[impl schema.translation.skip-unknown+2]
 // r[impl schema.translation.fill-defaults]
 // r[impl schema.translation.reorder]
 // r[impl schema.errors.early-detection]

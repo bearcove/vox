@@ -254,7 +254,7 @@ impl SchemaSendTracker {
     /// to inline in the request/response. Returns empty payload if schemas
     /// were already sent for this shape.
     ///
-    // r[impl schema.tracking.transitive]
+    // r[impl schema.tracking.transitive+3]
     // r[impl schema.exchange.idempotent]
     // r[impl schema.principles.once-per-type]
     // r[impl schema.principles.sender-driven]
@@ -848,7 +848,7 @@ impl ExtractCtx {
         let key = self.key_for_shape(shape);
         let id = self.id_for_key(key);
 
-        // r[impl schema.format.recursive]
+        // r[impl schema.format.recursive+3]
         // Cycle detection: if we've already started walking this shape,
         // return the assigned id without re-entering.
         if !self.seen.insert(shape) {
@@ -887,7 +887,7 @@ impl ExtractCtx {
             .map(|tp| TypeParamName(tp.name.to_string()))
             .collect();
 
-        // r[impl schema.format.primitive]
+        // r[impl schema.format.primitive+3]
         // Scalars
         if let Some(scalar) = shape.scalar_type() {
             self.emit_schema(
@@ -903,7 +903,7 @@ impl ExtractCtx {
             return Ok(TypeRef::concrete(id));
         }
 
-        // r[impl schema.format.container]
+        // r[impl schema.format.container+4]
         // Containers
         match shape.def {
             Def::List(list_def) => {
@@ -1078,8 +1078,8 @@ impl ExtractCtx {
 
         // User-defined types.
         let kind = match shape.ty {
-            // r[impl schema.format.struct]
-            // r[impl schema.format.tuple]
+            // r[impl schema.format.struct+4]
+            // r[impl schema.format.tuple+4]
             Type::User(UserType::Struct(struct_type)) => match struct_type.kind {
                 StructKind::Unit => {
                     let primitive_type = if is_infallible_shape(shape) {
@@ -1129,7 +1129,7 @@ impl ExtractCtx {
                     }
                 }
             },
-            // r[impl schema.format.enum]
+            // r[impl schema.format.enum+4]
             Type::User(UserType::Enum(enum_type)) => {
                 let mut variants = Vec::with_capacity(enum_type.variants.len());
                 for (i, v) in enum_type.variants.iter().enumerate() {
@@ -1345,7 +1345,7 @@ mod tests {
         assert_eq!(payload.root, TypeRef::concrete(schema.id));
     }
 
-    // r[verify schema.format.primitive]
+    // r[verify schema.format.primitive+3]
     #[test]
     fn primitive_u32() {
         let schemas = extract_schemas(<u32 as Facet>::SHAPE)
@@ -1391,7 +1391,7 @@ mod tests {
         ));
     }
 
-    // r[verify schema.format.struct]
+    // r[verify schema.format.struct+4]
     #[test]
     fn simple_struct() {
         #[derive(Facet)]
@@ -1420,7 +1420,7 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.enum]
+    // r[verify schema.format.enum+4]
     #[test]
     fn simple_enum() {
         #[derive(Facet)]
@@ -1445,7 +1445,7 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.enum]
+    // r[verify schema.format.enum+4]
     #[test]
     fn enum_with_payloads() {
         #[derive(Facet)]
@@ -1480,7 +1480,7 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.container]
+    // r[verify schema.format.container+4]
     #[test]
     fn container_vec() {
         let schemas = extract_schemas(<Vec<u32> as Facet>::SHAPE)
@@ -1497,7 +1497,7 @@ mod tests {
         assert!(matches!(schemas[1].kind, SchemaKind::List { .. }));
     }
 
-    // r[verify schema.format.container]
+    // r[verify schema.format.container+4]
     #[test]
     fn container_option() {
         let schemas = extract_schemas(<Option<String> as Facet>::SHAPE)
@@ -1514,7 +1514,7 @@ mod tests {
         assert!(matches!(schemas[1].kind, SchemaKind::Option { .. }));
     }
 
-    // r[verify schema.format.recursive]
+    // r[verify schema.format.recursive+3]
     #[test]
     fn recursive_type_terminates() {
         #[derive(Facet)]
@@ -1530,7 +1530,7 @@ mod tests {
         assert!(matches!(node_schema.kind, SchemaKind::Struct { .. }));
     }
 
-    // r[verify schema.format.primitive]
+    // r[verify schema.format.primitive+3]
     #[test]
     fn vec_u8_is_bytes() {
         let schemas = extract_schemas(<Vec<u8> as Facet>::SHAPE)
@@ -1629,7 +1629,7 @@ mod tests {
         assert_eq!(schemas.len(), 2);
     }
 
-    // r[verify schema.format.container]
+    // r[verify schema.format.container+4]
     #[test]
     fn container_map() {
         let schemas = extract_schemas(<std::collections::HashMap<String, u32> as Facet>::SHAPE)
@@ -1640,7 +1640,7 @@ mod tests {
         assert!(matches!(map_schema.kind, SchemaKind::Map { .. }));
     }
 
-    // r[verify schema.format.container]
+    // r[verify schema.format.container+4]
     #[test]
     fn container_array() {
         let schemas = extract_schemas(<[u32; 4] as Facet>::SHAPE)
@@ -1654,7 +1654,7 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.tuple]
+    // r[verify schema.format.tuple+4]
     #[test]
     fn tuple_type() {
         let schemas = extract_schemas(<(u32, String) as Facet>::SHAPE)
@@ -1671,7 +1671,7 @@ mod tests {
         }
     }
 
-    // r[verify schema.format]
+    // r[verify schema.format+4]
     #[test]
     fn extract_schemas_returns_all_kinds() {
         #[derive(Facet)]
@@ -1710,7 +1710,7 @@ mod tests {
         assert!(schematic.attached.is_empty());
     }
 
-    // r[verify schema.tracking.transitive]
+    // r[verify schema.tracking.transitive+3]
     // r[verify schema.tracking.sent]
     #[test]
     fn tracker_prepare_send_includes_transitive_deps() {

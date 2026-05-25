@@ -185,7 +185,7 @@ weight = 11
 
 > r[conduit]
 >
-> Conduits provide compact Telex serialization/deserialization on top of links.
+> Conduits provide compact Binette serialization/deserialization on top of links.
 > Sending is split into synchronous preparation and asynchronous enqueue.
 
 > r[conduit.typeplan]
@@ -311,17 +311,17 @@ starts only after that conduit has been selected and initialized.
 >
 > Application-level schemas are delivered by standalone `SchemaMessage`
 > payloads before the `Request` or `Response` payloads that need them
-> (see `r[schema.format.delivery+2]`).
+> (see `r[schema.format.delivery+3]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
-> They are self-describing Telex handshake structs exchanged before the
+> They are self-describing Binette handshake structs exchanged before the
 > compact `MessagePayload` enum is used (see `r[session.handshake]`).
 
 > r[session.handshake]
 >
 > To establish a session on top of an existing conduit, a three-step
-> self-describing Telex handshake MUST be performed. The handshake
-> messages are self-describing structs, NOT compact Telex
+> self-describing Binette handshake MUST be performed. The handshake
+> messages are self-describing structs, NOT compact Binette
 > `MessagePayload` variants. This is the bootstrap: it establishes the
 > schemas needed to interpret the compact
 > `MessagePayload` enum that follows.
@@ -348,15 +348,15 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.self-describing]
 >
 > All handshake messages (`Hello`, `HelloYourself`, `LetsGo`, `Sorry`) MUST
-> be encoded in self-describing Telex mode. Self-describing mode does not require
+> be encoded in self-describing Binette mode. Self-describing mode does not require
 > a schema to parse, avoiding the chicken-and-egg problem of needing a schema to
-> read a schema. After `LetsGo`, all subsequent communication is compact Telex
+> read a schema. After `LetsGo`, all subsequent communication is compact Binette
 > `MessagePayload` values, deserialized using translation plans built from the
 > schemas exchanged in the handshake.
 
 > r[session.handshake.sorry]
 >
-> `Sorry` MUST contain a structured self-describing Telex description of
+> `Sorry` MUST contain a structured self-describing Binette description of
 > the incompatibility:
 > which variants or fields the rejecting peer requires that the other peer's
 > schema does not provide. After sending or receiving `Sorry`, the session

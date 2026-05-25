@@ -5,7 +5,8 @@ weight = 10
 +++
 
 The Vox specification defines the protocol and runtime model across layers. Vox
-uses [Telex](../telex/) as its value format, but Telex is specified separately.
+uses [Binette](https://github.com/bearcove/binette) as its value format, but
+Binette is specified separately.
 
 - Requests and channels
 - Connections and sessions

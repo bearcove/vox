@@ -1,24 +1,26 @@
 +++
 title = "Schema Exchange"
-description = "Backwards-compatible type evolution for compact Telex values"
+description = "Backwards-compatible type evolution for compact Binette values"
 weight = 15
 +++
 
-Compact Telex is Vox's steady-state data format. Compact Telex bytes are
+Compact Binette is Vox's steady-state data format. Compact Binette bytes are
 schema-driven: fields are identified by their order in the sender schema, not
 by name in the byte stream. This means that adding, removing, or reordering
 fields changes the byte layout, and a peer reading with a different type
 definition would silently misinterpret the data without Vox schema exchange.
 
 Schema exchange solves this without making compact values self-describing.
-Peers describe their types to each other by sending Telex schemas encoded as
-self-describing Telex values. Vox adds the exchange rules, per-connection
-tracking, translation planning, and Vox-specific schema metadata needed for RPC.
+Peers describe their types to each other by sending Binette schema bundles
+encoded as self-describing Binette values. Vox adds the exchange rules,
+per-connection tracking, method binding, and channel attachment rules needed
+for RPC.
 
-The result: compact Telex remains the fast path for serialization and
+The result: compact Binette remains the fast path for serialization and
 deserialization, but peers with different versions of the same types can
-communicate safely. Incompatibilities are detected early — when the
-translation plan is built — not mid-stream when a field has the wrong value.
+communicate safely. Vox applies Binette compatibility planning before payload
+decode so incompatibilities are detected early, not mid-stream when a field has
+the wrong value.
 
 # Design principles
 
@@ -36,10 +38,11 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 > r[schema.principles.self-describing]
 >
-> Schemas MUST be encoded using self-describing Telex. Self-describing mode does
-> not require a schema to parse, avoiding the chicken-and-egg problem of needing
-> a schema to read a schema. Compact Telex is used for data; self-describing
-> Telex is used for metadata about data.
+> Schema payloads MUST be encoded using self-describing Binette. Self-describing
+> mode does not require a schema to parse, avoiding the chicken-and-egg problem
+> of needing a schema to read a schema. Compact Binette is used for data;
+> self-describing Binette is used for schema bundles and other metadata about
+> data.
 
 > r[schema.principles.once-per-type]
 >
@@ -47,42 +50,34 @@ translation plan is built — not mid-stream when a field has the wrong value.
 > Once a peer has sent a schema, it records the type ID as "sent" and does
 > not send it again for the lifetime of the connection.
 
-# Type identity
+# Binette schema use
 
-The Telex schema specification defines the schema model and content-hash
-mechanism that gives every compact-capable type declaration a stable `u64`
-identity. See `r[telex.schema.model]` for the schema model,
-`r[telex.type-id]` for the umbrella identity rule,
-`r[telex.type-id.hash]` for the canonical-byte-sequence algorithm, and
-`r[telex.type-id.hash.typeref]`, `r[telex.type-id.hash.primitives]`,
-`r[telex.type-id.hash.struct]`, `r[telex.type-id.hash.enum]`,
-`r[telex.type-id.hash.container]`, `r[telex.type-id.hash.dynamic]`, and
-`r[telex.type-id.hash.tuple]` for the per-kind hash inputs. Recursive types
-follow `r[telex.hash.recursive]`.
-Vox's `TypeSchemaId` is the `u64` content hash defined by those rules.
+Binette owns the value model, schema model, type IDs, schema bundles, schema
+compatibility rules, and generic external attachment mechanism. Vox does not
+define a second schema language. Vox uses Binette schema bundles and adds only
+RPC-specific delivery, per-connection tracking, and method binding rules.
 
-Vox extends the Telex hash with one additional kind — channels — and
-constrains *where* a type ID is valid through per-connection scoping.
+Vox's `TypeSchemaId` is the Binette `u64` content hash. Content hashes give
+type IDs a universal meaning: a peer that receives a schema tagged with a
+content hash it has already seen — from this connection, a previous connection,
+or a persistent store — knows it already has that schema. This is critical for
+operation stores (see `r[schema.interaction.retry]`) and for efficient schema
+tracking across connection resumes.
 
-## Channel hashes
-
-> r[schema.type-id.hash.channel+2]
+> r[schema.type-id.hash.channel+3]
 >
-> Channels are a Vox RPC concept and not part of the Telex tag vocabulary,
-> so Telex's hash rules do not cover them directly. To hash a channel type,
-> use the same canonical-byte-sequence machinery as `r[telex.type-id.hash]`
-> and feed the hasher with:
+> Vox MUST NOT define a separate channel type-ID hash. Channel endpoints are
+> represented with Binette's external-attachment schema kind using external
+> kind string `"vox.channel"`. The channel endpoint's type ID is the Binette
+> type ID of that external-attachment schema.
 >
->   1. The tag `"channel"`
->   2. The direction: `"send"` or `"recv"`
->   3. The element type reference
-
-Content hashes give type IDs a universal meaning. A peer that receives
-a schema tagged with a content hash it has already seen — from this
-connection, a previous connection, or even a persistent store — knows
-it already has that schema. This is critical for operation stores
-(see `r[schema.interaction.retry]`) and for efficient schema tracking
-across connection resumes.
+> The `"vox.channel"` external metadata contains:
+>
+> - `direction`: `"send"` or `"recv"`
+> - `element`: the channel item type reference
+>
+> This makes channel positions visible to the Binette schema walk while keeping
+> channel allocation, flow control, and attachment IDs in Vox.
 
 > r[schema.type-id.per-connection]
 >
@@ -119,110 +114,23 @@ so schema state must be tracked independently per connection.
 
 # Vox schema payload format
 
-A Vox schema payload carries Telex schemas plus the Vox-specific metadata that
-the RPC layer needs to build translation plans. This is not a separate schema
-language: the compact byte grammar and non-channel type IDs come from Telex
-schemas.
-
-Vox adds two pieces above core Telex schemas:
-
-- `required` on struct fields and struct-variant fields, used by compatibility
-  tooling and diagnostics. Runtime translation decides missing local fields
-  from the local type's defaultability, not from remote metadata. This metadata
-  is a Vox profile field, not Telex type-ID hash input.
-- `channel`, a Vox schema extension for RPC channel endpoints. A channel's
-  Telex representation is unit at the value layer; Vox schema metadata records
-  the direction and element type so channels can be bound and translated.
-
-Vox profile metadata is scoped to the schema payload or schema snapshot that
-carried it. A cache keyed only by Telex type ID stores the Telex schema
-content, not the Vox profile metadata attached to one producer's view of that
-schema.
-
-The following abstract declarations describe Vox's schema payload profile. A
-non-channel Vox entry carries a core Telex schema value plus Vox metadata beside
-it; it does not add fields to the core Telex schema encoding from
-`r[telex.schema.format+2]`. Other language implementations must produce
-equivalent self-describing Telex encodings for this profile.
+A Vox schema payload carries a Binette schema bundle. The bundle root is the
+application type bound to one `(method_id, direction)` pair.
 
 ```rust
-/// A content hash that uniquely identifies a type's compact-wire-level
-/// structure. Computed via blake3, truncated to 64 bits.
-///
-/// The same type always produces the same TypeSchemaId regardless of
-/// connection, session, process, or language. On the wire, a TypeSchemaId is
-/// encoded as a little-endian u64.
-///
-/// For generic types, the TypeSchemaId identifies the *declaration*
-/// (e.g. `Result`), not a specific instantiation (e.g. `Result<u32, E>`).
-/// Concrete type arguments are provided separately at each use site.
 struct TypeSchemaId(u64);
 
-/// A reference to a type in a schema payload. Either a concrete type
-/// (identified by its TypeSchemaId with optional type arguments for generic
-/// types) or a type variable bound by the enclosing generic.
-enum TypeRef {
-    /// A concrete type, possibly generic.
-    Concrete {
-        type_id: TypeSchemaId,
-        /// Type arguments for generic types. Empty for non-generic types.
-        /// For example, `Vec<String>` is `Concrete { type_id: <Vec>, args: [<String>] }`.
-        args: Vec<TypeRef>,
-    },
-    /// A reference to a type parameter of the enclosing generic type,
-    /// by name. For example, in `Result<T, E>`, the `Ok` variant's
-    /// payload references `Var("T")`.
-    Var(String),
-}
+/// A Binette type reference, encoded as specified by Binette.
+struct TypeRef;
 
 /// The direction of a channel endpoint.
 enum ChannelDirection {
-    /// A sending endpoint (`Tx<T>`).
     Send,
-    /// A receiving endpoint (`Rx<T>`).
     Recv,
 }
 
-/// A core Telex schema value as defined by r[telex.schema.model].
-struct TelexSchema;
-
-/// A Vox schema payload entry.
-enum VoxSchemaEntry {
-    /// A Telex schema plus Vox metadata carried beside it.
-    Telex {
-        schema: TelexSchema,
-        metadata: VoxSchemaMetadata,
-    },
-    /// A Vox channel endpoint. Channels are serialized as Telex unit values;
-    /// the actual channel ID is passed out-of-band.
-    Channel {
-        id: TypeSchemaId,
-        direction: ChannelDirection,
-        element: TypeRef,
-    },
-}
-
-/// Metadata attached to a Telex schema entry by Vox.
-enum VoxSchemaMetadata {
-    None,
-    Struct { fields: Vec<FieldMetadata> },
-    Enum { variants: Vec<VariantMetadata> },
-}
-
-/// Metadata for one struct field or struct-variant field.
-struct FieldMetadata {
-    /// True if the producer's field has no default value. This is profile
-    /// metadata for compatibility tools and diagnostics, not Telex hash input.
-    required: bool,
-}
-
-/// Metadata for one enum variant. Its shape mirrors the Telex variant payload.
-enum VariantMetadata {
-    Unit,
-    Newtype,
-    Tuple,
-    Struct { fields: Vec<FieldMetadata> },
-}
+/// A Binette schema bundle as specified by Binette.
+struct BinetteSchemaBundle;
 ```
 
 Generic types are sent once per declaration, not once per instantiation.
@@ -234,107 +142,58 @@ matching where different languages may format generic type names differently.
 Container types (`list`, `set`, `map`, `array`, `option`) are built-in generics.
 Their element/key/value references use type references like any other schema
 reference, but they do not need explicit `type_params` because their
-generic structure is implicit in the Telex schema kind.
+generic structure is implicit in the Binette schema kind.
 
-The normative rules below define the self-describing Telex encoding of
-Vox schema payload entries.
+The normative rules below define the self-describing Binette encoding of
+Vox schema payloads.
 
-> r[schema.format+3]
+> r[schema.format+4]
 >
-> A Vox schema payload entry MUST be a self-described enum variant:
->
->   * `telex`: struct payload with `schema` and `metadata`
->   * `channel`: struct payload with `id`, `direction`, and `element`
->
-> The `schema` field in a `telex` entry is encoded exactly as
-> `r[telex.schema.format+2]`. The `metadata` field is Vox profile metadata and
-> is not part of the Telex schema content. The `channel` entry is the Vox
-> extension defined by `r[schema.format.channel+3]`.
+> A Vox `SchemaPayload` MUST be a self-described Binette struct containing a
+> `bundle` field. The `bundle` field is a Binette schema bundle whose root is
+> the type bound by this `SchemaMessage`.
 
 > r[schema.format.type-id]
 >
 > A `TypeSchemaId` MUST be encoded as a `u64`.
 
-> r[schema.format.type-ref+3]
+> r[schema.format.type-ref+4]
 >
-> Vox type references use the Telex type-reference encoding from
-> `r[telex.schema.format.type-ref+2]`. A concrete `type_id` may identify either
-> a Telex schema entry or a Vox channel entry in the same schema registry.
->
-> Concrete references use variant `concrete` with struct payload fields
-> `type_id: u64` and `args: list<type_ref>`. The `args` list is empty for
-> non-generic concrete references. Type-parameter references use variant `var`
-> with a UTF-8 string payload naming one of the enclosing Telex schema's
-> `type_params`.
+> Vox type references use the Binette type-reference encoding. Vox does not add
+> a Vox-specific type-reference variant.
 
-> r[schema.format.primitive+2]
+> r[schema.format.primitive+3]
 >
-> Primitive type IDs are the well-known Telex constants from
-> `r[telex.type-id.hash.primitives]`. A Vox schema payload does not need to
-> carry primitive schema entries before primitive IDs can be referenced. If a
-> primitive schema entry is carried, it is a `telex` entry whose nested schema is
-> the corresponding Telex primitive schema and whose metadata is `none`.
+> Vox primitive schemas are Binette primitive schemas. Vox does not define
+> primitive schema metadata.
 
-> r[schema.format.struct+3]
+> r[schema.format.struct+4]
 >
-> For a `telex` entry whose nested Telex schema kind is `struct`, Vox metadata
-> MUST be `struct` metadata with one field-metadata entry per Telex field, in
-> the same declaration order. Each field metadata entry contains:
->
->   * `required`: a boolean, `true` if the producer's field has no default
->     value, `false` if it does
->
-> The `required` field is Vox profile metadata. It is not part of the Telex
-> schema content used by `r[telex.type-id.hash]`, and two otherwise identical
-> struct schemas that differ only in `required` flags have the same Telex type
-> ID. Runtime decode of a missing local field is governed by the local type's
-> defaultability (`r[schema.translation.fill-defaults]`); remote `required`
-> flags are used for Vox compatibility reports and diagnostics.
+> Vox struct schemas are Binette struct schemas. Producer-side field
+> defaultability is not sent in live Vox schema exchange; default providers are
+> reader-side information used by the Binette compatibility rules.
 
-> r[schema.format.enum+3]
+> r[schema.format.enum+4]
 >
-> For a `telex` entry whose nested Telex schema kind is `enum`, Vox metadata
-> MUST be `enum` metadata with one variant-metadata entry per Telex variant, in
-> declaration order. Each variant metadata entry MUST mirror the corresponding
-> Telex variant payload shape: `unit`, `newtype`, `tuple`, or `struct`.
->
-> Only `struct` variant metadata contains field metadata. It contains one
-> field-metadata entry per Telex struct-variant field, in declaration order,
-> with the same `required` meaning as `r[schema.format.struct+3]`.
+> Vox enum schemas are Binette enum schemas. Vox does not define enum schema
+> metadata.
 
-> r[schema.format.container+3]
+> r[schema.format.container+4]
 >
-> For `telex` entries whose nested Telex schema kind is `list`, `set`, `map`,
-> `array`, `option`, or `dynamic`, Vox metadata MUST be `none`. Sets MUST use
-> the Telex `set` schema kind. Lists and sets remain distinct schema kinds even
-> if an implementation stores both as homogeneous sequences internally.
+> Vox container schemas are Binette container schemas. Lists and sets remain
+> distinct schema kinds as specified by Binette.
 
-> r[schema.format.tuple+3]
+> r[schema.format.tuple+4]
 >
-> For a `telex` entry whose nested Telex schema kind is `tuple`, Vox metadata
-> MUST be `none`.
->
-> The `elements` array MUST contain at least one element. A zero-element
-> tuple is not valid; use the Telex `unit` primitive instead.
+> Vox tuple schemas are Binette tuple schemas.
 
-> r[schema.format.channel+3]
+> r[schema.format.channel+4]
 >
-> A Vox channel entry MUST contain:
->
->   * `id`: the channel type ID computed by `r[schema.type-id.hash.channel+2]`
->   * `direction`: `"send"` or `"recv"`
->   * `element`: a type reference for the channel's element type, encoded by
->     `r[schema.format.type-ref+3]`
->
-> Channels are serialized as Telex `unit` values on the value wire. The actual
-> channel ID is passed out-of-band in the message's `channels` field. The
-> schema records the direction and element type so that translation plans can
-> correctly map channel positions across schema versions.
->
-> A channel schema is not interchangeable with an ordinary Telex `unit` schema:
-> it marks the compact position where Vox must bind the next channel ID from
-> the message's channel attachment list. Runtime channel capacity is
-> flow-control configuration, not part of the schema identity.
+> Vox channel endpoints MUST be represented as Binette external attachments
+> using the `"vox.channel"` external kind from
+> `r[schema.type-id.hash.channel+3]`. The in-band compact value is Binette
+> unit. The actual channel ID is carried out-of-band in the message's
+> `channels` field.
 
 ## Recursive types on the wire
 
@@ -343,18 +202,12 @@ same plain `u64` content hash as any other type. There is no special
 wire representation for recursive references. The schemas for all
 types in a recursive group simply reference each other by hash.
 
-> r[schema.format.recursive+2]
+> r[schema.format.recursive+3]
 >
-> When sending schemas for a recursive group, the sender MUST include
-> all schemas in the group that have not already been sent on this
-> connection. The receiver MUST be able to resolve every `TypeSchemaId`
-> referenced in the schemas using either the schemas included in the
-> current `SchemaPayload` or schemas previously received on this
-> connection.
->
-> The order of schemas inside a `SchemaPayload` is not significant. A receiver
-> MUST collect the payload's declared schema IDs before resolving references,
-> so mutual recursion and forward references within the payload are valid.
+> Recursive schemas are represented using Binette recursive type IDs and
+> Binette schema bundles. When sending schemas for a recursive group, the
+> sender MUST include all schemas in the group that have not already been sent
+> on this connection.
 
 ## Schema delivery
 
@@ -370,15 +223,10 @@ enum BindingDirection {
     Response,
 }
 
-/// The self-describing Telex payload carried by a SchemaMessage.
+/// The self-describing Binette payload carried by a SchemaMessage.
 struct SchemaPayload {
-    /// All schemas needed by the receiver that have not been
-    /// previously sent on this connection.
-    schemas: Vec<VoxSchemaEntry>,
-    /// The root type for one method's args or response. This is a
-    /// TypeRef because the root type may be a generic instantiation
-    /// (e.g. `Result<Profile, VoxError<Infallible>>`).
-    root: TypeRef,
+    /// The Binette schema bundle for this method binding.
+    bundle: BinetteSchemaBundle,
 }
 ```
 
@@ -390,29 +238,23 @@ struct SchemaPayload {
 > this connection. The receiver MUST be able to build translation plans for
 > all included types before deserializing the payload.
 
-> r[schema.format.id-verified+3]
+> r[schema.format.id-verified+4]
 >
-> Before installing a schema entry from a `SchemaPayload`, the receiver MUST
-> verify that the declared `id` matches the schema content.
->
-> For `telex` entries, verification uses `r[telex.schema.registry+2]` on the
-> nested Telex schema. Vox profile metadata such as `required` is checked for
-> shape against the nested schema, but ignored for Telex type-ID verification.
->
-> For `channel` entries, verification uses `r[schema.type-id.hash.channel+2]`.
->
-> A schema whose declared ID does not match its content is a protocol error.
-> The receiver MUST NOT install it in the connection's schema registry.
+> Before installing schemas from a `SchemaPayload`, the receiver MUST verify the
+> Binette schema bundle using Binette schema registry rules. A schema whose
+> declared ID does not match its content, whose bundle is not self-contained, or
+> whose root cannot be resolved is a protocol error. The receiver MUST NOT
+> install any schema from a rejected payload in the connection's schema registry.
 
-> r[schema.format.delivery+2]
+> r[schema.format.delivery+3]
 >
 > Application-level schemas are delivered as a standalone `SchemaMessage`
-> containing a self-describing Telex `SchemaPayload`. The payload MUST
+> containing a self-describing Binette `SchemaPayload`. The payload MUST
 > include:
 >
->   * All schemas needed for the method's types that have not been
->     previously sent on this connection
->   * The root type reference for one `(method_id, direction)` binding
+>   * a Binette schema bundle containing all schemas needed for the method's
+>     types that have not been previously sent on this connection
+>   * the bundle root type reference for one `(method_id, direction)` binding
 >
 > The root type for a response is always the full
 > `Result<T, VoxError<E>>` wire type, regardless of whether the
@@ -420,7 +262,7 @@ struct SchemaPayload {
 >
 > A `SchemaMessage` binds exactly one `(method_id, direction)` pair. If all
 > schemas for that method's types have already been sent on this connection,
-> the `schemas` array MAY be empty — but the binding message MUST still be sent
+> the bundle's `schemas` list MAY be empty — but the binding message MUST still be sent
 > the first time this `(method_id, direction)` pair is introduced on the
 > connection. The receiver needs the binding to know which previously-sent
 > `TypeSchemaId` is the root for this method. Sending a schema whose
@@ -442,13 +284,12 @@ Each peer maintains two sets per connection:
 > from the other peer. This set starts empty and grows monotonically over
 > the connection lifetime.
 
-> r[schema.tracking.transitive+2]
+> r[schema.tracking.transitive+3]
 >
-> When a schema entry is sent, all type IDs transitively referenced by that
-> entry are also marked as sent. A schema payload is self-contained
-> (see `r[schema.format.self-contained]`), so sending a struct Telex schema
-> implicitly sends the schemas of all its field types, their field types, and
-> so on.
+> When a schema bundle is sent, all type IDs transitively referenced by that
+> bundle are also marked as sent. A schema payload is self-contained
+> (see `r[schema.format.self-contained]`), so sending a Binette bundle
+> implicitly sends the schemas reachable from its root.
 
 > r[schema.tracking.bindings]
 >
@@ -463,7 +304,7 @@ Each peer maintains two sets per connection:
 Schema exchange operates at two levels:
 
 1. **Protocol level (per-session):** The `MessagePayload` schema is
-   exchanged during the self-describing Telex handshake
+   exchanged during the self-describing Binette handshake
    (see `r[session.handshake]`).
    This allows the protocol framing itself to evolve without breaking
    changes.
@@ -488,7 +329,7 @@ for the entire service interface up front.
 > the method's argument types have been sent to this peer on this connection.
 > If any have not, the caller MUST send a `SchemaMessage` carrying all unsent
 > schemas and the method binding before sending the `Request`
-> (see `r[schema.format.delivery+2]`).
+> (see `r[schema.format.delivery+3]`).
 
 > r[schema.exchange.callee]
 >
@@ -506,10 +347,12 @@ for the entire service interface up front.
 
 > r[schema.exchange.channels]
 >
-> Channel element types are included in schema exchange. If a method's
-> arguments contain `Tx<T>` or `Rx<T>`, the schema for `T` MUST be included
-> in the caller's schemas. Channels MUST NOT appear in return types
-> (see `r[rpc.channel.placement]`).
+> Channel endpoint schemas are included in schema exchange using the
+> `"vox.channel"` Binette external-attachment kind. If a method's arguments
+> contain `Tx<T>` or `Rx<T>`, the external attachment metadata identifies the
+> endpoint direction and the schema for `T` MUST be included in the caller's
+> bundle. Channels MUST NOT appear in return types (see
+> `r[rpc.channel.placement]`).
 
 > r[schema.exchange.required]
 >
@@ -534,8 +377,8 @@ for the entire service interface up front.
 # Method identity without signatures
 
 Schema exchange is mandatory (see `r[session.handshake]`). Since peers
-always have each other's type metadata, method identity no longer needs
-to encode the full type signature. Two versions of a service may have
+always have each other's method-bound schema roots, method identity no longer
+needs to encode the full type signature. Two versions of a service may have
 the same method with evolved argument types — including the signature
 hash in the method ID would make these look like different methods,
 which is exactly what schema exchange is designed to avoid.
@@ -558,36 +401,35 @@ difference.
 # Translation plans
 
 When a peer receives a schema for a remote type that it will deserialize
-into a local type, it builds a **translation plan**. The translation plan
-is a recipe for reading compact Telex bytes written by the remote type
-and populating the fields of the local type.
+into a local type, it builds a **translation plan** using Binette compatibility
+rules. The translation plan is a recipe for reading compact Binette bytes
+written by the remote type and populating the fields of the local type.
 
 Translation plans are built once per (remote type ID, local type) pair
 and cached for the connection lifetime.
 
 > r[schema.translation.field-matching]
 >
-> Fields are matched by name, not by position. Vox's plan-builder applies this
-> rule when constructing a translation plan from a remote schema and a local
-> type.
+> Fields are matched by name, not by position. Vox's plan-builder applies
+> Binette field-matching compatibility when constructing a translation plan
+> from a remote schema and a local type.
 
 > r[schema.translation.skip-unknown+2]
 >
 > Fields present in the remote schema but absent from the local type MUST be
-> skipped during deserialization. Compact Telex does not add per-field length
-> wrappers for this; the translation plan skips an unmatched value by walking
-> the sender schema for that value, as required by
-> `r[telex.aggregate.schema-driven-skip]`. Vox's plan-builder records "skip"
-> entries for unmatched remote fields when it constructs the plan.
+> skipped during deserialization. Vox uses Binette's schema-driven skip rule:
+> the translation plan skips an unmatched value by walking the sender schema
+> for that value. Vox's plan-builder records "skip" entries for unmatched remote
+> fields when it constructs the plan.
 
 > r[schema.translation.fill-defaults]
 >
 > Local fields absent from the remote schema MUST be filled with their
-> default values. Whether a local field has a default is a property of the local
-> type definition (e.g. `#[facet(default)]` in Rust, or equivalent in other
-> languages) and is not carried in the remote schema. Local fields without a
-> default that are missing from the remote schema cause a translation plan error
-> (see `r[schema.errors.missing-required]`).
+> default values. Whether a local field has a default is reader-side
+> defaultability information as defined by Binette compatibility tooling; Vox
+> live schema exchange does not carry producer-side `required` flags. Local
+> fields without a default that are missing from the remote schema cause a
+> translation plan error (see `r[schema.errors.missing-required]`).
 
 > r[schema.translation.reorder]
 >
@@ -600,20 +442,13 @@ and cached for the connection lifetime.
 > r[schema.translation.type-compat]
 >
 > For each matched field, the remote field type and local field type MUST be
-> compatible. Two types are compatible if:
->
->   * They are the same primitive type
->   * They are both containers of the same kind with compatible element types
->   * They are both structs and a nested translation plan can be built
->   * They are both enums and variant matching succeeds
->     (see `r[schema.translation.enum]`)
->   * They are both tuples and tuple matching succeeds
->     (see `r[schema.translation.tuple]`)
+> compatible according to Binette type-compatibility rules. Vox does not add
+> integer widening or other RPC-specific coercions.
 
 > r[schema.translation.serialization-unchanged]
 >
 > Schema exchange does NOT affect serialization. A peer always serializes
-> using its own local type definition and compact Telex. The translation
+> using its own local type definition and compact Binette. The translation
 > plan applies only on the deserialization side — the receiver adapts to the
 > sender's layout.
 
@@ -625,8 +460,8 @@ This allows adding variants to an enum without breaking existing peers.
 > r[schema.translation.enum]
 >
 > Enum variants are matched by name, not by variant index. Vox's plan-builder
-> maps remote variant names to local variant indices and records how to
-> deserialize each variant's payload.
+> applies Binette enum compatibility, maps remote variant names to local variant
+> indices, and records how to deserialize each variant's payload.
 
 > r[schema.translation.enum.unknown-variant]
 >
@@ -658,11 +493,8 @@ This means tuple evolution is more restricted than struct evolution.
 
 > r[schema.translation.tuple]
 >
-> Tuple types MUST have the same arity (number of elements) in both
-> the remote and local types. For each position, the remote element
-> type and local element type MUST be compatible (per
-> `r[schema.translation.type-compat]`). Adding, removing, or
-> reordering tuple elements is a breaking change.
+> Tuple types MUST be compatible according to Binette tuple-compatibility rules.
+> Vox does not add tuple-specific adaptation beyond the Binette plan.
 
 # Error reporting
 
@@ -745,14 +577,14 @@ can snapshot schemas and check changes as part of the development workflow.
 
 > r[schema.compat.snapshot]
 >
-> Implementations SHOULD provide tooling to snapshot the schemas of a
-> service's types. A snapshot captures the full schemas for every type
-> used in the service's method signatures.
+> Implementations SHOULD provide tooling to snapshot the Binette schema bundles
+> for a service's method bindings. A snapshot captures every schema reachable
+> from the service's method argument and response roots.
 
 > r[schema.compat.check+2]
 >
-> Implementations SHOULD provide tooling to compare two snapshots and
-> report:
+> Implementations SHOULD provide tooling to compare two snapshots using Binette
+> compatibility rules and report:
 >
 >   * **Compatible changes** — changes where a translation plan can be
 >     built in both directions (e.g., adding a field with a default)
@@ -769,9 +601,9 @@ can snapshot schemas and check changes as part of the development workflow.
 
 > r[schema.compat.policy]
 >
-> A breaking change is one where a translation plan cannot be built between
-> the old and new versions. Whether a breaking change is acceptable depends
-> on the project's deployment model (rolling updates vs. coordinated
+> A breaking change is one where a Binette translation plan cannot be built
+> between the old and new versions. Whether a breaking change is acceptable
+> depends on the project's deployment model (rolling updates vs. coordinated
 > releases). The tooling reports facts; policy is up to the project.
 
 # Interaction with other spec areas
@@ -780,17 +612,16 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 
 > r[schema.interaction.channels]
 >
-> Channels are unaffected by schema exchange beyond their element types.
-> Channel semantics (creation, flow control, close, reset) are unchanged.
-> The element type's schema is exchanged as part of the method's argument
-> or response schemas (see `r[schema.exchange.channels]`), and translation
-> plans apply to channel items the same way they apply to request/response
-> payloads.
+> Channel semantics (creation, flow control, close, reset) are unchanged by
+> schema exchange. Channel endpoints appear in Binette schemas as
+> `"vox.channel"` external attachments (see `r[schema.exchange.channels]`), and
+> translation plans apply to channel items the same way they apply to
+> request/response payloads.
 
 > r[schema.interaction.retry]
 >
 > Operation stores MUST store schemas alongside serialized payloads.
-> A sealed operation contains compact Telex bytes that are only
+> A sealed operation contains compact Binette bytes that are only
 > meaningful together with the schemas that describe them. When replaying
 > a sealed response, the replaying peer MUST send schemas for the
 > response types on the current connection if they have not already been
