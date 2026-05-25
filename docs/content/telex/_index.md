@@ -40,18 +40,28 @@ the telex value model, but that mapping is outside the core byte format.
 > | dynamic value | nested self-described value |
 > | extension | extension-defined payload |
 
+> r[telex.value-model.extension-form]
+>
+> `extension` is a self-describing-only value kind. Compact schemas MUST NOT
+> name `extension` as a compact kind, and compact values MUST NOT contain
+> extension tags in schema-driven positions.
+>
+> A compact dynamic-value field may still contain an extension value, because
+> `r[telex.aggregate.dynamic-value]` explicitly embeds a nested self-described
+> value.
+
 > r[telex.value-kind.preserved]
 >
 > The telex value kind is part of the value, not an implementation detail of
 > the body bytes. A decoded generic telex value includes one kind from
 > `r[telex.value-model]`.
 >
-> Self-describing form carries the kind as the leading tag byte. Compact form
-> omits that tag byte, but the external schema supplies the same kind the tag
-> would have supplied. Body grammars may reuse the same byte skeleton without
-> merging the corresponding value kinds; for example, `list`, `set`, and
-> rank-1 `array` are distinct telex kinds even though each contains a sequence
-> of element bytes.
+> Self-describing form carries the kind as the leading tag byte. For
+> compact-capable kinds, compact form omits that tag byte, but the external
+> schema supplies the same kind the tag would have supplied. Body grammars may
+> reuse the same byte skeleton without merging the corresponding value kinds;
+> for example, `list`, `set`, and rank-1 `array` are distinct telex kinds even
+> though each contains a sequence of element bytes.
 
 # Encoding forms
 
@@ -64,7 +74,7 @@ the telex value model, but that mapping is outside the core byte format.
 >   nested self-described values.
 > - **Compact form**: the value kind and aggregate structure are supplied by a
 >   schema outside the byte stream. Compact bytes contain scalar payloads,
->   aggregate counts, and field-length prefixes, but not tag bytes, field names,
+>   aggregate counts, and aggregate payloads, but not tag bytes, field names,
 >   variant names, or type names.
 
 > r[telex.mode.self-describing]
@@ -77,9 +87,9 @@ the telex value model, but that mapping is outside the core byte format.
 > r[telex.mode.compact]
 >
 > A compact value is decoded using an external schema that supplies its kind and
-> aggregate structure. Scalar payloads, aggregate counts, and field-length
-> prefixes have the same byte representation in compact form as they do inside
-> self-describing form. The schema, not the body skeleton alone, determines
+> aggregate structure. Scalar payloads and aggregate counts have the same byte
+> representation in compact form as they do inside self-describing form. The
+> schema, not the body skeleton alone, determines
 > whether those bytes are a list, set, array, tuple, struct, or other telex kind.
 
 # Self-describing tags
@@ -288,6 +298,22 @@ assigned bytes are the permanent bootstrap contract for telex.
 > ordering as the byte-level rule; otherwise it sorts by encoded bytes before
 > emitting.
 
+> r[telex.aggregate.set-map.decode-policy]
+>
+> Canonical ordering is an encoder requirement and a canonical-validation
+> requirement, not an unconditional tax on every trusted decode path.
+>
+> A decoder that is validating Telex bytes for interchange, storage, hashing, or
+> diagnostics MUST verify that set elements and map entries appear in strictly
+> ascending canonical order and MUST reject noncanonical order.
+>
+> An implementation MAY also expose a trusted decode path that assumes the input
+> was produced by a conforming encoder and skips the ordering check. A trusted
+> decode path still follows the same byte grammar and scalar validity rules, but
+> it MUST NOT report that the input bytes were canonical unless canonical order
+> was actually verified or the bytes came directly from that implementation's
+> canonical encoder.
+
 > r[telex.aggregate.set-map.float-keys]
 >
 > When `f32` or `f64` appears as a set element or map key, the
@@ -307,11 +333,12 @@ assigned bytes are the permanent bootstrap contract for telex.
 
 > r[telex.aggregate.array]
 >
-> Arrays are fixed-shape homogeneous containers. The shape is a positive rank
-> and one `u64` dimension length per axis. Rank `1` with dimensions `[N]`
-> represents a one-dimensional fixed array of `N` elements. Unlike a list, an
-> array's shape is part of the kind's type information rather than variable
-> payload data.
+> Arrays are fixed-shape homogeneous containers. The shape is rank `>= 1` and
+> one `u64` dimension length per axis. Dimension lengths MAY be zero. Rank `1`
+> with dimensions `[N]` represents a one-dimensional fixed array of `N`
+> elements; rank `1` with dimensions `[0]` represents an empty one-dimensional
+> fixed array. Unlike a list, an array's shape is part of the kind's type
+> information rather than variable payload data.
 >
 > - **Compact mode.** The shape comes from the schema. The bytes are only the
 >   element bytes in row-major order.
@@ -319,14 +346,16 @@ assigned bytes are the permanent bootstrap contract for telex.
 >   `[rank: u32 LE][dim_0: u64 LE]...[dim_{rank-1}: u64 LE][element bytes...]`.
 >   Element bytes are self-described values in row-major order.
 >
-> The element count is the product of the dimensions. Rank `0` and dimension
-> products that overflow `u64` are invalid.
+> The element count is the product of the dimensions. If the element count is
+> zero, no element bytes are emitted. Rank `0` and dimension products that
+> overflow `u64` are invalid.
 
 > r[telex.aggregate.tuple]
 >
 > Tuples encode their elements in tuple order. Compact tuple arity comes from
 > the schema. Self-describing tuples carry `[count: u32 LE]` before the
-> elements.
+> elements. Tuple arity MUST be at least one; use `unit` for the zero-field
+> product.
 
 > r[telex.aggregate.struct.self-describing]
 >
@@ -337,7 +366,6 @@ assigned bytes are the permanent bootstrap contract for telex.
 > field_count: u32 LE
 > repeated field_count times:
 >   field_name: string payload without an extra string tag
->   field_len: u32 LE
 >   field_value: self-described value bytes
 > ```
 >
@@ -347,30 +375,29 @@ assigned bytes are the permanent bootstrap contract for telex.
 > r[telex.aggregate.struct.compact]
 >
 > A compact struct is encoded in the sender's declaration order. Every field is
-> encoded as:
+> encoded directly:
 >
 > ```text
-> field_len: u32 LE
 > field_value: compact value bytes
 > ```
 >
-> `field_len` counts only `field_value`, not the length prefix. This prefix is
-> required for every struct field, even when the sender believes all receivers
-> know the field.
+> The field's schema determines how many bytes the field consumes. Compact
+> struct bytes do not include field names or per-field length wrappers.
 
-> r[telex.aggregate.field-prefix]
+> r[telex.aggregate.schema-driven-skip]
 >
-> Compact struct fields and compact enum tuple/struct payload fields MUST
-> always carry the `u32` field-length prefix. Encoders MUST NOT omit it when
-> local and remote schemas are identical, when a field is fixed-width, or when
-> the selected link is local or uncompressed.
+> A compact decoder that needs to ignore a value MUST skip it by walking the
+> sender schema for that value. Compact Telex MUST NOT add an extra field or
+> payload length solely to make struct fields or enum payload fields skippable.
+> Variable-length primitives and aggregates still carry their own intrinsic
+> lengths and counts as defined by their value grammar.
 
 > r[telex.aggregate.enum.compact]
 >
 > A compact enum is encoded as `[variant_index: u32 LE][payload bytes]`, where
 > `variant_index` is the sender schema's declaration index. Unit variants have
-> no payload. Newtype, tuple, and struct variant payload fields use the same
-> per-field `u32` length prefix required for struct fields.
+> no payload. Newtype, tuple, and struct variant payload fields are encoded
+> directly according to the selected variant payload schema.
 
 > r[telex.aggregate.enum.self-describing]
 >
@@ -379,7 +406,6 @@ assigned bytes are the permanent bootstrap contract for telex.
 > ```text
 > tag(enum variant)
 > variant_name: string payload without an extra string tag
-> payload_len: u32 LE
 > payload_value: self-described value bytes
 > ```
 >
@@ -397,17 +423,16 @@ assigned bytes are the permanent bootstrap contract for telex.
 >   outer `0x1B` marks the field as "any type" rather than a concrete shape;
 >   the inner tag and body are a regular self-described value.
 > - **Compact mode.** The dynamic-value field is reached via the standard
->   per-field length prefix (`r[telex.aggregate.field-prefix]`), and the
->   prefixed bytes are themselves a self-described value:
->   `[field_len: u32 LE] [inner tag] [inner body]`. No outer `0x1B` — the
+>   schema-driven compact path, and the bytes are themselves exactly one
+>   self-described value: `[inner tag] [inner body]`. No outer `0x1B` — the
 >   "this field is dynamic" information comes from the schema.
 >
 > A dynamic-value field is the only place compact bytes contain a
-> self-describing tag stream; the field-length prefix isolates it from the
-> compact codec, which only reads the length and the bytes beyond.
+> self-describing tag stream. A decoder consumes exactly one self-described
+> value, then returns to the surrounding compact schema.
 
 # Related specifications
 
-Schema/type identity is outside this core byte format. The companion
-[Telex schema identity](./type-identity/) specification defines a content-hash
-scheme for systems that need stable identifiers for compact schemas.
+Compact schemas and type identity are part of Telex. The companion
+[Telex schemas](./schemas/) specification defines the schema model used by
+compact mode and the content-hash scheme for stable schema identifiers.

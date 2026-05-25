@@ -4,17 +4,16 @@ description = "Backwards-compatible type evolution for compact Telex values"
 weight = 15
 +++
 
-Compact Telex is Vox's steady-state data format. It is compact and fast,
-but positional: fields are identified by their order in the sender schema, not
+Compact Telex is Vox's steady-state data format. Compact Telex bytes are
+schema-driven: fields are identified by their order in the sender schema, not
 by name in the byte stream. This means that adding, removing, or reordering
 fields changes the byte layout, and a peer reading with a different type
-definition would silently misinterpret the data without schema exchange.
+definition would silently misinterpret the data without Vox schema exchange.
 
 Schema exchange solves this without making compact values self-describing.
-Peers describe their types to each other using self-describing Telex
-schema payloads, and the receiving side builds a **translation plan** that maps
-remote field positions to local field positions before deserializing compact
-bytes.
+Peers describe their types to each other by sending Telex schemas encoded as
+self-describing Telex values. Vox adds the exchange rules, per-connection
+tracking, translation planning, and Vox-specific schema metadata needed for RPC.
 
 The result: compact Telex remains the fast path for serialization and
 deserialization, but peers with different versions of the same types can
@@ -50,9 +49,10 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 # Type identity
 
-The separate Telex schema identity specification defines the universal
-content-hash mechanism that gives every type declaration a stable `u64`
-identity. See `r[telex.type-id]` for the umbrella rule,
+The Telex schema specification defines the schema model and content-hash
+mechanism that gives every compact-capable type declaration a stable `u64`
+identity. See `r[telex.schema.model]` for the schema model,
+`r[telex.type-id]` for the umbrella identity rule,
 `r[telex.type-id.hash]` for the canonical-byte-sequence algorithm, and
 `r[telex.type-id.hash.typeref]`, `r[telex.type-id.hash.primitives]`,
 `r[telex.type-id.hash.struct]`, `r[telex.type-id.hash.enum]`,
@@ -74,7 +74,7 @@ constrains *where* a type ID is valid through per-connection scoping.
 >
 >   1. The tag `"channel"`
 >   2. The direction: `"send"` or `"recv"`
->   3. The element `TypeRef`
+>   3. The element type reference
 
 Content hashes give type IDs a universal meaning. A peer that receives
 a schema tagged with a content hash it has already seen — from this
@@ -116,15 +116,24 @@ connection 0's schemas; it only sees connection 1. Each connection is
 an independent communication channel that may reach a different peer,
 so schema state must be tracked independently per connection.
 
-# Schema format
+# Vox schema payload format
 
-A schema describes a single type. Schemas are self-describing Telex
-values and self-contained — every type referenced by a schema is either a
-primitive or is referenced by its `TypeSchemaId` (a `u64` content hash).
+A Vox schema payload carries Telex schemas plus the Vox-specific metadata that
+the RPC layer needs to build translation plans. This is not a separate schema
+language: the compact byte grammar and type IDs come from Telex schemas.
 
-The following Rust declarations define the schema data model. Other
-language implementations must produce equivalent self-describing Telex
-encodings.
+Vox adds two pieces above core Telex schemas:
+
+- `required` on struct fields and struct-variant fields, used by translation
+  planning to decide whether a missing local field can be default-filled.
+  This metadata is not Telex type-ID hash input.
+- `channel`, a Vox schema extension for RPC channel endpoints. A channel's
+  Telex representation is unit at the value layer; Vox schema metadata records
+  the direction and element type so channels can be bound and translated.
+
+The following abstract declarations describe Vox's schema payload profile.
+Other language implementations must produce equivalent self-describing Telex
+encodings for this profile.
 
 ```rust
 /// A content hash that uniquely identifies a type's compact-wire-level
@@ -183,7 +192,7 @@ enum PrimitiveType {
     Payload,
 }
 
-/// The structural description of a type.
+/// The structural description of a Vox schema payload entry.
 ///
 /// Type references within a schema use `TypeRef`, which can be either
 /// a concrete type (with optional type arguments) or a type variable
@@ -215,13 +224,14 @@ enum SchemaKind {
     /// A variable-length collection of key-value pairs.
     Map { key: TypeRef, value: TypeRef },
 
-    /// A fixed-length homogeneous sequence (`[T; N]`).
-    Array { element: TypeRef, length: u64 },
+    /// A fixed-shape homogeneous array. Rust `[T; N]` maps to
+    /// `dimensions: [N]`; `[T; 0]` maps to `dimensions: [0]`.
+    Array { element: TypeRef, dimensions: Vec<u64> },
 
     /// A value that may be absent (`Option<T>`).
     Option { element: TypeRef },
 
-    /// A channel endpoint. Channels are serialized as `()` on the wire;
+    /// A Vox channel endpoint. Channels are serialized as Telex unit values;
     /// the actual channel ID is passed out-of-band. The schema records
     /// the direction and element type so that translation plans can correctly
     /// map channel positions across schema versions.
@@ -283,7 +293,7 @@ struct Schema {
     id: TypeSchemaId,
     /// Type parameter names for generic types. Empty for non-generic
     /// types. For `Result<T, E>`, this would be `["T", "E"]`.
-    /// The schema body uses `TypeRef::Var(name)` to reference these.
+    /// The schema body references these by type-parameter name.
     type_params: Vec<String>,
     /// The structural description of this type.
     kind: SchemaKind,
@@ -297,7 +307,7 @@ site differ. This is more efficient on the wire and enables cross-language
 matching where different languages may format generic type names differently.
 
 Container types (`List`, `Set`, `Map`, `Array`, `Option`) are built-in generics.
-Their element/key/value references use `TypeRef` like any other type
+Their element/key/value references use type references like any other schema
 reference, but they do not need explicit `type_params` because their
 generic structure is implicit in the `SchemaKind` variant.
 
@@ -306,7 +316,7 @@ these types.
 
 > r[schema.format]
 >
-> A schema MUST be a self-describing Telex struct containing:
+> A Vox schema payload entry MUST be a self-describing Telex struct containing:
 >
 >   * `id` — a `u64` type declaration content hash
 >   * `type_params` — a list of type parameter names.
@@ -314,6 +324,10 @@ these types.
 >   * `kind` — one of: `"struct"`, `"enum"`, `"tuple"`, `"list"`, `"set"`,
 >     `"map"`, `"array"`, `"option"`, `"channel"`, `"primitive"`
 >   * Kind-specific fields as defined below
+>
+> For every non-channel kind, the schema kind is the corresponding Telex schema
+> kind from `r[telex.schema.kinds]`. The `channel` kind is the Vox extension
+> defined by `r[schema.format.channel]`.
 
 > r[schema.format.type-id]
 >
@@ -321,11 +335,12 @@ these types.
 
 > r[schema.format.type-ref]
 >
-> A `TypeRef` MUST be encoded as one of:
+> Vox type references use the Telex type-reference encoding from
+> `r[telex.schema.format.type-ref]`. In the Vox schema profile, this is one of:
 >
 >   * A struct variant `{"concrete": type_id}` — a non-generic concrete type
 >   * A struct variant `{"concrete": type_id, "args": [type_ref, ...]}` — a
->     generic type with type arguments (each argument is itself a `TypeRef`)
+>     generic type with type arguments (each argument is itself a type reference)
 >   * A struct variant `{"var": name}` — a reference to a type parameter of
 >     the enclosing schema's `type_params` list, by name (UTF-8 string)
 
@@ -344,10 +359,10 @@ these types.
 > A struct schema MUST contain:
 >
 >   * `kind`: `"struct"`
->   * `name`: the type name (UTF-8 string, MUST NOT be empty)
+>   * `name`: the canonical declaration name (UTF-8 string, MUST NOT be empty)
 >   * `fields`: a list of field descriptors, each a struct with:
 >     - `name`: field name (UTF-8 string)
->     - `type_ref`: a `TypeRef` (see `r[schema.format.type-ref]`)
+>     - `type_ref`: a type reference (see `r[schema.format.type-ref]`)
 >     - `required`: a boolean — `true` if the field has no default
 >       value, `false` if it does
 >
@@ -359,7 +374,7 @@ these types.
 > An enum schema MUST contain:
 >
 >   * `kind`: `"enum"`
->   * `name`: the type name (UTF-8 string, MUST NOT be empty)
+>   * `name`: the canonical declaration name (UTF-8 string, MUST NOT be empty)
 >   * `variants`: a list of variant descriptors, each a struct with:
 >     - `name`: variant name (UTF-8 string)
 >     - `index`: the compact-wire variant index (`u32`)
@@ -375,9 +390,10 @@ these types.
 > Container schemas MUST contain:
 >
 >   * `kind`: `"list"`, `"set"`, `"map"`, `"array"`, or `"option"`
->   * `element`: a `TypeRef` (for list, set, array, option)
->   * `key` and `value`: `TypeRef`s (for map)
->   * `length`: a `u64` (for array only)
+>   * `element`: a type reference (for list, set, array, option)
+>   * `key` and `value`: type references (for map)
+>   * `dimensions`: a non-empty list of `u64` dimension lengths (for array
+>     only). Dimension lengths MAY be zero.
 >
 > Sets (`HashSet<T>`, `BTreeSet<T>`, etc.) MUST use `kind: "set"`. Lists and
 > sets have distinct schema kinds even if an implementation stores both as
@@ -388,7 +404,7 @@ these types.
 > A tuple schema MUST contain:
 >
 >   * `kind`: `"tuple"`
->   * `elements`: a list of `TypeRef`s, one per element, in order
+>   * `elements`: a list of type references, one per element, in order
 >
 > The `elements` array MUST contain at least one element. A zero-element
 > tuple is not valid — use `PrimitiveType::Unit` instead.
@@ -399,13 +415,17 @@ these types.
 >
 >   * `kind`: `"channel"`
 >   * `direction`: `"send"` or `"recv"`
->   * `element`: a `TypeRef` for the channel's element type
+>   * `element`: a type reference for the channel's element type
 >
-> Channels are serialized as `()` (unit) on the wire. The actual channel
-> ID is passed out-of-band in the message's `channels` field. The schema
-> records the direction and element type so that translation plans can
-> correctly map channel positions across schema versions. Runtime channel
-> capacity is flow-control configuration, not part of the schema identity.
+> Channels are serialized as Telex `unit` values on the value wire. The actual
+> channel ID is passed out-of-band in the message's `channels` field. The
+> schema records the direction and element type so that translation plans can
+> correctly map channel positions across schema versions.
+>
+> A channel schema is not interchangeable with an ordinary Telex `unit` schema:
+> it marks the compact position where Vox must bind the next channel ID from
+> the message's channel attachment list. Runtime channel capacity is
+> flow-control configuration, not part of the schema identity.
 
 ## Recursive types on the wire
 
@@ -422,6 +442,10 @@ types in a recursive group simply reference each other by hash.
 > referenced in the schemas using either the schemas included in the
 > current `SchemaPayload` or schemas previously received on this
 > connection.
+>
+> The order of schemas inside a `SchemaPayload` is not significant. A receiver
+> MUST collect the payload's declared schema IDs before resolving references,
+> so mutual recursion and forward references within the payload are valid.
 
 ## Schema delivery
 
@@ -457,6 +481,16 @@ struct SchemaPayload {
 > this connection. The receiver MUST be able to build translation plans for
 > all included types before deserializing the payload.
 
+> r[schema.format.id-verified]
+>
+> Before installing a schema from a `SchemaPayload`, the receiver MUST verify
+> that the declared `id` matches the schema content. For Telex schema kinds,
+> verification uses `r[telex.schema.registry]`. For Vox channel schemas,
+> verification uses `r[schema.type-id.hash.channel]`.
+>
+> A schema whose declared ID does not match its content is a protocol error.
+> The receiver MUST NOT install it in the connection's schema registry.
+
 > r[schema.format.delivery]
 >
 > Application-level schemas are delivered as a standalone `SchemaMessage`
@@ -465,7 +499,7 @@ struct SchemaPayload {
 >
 >   * All schemas needed for the method's types that have not been
 >     previously sent on this connection
->   * The root `TypeSchemaId` for one `(method_id, direction)` binding
+>   * The root type reference for one `(method_id, direction)` binding
 >
 > The root type for a response is always the full
 > `Result<T, VoxError<E>>` wire type, regardless of whether the
@@ -627,11 +661,11 @@ and cached for the connection lifetime.
 > r[schema.translation.skip-unknown]
 >
 > Fields present in the remote schema but absent from the local type MUST be
-> skipped during deserialization. Compact struct fields and compact enum
-> tuple/struct payload fields carry fixed-width length prefixes, so a skipped
-> field is a length read followed by advancing that many bytes. Vox's
-> plan-builder records "skip" entries for unmatched remote fields when it
-> constructs the plan.
+> skipped during deserialization. Compact Telex does not add per-field length
+> wrappers for this; the translation plan skips an unmatched value by walking
+> the sender schema for that value, as required by
+> `r[telex.aggregate.schema-driven-skip]`. Vox's plan-builder records "skip"
+> entries for unmatched remote fields when it constructs the plan.
 
 > r[schema.translation.fill-defaults]
 >
