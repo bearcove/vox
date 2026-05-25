@@ -1,10 +1,10 @@
 +++
-title = "Telex"
+title = "telex"
 description = "Binary value format, framing modes, and schema-evolution constraints"
 weight = 13
 +++
 
-Telex is a binary value format for Facet-shaped values. Vox uses it for
+telex is a binary value format for Facet-shaped values. vox uses it for
 protocol messages, handshake values, schema payloads, and application payloads.
 It has two framing modes:
 
@@ -15,23 +15,23 @@ It has two framing modes:
 
 The two modes share the same scalar and byte-level leaf encoding. The only
 difference is whether the structural tag stream is present in the bytes.
-The name is deliberately not Vox-branded: Telex is the message format beneath
-Vox, and can be specified independently from the Vox RPC protocol.
+The name is deliberately not vox-branded: telex is the message format beneath
+vox, and can be specified independently from the vox RPC protocol.
 
 # Format contract
 
 > r[telex.format]
 >
-> Telex defines a single value codec for every value it transports —
+> telex defines a single value codec for every value it transports —
 > bootstrap values, schema payloads, and application payloads alike. A
-> Telex-compliant implementation MUST NOT require a separate value codec to
-> decode any logical Telex message; the two framing modes
+> telex-compliant implementation MUST NOT require a separate value codec to
+> decode any logical telex message; the two framing modes
 > (`r[telex.mode.self-describing]`, `r[telex.mode.compact]`) share one
 > implementation per `r[telex.one-codec]`.
 
 > r[telex.modes]
 >
-> Telex defines exactly two framing modes:
+> telex defines exactly two framing modes:
 >
 > - **Self-describing**: every value carries enough structural tags to decode
 >   into a generic value tree without prior schema agreement.
@@ -45,7 +45,7 @@ Vox, and can be specified independently from the Vox RPC protocol.
 > r[telex.mode.self-describing]
 >
 > Self-describing mode MUST be decodable with zero application schema knowledge.
-> A decoder only needs the fixed Telex tag vocabulary and scalar encodings
+> A decoder only needs the fixed telex tag vocabulary and scalar encodings
 > in this chapter. It MUST be able to materialize a generic value tree that can
 > later be deserialized tolerantly into local protocol types.
 
@@ -57,7 +57,7 @@ Vox, and can be specified independently from the Vox RPC protocol.
 > prefixes — MUST NOT contain field names, type names, or structural tag bytes.
 > Bytes *inside* a length-prefixed region are opaque to the compact codec; in
 > particular, a dynamic-value field's prefixed bytes are decoded as a
-> self-described Telex value per `r[telex.aggregate.dynamic-value]`.
+> self-described telex value per `r[telex.aggregate.dynamic-value]`.
 
 > r[telex.one-codec]
 >
@@ -70,11 +70,11 @@ Vox, and can be specified independently from the Vox RPC protocol.
 
 > r[telex.endianness]
 >
-> All fixed-width numeric values in Telex MUST be little-endian.
+> All fixed-width numeric values in telex MUST be little-endian.
 
 > r[telex.no-varint]
 >
-> Telex MUST NOT use varints for integers, lengths, enum discriminants, or
+> telex MUST NOT use varints for integers, lengths, enum discriminants, or
 > type identifiers. Every integer has the width assigned by its type or by this
 > chapter.
 
@@ -87,10 +87,10 @@ Vox, and can be specified independently from the Vox RPC protocol.
 
 > r[telex.length.canonical-width]
 >
-> Length and count widths are part of the canonical Telex byte format. An
+> Length and count widths are part of the canonical telex byte format. An
 > encoder MUST NOT choose a narrower width for small values, schemas, local
 > transports, or uncompressed links. Compression, when used, happens below
-> Telex value framing and MUST NOT change the uncompressed Telex bytes.
+> telex value framing and MUST NOT change the uncompressed telex bytes.
 
 > r[telex.length.bounds]
 >
@@ -147,13 +147,13 @@ Vox, and can be specified independently from the Vox RPC protocol.
 # Self-describing tags
 
 Self-describing mode prefixes each value with one tag byte from this table. The
-assigned bytes are the permanent bootstrap contract for Telex.
+assigned bytes are the permanent bootstrap contract for telex.
 
 > r[telex.tags]
 >
 > Self-describing mode MUST use the following tag byte assignments:
 >
-> | Tag | Telex kind | Facet source |
+> | Tag | telex kind | Facet source |
 > |-----|------------|--------------|
 > | `0x00` | unit | `ScalarType::Unit`; unit struct/variant payloads |
 > | `0x01` | bool | `ScalarType::Bool` |
@@ -184,7 +184,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > | `0x1A` | option none | `Def::Option` |
 > | `0x1B` | option some | `Def::Option` |
 > | `0x1C` | dynamic value | `Def::DynamicValue` |
-> | `0x80..0xFF` | extension | future Telex extension tags |
+> | `0x80..0xFF` | extension | future telex extension tags |
 >
 > Tags `0x1D..0x7F` are reserved and MUST NOT be emitted. Tags
 > `0x80..0xFF` MUST follow the extension envelope defined by
@@ -202,7 +202,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > `0x19`, option some `0x1B`, dynamic value `0x1C`), the tag byte is followed
 > by the body defined in `r[telex.aggregate.*]` for that kind. Within a
 > self-describing aggregate body, every element, key, value, and field-value
-> is itself a self-described Telex value beginning with its own tag byte. The
+> is itself a self-described telex value beginning with its own tag byte. The
 > sole exceptions are field and variant *names* in
 > `r[telex.aggregate.struct.self-describing]` and
 > `r[telex.aggregate.enum.self-describing]`, which are emitted as raw
@@ -234,7 +234,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > r[telex.tags.unsupported-facet]
 >
 > Facet scalar and shape variants not listed in `r[telex.tags]` do not have an
-> implicit Telex representation. In particular, `usize`, `isize`, network
+> implicit telex representation. In particular, `usize`, `isize`, network
 > address scalars, `ConstTypeId`, raw pointers, function pointers, unions, and
 > undefined shapes MUST either be mapped by an explicit schema-defined type or
 > rejected before encoding.
@@ -394,7 +394,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 
 > r[telex.aggregate.dynamic-value]
 >
-> A dynamic value carries an arbitrary Telex value whose concrete type is not
+> A dynamic value carries an arbitrary telex value whose concrete type is not
 > fixed by the surrounding schema. Its content is always one self-described
 > value beginning with a tag byte from `r[telex.tags]`.
 >
@@ -441,7 +441,7 @@ assigned bytes are the permanent bootstrap contract for Telex.
 > A translation plan MUST be consumed when the decoder for a given
 > (remote schema, local type) pair is built. The hot decode path MUST NOT
 > interpret a translation plan per message. This applies to every conforming
-> Telex decoder — interpreted, JIT-compiled, or any other backend.
+> telex decoder — interpreted, JIT-compiled, or any other backend.
 
 > r[telex.translation.no-evolution-fallback]
 >
@@ -471,10 +471,10 @@ assigned bytes are the permanent bootstrap contract for Telex.
 >
 > | Kind tag | Reserved for | Defined in |
 > |----------|--------------|------------|
-> | `"channel"` | Vox RPC protocol | `r[schema.type-id.hash.channel]` |
+> | `"channel"` | vox RPC protocol | `r[schema.type-id.hash.channel]` |
 >
-> Telex itself does not specify how to hash a reserved-kind value because
-> the kinds are outside the Telex tag vocabulary — a Telex-only
+> telex itself does not specify how to hash a reserved-kind value because
+> the kinds are outside the telex tag vocabulary — a telex-only
 > implementation has no need to hash them. A protocol that consumes those
 > kinds is responsible for defining the canonical byte sequence its kind
 > feeds to the hasher.
@@ -733,7 +733,7 @@ Example: mutually recursive types.
 > r[telex.value.generic]
 >
 > A self-describing decoder MUST be able to materialize a generic value tree
-> containing all known Telex primitives and aggregates, plus opaque extension
+> containing all known telex primitives and aggregates, plus opaque extension
 > values for unknown extension tags. The generic value tree is the only input
 > required to materialize handshake and schema values into local types.
 
@@ -762,8 +762,8 @@ Example: mutually recursive types.
 
 > r[telex.compression]
 >
-> Wire compression is an optional byte-stream wrapper *below* Telex value
-> framing. It MUST NOT alter the bytes a Telex encoder produced — after
+> Wire compression is an optional byte-stream wrapper *below* telex value
+> framing. It MUST NOT alter the bytes a telex encoder produced — after
 > decompression a receiver MUST see the exact byte stream the encoder
 > emitted — and it MUST NOT alter the type-ID hashes of schemas it carries
 > (see `r[telex.type-id.hash]` for the hash definition).
@@ -780,9 +780,9 @@ Example: mutually recursive types.
 > r[telex.compression.streaming]
 >
 > Compression for stream-like remote links SHOULD be streaming over the link
-> byte stream, not a fresh compressor per Vox message. Per-message compression
+> byte stream, not a fresh compressor per vox message. Per-message compression
 > loses the recurring schema and field-layout context that makes fixed-width
-> Telex bytes compress well.
+> telex bytes compress well.
 
 > r[telex.compression.stream-state]
 >
@@ -797,7 +797,7 @@ Example: mutually recursive types.
 
 > r[telex.decoder.equivalence]
 >
-> All conforming Telex decoders for the same target type, remote schema, local
+> All conforming telex decoders for the same target type, remote schema, local
 > schema, and translation plan MUST produce the same decoded value or the same
 > error classification, regardless of whether they are reflective, interpreted,
 > JIT-compiled, or otherwise optimized.
@@ -806,10 +806,10 @@ Example: mutually recursive types.
 >
 > A conforming compact decoder MUST implement the schema-evolution operations
 > required by this chapter, including skip, default-fill, and reorder. These
-> operations are part of normal Telex semantics, not optional slow paths.
+> operations are part of normal telex semantics, not optional slow paths.
 
 > r[telex.oracle.reflective]
 >
 > A reflective decoder that walks facet shapes directly MAY exist as a test and
 > CI oracle. It MUST NOT be required as a shipped runtime path for compact
-> Telex decoding.
+> telex decoding.
