@@ -155,8 +155,7 @@ weight = 11
 >
 > The requested wire compression mode is an exact request. `none` is the
 > baseline mode and MUST be supported. Any compressed mode MUST be named in the
-> transport prologue before compressed bytes are sent
-> (see `r[telex.compression.modes]`).
+> transport prologue before compressed bytes are sent.
 
 > r[transport.prologue.accept]
 >
@@ -349,12 +348,11 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.self-describing]
 >
 > All handshake messages (`Hello`, `HelloYourself`, `LetsGo`, `Sorry`) MUST
-> be encoded in self-describing Telex mode
-> (see `r[telex.bootstrap.self-describing]`). Self-describing mode does not
-> require a schema to parse, avoiding the chicken-and-egg problem of needing a
-> schema to read a schema. After `LetsGo`, all subsequent communication is
-> compact Telex `MessagePayload` values, deserialized using translation
-> plans built from the schemas exchanged in the handshake.
+> be encoded in self-describing Telex mode. Self-describing mode does not require
+> a schema to parse, avoiding the chicken-and-egg problem of needing a schema to
+> read a schema. After `LetsGo`, all subsequent communication is compact Telex
+> `MessagePayload` values, deserialized using translation plans built from the
+> schemas exchanged in the handshake.
 
 > r[session.handshake.sorry]
 >

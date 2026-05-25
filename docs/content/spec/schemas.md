@@ -37,10 +37,9 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 > r[schema.principles.self-describing]
 >
-> Schemas MUST be encoded using self-describing Telex
-> (see `r[telex.schema.self-describing]`). Self-describing mode does not require
-> a schema to parse, avoiding the chicken-and-egg problem of needing a schema
-> to read a schema. Compact Telex is used for data; self-describing
+> Schemas MUST be encoded using self-describing Telex. Self-describing mode does
+> not require a schema to parse, avoiding the chicken-and-egg problem of needing
+> a schema to read a schema. Compact Telex is used for data; self-describing
 > Telex is used for metadata about data.
 
 > r[schema.principles.once-per-type]
@@ -51,15 +50,15 @@ translation plan is built — not mid-stream when a field has the wrong value.
 
 # Type identity
 
-Telex defines the universal content-hash mechanism that gives every type
-declaration a stable `u64` identity. See `r[telex.type-id]` for the
-umbrella rule, `r[telex.type-id.hash]` for the canonical-byte-sequence
-algorithm, and `r[telex.type-id.hash.typeref]`,
-`r[telex.type-id.hash.primitives]`, `r[telex.type-id.hash.struct]`,
-`r[telex.type-id.hash.enum]`, `r[telex.type-id.hash.container]`, and
-`r[telex.type-id.hash.tuple]` for the per-kind hash inputs. Recursive
-types follow `r[telex.hash.recursive]`. Vox's `TypeSchemaId` is the
-`u64` content hash defined by those rules.
+The separate Telex schema identity specification defines the universal
+content-hash mechanism that gives every type declaration a stable `u64`
+identity. See `r[telex.type-id]` for the umbrella rule,
+`r[telex.type-id.hash]` for the canonical-byte-sequence algorithm, and
+`r[telex.type-id.hash.typeref]`, `r[telex.type-id.hash.primitives]`,
+`r[telex.type-id.hash.struct]`, `r[telex.type-id.hash.enum]`,
+`r[telex.type-id.hash.container]`, and `r[telex.type-id.hash.tuple]` for
+the per-kind hash inputs. Recursive types follow `r[telex.hash.recursive]`.
+Vox's `TypeSchemaId` is the `u64` content hash defined by those rules.
 
 Vox extends the Telex hash with one additional kind — channels — and
 constrains *where* a type ID is valid through per-connection scoping.
@@ -160,8 +159,9 @@ enum TypeRef {
 /// The primitive types of compact Telex encoding.
 ///
 /// These are leaves in the type graph — they have no child types.
-/// Language-level wrappers (Rust newtypes, TypeScript type aliases)
-/// are transparent: `struct UserId(u64)` has the same schema as `u64`.
+/// Language-level wrappers are not implicitly transparent. A Rust newtype such
+/// as `struct UserId(u64)` is a named schema declaration unless the source
+/// mapping explicitly marks it transparent.
 enum PrimitiveType {
     Bool,
     U8, U16, U32, U64, U128,
@@ -620,36 +620,35 @@ and cached for the connection lifetime.
 
 > r[schema.translation.field-matching]
 >
-> Fields are matched by name, not by position — the wire-level requirement
-> is pinned in `r[telex.translation.name-matching]`. Vox's plan-builder
-> applies this rule when constructing a translation plan from a remote
-> schema and a local type.
+> Fields are matched by name, not by position. Vox's plan-builder applies this
+> rule when constructing a translation plan from a remote schema and a local
+> type.
 
 > r[schema.translation.skip-unknown]
 >
 > Fields present in the remote schema but absent from the local type MUST be
-> skipped during deserialization. The wire-level skip is a fixed-width
-> length read — see `r[telex.skip.struct-field]` and
-> `r[telex.skip.enum-field]`. Vox's plan-builder records "skip" entries for
-> unmatched remote fields when it constructs the plan.
+> skipped during deserialization. Compact struct fields and compact enum
+> tuple/struct payload fields carry fixed-width length prefixes, so a skipped
+> field is a length read followed by advancing that many bytes. Vox's
+> plan-builder records "skip" entries for unmatched remote fields when it
+> constructs the plan.
 
 > r[schema.translation.fill-defaults]
 >
 > Local fields absent from the remote schema MUST be filled with their
-> default values — the wire-level rule is `r[telex.translation.default-fill]`.
-> Whether a local field has a default is a property of the local type
-> definition (e.g. `#[facet(default)]` in Rust, or equivalent in other
-> languages) and is not carried in the remote schema. Local fields without
-> a default that are missing from the remote schema cause a translation
-> plan error (see `r[schema.errors.missing-required]`).
+> default values. Whether a local field has a default is a property of the local
+> type definition (e.g. `#[facet(default)]` in Rust, or equivalent in other
+> languages) and is not carried in the remote schema. Local fields without a
+> default that are missing from the remote schema cause a translation plan error
+> (see `r[schema.errors.missing-required]`).
 
 > r[schema.translation.reorder]
 >
 > When fields exist in both schemas but in different declaration order, the
-> translation plan MUST reorder during decode. This is a direct consequence
-> of `r[telex.translation.name-matching]` — the plan remaps remote positions
-> to local field offsets, then the compiled decoder writes each remote field
-> into its local slot.
+> translation plan MUST reorder during decode. This is a direct consequence of
+> `r[schema.translation.field-matching]`: the plan remaps remote positions to
+> local field offsets, then the compiled decoder writes each remote field into
+> its local slot.
 
 > r[schema.translation.type-compat]
 >
@@ -678,10 +677,9 @@ This allows adding variants to an enum without breaking existing peers.
 
 > r[schema.translation.enum]
 >
-> Enum variants are matched by name, not by variant index — the wire-level
-> requirement is `r[telex.translation.name-matching]` applied to enums.
-> Vox's plan-builder maps remote variant names to local variant indices
-> and records how to deserialize each variant's payload.
+> Enum variants are matched by name, not by variant index. Vox's plan-builder
+> maps remote variant names to local variant indices and records how to
+> deserialize each variant's payload.
 
 > r[schema.translation.enum.unknown-variant]
 >

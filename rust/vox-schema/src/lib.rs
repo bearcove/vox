@@ -16,7 +16,6 @@ use std::collections::HashMap;
 /// Computed via blake3, truncated to 64 bits. The same type always produces
 /// the same TypeSchemaId regardless of connection, session, process, or
 /// language.
-// r[impl telex.type-id]
 #[derive(Facet, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[facet(transparent)]
 pub struct SchemaHash(pub u64);
@@ -497,7 +496,7 @@ pub enum PrimitiveType {
 }
 
 // ============================================================================
-// Content hashing — r[telex.type-id.hash]
+// Content hashing
 // ============================================================================
 
 impl PrimitiveType {
@@ -569,11 +568,6 @@ impl<'a, Id: Copy> SchemaHasher<'a, Id> {
         }
     }
 
-    // r[impl telex.type-id.hash.primitives]
-    // r[impl telex.type-id.hash.struct]
-    // r[impl telex.type-id.hash.enum]
-    // r[impl telex.type-id.hash.container]
-    // r[impl telex.type-id.hash.tuple]
     fn feed_schema(&mut self, kind: &SchemaKind<Id>, type_params: &[TypeParamName]) {
         match kind {
             SchemaKind::Primitive { primitive_type } => {

@@ -557,9 +557,7 @@ fn extract_schemas_uncached(shape: &'static Shape) -> Result<ExtractedSchemas, S
 ///
 /// Schemas must be in dependency order (dependencies before dependents).
 /// For non-recursive types, this is a simple bottom-up pass. For recursive
-/// types, the 4-step algorithm from r[telex.hash.recursive] is used.
-// r[impl telex.type-id.hash]
-// r[impl telex.hash.recursive]
+/// types, the recursive content-hash algorithm is used.
 /// Resolve a MixedId to a TypeSchemaId for hashing purposes.
 fn resolve_mixed(id: MixedId, temp_to_final: &HashMap<CycleSchemaIndex, SchemaHash>) -> SchemaHash {
     match id {
@@ -579,11 +577,9 @@ enum ExtractKey {
 ///
 /// Schemas must be in dependency order (dependencies before dependents).
 /// For non-recursive types, this is a simple bottom-up pass. For recursive
-/// types, the 4-step algorithm from r[telex.hash.recursive] is used.
+/// types, the recursive content-hash algorithm is used.
 ///
 /// Returns the finalized schemas and a mapping from temp IDs to final IDs.
-// r[impl telex.type-id.hash]
-// r[impl telex.hash.recursive]
 fn finalize_content_hashes(
     schemas: Vec<MixedSchema>,
 ) -> Result<(Vec<Schema>, HashMap<CycleSchemaIndex, SchemaHash>), SchemaExtractError> {
@@ -1319,7 +1315,6 @@ mod tests {
         }
     }
 
-    // r[verify telex.type-id]
     #[test]
     fn type_ids_are_u64_content_hashes() {
         let id = SchemaHash(42);
@@ -1777,8 +1772,6 @@ mod tests {
         );
     }
 
-    // r[verify telex.type-id]
-    // r[verify telex.type-id.hash]
     #[test]
     fn type_ids_are_content_hashes() {
         let mut tracker = SchemaSendTracker::new();
@@ -1811,7 +1804,6 @@ mod tests {
         );
     }
 
-    // r[verify telex.type-id.hash.primitives]
     #[test]
     fn primitive_content_hashes_are_stable() {
         // These are the canonical hash values for primitive types.
@@ -1860,7 +1852,6 @@ mod tests {
         }
     }
 
-    // r[verify telex.type-id.hash.struct]
     #[test]
     fn struct_hash_is_deterministic() {
         #[derive(Facet)]
@@ -1878,7 +1869,6 @@ mod tests {
         );
     }
 
-    // r[verify telex.hash.recursive]
     #[test]
     fn recursive_type_hash_is_deterministic() {
         #[derive(Facet)]
