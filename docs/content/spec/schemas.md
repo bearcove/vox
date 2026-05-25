@@ -65,7 +65,7 @@ constrains *where* a type ID is valid through per-connection scoping.
 
 ## Channel hashes
 
-> r[schema.type-id.hash.channel]
+> r[schema.type-id.hash.channel+2]
 >
 > Channels are a Vox RPC concept and not part of the Telex tag vocabulary,
 > so Telex's hash rules do not cover them directly. To hash a channel type,
@@ -314,7 +314,7 @@ generic structure is implicit in the `SchemaKind` variant.
 The normative rules below define the self-describing Telex encoding of
 these types.
 
-> r[schema.format]
+> r[schema.format+2]
 >
 > A Vox schema payload entry MUST be a self-describing Telex struct containing:
 >
@@ -333,7 +333,7 @@ these types.
 >
 > A `TypeSchemaId` MUST be encoded as a `u64`.
 
-> r[schema.format.type-ref]
+> r[schema.format.type-ref+2]
 >
 > Vox type references use the Telex type-reference encoding from
 > `r[telex.schema.format.type-ref]`. In the Vox schema profile, this is one of:
@@ -354,7 +354,7 @@ these types.
 >     `"f32"`, `"f64"`, `"char"`, `"string"`, `"unit"`, `"never"`,
 >     `"bytes"`, `"payload"`
 
-> r[schema.format.struct]
+> r[schema.format.struct+2]
 >
 > A struct schema MUST contain:
 >
@@ -369,7 +369,7 @@ these types.
 > Fields MUST be listed in declaration order (which is also compact-wire
 > serialization order).
 
-> r[schema.format.enum]
+> r[schema.format.enum+2]
 >
 > An enum schema MUST contain:
 >
@@ -385,7 +385,7 @@ these types.
 >       - `{"struct": [field_descriptors...]}` — struct variant
 >         (field descriptors follow `r[schema.format.struct]`)
 
-> r[schema.format.container]
+> r[schema.format.container+2]
 >
 > Container schemas MUST contain:
 >
@@ -399,7 +399,7 @@ these types.
 > sets have distinct schema kinds even if an implementation stores both as
 > homogeneous sequences internally.
 
-> r[schema.format.tuple]
+> r[schema.format.tuple+2]
 >
 > A tuple schema MUST contain:
 >
@@ -409,7 +409,7 @@ these types.
 > The `elements` array MUST contain at least one element. A zero-element
 > tuple is not valid — use `PrimitiveType::Unit` instead.
 
-> r[schema.format.channel]
+> r[schema.format.channel+2]
 >
 > A channel schema MUST contain:
 >
@@ -434,7 +434,7 @@ same plain `u64` content hash as any other type. There is no special
 wire representation for recursive references. The schemas for all
 types in a recursive group simply reference each other by hash.
 
-> r[schema.format.recursive]
+> r[schema.format.recursive+2]
 >
 > When sending schemas for a recursive group, the sender MUST include
 > all schemas in the group that have not already been sent on this
@@ -491,7 +491,7 @@ struct SchemaPayload {
 > A schema whose declared ID does not match its content is a protocol error.
 > The receiver MUST NOT install it in the connection's schema registry.
 
-> r[schema.format.delivery]
+> r[schema.format.delivery+2]
 >
 > Application-level schemas are delivered as a standalone `SchemaMessage`
 > containing a self-describing Telex `SchemaPayload`. The payload MUST
@@ -658,7 +658,7 @@ and cached for the connection lifetime.
 > rule when constructing a translation plan from a remote schema and a local
 > type.
 
-> r[schema.translation.skip-unknown]
+> r[schema.translation.skip-unknown+2]
 >
 > Fields present in the remote schema but absent from the local type MUST be
 > skipped during deserialization. Compact Telex does not add per-field length
