@@ -289,7 +289,7 @@ starts only after that conduit has been selected and initialized.
 > connection ID is meaningful for every message type except `ProtocolError`
 > and keepalive (`Ping`/`Pong`), which MUST use connection ID 0.
 
-> r[session.message.payloads]
+> r[session.message.payloads+2]
 >
 > Here are all the kinds of message payloads:
 >
@@ -311,7 +311,7 @@ starts only after that conduit has been selected and initialized.
 >
 > Application-level schemas are delivered by standalone `SchemaMessage`
 > payloads before the `Request` or `Response` payloads that need them
-> (see `r[schema.format.delivery]`).
+> (see `r[schema.format.delivery+2]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
 > They are self-describing Telex handshake structs exchanged before the

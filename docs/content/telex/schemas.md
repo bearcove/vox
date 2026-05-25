@@ -125,72 +125,106 @@ depends only on the Telex schema model defined here.
 > Because schema interchange uses self-describing Telex, decoding a schema does
 > not require a pre-existing schema for the schema type.
 
-> r[telex.schema.registry]
+> r[telex.schema.registry+2]
 >
-> A schema registry maps type IDs to schemas. Before installing a non-primitive
-> schema into a registry, a consumer MUST recompute the schema's type ID from
-> its content using `r[telex.type-id.hash]` and reject the schema if the
-> recomputed ID differs from the declared `id`.
+> A schema registry maps type IDs to schemas. Before installing non-primitive
+> schemas into a registry, a consumer MUST verify the declared IDs against the
+> schemas' canonical content.
 >
 > Schema references may point to schemas already in the registry or to other
 > schemas being installed in the same batch. Batch order is not significant:
 > a consumer first indexes the batch by declared type ID, then resolves
 > references against the combined existing registry and batch. Duplicate
 > non-identical declarations for the same type ID are invalid.
+>
+> Verification is performed over the reference graph of the batch being
+> installed. Strongly connected components are verified in dependency order:
+>
+> - A non-recursive singleton is verified by recomputing its ID with
+>   `r[telex.type-id.hash]` and comparing the result with its declared `id`.
+>   References to earlier components in the same batch use those components'
+>   newly verified IDs.
+> - A self-recursive schema or mutually recursive group is verified as one
+>   strongly connected component using `r[telex.hash.recursive]`; every computed
+>   final ID in the component must match the corresponding declared `id`.
+> - References to schemas already present in the registry use those schemas'
+>   verified IDs as ordinary external references.
 
 # Schema encoding
 
-> r[telex.schema.format]
+> r[telex.schema.format+2]
 >
 > A Telex schema encoded for interchange is a self-described Telex struct with
-> these fields:
+> exactly these fields, emitted in this order by canonical encoders:
 >
 > - `id`: `u64`
 > - `type_params`: list of UTF-8 strings, empty for non-generic types
-> - `kind`: one schema-kind payload from `r[telex.schema.format.kind]`
+> - `kind`: one schema-kind payload from `r[telex.schema.format.kind+2]`
+>
+> Decoders identify fields by name using the self-describing struct rules in
+> `r[telex.aggregate.struct.self-describing]`. Canonical schema encoders MUST
+> NOT emit extra fields. A schema value with missing, duplicate, or extra fields
+> is not a valid core Telex schema encoding.
+>
+> Protocols that attach metadata to Telex schemas MUST carry that metadata
+> outside this core schema value. Extra protocol metadata is not part of the
+> Telex schema content and MUST NOT affect `r[telex.type-id.hash]`.
 
-> r[telex.schema.format.type-ref]
+> r[telex.schema.format.type-ref+2]
 >
-> A type reference is encoded as one of:
+> A type reference is encoded as a self-described enum variant:
 >
-> - `concrete`: struct payload with `type_id: u64` and `args: list<type_ref>`
-> - `var`: UTF-8 string payload naming one of the enclosing schema's type
->   parameters
+> - variant `concrete`: self-described struct payload with fields `type_id:
+>   u64` and `args: list<type_ref>`, emitted in that order by canonical
+>   encoders
+> - variant `var`: UTF-8 string payload naming one of the enclosing schema's
+>   type parameters
 >
 > The `args` list is empty for non-generic concrete references.
 
-> r[telex.schema.format.kind]
+> r[telex.schema.format.kind+2]
 >
-> A schema kind is encoded as one of:
+> A schema kind is encoded as a self-described enum variant:
 >
 > - `primitive`: primitive tag string from `r[telex.schema.primitive]`
-> - `struct`: canonical declaration name and field list
-> - `enum`: canonical declaration name and variant list
-> - `tuple`: non-empty element type-reference list
-> - `list`: element type reference
-> - `set`: element type reference
-> - `map`: key type reference and value type reference
-> - `array`: element type reference and non-empty dimension list
-> - `option`: element type reference
-> - `dynamic`: empty payload
-
-> r[telex.schema.format.fields]
+> - `struct`: self-described struct payload with fields `name: string` and
+>   `fields: list<field>`
+> - `enum`: self-described struct payload with fields `name: string` and
+>   `variants: list<variant>`
+> - `tuple`: non-empty `list<type_ref>`
+> - `list`: self-described struct payload with field `element: type_ref`
+> - `set`: self-described struct payload with field `element: type_ref`
+> - `map`: self-described struct payload with fields `key: type_ref` and
+>   `value: type_ref`
+> - `array`: self-described struct payload with fields `element: type_ref` and
+>   `dimensions: non-empty list<u64>`
+> - `option`: self-described struct payload with field `element: type_ref`
+> - `dynamic`: unit payload
 >
-> A field descriptor contains:
+> Canonical encoders emit payload fields in the order listed above.
+
+> r[telex.schema.format.fields+2]
+>
+> A field descriptor is a self-described struct containing exactly these fields,
+> emitted in this order by canonical encoders:
 >
 > - `name`: UTF-8 field name
 > - `type_ref`: type reference
 >
 > Field descriptors appear in compact serialization order.
 
-> r[telex.schema.format.variants]
+> r[telex.schema.format.variants+2]
 >
-> A variant descriptor contains:
+> A variant descriptor is a self-described struct containing exactly these
+> fields, emitted in this order by canonical encoders:
 >
 > - `name`: UTF-8 variant name
 > - `index`: `u32` compact variant index
-> - `payload`: one of `unit`, `newtype(type_ref)`, `tuple(list<type_ref>)`,
->   or `struct(list<field>)`
+> - `payload`: a self-described enum variant, one of:
+>   - `unit`: unit payload
+>   - `newtype`: type-reference payload
+>   - `tuple`: list of type references
+>   - `struct`: list of field descriptors
 >
 > Variant descriptors appear in declaration order. The `index` field is the
 > compact byte value used by `r[telex.aggregate.enum.compact]`.
@@ -347,6 +381,14 @@ opt-in so a schema mapping can erase wrapper identity when that is intended.
 > reuse a similar body grammar. This preserves the core Telex rule that value
 > kind is semantic: `list<T>`, `set<T>`, and `array<T, [N]>` have distinct type
 > identities.
+
+## Dynamic-Value Hashes
+
+> r[telex.type-id.hash.dynamic]
+>
+> To hash the dynamic-value schema kind, update the hasher with the tag
+> `"dynamic"`. Dynamic values have no child type references in the schema; the
+> concrete value kind is carried by each nested self-described value.
 
 ## Tuple Hashes
 
