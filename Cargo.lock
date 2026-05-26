@@ -272,7 +272,7 @@ dependencies = [
 [[package]]
 name = "binette"
 version = "0.0.0"
-source = "git+https://github.com/bearcove/binette?rev=e95580da530037f46bfb6640bd9ab11ddc4442e9#e95580da530037f46bfb6640bd9ab11ddc4442e9"
+source = "git+https://github.com/bearcove/binette?rev=cdbab38c7bda3be7468898abc52618f68ca2d774#cdbab38c7bda3be7468898abc52618f68ca2d774"
 dependencies = [
  "blake3",
  "facet-core",

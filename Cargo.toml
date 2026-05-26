@@ -72,7 +72,7 @@ vox-jit = { path = "rust/vox-jit", version = "0.8.2" }
 vox-swift-abi = { path = "rust/vox-swift-abi", version = "0.8.2" }
 facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
-binette = { git = "https://github.com/bearcove/binette", rev = "e95580da530037f46bfb6640bd9ab11ddc4442e9" }
+binette = { git = "https://github.com/bearcove/binette", rev = "cdbab38c7bda3be7468898abc52618f68ca2d774" }
 
 # Not internal crates
 moire = { version = "1.0.0", git = "https://github.com/bearcove/moire", rev = "cf162e7" }
