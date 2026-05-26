@@ -172,6 +172,9 @@ eyre = "0.6"
 # moire = { path = "../moire/crates/moire" }
 # moire-types = { path = "../moire/crates/moire-types" }
 
+[patch."https://github.com/bearcove/binette"]
+binette = { path = "/Users/amos/binette/rust/binette" }
+
 [profile.release]
 debug = 1
 
