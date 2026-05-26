@@ -26,6 +26,7 @@ vox-types = { workspace = true, features = ["jit"] }
 facet.workspace = true
 facet-core.workspace = true
 facet-reflect.workspace = true
+binette.workspace = true
 vox-postcard.workspace = true
 facet-cbor.workspace = true
 tokio.workspace = true

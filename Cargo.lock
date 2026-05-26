@@ -270,6 +270,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "binette"
+version = "0.0.0"
+source = "git+https://github.com/bearcove/binette?rev=e95580da530037f46bfb6640bd9ab11ddc4442e9#e95580da530037f46bfb6640bd9ab11ddc4442e9"
+dependencies = [
+ "blake3",
+ "facet-core",
+ "facet-reflect",
+ "facet-value",
+ "libc",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4182,6 +4195,7 @@ dependencies = [
 name = "vox-core"
 version = "0.8.2"
 dependencies = [
+ "binette",
  "facet",
  "facet-cbor",
  "facet-core",

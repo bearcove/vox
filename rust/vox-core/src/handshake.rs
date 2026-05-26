@@ -50,9 +50,24 @@ fn message_schema() -> Vec<Schema> {
         .clone()
 }
 
-/// Send a CBOR-encoded handshake message on a raw link.
+fn encode_handshake(msg: &HandshakeMessage) -> Result<Vec<u8>, HandshakeError> {
+    binette::encode_to_vec(msg).map_err(|e| HandshakeError::Encode(e.to_string()))
+}
+
+fn decode_handshake(bytes: &[u8]) -> Result<HandshakeMessage, HandshakeError> {
+    let bundle = binette::schema_bundle_for::<HandshakeMessage>()
+        .map_err(|e| HandshakeError::Decode(e.to_string()))?;
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(&bundle)
+        .map_err(|e| HandshakeError::Decode(e.to_string()))?;
+    binette::decode_from_slice(bytes, &bundle.root, &registry)
+        .map_err(|e| HandshakeError::Decode(e.to_string()))
+}
+
+/// Send a Binette-encoded handshake message on a raw link.
 async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(), HandshakeError> {
-    let bytes = facet_cbor::to_vec(msg).map_err(|e| HandshakeError::Encode(e.to_string()))?;
+    let bytes = encode_handshake(msg)?;
     vox_types::dlog!(
         "[handshake] send {:?} ({} bytes)",
         handshake_tag(msg),
@@ -61,7 +76,7 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
     tx.send(bytes).await.map_err(HandshakeError::Io)
 }
 
-/// Receive and decode a CBOR handshake message from a raw link.
+/// Receive and decode a Binette handshake message from a raw link.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()
@@ -72,8 +87,7 @@ async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, Han
         "[handshake] recv raw frame ({} bytes)",
         backing.as_bytes().len()
     );
-    let msg = facet_cbor::from_slice(backing.as_bytes())
-        .map_err(|e| HandshakeError::Decode(e.to_string()))?;
+    let msg = decode_handshake(backing.as_bytes())?;
     vox_types::dlog!("[handshake] recv {:?}", handshake_tag(&msg));
     Ok(msg)
 }
@@ -89,7 +103,7 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 
 // r[impl session.handshake]
 // r[impl session.handshake.self-describing]
-/// Perform the CBOR handshake as the initiator.
+/// Perform the Binette handshake as the initiator.
 ///
 /// Three-step exchange:
 /// 1. Send Hello
@@ -163,7 +177,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 
 // r[impl session.handshake]
 // r[impl session.handshake.self-describing]
-/// Perform the CBOR handshake as the acceptor.
+/// Perform the Binette handshake as the acceptor.
 ///
 /// Three-step exchange:
 /// 1. Receive Hello
