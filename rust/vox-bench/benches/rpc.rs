@@ -142,6 +142,7 @@ struct BinetteFixture<T> {
     value: T,
     bytes: Vec<u8>,
     writer_plan: binette::WriterPlan,
+    reader_plan: binette::ReaderPlan,
     registry: binette::SchemaRegistry,
 }
 
@@ -157,12 +158,15 @@ where
             .expect("install binette schema bundle");
         let bytes =
             binette::encode_to_vec_with_plan(&value, &writer_plan).expect("binette encode fixture");
-        let _: T = binette::decode_from_slice(&bytes, writer_plan.root(), &registry)
+        let reader_plan = binette::reader_plan_for::<T>(writer_plan.root(), &registry)
+            .expect("binette reader plan");
+        let _: T = binette::decode_from_slice_with_plan(&bytes, &reader_plan, &registry)
             .expect("binette decode fixture");
         Self {
             value,
             bytes,
             writer_plan,
+            reader_plan,
             registry,
         }
     }
@@ -193,9 +197,9 @@ mod codec {
     fn interp_decode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
         bencher.bench_local(|| {
             black_box(
-                binette::decode_from_slice::<T>(
+                binette::decode_from_slice_with_plan::<T>(
                     black_box(&fixture.bytes),
-                    fixture.writer_plan.root(),
+                    &fixture.reader_plan,
                     &fixture.registry,
                 )
                 .unwrap(),
