@@ -10,8 +10,8 @@ import type {
   VariantSchema,
   PrimitiveType,
   ChannelDirection,
-} from "@bearcove/binette";
-import { decodeWithTypeRef, encodeWithTypeRef } from "@bearcove/binette";
+} from "@bearcove/vox-binette";
+import { decodeWithTypeRef, encodeWithTypeRef } from "@bearcove/vox-binette";
 import { schemaPayloadRootRef, schemaPayloadSchemaRegistry } from "@bearcove/vox-wire";
 
 type RustTypeRef =

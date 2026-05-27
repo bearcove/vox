@@ -39,7 +39,7 @@ import {
   encodeU64,
   encodeVec,
   type DecodeResult,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

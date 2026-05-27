@@ -6,7 +6,7 @@ import {
   type Schema,
   type SchemaKind,
   type SchemaRegistry,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 import {
   decodeMessage,
   decodeMessageWithPlan,

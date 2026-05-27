@@ -117,7 +117,7 @@ pub fn generate_send_schema_table(service: &ServiceDescriptor) -> String {
     ));
 
     // schemas: Map<bigint, Schema>
-    out.push_str("  schemas: new Map<bigint, import(\"@bearcove/binette\").Schema>([\n");
+    out.push_str("  schemas: new Map<bigint, import(\"@bearcove/vox-binette\").Schema>([\n");
     for schema in &deduped_schemas {
         let id_hex = hex_u64(schema.id.0);
         let schema_ts = render_schema(schema);

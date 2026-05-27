@@ -1,5 +1,5 @@
-import type { Schema } from "@bearcove/binette";
-import { decodeWithTypeRef, encodeWithTypeRef } from "@bearcove/binette";
+import type { Schema } from "@bearcove/vox-binette";
+import { decodeWithTypeRef, encodeWithTypeRef } from "@bearcove/vox-binette";
 import type { ConnectionSettings, Parity, MetadataEntry, Metadata } from "@bearcove/vox-wire";
 import { handshakeMessageRootRef, handshakeMessageSchemaRegistry, messageSchemas } from "@bearcove/vox-wire";
 import type { Link } from "./link.ts";

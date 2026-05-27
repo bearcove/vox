@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@bearcove/vox-core": "workspace:*",
-    "@bearcove/binette": "workspace:*",
+    "@bearcove/vox-binette": "workspace:*",
     "@bearcove/vox-ws": "workspace:*"
   }
 }

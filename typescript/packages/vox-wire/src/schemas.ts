@@ -6,7 +6,7 @@ export type {
   Schema,
   SchemaRegistry,
   TypeRef,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 export {
   messageSchemas,
   messageSchemaRegistry,

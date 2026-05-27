@@ -1,6 +1,6 @@
-# @bearcove/binette
+# @bearcove/vox-binette
 
-binette compact serialization utilities for TypeScript.
+Vox schema and channel-aware binette codec helpers for TypeScript.
 
 ## What this package provides
 

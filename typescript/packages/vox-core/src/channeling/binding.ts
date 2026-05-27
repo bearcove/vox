@@ -15,7 +15,7 @@ import {
   type TypeRef,
   // type SchemaKind,
   type VariantPayload,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 
 /**
  * Bind all Tx/Rx channels found in canonical args type refs.

@@ -2,7 +2,7 @@ import {
   decodeWithKind,
   decodeWithPlan,
   encodeWithKind,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 import {
   type ConnectionSettings,
   type RequestMessage,

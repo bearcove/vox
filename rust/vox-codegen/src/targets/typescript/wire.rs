@@ -119,7 +119,7 @@ pub fn generate_wire(config: &WireTypeGenConfig) -> Result<String, Box<dyn std::
         let extracted = extract_schemas(root.shape)?;
         let prefix = root.schema_prefix;
         out.push_str(
-            &format!("export const {prefix}SchemaRegistry: import(\"@bearcove/binette\").SchemaRegistry = new Map<bigint, import(\"@bearcove/binette\").Schema>([\n"),
+            &format!("export const {prefix}SchemaRegistry: import(\"@bearcove/vox-binette\").SchemaRegistry = new Map<bigint, import(\"@bearcove/vox-binette\").Schema>([\n"),
         );
         for schema in &extracted.schemas {
             out.push_str(&format!(
@@ -130,11 +130,11 @@ pub fn generate_wire(config: &WireTypeGenConfig) -> Result<String, Box<dyn std::
         }
         out.push_str("]);\n\n");
         out.push_str(&format!(
-            "export const {prefix}RootRef: import(\"@bearcove/binette\").TypeRef = {};\n\n",
+            "export const {prefix}RootRef: import(\"@bearcove/vox-binette\").TypeRef = {};\n\n",
             render_type_ref(&extracted.root)
         ));
         out.push_str(&format!(
-            "export const {prefix}Schemas: import(\"@bearcove/binette\").Schema[] = Array.from({prefix}SchemaRegistry.values());\n\n"
+            "export const {prefix}Schemas: import(\"@bearcove/vox-binette\").Schema[] = Array.from({prefix}SchemaRegistry.values());\n\n"
         ));
     }
 

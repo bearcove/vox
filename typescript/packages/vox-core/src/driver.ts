@@ -7,7 +7,7 @@ import {
   concat,
   encodeU32,
   resolveTypeRef,
-} from "@bearcove/binette";
+} from "@bearcove/vox-binette";
 import {
   RpcError,
   RpcErrorCode,

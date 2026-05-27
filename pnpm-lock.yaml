@@ -26,9 +26,9 @@ importers:
 
   typescript/generated:
     dependencies:
-      '@bearcove/binette':
+      '@bearcove/vox-binette':
         specifier: workspace:*
-        version: link:../packages/binette
+        version: link:../packages/vox-binette
       '@bearcove/vox-core':
         specifier: workspace:*
         version: link:../packages/vox-core
@@ -36,7 +36,7 @@ importers:
         specifier: workspace:*
         version: link:../packages/vox-ws
 
-  typescript/packages/binette:
+  typescript/packages/vox-binette:
     devDependencies:
       '@types/node':
         specifier: ^25.0.0
@@ -51,8 +51,11 @@ importers:
   typescript/packages/vox-core:
     dependencies:
       '@bearcove/binette':
+        specifier: link:/Users/amos/binette/typescript/binette
+        version: link:../../../../../../../binette/typescript/binette
+      '@bearcove/vox-binette':
         specifier: workspace:*
-        version: link:../binette
+        version: link:../vox-binette
       '@bearcove/vox-wire':
         specifier: workspace:*
         version: link:../vox-wire
@@ -84,8 +87,11 @@ importers:
   typescript/packages/vox-wire:
     dependencies:
       '@bearcove/binette':
+        specifier: link:/Users/amos/binette/typescript/binette
+        version: link:../../../../../../../binette/typescript/binette
+      '@bearcove/vox-binette':
         specifier: workspace:*
-        version: link:../binette
+        version: link:../vox-binette
     devDependencies:
       '@types/node':
         specifier: ^25.0.0

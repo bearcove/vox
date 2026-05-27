@@ -26,7 +26,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@bearcove/binette": "workspace:*"
+    "@bearcove/binette": "link:/Users/amos/binette/typescript/binette",
+    "@bearcove/vox-binette": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.0.0",

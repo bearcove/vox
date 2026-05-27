@@ -1461,7 +1461,7 @@ export class TestbedDispatcher implements Dispatcher {
 // Schema objects for wire schema exchange (TypeScript → Rust)
 // Generated from Rust Facet shapes — do not modify.
 export const testbed_send_schemas: import("@bearcove/vox-core").ServiceSendSchemas = {
-  schemas: new Map<bigint, import("@bearcove/binette").Schema>([
+  schemas: new Map<bigint, import("@bearcove/vox-binette").Schema>([
     [0x178367a87f66fb46n, {
       id: 0x178367a87f66fb46n,
       type_params: [],

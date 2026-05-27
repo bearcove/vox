@@ -1,5 +1,5 @@
 {
-  "name": "@bearcove/binette",
+  "name": "@bearcove/vox-binette",
   "version": "0.2.0",
   "private": false,
   "type": "module",
@@ -31,7 +31,7 @@
     "vitest": "^4.0.0"
   },
   "license": "MIT OR Apache-2.0",
-  "description": "TypeScript implementation of binette compact serialization",
+  "description": "Vox schema and channel-aware binette codec helpers for TypeScript",
   "repository": "https://github.com/bearcove/vox",
   "homepage": "https://github.com/bearcove/vox",
   "keywords": [

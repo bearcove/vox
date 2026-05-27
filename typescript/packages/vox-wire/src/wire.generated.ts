@@ -428,9 +428,9 @@ export type HandshakeMessageHelloYourself = Extract<HandshakeMessage, { tag: "He
 export type HandshakeMessageLetsGo = Extract<HandshakeMessage, { tag: "LetsGo" }>;
 export type HandshakeMessageSorry = Extract<HandshakeMessage, { tag: "Sorry" }>;
 
-export const messageSchemaRegistry: import("@bearcove/binette").SchemaRegistry = new Map<
+export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegistry = new Map<
   bigint,
-  import("@bearcove/binette").Schema
+  import("@bearcove/vox-binette").Schema
 >([
   [15651524488059042220n, {
     id: 0xd9356298b81639acn,
@@ -952,17 +952,17 @@ export const messageSchemaRegistry: import("@bearcove/binette").SchemaRegistry =
   }],
 ]);
 
-export const messageRootRef: import("@bearcove/binette").TypeRef = {
+export const messageRootRef: import("@bearcove/vox-binette").TypeRef = {
   tag: "concrete",
   type_id: 0x15466886ca2608b7n,
   args: [],
 };
 
-export const messageSchemas: import("@bearcove/binette").Schema[] = Array.from(messageSchemaRegistry.values());
+export const messageSchemas: import("@bearcove/vox-binette").Schema[] = Array.from(messageSchemaRegistry.values());
 
-export const handshakeMessageSchemaRegistry: import("@bearcove/binette").SchemaRegistry = new Map<
+export const handshakeMessageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegistry = new Map<
   bigint,
-  import("@bearcove/binette").Schema
+  import("@bearcove/vox-binette").Schema
 >([
   [6562566395840718674n, {
     id: 0x5b12eb5df7006752n,
@@ -1610,19 +1610,19 @@ export const handshakeMessageSchemaRegistry: import("@bearcove/binette").SchemaR
   }],
 ]);
 
-export const handshakeMessageRootRef: import("@bearcove/binette").TypeRef = {
+export const handshakeMessageRootRef: import("@bearcove/vox-binette").TypeRef = {
   tag: "concrete",
   type_id: 0x659c5e6613b48e23n,
   args: [],
 };
 
-export const handshakeMessageSchemas: import("@bearcove/binette").Schema[] = Array.from(
+export const handshakeMessageSchemas: import("@bearcove/vox-binette").Schema[] = Array.from(
   handshakeMessageSchemaRegistry.values(),
 );
 
-export const schemaPayloadSchemaRegistry: import("@bearcove/binette").SchemaRegistry = new Map<
+export const schemaPayloadSchemaRegistry: import("@bearcove/vox-binette").SchemaRegistry = new Map<
   bigint,
-  import("@bearcove/binette").Schema
+  import("@bearcove/vox-binette").Schema
 >([
   [15651524488059042220n, {
     id: 0xd9356298b81639acn,
@@ -2062,12 +2062,12 @@ export const schemaPayloadSchemaRegistry: import("@bearcove/binette").SchemaRegi
   }],
 ]);
 
-export const schemaPayloadRootRef: import("@bearcove/binette").TypeRef = {
+export const schemaPayloadRootRef: import("@bearcove/vox-binette").TypeRef = {
   tag: "concrete",
   type_id: 0xa049339e76285f7cn,
   args: [],
 };
 
-export const schemaPayloadSchemas: import("@bearcove/binette").Schema[] = Array.from(
+export const schemaPayloadSchemas: import("@bearcove/vox-binette").Schema[] = Array.from(
   schemaPayloadSchemaRegistry.values(),
 );
