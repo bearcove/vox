@@ -1976,6 +1976,17 @@ impl Session {
 
         let conn_id = self.conn_ids.alloc();
 
+        // Store the pending state before sending ConnectionOpen. With
+        // in-process links, the peer can accept and send ConnectionAccept
+        // before send() returns.
+        self.conns.insert(
+            conn_id,
+            ConnectionSlot::PendingOutbound(PendingOutboundData {
+                local_settings: req.settings.clone(),
+                result_tx: Some(req.result_tx),
+            }),
+        );
+
         // Send ConnectionOpen to the peer.
         let send_result = self
             .sess_core
@@ -1993,21 +2004,16 @@ impl Session {
             .await;
 
         if send_result.is_err() {
-            let _ = req.result_tx.send(Err(SessionError::Protocol(
-                "failed to send ConnectionOpen".into(),
-            )));
+            if let Some(ConnectionSlot::PendingOutbound(mut pending)) = self.conns.remove(&conn_id)
+            {
+                if let Some(result_tx) = pending.result_tx.take() {
+                    let _ = result_tx.send(Err(SessionError::Protocol(
+                        "failed to send ConnectionOpen".into(),
+                    )));
+                }
+            }
             return;
         }
-
-        // Store the pending state. The run loop will complete the oneshot
-        // when ConnectionAccept or ConnectionReject arrives.
-        self.conns.insert(
-            conn_id,
-            ConnectionSlot::PendingOutbound(PendingOutboundData {
-                local_settings: req.settings,
-                result_tx: Some(req.result_tx),
-            }),
-        );
     }
 
     // r[impl connection.close]
