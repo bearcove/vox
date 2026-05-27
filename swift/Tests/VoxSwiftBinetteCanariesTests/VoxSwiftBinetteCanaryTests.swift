@@ -3,7 +3,6 @@ import CBinette
 import XCTest
 
 private struct VoxSwiftChannel {
-    var raw: UInt64
 }
 
 private struct VoxSwiftCall {
@@ -15,7 +14,7 @@ private struct VoxSwiftCall {
 }
 
 final class VoxSwiftBinetteCanaryTests: XCTestCase {
-    func testVoxShapedSwiftValueImportsThroughBinetteLocalAccess() throws {
+    func testVoxShapedSwiftValueEncodesAndDecodesThroughBinetteLocalAccess() throws {
         let arena = BinetteCAbiDescriptorArena()
 
         let u32Descriptor = arena.plain(typeID: binette_primitive_u32_type_id(), UInt32.self)
@@ -70,6 +69,51 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         let status = binette_local_descriptor_import(descriptor, &handle)
         XCTAssertEqual(status, BINETTE_STATUS_OK)
         let imported = try XCTUnwrap(handle)
-        binette_local_descriptor_free(imported)
+        defer { binette_local_descriptor_free(imported) }
+
+        var schemaBundle = BinetteByteBuffer()
+        let schemaStatus = binette_local_descriptor_synthetic_schema_bundle(imported, &schemaBundle)
+        XCTAssertEqual(schemaStatus, BINETTE_STATUS_OK)
+        defer { binette_byte_buffer_free(schemaBundle) }
+
+        var value = VoxSwiftCall(
+            method: 0xCAFE_BABE,
+            title: "hello from vox swift",
+            payload: [0, 1, 2, 3, 5, 8],
+            retry: 144,
+            output: VoxSwiftChannel()
+        )
+        var encoded = BinetteByteBuffer()
+        let encodeStatus = withUnsafePointer(to: &value) { pointer in
+            binette_local_encode_with_schema_bundle(
+                imported,
+                UnsafePointer(schemaBundle.ptr),
+                schemaBundle.len,
+                UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self),
+                &encoded
+            )
+        }
+        XCTAssertEqual(encodeStatus, BINETTE_STATUS_OK)
+        defer { binette_byte_buffer_free(encoded) }
+
+        let decoded = UnsafeMutablePointer<VoxSwiftCall>.allocate(capacity: 1)
+        let decodeStatus = binette_local_decode_with_schema_bundles(
+            imported,
+            UnsafePointer(schemaBundle.ptr),
+            schemaBundle.len,
+            UnsafePointer(schemaBundle.ptr),
+            schemaBundle.len,
+            UnsafePointer(encoded.ptr),
+            encoded.len,
+            UnsafeMutableRawPointer(decoded).assumingMemoryBound(to: UInt8.self)
+        )
+        XCTAssertEqual(decodeStatus, BINETTE_STATUS_OK)
+        let decodedValue = decoded.move()
+        decoded.deallocate()
+
+        XCTAssertEqual(decodedValue.method, value.method)
+        XCTAssertEqual(decodedValue.title, value.title)
+        XCTAssertEqual(decodedValue.payload, value.payload)
+        XCTAssertEqual(decodedValue.retry, value.retry)
     }
 }
