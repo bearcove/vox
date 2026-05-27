@@ -28,7 +28,11 @@ pub trait Calculator {
 }
 ```
 
-Implementations for other languages (TypeScript, Swift) are **generated from Rust definitions** using Rust tooling.
+Implementations for other languages are **generated from Rust definitions**
+using Rust tooling. TypeScript is the active non-Rust runtime in the binette
+migration. Swift support is parked for now; the expected next Swift path is to
+use the Rust binette implementation through FFI rather than maintaining a
+separate Swift-native codec.
 
 ## Implementing a Service
 
@@ -140,7 +144,7 @@ let client = DownstreamClient::new(caller);
 |----------|--------|
 | Rust | Reference implementation |
 | TypeScript | Generated client/server |
-| Swift | Generated client/server |
+| Swift | Parked during binette migration; likely Rust FFI codec |
 
 ## Transport Bindings
 
@@ -157,7 +161,7 @@ let client = DownstreamClient::new(caller);
 ```
 rust/           # Rust implementation
 typescript/     # TypeScript packages
-swift/          # Swift packages
+swift/          # Parked Swift packages
 spec/           # Compliance test suite
 docs/           # Specifications
 ```

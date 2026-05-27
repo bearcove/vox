@@ -7,8 +7,13 @@ weight = 10
 > r[service-macro.is-source-of-truth]
 >
 > vox is a **Rust-native** RPC protocol. There is no independent schema language;
-> Rust traits *are* the schema. Implementations for other languages (Swift,
-> TypeScript, etc.) are generated from Rust definitions.
+> Rust traits *are* the schema. Implementations for other languages are generated
+> from Rust definitions.
+
+The currently specified runtimes are Rust and TypeScript. Swift is out of scope
+for the current protocol/runtime specification; when Swift support returns, it
+is expected to call the Rust binette implementation through FFI instead of
+carrying a separate Swift-native codec.
 
 This specification describes the current protocol model. The current line
 introduces a transport prologue below the conduit/session layers so conduit
@@ -30,7 +35,7 @@ pub trait Adder {
 
 Proto crates are meant to only contain types and trait definitions (as much as
 possible, modulo orphan rules) so that they may be joined with vox codegen to
-generate client and server code for Swift and TypeScript.
+generate client and server code for supported language runtimes.
 
 All types that occur as arguments or in return position must implement the
 `Facet` trait, from the [facet](https://docs.rs/facet) crate.

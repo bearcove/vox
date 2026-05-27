@@ -1,10 +1,21 @@
 +++
-title = "Swift Guide"
-description = "How to generate Swift bindings from Rust descriptors and wire them with VoxRuntime."
+title = "Swift Status"
+description = "Current status of Swift support during the binette migration."
 weight = 22
 +++
 
-Swift usage in Vox is descriptor-driven: define services in Rust, generate Swift code, then run it against `VoxRuntime`.
+Swift support is parked during the binette migration. The likely next Swift path
+is to keep binette in Rust and expose it to Swift through FFI, rather than
+maintaining a separate Swift-native binette codec.
+
+The material below describes the existing descriptor-driven Swift runtime. It is
+historical for the current migration pass and should not be treated as the
+active binette implementation plan.
+
+## Existing descriptor path
+
+Swift usage in Vox has been descriptor-driven: define services in Rust,
+generate Swift code, then run it against `VoxRuntime`.
 
 ## 1) Add runtime dependency
 
