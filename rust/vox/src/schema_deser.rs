@@ -54,6 +54,27 @@ pub fn schema_deserialize_response<T: Facet<'static>>(
     schema_deserialize_with_direction(bytes, method_id, BindingDirection::Response, tracker)
 }
 
+// r[impl schema.exchange.required]
+pub fn binette_schema_bundle_for_remote_binding(
+    method_id: MethodId,
+    direction: BindingDirection,
+    tracker: &SchemaRecvTracker,
+) -> Result<binette::SchemaBundle, SchemaDeserializeError> {
+    let (remote_root, registry) = require_remote_vox_binding(method_id, direction, tracker)?;
+    binette_schema_bundle_from_vox_schemas(remote_root, registry)
+}
+
+// r[impl schema.exchange.required]
+pub fn encode_binette_schema_bundle_for_remote_binding(
+    method_id: MethodId,
+    direction: BindingDirection,
+    tracker: &SchemaRecvTracker,
+) -> Result<Vec<u8>, SchemaDeserializeError> {
+    let bundle = binette_schema_bundle_for_remote_binding(method_id, direction, tracker)?;
+    binette::encode_schema_bundle_to_vec(&bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
+}
+
 fn schema_deserialize_with_direction<T: Facet<'static>>(
     bytes: &[u8],
     method_id: MethodId,
@@ -108,6 +129,20 @@ fn require_remote_binding(
     direction: BindingDirection,
     tracker: &SchemaRecvTracker,
 ) -> Result<(binette::TypeRef, binette::SchemaRegistry), SchemaDeserializeError> {
+    let (remote_root_ref, registry) = require_remote_vox_binding(method_id, direction, tracker)?;
+    let bundle = binette_schema_bundle_from_vox_schemas(remote_root_ref, registry)?;
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(&bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
+    Ok((bundle.root, registry))
+}
+
+fn require_remote_vox_binding(
+    method_id: MethodId,
+    direction: BindingDirection,
+    tracker: &SchemaRecvTracker,
+) -> Result<(vox_schema::TypeRef, vox_schema::SchemaRegistry), SchemaDeserializeError> {
     let dir_name = match direction {
         BindingDirection::Args => "args",
         BindingDirection::Response => "response",
@@ -129,13 +164,13 @@ fn require_remote_binding(
             "remote root type ref {remote_root_ref:?} not found in received schemas"
         ))
     })?;
-    binette_bundle_from_vox_schemas(remote_root_ref, registry)
+    Ok((remote_root_ref, registry))
 }
 
-fn binette_bundle_from_vox_schemas(
+fn binette_schema_bundle_from_vox_schemas(
     root: vox_schema::TypeRef,
     registry: vox_schema::SchemaRegistry,
-) -> Result<(binette::TypeRef, binette::SchemaRegistry), SchemaDeserializeError> {
+) -> Result<binette::SchemaBundle, SchemaDeserializeError> {
     let argless_schema_ids = registry
         .values()
         .filter_map(|schema| {
@@ -155,13 +190,8 @@ fn binette_bundle_from_vox_schemas(
         root: binette_type_ref_from_vox_type_ref(root, &argless_schema_ids),
         attachments: Vec::new(),
     };
-    let bundle = binette::canonicalize_schema_bundle(bundle)
-        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
-    let mut registry = binette::SchemaRegistry::new();
-    registry
-        .install_bundle(&bundle)
-        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
-    Ok((bundle.root, registry))
+    binette::canonicalize_schema_bundle(bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
 }
 
 fn binette_schema_from_vox_schema(
