@@ -269,8 +269,7 @@ async fn cancel_aborts_in_flight_handler() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let error: Result<(), VoxError> =
-        vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let error: Result<(), VoxError> = decode_binette_payload(ret_bytes);
     assert!(
         matches!(error, Err(VoxError::Cancelled)),
         "expected Err(VoxError::Cancelled) in response payload"
@@ -367,7 +366,7 @@ async fn cancel_does_not_abort_persist_handler() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let value: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(value, 123);
 }
 
@@ -726,13 +725,16 @@ fn message_plan_from_identical_schemas_round_trips() {
         connection_id: vox_types::ConnectionId::ROOT,
         payload: MessagePayload::Ping(vox_types::Ping { nonce: 42 }),
     };
-    let bytes = vox_postcard::to_vec(&msg).expect("serialize message");
+    let writer_plan =
+        binette::writer_plan_for::<Message<'static>>().expect("build binette writer plan");
+    let bytes = binette::encode_to_vec_with_plan(&msg, &writer_plan).expect("serialize message");
     let backing = Backing::Boxed(bytes.into());
 
     // Deserialize with the plan
-    let decoded: SelfRef<Message<'static>> =
-        crate::deserialize_postcard_with_plan(backing, &plan.plan, &plan.registry)
+    let decoded_value: Message<'static> =
+        binette::decode_from_slice(backing.as_bytes(), &plan.writer_root, &plan.registry)
             .expect("should deserialize with identical-schema plan");
+    let decoded = SelfRef::owning(backing, decoded_value);
     let decoded = decoded.get();
     assert_eq!(decoded.connection_id, vox_types::ConnectionId::ROOT);
     match &decoded.payload {
@@ -781,7 +783,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let value: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(value, 42);
 }
 
@@ -839,8 +841,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let error: Result<(), VoxError<std::convert::Infallible>> =
-        vox_postcard::from_slice(ret_bytes).expect("deserialize error response");
+    let error: Result<(), VoxError<std::convert::Infallible>> = decode_binette_payload(ret_bytes);
     assert!(
         matches!(error, Err(VoxError::Cancelled)),
         "expected Cancelled error response, got {error:?}"
@@ -1119,7 +1120,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize vconn response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 200);
 }
 
@@ -1918,7 +1919,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize proxied response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, args_value);
 
     guest_a_session

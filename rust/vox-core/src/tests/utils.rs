@@ -22,6 +22,15 @@ pub(crate) fn test_resume_key() -> SessionResumeKey {
     SessionResumeKey([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
 }
 
+pub(crate) fn decode_binette_payload<T: Facet<'static>>(bytes: &[u8]) -> T {
+    let plan = binette::writer_plan_for::<T>().expect("build binette payload plan");
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(plan.schema_bundle())
+        .expect("install binette payload schema");
+    binette::decode_from_slice(bytes, plan.root(), &registry).expect("decode binette payload")
+}
+
 pub(crate) fn test_acceptor_handshake() -> HandshakeResult {
     HandshakeResult {
         role: SessionRole::Acceptor,
@@ -269,7 +278,7 @@ impl Handler<DriverReplySink> for EchoHandler {
             _ => panic!("expected incoming payload"),
         };
 
-        let result: u32 = vox_postcard::from_slice(args_bytes).expect("deserialize args");
+        let result: u32 = decode_binette_payload(args_bytes);
         reply
             .send_reply(RequestResponse {
                 ret: Payload::outgoing(&result),

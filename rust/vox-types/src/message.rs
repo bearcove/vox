@@ -8,7 +8,6 @@ use crate::{
     BindingDirection, CborPayload, ChannelId, ConnectionId, Metadata, MethodId, RequestId,
 };
 use facet::{Facet, FacetOpaqueAdapter, OpaqueDeserialize, OpaqueSerialize, PtrConst, Shape};
-use vox_schema::opaque_encoded_borrowed;
 
 /// Default per-channel initial credit and inbound queue capacity.
 // r[impl rpc.flow-control.credit.initial]
@@ -342,7 +341,10 @@ impl FacetOpaqueAdapter for PayloadAdapter {
     fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
         match value {
             Payload::Value { ptr, shape, .. } => OpaqueSerialize { ptr: *ptr, shape },
-            Payload::PostcardBytes(bytes) => opaque_encoded_borrowed(bytes),
+            Payload::PostcardBytes(bytes) => OpaqueSerialize {
+                ptr: PtrConst::new((bytes as *const &[u8]).cast::<u8>()),
+                shape: <&[u8] as Facet>::SHAPE,
+            },
         }
     }
 

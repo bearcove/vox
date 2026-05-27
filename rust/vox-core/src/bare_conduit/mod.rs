@@ -1,17 +1,10 @@
 use std::marker::PhantomData;
 
-#[cfg(not(target_arch = "wasm32"))]
-use facet_core::PtrConst;
-#[cfg(not(target_arch = "wasm32"))]
-use vox_jit::cache::{CompiledDecoder, CompiledEncoder};
-#[cfg(not(target_arch = "wasm32"))]
-use vox_jit::cal::BorrowMode;
-
 use vox_types::{Conduit, ConduitRx, ConduitTx, Link, LinkTx, MaybeSend, MsgFamily, SelfRef};
 
 use crate::MessagePlan;
 
-/// Wraps a [`Link`] with postcard serialization. No reconnect, no reliability.
+/// Wraps a [`Link`] with binette serialization. No reconnect, no reliability.
 ///
 /// If the link dies, the conduit is dead. For localhost, SHM, or any
 /// transport where reconnect isn't needed.
@@ -24,10 +17,7 @@ use crate::MessagePlan;
 // r[impl zerocopy.framing.conduit.bare]
 pub struct BareConduit<F: MsgFamily, L: Link> {
     link: L,
-    #[cfg(not(target_arch = "wasm32"))]
-    encoder: &'static CompiledEncoder,
-    #[cfg(not(target_arch = "wasm32"))]
-    decoder: Option<&'static CompiledDecoder>,
+    writer_plan: binette::WriterPlan,
     message_plan: MessagePlan,
     _phantom: PhantomData<fn(F) -> F>,
 }
@@ -35,15 +25,9 @@ pub struct BareConduit<F: MsgFamily, L: Link> {
 impl<F: MsgFamily, L: Link> BareConduit<F, L> {
     /// Create a new BareConduit (identity plan — no schema translation).
     pub fn new(link: L) -> Self {
-        let identity_plan = vox_postcard::build_identity_plan(F::shape());
-        Self::resolve(
-            link,
-            MessagePlan {
-                remote_schema_id: 0,
-                plan: identity_plan,
-                registry: vox_types::SchemaRegistry::new(),
-            },
-        )
+        let message_plan =
+            MessagePlan::for_shape(F::shape()).expect("binette message plan unavailable");
+        Self::resolve(link, message_plan)
     }
 
     /// Create a new BareConduit with a pre-built message translation plan.
@@ -52,30 +36,11 @@ impl<F: MsgFamily, L: Link> BareConduit<F, L> {
     }
 
     fn resolve(link: L, message_plan: MessagePlan) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let runtime = vox_jit::global_runtime();
-        #[cfg(not(target_arch = "wasm32"))]
-        let encoder = runtime
-            .prepare_encoder(F::shape())
-            .expect("JIT encode unavailable for message shape");
-        #[cfg(not(target_arch = "wasm32"))]
-        let decoder = runtime.prepare_decoder(
-            message_plan.remote_schema_id,
-            F::shape(),
-            &message_plan.plan,
-            &message_plan.registry,
-            BorrowMode::Owned,
-        );
-        #[cfg(not(target_arch = "wasm32"))]
-        if decoder.is_none() {
-            tracing::warn!("vox bare conduit message decoder unavailable; falling back");
-        }
+        let writer_plan =
+            binette::writer_plan_for_shape(F::shape()).expect("binette writer plan unavailable");
         Self {
             link,
-            #[cfg(not(target_arch = "wasm32"))]
-            encoder,
-            #[cfg(not(target_arch = "wasm32"))]
-            decoder,
+            writer_plan,
             message_plan,
             _phantom: PhantomData,
         }
@@ -96,15 +61,12 @@ where
         (
             BareConduitTx {
                 link_tx: tx,
-                #[cfg(not(target_arch = "wasm32"))]
-                encoder: self.encoder,
+                writer_plan: self.writer_plan,
                 _phantom: PhantomData,
             },
             BareConduitRx {
                 link_rx: rx,
                 pending_fds: vox_types::FrameFds::default(),
-                #[cfg(not(target_arch = "wasm32"))]
-                decoder: self.decoder,
                 message_plan: self.message_plan,
                 _phantom: PhantomData,
             },
@@ -118,8 +80,7 @@ where
 
 pub struct BareConduitTx<F: MsgFamily, LTx: LinkTx> {
     link_tx: LTx,
-    #[cfg(not(target_arch = "wasm32"))]
-    encoder: &'static CompiledEncoder,
+    writer_plan: binette::WriterPlan,
     _phantom: PhantomData<fn(F)>,
 }
 
@@ -145,15 +106,11 @@ impl<F: MsgFamily, LTx: LinkTx + MaybeSend + 'static> ConduitTx for BareConduitT
     // r[impl zerocopy.scatter.lifetime]
     fn prepare_send(&self, item: F::Msg<'_>) -> Result<Self::Prepared, Self::Error> {
         let encode = || -> Result<Vec<u8>, BareConduitError> {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let ptr = PtrConst::new((&raw const item).cast::<u8>());
-                vox_jit::encode_with(self.encoder, ptr).map_err(BareConduitError::Encode)
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                vox_postcard::to_vec(&item).map_err(BareConduitError::Encode)
-            }
+            binette::encode_peek_to_vec_with_plan(
+                facet_reflect::Peek::new(&item),
+                &self.writer_plan,
+            )
+            .map_err(BareConduitError::Encode)
         };
         // Collect any `Fd`s the encoder funnels into the thread-local
         // collector — same install-around-encode shape as the channel
@@ -194,8 +151,6 @@ pub struct BareConduitRx<F: MsgFamily, LRx> {
     /// Descriptors that arrived with the most recently `recv`'d frame,
     /// awaiting [`take_frame_fds`](vox_types::ConduitRx::take_frame_fds).
     pending_fds: vox_types::FrameFds,
-    #[cfg(not(target_arch = "wasm32"))]
-    decoder: Option<&'static CompiledDecoder>,
     message_plan: MessagePlan,
     _phantom: PhantomData<fn() -> F>,
 }
@@ -224,27 +179,13 @@ where
         // installed at that decode site, not here.
         self.pending_fds = self.link_rx.take_frame_fds();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            crate::deserialize_postcard_with_decoder::<F::Msg<'static>>(
-                backing,
-                self.decoder,
-                &self.message_plan.plan,
-                &self.message_plan.registry,
-            )
-            .map_err(BareConduitError::Decode)
-            .map(Some)
-        }
-        #[cfg(target_arch = "wasm32")]
-        {
-            crate::deserialize_postcard_with_plan::<F::Msg<'static>>(
-                backing,
-                &self.message_plan.plan,
-                &self.message_plan.registry,
-            )
-            .map_err(BareConduitError::Decode)
-            .map(Some)
-        }
+        let value = binette::decode_from_slice::<F::Msg<'static>>(
+            backing.as_bytes(),
+            &self.message_plan.writer_root,
+            &self.message_plan.registry,
+        )
+        .map_err(BareConduitError::Decode)?;
+        Ok(Some(SelfRef::owning(backing, value)))
     }
 
     fn take_frame_fds(&mut self) -> vox_types::FrameFds {
@@ -258,8 +199,8 @@ where
 
 #[derive(Debug)]
 pub enum BareConduitError {
-    Encode(vox_postcard::SerializeError),
-    Decode(vox_postcard::DeserializeError),
+    Encode(binette::EncodeError),
+    Decode(binette::DecodeError),
     Io(std::io::Error),
     LinkDead,
 }

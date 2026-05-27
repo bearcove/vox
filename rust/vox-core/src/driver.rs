@@ -2649,7 +2649,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                             let registry = vox_types::build_registry(&extracted.schemas);
                             let error: Result<(), VoxError<core::convert::Infallible>> =
                                 Err(vox_error);
-                            let encoded = vox_postcard::to_vec(&error)
+                            let encoded = binette::encode_to_vec(&error)
                                 .expect("serialize runtime-generated error response");
                             let mut response = RequestResponse {
                                 ret: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),

@@ -2,7 +2,7 @@
 //!
 //! This crate provides concrete implementations of the traits defined in
 //! [`vox_types`]. The only conduit shape is [`BareConduit`]: wraps a raw
-//! `Link` with postcard serialization. No reconnect, no reliability —
+//! `Link` with binette serialization. No reconnect, no reliability —
 //! reconnect was removed (StableConduit deleted) because the abstraction
 //! had no real users.
 
@@ -47,42 +47,28 @@ use vox_types::{Backing, SelfRef};
 /// local schema. Stored in the conduit's Rx half and used for every
 /// incoming message.
 pub struct MessagePlan {
-    pub remote_schema_id: u64,
-    pub plan: vox_postcard::plan::TranslationPlan,
-    pub registry: vox_types::SchemaRegistry,
+    pub writer_root: binette::TypeRef,
+    pub registry: binette::SchemaRegistry,
 }
 
 impl MessagePlan {
+    fn for_shape(shape: &'static facet_core::Shape) -> Result<Self, String> {
+        let writer_plan = binette::writer_plan_for_shape(shape)
+            .map_err(|e| format!("failed to build binette writer plan: {e}"))?;
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(writer_plan.schema_bundle())
+            .map_err(|e| format!("failed to install binette schema bundle: {e}"))?;
+        Ok(Self {
+            writer_root: writer_plan.root().clone(),
+            registry,
+        })
+    }
+
     /// Build a message plan from the handshake result's schema exchange.
     pub fn from_handshake(result: &vox_types::HandshakeResult) -> Result<Self, String> {
-        use vox_postcard::plan::{PlanInput, SchemaSet, build_plan};
-
-        if result.peer_schema.is_empty() || result.our_schema.is_empty() {
-            // No schemas exchanged — fall back to identity plan
-            let plan = vox_postcard::build_identity_plan(
-                <vox_types::Message<'static> as facet::Facet<'static>>::SHAPE,
-            );
-            return Ok(MessagePlan {
-                remote_schema_id: 0,
-                plan,
-                registry: vox_types::SchemaRegistry::new(),
-            });
-        }
-
-        let remote = SchemaSet::from_schemas(result.peer_schema.clone());
-        let local = SchemaSet::from_schemas(result.our_schema.clone());
-
-        let plan = build_plan(&PlanInput {
-            remote: &remote,
-            local: &local,
-        })
-        .map_err(|e| format!("failed to build message translation plan: {e}"))?;
-
-        Ok(MessagePlan {
-            remote_schema_id: remote.root.id.0,
-            plan,
-            registry: remote.registry,
-        })
+        let _ = result;
+        Self::for_shape(<vox_types::Message<'static> as facet::Facet<'static>>::SHAPE)
     }
 }
 
@@ -134,43 +120,6 @@ pub(crate) fn deserialize_postcard_with_plan<T: facet::Facet<'static>>(
             vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry)
         })
     }
-}
-
-/// Like [`deserialize_postcard`] but uses an already-resolved JIT decoder,
-/// skipping the global cache lookup. Used by conduits that resolved their
-/// decoder at construction.
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn deserialize_postcard_with_decoder<T: facet::Facet<'static>>(
-    backing: Backing,
-    decoder: Option<&'static vox_jit::cache::CompiledDecoder>,
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> Result<SelfRef<T>, vox_postcard::DeserializeError> {
-    SelfRef::try_new(backing, |bytes| {
-        let Some(decoder) = decoder else {
-            return vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry);
-        };
-        let Some(decode_fn) = decoder.owned_fn_ptr() else {
-            tracing::warn!(
-                shape = %T::SHAPE,
-                "vox message JIT decoder missing function pointer; falling back"
-            );
-            return vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry);
-        };
-        match std::panic::catch_unwind(AssertUnwindSafe(|| {
-            vox_jit::decode_owned_with::<T>(decode_fn, bytes)
-        })) {
-            Ok(result) => result,
-            Err(payload) => {
-                tracing::warn!(
-                    shape = %T::SHAPE,
-                    panic = %panic_payload_message(&payload),
-                    "vox message JIT decode panicked; falling back"
-                );
-                vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry)
-            }
-        }
-    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
