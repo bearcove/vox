@@ -2100,7 +2100,6 @@ impl DriverCaller {
         );
 
         // r[impl schema.exchange.caller+2]
-        // r[impl schema.exchange.channels]
         // Schemas are attached by SessionCore::send() when it sees a Call
         // with Payload::Value — no separate prepare step needed.
         //

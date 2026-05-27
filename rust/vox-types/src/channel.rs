@@ -1012,11 +1012,10 @@ impl ReplenisherSlot {
 ///
 /// In method args, the handler holds it (handler sends → caller).
 ///
-/// Wire encoding is always unit (`()`), with channel IDs carried exclusively
-/// in `Message::Request.channels`.
+/// Current Rust payload encoding serializes the channel ID through the
+/// `ChannelId` proxy while the channel binder allocates/binds the endpoint.
 // r[impl rpc.channel]
 // r[impl rpc.channel.direction]
-// r[impl rpc.channel.payload-encoding]
 #[derive(Facet)]
 #[facet(proxy = crate::ChannelId)]
 pub struct Tx<T> {
@@ -1385,7 +1384,8 @@ impl<T: std::fmt::Debug> std::error::Error for TrySendError<T> {}
 ///
 /// In method args, the handler holds it (handler receives ← caller).
 ///
-/// Channel IDs are serialized inline in the binette payload.
+/// Current Rust payload encoding serializes the channel ID through the
+/// `ChannelId` proxy while the channel binder allocates/binds the endpoint.
 #[derive(Facet)]
 #[facet(proxy = crate::ChannelId)]
 pub struct Rx<T> {
