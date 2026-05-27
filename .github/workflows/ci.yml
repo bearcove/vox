@@ -51,7 +51,7 @@ jobs:
         run: cargo build --package subject-rust
 
       - name: Test workspace (Rust-only)
-        run: cargo nextest run --workspace -E 'not test(/lang_.*(typescript|swift)/)'
+        run: cargo nextest run --workspace -E 'not test(/lang_.*typescript/)'
 
   rust-doc:
     name: Rust / Documentation
@@ -165,16 +165,16 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Regenerate TypeScript and Swift bindings
-        run: cargo xtask codegen --typescript --swift
+      - name: Regenerate TypeScript bindings
+        run: cargo xtask codegen --typescript
 
       - name: Check generated bindings are committed
         run: |
-          DRIFT="$(git status --porcelain -- typescript/generated swift/subject/Sources/subject-swift)"
+          DRIFT="$(git status --porcelain -- typescript/generated typescript/packages/vox-wire/src/wire.generated.ts)"
           if [ -n "$DRIFT" ]; then
-            echo "Generated bindings are out of date. Run: cargo xtask codegen --typescript --swift"
+            echo "Generated bindings are out of date. Run: cargo xtask codegen --typescript"
             echo "$DRIFT"
-            git --no-pager diff -- typescript/generated swift/subject/Sources/subject-swift || true
+            git --no-pager diff -- typescript/generated typescript/packages/vox-wire/src/wire.generated.ts || true
             exit 1
           fi
 
@@ -225,65 +225,6 @@ jobs:
       - name: Run TypeScript TCP subject matrix tests
         run: >
           cargo nextest run -p spec-tests --test spec_matrix --run-ignored all -E 'test(lang_typescript_transport_tcp::)'
-
-  swift-conformance:
-    name: Conformance / Swift
-    runs-on: depot-macos-15
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build subject
-        run: swift build -c release --package-path swift/subject
-
-      - name: Run VoxRuntime Swift tests
-        run: swift test --no-parallel -Xlinker -L$(pwd)/target/release
-
-      - name: Run Swift TCP subject matrix tests
-        run: >
-          cargo nextest run -p spec-tests --test spec_matrix --run-ignored all
-          -E 'test(lang_swift_transport_tcp::)'
-
-  swift-linux:
-    name: Conformance / Swift (Linux)
-    runs-on: depot-ubuntu-24.04-16
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.1"
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build subject
-        run: swift build -c release --package-path swift/subject
-
-      - name: Run VoxRuntime Swift tests
-        run: swift test --no-parallel -Xlinker -L$(pwd)/target/release
-
-      - name: Run Swift TCP subject matrix tests
-        run: >
-          cargo nextest run -p spec-tests --test spec_matrix --run-ignored all
-          -E 'test(lang_swift_transport_tcp::)'
 
   rust-wasm:
     name: Rust / WebAssembly
@@ -370,4 +311,4 @@ jobs:
         run: cargo build -p subject-rust
 
       - name: Test workspace (Rust-only, no cross-language)
-        run: cargo nextest run --workspace -E 'not test(/lang_.*(typescript|swift)/)'
+        run: cargo nextest run --workspace -E 'not test(/lang_.*typescript/)'

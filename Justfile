@@ -29,71 +29,20 @@ ts:
     SUBJECT_CMD="./typescript/subject/subject-ts.sh" cargo nextest run -p spec-tests typescript_
 
 swift:
-    just rust-ffi
-    swift test --no-parallel -Xlinker -L$(pwd)/target/release
-    swift build -c release --package-path swift/subject
-    SUBJECT_CMD="./swift/subject/subject-swift.sh" cargo nextest run -p spec-tests swift_
+    @echo "Swift is parked during the binette migration; the next Swift path is Rust FFI-backed binette."
+    @false
 
 swift-subject-cov *args:
-    rm -rf .coverage/swift-subject
-    mkdir -p .coverage/swift-subject
-    just rust-ffi
-    swift build -c debug --package-path swift/subject --product subject-swift \
-      -Xswiftc -profile-generate \
-      -Xswiftc -profile-coverage-mapping
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/tcp-%p%c.profraw" \
-      SUBJECT_CMD="$(pwd)/swift/subject/.build/debug/subject-swift" \
-      cargo nextest run -P coverage --test-threads=1 -p spec-tests {{ quote(args) }}
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/subject-tests-%p%c.profraw" \
-      swift test --package-path swift/subject --no-parallel \
-        -Xswiftc -profile-generate \
-        -Xswiftc -profile-coverage-mapping
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/runtime-tests-%p%c.profraw" \
-      swift test --package-path swift/vox-runtime --no-parallel \
-        -Xswiftc -profile-generate \
-        -Xswiftc -profile-coverage-mapping
-    RUNTIME_TEST_BIN="$(swift build --package-path swift/vox-runtime --show-bin-path)/vox-runtimePackageTests.xctest/Contents/MacOS/vox-runtimePackageTests" && \
-      SUBJECT_TEST_BIN="$(swift build --package-path swift/subject --show-bin-path)/subject-swiftPackageTests.xctest/Contents/MacOS/subject-swiftPackageTests" && \
-      xcrun llvm-profdata merge -sparse .coverage/swift-subject/*.profraw -o .coverage/swift-subject/subject.profdata && \
-      xcrun llvm-cov report "$(pwd)/swift/subject/.build/debug/subject-swift" \
-        -object "$RUNTIME_TEST_BIN" \
-        -object "$SUBJECT_TEST_BIN" \
-        -instr-profile=.coverage/swift-subject/subject.profdata
+    @echo "Swift coverage is parked during the binette migration."
+    @false
 
 swift-subject-cov-tcp *args:
-    rm -rf .coverage/swift-subject
-    mkdir -p .coverage/swift-subject
-    just rust-ffi
-    swift build -c debug --package-path swift/subject --product subject-swift \
-      -Xswiftc -profile-generate \
-      -Xswiftc -profile-coverage-mapping
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/tcp-%p%c.profraw" \
-      SUBJECT_CMD="$(pwd)/swift/subject/.build/debug/subject-swift" \
-      cargo nextest run -P coverage --test-threads=1 -p spec-tests {{ quote(args) }}
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/subject-tests-%p%c.profraw" \
-      swift test --package-path swift/subject --no-parallel \
-        -Xswiftc -profile-generate \
-        -Xswiftc -profile-coverage-mapping
-    LLVM_PROFILE_FILE="$(pwd)/.coverage/swift-subject/runtime-tests-%p%c.profraw" \
-      swift test --package-path swift/vox-runtime --no-parallel \
-        -Xswiftc -profile-generate \
-        -Xswiftc -profile-coverage-mapping
-    RUNTIME_TEST_BIN="$(swift build --package-path swift/vox-runtime --show-bin-path)/vox-runtimePackageTests.xctest/Contents/MacOS/vox-runtimePackageTests" && \
-      SUBJECT_TEST_BIN="$(swift build --package-path swift/subject --show-bin-path)/subject-swiftPackageTests.xctest/Contents/MacOS/subject-swiftPackageTests" && \
-      xcrun llvm-profdata merge -sparse .coverage/swift-subject/*.profraw -o .coverage/swift-subject/subject.profdata && \
-      xcrun llvm-cov report "$(pwd)/swift/subject/.build/debug/subject-swift" \
-        -object "$RUNTIME_TEST_BIN" \
-        -object "$SUBJECT_TEST_BIN" \
-        -instr-profile=.coverage/swift-subject/subject.profdata
+    @echo "Swift coverage is parked during the binette migration."
+    @false
 
 swift-subject-cov-html:
-    RUNTIME_TEST_BIN="$(swift build --package-path swift/vox-runtime --show-bin-path)/vox-runtimePackageTests.xctest/Contents/MacOS/vox-runtimePackageTests" && \
-      SUBJECT_TEST_BIN="$(swift build --package-path swift/subject --show-bin-path)/subject-swiftPackageTests.xctest/Contents/MacOS/subject-swiftPackageTests" && \
-      xcrun llvm-cov show "$(pwd)/swift/subject/.build/debug/subject-swift" \
-        -object "$RUNTIME_TEST_BIN" \
-        -object "$SUBJECT_TEST_BIN" \
-        -instr-profile=.coverage/swift-subject/subject.profdata \
-        -format=html -output-dir .coverage/swift-subject/html
+    @echo "Swift coverage is parked during the binette migration."
+    @false
 
 examples:
     #!/bin/bash -eu
@@ -107,7 +56,6 @@ examples:
 all *args:
     just rust {{ args }}
     just ts {{ args }}
-    just swift {{ args }}
     just examples
 
 wasm-build:

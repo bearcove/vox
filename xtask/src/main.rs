@@ -43,16 +43,16 @@ enum Commands {
         /// Generate TypeScript bindings into `typescript/generated/`
         #[facet(args::named, default)]
         typescript: bool,
-        /// Generate Swift bindings into `swift/generated/`
+        /// Deprecated: Swift codegen is parked during the binette migration.
         #[facet(args::named, default)]
         swift: bool,
-        /// Generate Swift client-only bindings
+        /// Deprecated: Swift codegen is parked during the binette migration.
         #[facet(args::named, default)]
         swift_client: bool,
-        /// Generate Swift server-only bindings
+        /// Deprecated: Swift codegen is parked during the binette migration.
         #[facet(args::named, default)]
         swift_server: bool,
-        /// Generate Swift wire protocol types (Wire.swift)
+        /// Deprecated: Swift codegen is parked during the binette migration.
         #[facet(args::named, default)]
         swift_wire: bool,
     },

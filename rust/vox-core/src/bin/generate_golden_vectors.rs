@@ -1,4 +1,4 @@
-//! Generate all golden vectors used by TypeScript and Swift tests.
+//! Generate golden vectors used by TypeScript protocol tests.
 
 use std::{fs, path::PathBuf};
 
