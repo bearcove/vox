@@ -1,228 +1,10 @@
-use std::convert::Infallible;
+use std::future::pending;
 use std::time::Duration;
 
 use afl::fuzz;
-use spec_proto::{
-    Canvas, Color, Config, LookupError, MathError, Measurement, Message, Person, Point, Profile,
-    Record, Rectangle, Shape, Status, Tag, Testbed, TestbedClient, TestbedDispatcher,
-};
-use vox::Call;
-use vox_core::{BareConduit, DriverReplySink, acceptor, initiator, memory_link_pair};
-use vox_types::{Handler, MessageFamily, RequestCall, SelfRef};
-
-struct NoopHandler;
-
-impl Handler<DriverReplySink> for NoopHandler {
-    async fn handle(
-        &self,
-        _call: SelfRef<RequestCall<'static>>,
-        _reply: DriverReplySink,
-        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
-    ) {
-    }
-}
-
-#[derive(Clone)]
-struct FuzzService;
-
-impl Testbed for FuzzService {
-    async fn echo(&self, call: impl Call<String, Infallible>, message: String) {
-        call.ok(message).await;
-    }
-
-    async fn reverse(&self, call: impl Call<String, Infallible>, message: String) {
-        call.ok(message.chars().rev().collect()).await;
-    }
-
-    async fn divide(&self, call: impl Call<i64, MathError>, dividend: i64, divisor: i64) {
-        if divisor == 0 {
-            call.err(MathError::DivisionByZero).await;
-        } else {
-            call.ok(dividend / divisor).await;
-        }
-    }
-
-    async fn lookup(&self, call: impl Call<Person, LookupError>, id: u32) {
-        match id {
-            1 => {
-                call.ok(Person {
-                    name: "Alice".to_string(),
-                    age: 30,
-                    email: Some("alice@example.com".to_string()),
-                })
-                .await
-            }
-            2 => {
-                call.ok(Person {
-                    name: "Bob".to_string(),
-                    age: 25,
-                    email: None,
-                })
-                .await
-            }
-            _ => call.err(LookupError::NotFound).await,
-        }
-    }
-
-    async fn sum(&self, call: impl Call<i64, Infallible>, mut numbers: vox::Rx<i32>) {
-        let mut total: i64 = 0;
-        while let Ok(Some(n)) = numbers.recv().await {
-            total += i64::from(*n);
-        }
-        call.ok(total).await;
-    }
-
-    async fn generate(&self, call: impl Call<(), Infallible>, count: u32, output: vox::Tx<i32>) {
-        for i in 0..count as i32 {
-            if output.send(i).await.is_err() {
-                break;
-            }
-        }
-        let _ = output.close(Default::default()).await;
-        call.ok(()).await;
-    }
-
-    async fn transform(
-        &self,
-        call: impl Call<(), Infallible>,
-        mut input: vox::Rx<String>,
-        output: vox::Tx<String>,
-    ) {
-        while let Ok(Some(s)) = input.recv().await {
-            let _ = output.send(s.clone()).await;
-        }
-        let _ = output.close(Default::default()).await;
-        call.ok(()).await;
-    }
-
-    async fn post_reply_generate(&self, call: impl Call<(), Infallible>, output: vox::Tx<i32>) {
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-            for i in 0..5 {
-                if output.send(i).await.is_err() {
-                    break;
-                }
-            }
-            let _ = output.close(Default::default()).await;
-        });
-        call.ok(()).await;
-    }
-
-    async fn post_reply_sum(
-        &self,
-        call: impl Call<(), Infallible>,
-        mut input: vox::Rx<i32>,
-        result: vox::Tx<i64>,
-    ) {
-        tokio::spawn(async move {
-            let mut total: i64 = 0;
-            while let Ok(Some(n)) = input.recv().await {
-                total += i64::from(*n);
-            }
-            let _ = result.send(total).await;
-            let _ = result.close(Default::default()).await;
-        });
-        call.ok(()).await;
-    }
-
-    async fn echo_point(&self, call: impl Call<Point, Infallible>, point: Point) {
-        call.ok(point).await;
-    }
-
-    async fn create_person(
-        &self,
-        call: impl Call<Person, Infallible>,
-        name: String,
-        age: u8,
-        email: Option<String>,
-    ) {
-        call.ok(Person { name, age, email }).await;
-    }
-
-    async fn rectangle_area(&self, call: impl Call<f64, Infallible>, rect: Rectangle) {
-        let width = (rect.bottom_right.x - rect.top_left.x).abs() as f64;
-        let height = (rect.bottom_right.y - rect.top_left.y).abs() as f64;
-        call.ok(width * height).await;
-    }
-
-    async fn parse_color(&self, call: impl Call<Option<Color>, Infallible>, name: String) {
-        let color = match name.to_ascii_lowercase().as_str() {
-            "red" => Some(Color::Red),
-            "green" => Some(Color::Green),
-            "blue" => Some(Color::Blue),
-            _ => None,
-        };
-        call.ok(color).await;
-    }
-
-    async fn shape_area(&self, call: impl Call<f64, Infallible>, shape: Shape) {
-        let area = match shape {
-            Shape::Circle { radius } => std::f64::consts::PI * radius * radius,
-            Shape::Rectangle { width, height } => width * height,
-            Shape::Point => 0.0,
-        };
-        call.ok(area).await;
-    }
-
-    async fn create_canvas(
-        &self,
-        call: impl Call<Canvas, Infallible>,
-        name: String,
-        shapes: Vec<Shape>,
-        background: Color,
-    ) {
-        call.ok(Canvas {
-            name,
-            shapes,
-            background,
-        })
-        .await;
-    }
-
-    async fn process_message(&self, call: impl Call<Message, Infallible>, msg: Message) {
-        let response = match msg {
-            Message::Text(s) => Message::Text(format!("processed: {s}")),
-            Message::Number(n) => Message::Number(n.wrapping_mul(2)),
-            Message::Data(d) => Message::Data(d.into_iter().rev().collect()),
-        };
-        call.ok(response).await;
-    }
-
-    async fn get_points(&self, call: impl Call<Vec<Point>, Infallible>, count: u32) {
-        let points = (0..count as i32)
-            .map(|i| Point { x: i, y: i * 2 })
-            .collect();
-        call.ok(points).await;
-    }
-
-    async fn swap_pair(&self, call: impl Call<(String, i32), Infallible>, pair: (i32, String)) {
-        call.ok((pair.1, pair.0)).await;
-    }
-
-    async fn echo_profile(&self, profile: Profile) -> Profile {
-        profile
-    }
-
-    async fn echo_record(&self, record: Record) -> Record {
-        record
-    }
-
-    async fn echo_status(&self, status: Status) -> Status {
-        status
-    }
-
-    async fn echo_tag(&self, tag: Tag) -> Tag {
-        tag
-    }
-
-    async fn echo_measurement(&self, m: Measurement) -> Measurement {
-        m
-    }
-
-    async fn echo_config(&self, c: Config) -> Config {
-        c
-    }
-}
+use spec_proto::{Message, Point, TestbedClient, TestbedDispatcher};
+use subject_rust::TestbedService;
+use vox::{TransportMode, initiator_on, memory_link_pair};
 
 struct Cursor<'a> {
     bytes: &'a [u8],
@@ -272,27 +54,25 @@ impl<'a> Cursor<'a> {
 async fn setup_client() -> Option<TestbedClient> {
     let (client_link, server_link) = memory_link_pair(64 * 1024);
 
-    let server_conduit: BareConduit<MessageFamily, _> = BareConduit::new(server_link);
-    let client_conduit: BareConduit<MessageFamily, _> = BareConduit::new(client_link);
-
-    let server_task = tokio::spawn(async move {
-        let Ok(((), _)) = acceptor(server_conduit)
-            .on_connection(TestbedDispatcher::new(FuzzService).establish::<()>())
+    tokio::spawn(async move {
+        let Ok(root) = vox::acceptor_on(server_link)
+            .on_connection(TestbedDispatcher::new(TestbedService))
+            .establish::<vox::NoopClient>()
             .await
         else {
             return;
         };
+        let _root = root;
+        pending::<()>().await;
     });
 
-    let Ok((client, _)) = initiator(client_conduit)
-        .on_connection(NoopHandler)
+    let Ok(client) = initiator_on(client_link, TransportMode::Bare)
         .establish::<TestbedClient>()
         .await
     else {
         return None;
     };
 
-    let _ = server_task.await;
     Some(client)
 }
 
@@ -325,17 +105,15 @@ async fn run_case(data: &[u8]) {
             }
             4 => {
                 let payload = cur.bytes(1024);
-                if let Ok(Ok(resp)) = tokio::time::timeout(
+                if let Ok(Ok(Message::Data(ret))) = tokio::time::timeout(
                     Duration::from_millis(25),
                     client.process_message(Message::Data(payload.clone())),
                 )
                 .await
                 {
-                    if let Message::Data(ret) = &resp.ret {
-                        let mut expected = payload;
-                        expected.reverse();
-                        assert_eq!(ret, &expected);
-                    }
+                    let mut expected = payload;
+                    expected.reverse();
+                    assert_eq!(ret, expected);
                 }
             }
             5 => {
@@ -359,7 +137,7 @@ async fn run_case(data: &[u8]) {
                 let recv_task = tokio::spawn(async move {
                     let mut out = Vec::new();
                     while let Ok(Some(n)) = rx.recv().await {
-                        out.push(*n);
+                        out.push(*n.get());
                         if out.len() > 32 {
                             break;
                         }
@@ -387,7 +165,7 @@ async fn run_case(data: &[u8]) {
                 let recv_task = tokio::spawn(async move {
                     let mut out = Vec::new();
                     while let Ok(Some(s)) = out_rx.recv().await {
-                        out.push(s.clone());
+                        out.push(s.get().clone());
                         if out.len() > 12 {
                             break;
                         }

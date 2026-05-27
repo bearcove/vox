@@ -6,10 +6,12 @@ publish = false
 
 [dependencies]
 afl = "0.18"
+binette = { git = "https://github.com/bearcove/binette", rev = "c1dc477ecbe8b547e50748451f096bb09db7fb14" }
 vox = { path = "../../rust/vox" }
 vox-core = { path = "../../rust/vox-core" }
 vox-types = { path = "../../rust/vox-types" }
 spec-proto = { path = "../../spec/spec-proto" }
+subject-rust = { path = "../../rust/subject-rust" }
 tokio = { version = "1", features = ["rt", "time", "macros"] }
 
 [[bin]]

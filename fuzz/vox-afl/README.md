@@ -5,7 +5,7 @@
 ## Targets
 
 - `protocol_decode`
-  - Feeds arbitrary bytes into Vox postcard decode for `vox_types::Message`.
+  - Feeds arbitrary bytes into Vox binette decode for `vox_types::Message`.
   - Re-encodes successfully decoded messages.
 - `testbed_mem_session`
   - Runs generated `spec-proto` Testbed RPC traffic over in-memory initiator/acceptor+driver.
