@@ -1,6 +1,6 @@
 // Canonical schema types shared by handshake, method args/ret, and translation plans.
 
-/** Content hash uniquely identifying a type's postcard-level structure. */
+/** Content hash uniquely identifying a type's binette schema shape. */
 export type SchemaHash = bigint;
 
 /**

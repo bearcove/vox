@@ -37,7 +37,6 @@ import {
   encodeU16,
   encodeU32,
   encodeU64,
-  encodeVarint,
   encodeVec,
   type DecodeResult,
 } from "@bearcove/vox-postcard";
@@ -65,22 +64,6 @@ function assertDecode<T>(
   expect(decoded.value, `decode ${vectorPath}`).toEqual(expected);
   expect(decoded.next, `decode length ${vectorPath}`).toBe(bytes.length);
 }
-
-describe("Varint encoding", () => {
-  it("encodes varints correctly", () => {
-    assertEncoding(encodeVarint(0), "varint/u64_0.bin");
-    assertEncoding(encodeVarint(1), "varint/u64_1.bin");
-    assertEncoding(encodeVarint(127), "varint/u64_127.bin");
-    assertEncoding(encodeVarint(128), "varint/u64_128.bin");
-    assertEncoding(encodeVarint(255), "varint/u64_255.bin");
-    assertEncoding(encodeVarint(256), "varint/u64_256.bin");
-    assertEncoding(encodeVarint(16383), "varint/u64_16383.bin");
-    assertEncoding(encodeVarint(16384), "varint/u64_16384.bin");
-    assertEncoding(encodeVarint(65535), "varint/u64_65535.bin");
-    assertEncoding(encodeVarint(65536), "varint/u64_65536.bin");
-    assertEncoding(encodeVarint(1048576), "varint/u64_1048576.bin");
-  });
-});
 
 describe("Primitive encoding", () => {
   it("encodes bool", () => {

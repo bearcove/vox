@@ -1,9 +1,5 @@
-// Postcard serialization format for TypeScript
-//
-// This module provides encoding/decoding functions compatible with Rust's
-// postcard format (https://postcard.rs/), which uses variable-length integers.
+// binette compact serialization helpers for TypeScript.
 
-import { encodeVarint, decodeVarint, decodeVarintNumber } from "./binary/varint.ts";
 import { concat } from "./binary/bytes.ts";
 
 // ============================================================================
@@ -13,6 +9,17 @@ import { concat } from "./binary/bytes.ts";
 export interface DecodeResult<T> {
   value: T;
   next: number; // offset after this value
+}
+
+function fixed(width: number, write: (view: DataView) => void): Uint8Array {
+  const buf = new ArrayBuffer(width);
+  write(new DataView(buf));
+  return new Uint8Array(buf);
+}
+
+function viewFor(buf: Uint8Array, offset: number, width: number, context: string): DataView {
+  if (offset + width > buf.length) throw new Error(`${context}: eof`);
+  return new DataView(buf.buffer, buf.byteOffset + offset, width);
 }
 
 // ============================================================================
@@ -57,84 +64,95 @@ export function decodeI8(buf: Uint8Array, offset: number): DecodeResult<number> 
   return { value, next: offset + 1 };
 }
 
-/** Encode a u16 (varint). */
+/** Encode a u16 (2 little-endian bytes). */
 export function encodeU16(value: number): Uint8Array {
-  return encodeVarint(value);
+  return fixed(2, (view) => view.setUint16(0, value, true));
 }
 
 /** Decode a u16. */
 export function decodeU16(buf: Uint8Array, offset: number): DecodeResult<number> {
-  const result = decodeVarintNumber(buf, offset);
-  if (result.value > 0xffff) throw new Error("u16: overflow");
-  return result;
+  return { value: viewFor(buf, offset, 2, "u16").getUint16(0, true), next: offset + 2 };
 }
 
-/** Encode a u32 (varint). */
+/** Encode a u32 (4 little-endian bytes). */
 export function encodeU32(value: number): Uint8Array {
-  return encodeVarint(value);
+  return fixed(4, (view) => view.setUint32(0, value, true));
 }
 
 /** Decode a u32. */
 export function decodeU32(buf: Uint8Array, offset: number): DecodeResult<number> {
-  const result = decodeVarintNumber(buf, offset);
-  if (result.value > 0xffffffff) throw new Error("u32: overflow");
-  return result;
+  return { value: viewFor(buf, offset, 4, "u32").getUint32(0, true), next: offset + 4 };
 }
 
-/** Encode a u64 (varint as bigint). */
+/** Encode a u64 (8 little-endian bytes). */
 export function encodeU64(value: bigint): Uint8Array {
-  return encodeVarint(value);
+  return fixed(8, (view) => view.setBigUint64(0, value, true));
 }
 
 /** Decode a u64. */
 export function decodeU64(buf: Uint8Array, offset: number): DecodeResult<bigint> {
-  return decodeVarint(buf, offset);
+  return { value: viewFor(buf, offset, 8, "u64").getBigUint64(0, true), next: offset + 8 };
 }
 
-/** Zigzag encode a signed integer to unsigned. */
-function zigzagEncode(n: bigint): bigint {
-  // (n << 1) ^ (n >> 63) for 64-bit
-  return (n << 1n) ^ (n >> 63n);
+/** Encode a u128 (16 little-endian bytes). */
+export function encodeU128(value: bigint): Uint8Array {
+  return fixed(16, (view) => {
+    view.setBigUint64(0, value & 0xffff_ffff_ffff_ffffn, true);
+    view.setBigUint64(8, value >> 64n, true);
+  });
 }
 
-/** Zigzag decode an unsigned integer to signed. */
-function zigzagDecode(n: bigint): bigint {
-  return (n >> 1n) ^ -(n & 1n);
+/** Decode a u128. */
+export function decodeU128(buf: Uint8Array, offset: number): DecodeResult<bigint> {
+  const view = viewFor(buf, offset, 16, "u128");
+  const lo = view.getBigUint64(0, true);
+  const hi = view.getBigUint64(8, true);
+  return { value: lo | (hi << 64n), next: offset + 16 };
 }
 
-/** Encode an i16 (zigzag varint). */
+/** Encode an i16 (2 little-endian bytes). */
 export function encodeI16(value: number): Uint8Array {
-  return encodeVarint(zigzagEncode(BigInt(value)));
+  return fixed(2, (view) => view.setInt16(0, value, true));
 }
 
 /** Decode an i16. */
 export function decodeI16(buf: Uint8Array, offset: number): DecodeResult<number> {
-  const result = decodeVarint(buf, offset);
-  const signed = zigzagDecode(result.value);
-  return { value: Number(signed), next: result.next };
+  return { value: viewFor(buf, offset, 2, "i16").getInt16(0, true), next: offset + 2 };
 }
 
-/** Encode an i32 (zigzag varint). */
+/** Encode an i32 (4 little-endian bytes). */
 export function encodeI32(value: number): Uint8Array {
-  return encodeVarint(zigzagEncode(BigInt(value)));
+  return fixed(4, (view) => view.setInt32(0, value, true));
 }
 
 /** Decode an i32. */
 export function decodeI32(buf: Uint8Array, offset: number): DecodeResult<number> {
-  const result = decodeVarint(buf, offset);
-  const signed = zigzagDecode(result.value);
-  return { value: Number(signed), next: result.next };
+  return { value: viewFor(buf, offset, 4, "i32").getInt32(0, true), next: offset + 4 };
 }
 
-/** Encode an i64 (zigzag varint). */
+/** Encode an i64 (8 little-endian bytes). */
 export function encodeI64(value: bigint): Uint8Array {
-  return encodeVarint(zigzagEncode(value));
+  return fixed(8, (view) => view.setBigInt64(0, value, true));
 }
 
 /** Decode an i64. */
 export function decodeI64(buf: Uint8Array, offset: number): DecodeResult<bigint> {
-  const result = decodeVarint(buf, offset);
-  return { value: zigzagDecode(result.value), next: result.next };
+  return { value: viewFor(buf, offset, 8, "i64").getBigInt64(0, true), next: offset + 8 };
+}
+
+/** Encode an i128 (16 little-endian two's-complement bytes). */
+export function encodeI128(value: bigint): Uint8Array {
+  const unsigned = BigInt.asUintN(128, value);
+  return fixed(16, (view) => {
+    view.setBigUint64(0, unsigned & 0xffff_ffff_ffff_ffffn, true);
+    view.setBigUint64(8, unsigned >> 64n, true);
+  });
+}
+
+/** Decode an i128. */
+export function decodeI128(buf: Uint8Array, offset: number): DecodeResult<bigint> {
+  const decoded = decodeU128(buf, offset);
+  return { value: BigInt.asIntN(128, decoded.value), next: decoded.next };
 }
 
 /** Encode an f32 (4 bytes little-endian IEEE 754). */
@@ -172,12 +190,12 @@ export function decodeF64(buf: Uint8Array, offset: number): DecodeResult<number>
 /** Encode a string (length-prefixed UTF-8). */
 export function encodeString(value: string): Uint8Array {
   const bytes = new TextEncoder().encode(value);
-  return concat(encodeVarint(bytes.length), bytes);
+  return concat(encodeU32(bytes.length), bytes);
 }
 
 /** Decode a string. */
 export function decodeString(buf: Uint8Array, offset: number): DecodeResult<string> {
-  const len = decodeVarintNumber(buf, offset);
+  const len = decodeU32(buf, offset);
   const start = len.next;
   const end = start + len.value;
   if (end > buf.length) throw new Error("string: overrun");
@@ -191,12 +209,12 @@ export function decodeString(buf: Uint8Array, offset: number): DecodeResult<stri
 
 /** Encode bytes (length-prefixed). */
 export function encodeBytes(value: Uint8Array): Uint8Array {
-  return concat(encodeVarint(value.length), value);
+  return concat(encodeU32(value.length), value);
 }
 
 /** Decode bytes. */
 export function decodeBytes(buf: Uint8Array, offset: number): DecodeResult<Uint8Array> {
-  const len = decodeVarintNumber(buf, offset);
+  const len = decodeU32(buf, offset);
   const start = len.next;
   const end = start + len.value;
   if (end > buf.length) throw new Error("bytes: overrun");
@@ -240,7 +258,7 @@ export function decodeOption<T>(
 
 /** Encode a Vec<T>. */
 export function encodeVec<T>(values: T[], encodeItem: (v: T) => Uint8Array): Uint8Array {
-  const parts: Uint8Array[] = [encodeVarint(values.length)];
+  const parts: Uint8Array[] = [encodeU32(values.length)];
   for (const item of values) {
     parts.push(encodeItem(item));
   }
@@ -253,7 +271,7 @@ export function decodeVec<T>(
   offset: number,
   decodeItem: (buf: Uint8Array, offset: number) => DecodeResult<T>,
 ): DecodeResult<T[]> {
-  const len = decodeVarintNumber(buf, offset);
+  const len = decodeU32(buf, offset);
   let pos = len.next;
   const items: T[] = [];
   for (let i = 0; i < len.value; i++) {
@@ -329,19 +347,18 @@ export function decodeTuple3<A, B, C>(
 
 /** Encode an enum variant index. */
 export function encodeEnumVariant(variantIndex: number): Uint8Array {
-  return encodeVarint(variantIndex);
+  return encodeU32(variantIndex);
 }
 
 /** Decode an enum variant index. */
 export function decodeEnumVariant(buf: Uint8Array, offset: number): DecodeResult<number> {
-  return decodeVarintNumber(buf, offset);
+  return decodeU32(buf, offset);
 }
 
 // ============================================================================
 // Re-export for convenience
 // ============================================================================
 
-export { encodeVarint, decodeVarint, decodeVarintNumber };
 export { concat };
 
 // ============================================================================

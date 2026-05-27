@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decodeVarintNumber, decodeString, decodeU32, encodeU16, encodeU32, encodeU64 } from "@bearcove/vox-postcard";
+import { decodeString, decodeU32, encodeU16, encodeU32, encodeU64 } from "@bearcove/vox-postcard";
 import {
   type Message,
   MetadataFlagValues,
@@ -96,18 +96,21 @@ describe("wire golden vectors", () => {
 
 // Mirrors the decode logic in connection.ts
 function decodeOkString(bytes: Uint8Array): string {
-  if (bytes[0] !== 0) throw new Error("expected Ok");
-  return decodeString(bytes, 1).value;
+  const variant = decodeU32(bytes, 0);
+  if (variant.value !== 0) throw new Error("expected Ok");
+  return decodeString(bytes, variant.next).value;
 }
 
 function decodeOkU32(bytes: Uint8Array): number {
-  if (bytes[0] !== 0) throw new Error("expected Ok");
-  return decodeU32(bytes, 1).value;
+  const variant = decodeU32(bytes, 0);
+  if (variant.value !== 0) throw new Error("expected Ok");
+  return decodeU32(bytes, variant.next).value;
 }
 
 function decodeErr(bytes: Uint8Array): RpcError {
-  if (bytes[0] !== 1) throw new Error("expected Err");
-  const variant = decodeVarintNumber(bytes, 1);
+  const resultVariant = decodeU32(bytes, 0);
+  if (resultVariant.value !== 1) throw new Error("expected Err");
+  const variant = decodeU32(bytes, resultVariant.next);
   if (variant.value === RpcErrorCode.USER) {
     return new RpcError(RpcErrorCode.USER, bytes.slice(variant.next));
   }
@@ -115,45 +118,45 @@ function decodeErr(bytes: Uint8Array): RpcError {
 }
 
 describe("Result/VoxError golden vectors", () => {
-  it("ok_string: [0x00, len, ...bytes]", () => {
+  it("ok_string: binette Result::Ok(String)", () => {
     const bytes = loadGoldenVector("result/ok_string.bin");
-    expect(Array.from(bytes)).toEqual([0x00, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f]);
+    expect(Array.from(bytes)).toEqual([0, 0, 0, 0, 5, 0, 0, 0, 104, 101, 108, 108, 111]);
     expect(decodeOkString(bytes)).toBe("hello");
   });
 
-  it("ok_u32: [0x00, varint(42)]", () => {
+  it("ok_u32: binette Result::Ok(u32)", () => {
     const bytes = loadGoldenVector("result/ok_u32.bin");
-    expect(Array.from(bytes)).toEqual([0x00, 0x2a]);
+    expect(Array.from(bytes)).toEqual([0, 0, 0, 0, 42, 0, 0, 0]);
     expect(decodeOkU32(bytes)).toBe(42);
   });
 
-  it("err_unknown_method: [0x01, 0x01]", () => {
+  it("err_unknown_method: binette Result::Err(UnknownMethod)", () => {
     const bytes = loadGoldenVector("result/err_unknown_method.bin");
-    expect(Array.from(bytes)).toEqual([0x01, 0x01]);
+    expect(Array.from(bytes)).toEqual([1, 0, 0, 0, 1, 0, 0, 0]);
     const err = decodeErr(bytes);
     expect(err.code).toBe(RpcErrorCode.UNKNOWN_METHOD);
     expect(err.payload).toBeNull();
   });
 
-  it("err_invalid_payload: [0x01, 0x02, 0x00]", () => {
+  it("err_invalid_payload: binette Result::Err(InvalidPayload)", () => {
     const bytes = loadGoldenVector("result/err_invalid_payload.bin");
-    expect(Array.from(bytes)).toEqual([0x01, 0x02, 0x00]);
+    expect(Array.from(bytes)).toEqual([1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]);
     const err = decodeErr(bytes);
     expect(err.code).toBe(RpcErrorCode.INVALID_PAYLOAD);
     expect(err.payload).toBeNull();
   });
 
-  it("err_cancelled: [0x01, 0x03]", () => {
+  it("err_cancelled: binette Result::Err(Cancelled)", () => {
     const bytes = loadGoldenVector("result/err_cancelled.bin");
-    expect(Array.from(bytes)).toEqual([0x01, 0x03]);
+    expect(Array.from(bytes)).toEqual([1, 0, 0, 0, 3, 0, 0, 0]);
     const err = decodeErr(bytes);
     expect(err.code).toBe(RpcErrorCode.CANCELLED);
     expect(err.payload).toBeNull();
   });
 
-  it("err_user_string: [0x01, 0x00, len, ...bytes]", () => {
+  it("err_user_string: binette Result::Err(User(String))", () => {
     const bytes = loadGoldenVector("result/err_user_string.bin");
-    expect(Array.from(bytes)).toEqual([0x01, 0x00, 0x04, 0x6f, 0x6f, 0x70, 0x73]);
+    expect(Array.from(bytes)).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 111, 111, 112, 115]);
     const err = decodeErr(bytes);
     expect(err.code).toBe(RpcErrorCode.USER);
     expect(err.payload).not.toBeNull();

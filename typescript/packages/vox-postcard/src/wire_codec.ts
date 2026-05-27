@@ -1,7 +1,7 @@
-// Plan-driven postcard codec using the new Wire schema types.
+// Plan-driven binette compact codec using the Vox schema types.
 //
 // Decoding is plan-driven: the TranslationPlan tells us how to read remote
-// postcard bytes into local types in a single pass, handling field reordering,
+// binette bytes into local types in a single pass, handling field reordering,
 // skipping, and default-filling.
 
 import type { DecodeResult } from "./index.ts";
@@ -15,11 +15,12 @@ import {
   decodeI32,
   decodeU64,
   decodeI64,
+  decodeU128,
+  decodeI128,
   decodeF32,
   decodeF64,
   decodeString,
   decodeBytes,
-  decodeVarintNumber,
 } from "./index.ts";
 import type {
   SchemaKind,
@@ -64,25 +65,52 @@ class BufWriter {
     this.pos += value.length;
   }
 
-  writeVarint(value: number | bigint): void {
-    let v: bigint;
-    if (typeof value === "number") {
-      if (!Number.isInteger(value) || value < 0) {
-        throw new Error(`varint: expected non-negative integer, got ${value}`);
-      }
-      v = BigInt(value);
-    } else {
-      if (value < 0n) {
-        throw new Error(`varint: expected non-negative integer, got ${value.toString()}`);
-      }
-      v = value;
-    }
+  writeU16(value: number): void {
+    this.reserve(2);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 2).setUint16(0, value, true);
+    this.pos += 2;
+  }
 
-    while (v >= 0x80n) {
-      this.writeByte(Number((v & 0x7fn) | 0x80n));
-      v >>= 7n;
-    }
-    this.writeByte(Number(v));
+  writeI16(value: number): void {
+    this.reserve(2);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 2).setInt16(0, value, true);
+    this.pos += 2;
+  }
+
+  writeU32(value: number): void {
+    this.reserve(4);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 4).setUint32(0, value, true);
+    this.pos += 4;
+  }
+
+  writeI32(value: number): void {
+    this.reserve(4);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 4).setInt32(0, value, true);
+    this.pos += 4;
+  }
+
+  writeU64(value: bigint): void {
+    this.reserve(8);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 8).setBigUint64(0, value, true);
+    this.pos += 8;
+  }
+
+  writeI64(value: bigint): void {
+    this.reserve(8);
+    new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 8).setBigInt64(0, value, true);
+    this.pos += 8;
+  }
+
+  writeU128(value: bigint): void {
+    this.reserve(16);
+    const view = new DataView(this.buf.buffer, this.buf.byteOffset + this.pos, 16);
+    view.setBigUint64(0, value & 0xffff_ffff_ffff_ffffn, true);
+    view.setBigUint64(8, value >> 64n, true);
+    this.pos += 16;
+  }
+
+  writeI128(value: bigint): void {
+    this.writeU128(BigInt.asUintN(128, value));
   }
 
   writeF32(value: number): void {
@@ -104,10 +132,6 @@ class BufWriter {
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
-
-function zigzagEncode(n: bigint): bigint {
-  return (n << 1n) ^ (n >> 63n);
-}
 
 function encodeChar(value: string, writer: BufWriter): void {
   const bytes = TEXT_ENCODER.encode(value);
@@ -202,7 +226,7 @@ function encodeByKind(
       if (!variant) {
         throw new Error(`unknown variant: ${enumValue.tag}`);
       }
-      writer.writeVarint(variant.index);
+      writer.writeU32(variant.index);
       switch (variant.payload.tag) {
         case "unit":
           return;
@@ -260,12 +284,12 @@ function encodeByKind(
     case "list": {
       if (isByteListKind(kind, registry)) {
         const bytes = coerceUint8Array(value, "list<u8>");
-        writer.writeVarint(bytes.length);
+        writer.writeU32(bytes.length);
         writer.writeBytes(bytes);
         return;
       }
       const values = value as unknown[];
-      writer.writeVarint(values.length);
+      writer.writeU32(values.length);
       for (const item of values) {
         encodeByKind(item, resolveTypeRefKind(kind.element, registry), writer, registry);
       }
@@ -282,7 +306,7 @@ function encodeByKind(
     case "map": {
       const entries =
         value instanceof Map ? [...value.entries()] : Array.isArray(value) ? value : [];
-      writer.writeVarint(entries.length);
+      writer.writeU32(entries.length);
       for (const [key, entryValue] of entries) {
         encodeByKind(key, resolveTypeRefKind(kind.key, registry), writer, registry);
         encodeByKind(entryValue, resolveTypeRefKind(kind.value, registry), writer, registry);
@@ -300,7 +324,7 @@ function encodeByKind(
       return;
     }
     case "channel":
-      writer.writeVarint(extractChannelId(value));
+      writer.writeU64(extractChannelId(value));
       return;
   }
 }
@@ -337,20 +361,28 @@ function encodePrimitive(value: unknown, primitiveType: string, writer: BufWrite
       writer.writeByte(value as number);
       return;
     case "u16":
+      writer.writeU16(value as number);
+      return;
     case "u32":
-      writer.writeVarint(value as number);
+      writer.writeU32(value as number);
       return;
     case "u64":
+      writer.writeU64(value as bigint);
+      return;
     case "u128":
-      writer.writeVarint(value as bigint);
+      writer.writeU128(value as bigint);
       return;
     case "i16":
+      writer.writeI16(value as number);
+      return;
     case "i32":
-      writer.writeVarint(zigzagEncode(BigInt(value as number)));
+      writer.writeI32(value as number);
       return;
     case "i64":
+      writer.writeI64(value as bigint);
+      return;
     case "i128":
-      writer.writeVarint(zigzagEncode(value as bigint));
+      writer.writeI128(value as bigint);
       return;
     case "f32":
       writer.writeF32(value as number);
@@ -363,7 +395,7 @@ function encodePrimitive(value: unknown, primitiveType: string, writer: BufWrite
       return;
     case "string": {
       const bytes = TEXT_ENCODER.encode(value as string);
-      writer.writeVarint(bytes.length);
+      writer.writeU32(bytes.length);
       writer.writeBytes(bytes);
       return;
     }
@@ -373,7 +405,7 @@ function encodePrimitive(value: unknown, primitiveType: string, writer: BufWrite
       throw new Error("encodePrimitive: cannot encode never");
     case "bytes": {
       const bytes = coerceUint8Array(value, "bytes");
-      writer.writeVarint(bytes.length);
+      writer.writeU32(bytes.length);
       writer.writeBytes(bytes);
       return;
     }
@@ -393,11 +425,11 @@ function encodePrimitive(value: unknown, primitiveType: string, writer: BufWrite
 }
 
 // ============================================================================
-// skipValue — advance past a postcard value without decoding it
+// skipValue — advance past a binette value without decoding it
 // ============================================================================
 
 /**
- * Skip past a postcard-encoded value described by `kind`.
+ * Skip past a binette-encoded value described by `kind`.
  * Returns the new offset after the value.
  */
 export function skipValue(
@@ -419,7 +451,7 @@ export function skipValue(
       if (isByteListKind(kind, registry)) {
         return decodeBytes(buf, offset).next;
       }
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       let off = next;
       const elemKind = resolveTypeRefKind(kind.element, registry);
       for (let i = 0; i < len; i++) {
@@ -434,7 +466,7 @@ export function skipValue(
       return skipValue(buf, offset + 1, elemKind, registry);
     }
     case "map": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       let off = next;
       const keyKind = resolveTypeRefKind(kind.key, registry);
       const valKind = resolveTypeRefKind(kind.value, registry);
@@ -464,15 +496,21 @@ function skipPrimitive(buf: Uint8Array, offset: number, pt: string): number {
     case "i8":
       return offset + 1;
     case "u16":
+      return offset + 2;
     case "u32":
+      return offset + 4;
     case "u64":
+      return offset + 8;
     case "u128":
-      return decodeVarintNumber(buf, offset).next;
+      return offset + 16;
     case "i16":
+      return offset + 2;
     case "i32":
+      return offset + 4;
     case "i64":
+      return offset + 8;
     case "i128":
-      return decodeVarintNumber(buf, offset).next;
+      return offset + 16;
     case "f32":
       return offset + 4;
     case "f64":
@@ -486,7 +524,7 @@ function skipPrimitive(buf: Uint8Array, offset: number, pt: string): number {
       return offset + 4;
     }
     case "string": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       return next + len;
     }
     case "unit":
@@ -494,17 +532,12 @@ function skipPrimitive(buf: Uint8Array, offset: number, pt: string): number {
     case "never":
       throw new Error("skipPrimitive: received bytes for never primitive");
     case "bytes": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       return next + len;
     }
     case "payload": {
-      // 4-byte LE u32 length prefix
-      const len =
-        buf[offset] |
-        (buf[offset + 1] << 8) |
-        (buf[offset + 2] << 16) |
-        (buf[offset + 3] << 24);
-      return offset + 4 + len;
+      const { value: len, next } = decodeU32(buf, offset);
+      return next + len;
     }
     default:
       throw new Error(`skipPrimitive: unknown primitive type "${pt}"`);
@@ -531,7 +564,7 @@ function skipEnum(
   variants: VariantSchema[],
   registry: SchemaRegistry,
 ): number {
-  const { value: discriminant, next } = decodeVarintNumber(buf, offset);
+  const { value: discriminant, next } = decodeU32(buf, offset);
   const variant = variants.find((v) => v.index === discriminant);
   if (!variant) throw new Error(`skipEnum: unknown variant discriminant ${discriminant}`);
 
@@ -574,9 +607,9 @@ function skipTuple(
 // ============================================================================
 
 /**
- * Decode postcard bytes using a translation plan.
+ * Decode binette bytes using a translation plan.
  *
- * @param buf - Postcard-encoded buffer
+ * @param buf - binette-encoded buffer
  * @param offset - Starting offset
  * @param plan - Translation plan from buildPlan()
  * @param localKind - Local schema kind (for decoding leaves and identity)
@@ -605,7 +638,7 @@ export function decodeWithPlan(
       return decodeTupleWithPlan(buf, offset, plan, localKind, remoteKind, registry);
 
     case "list": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       const localList = localKind as Extract<SchemaKind, { tag: "list" }>;
       const remoteList = remoteKind as Extract<SchemaKind, { tag: "list" }>;
       if (isByteListKind(localList, registry) && isByteListKind(remoteList, registry)) {
@@ -634,7 +667,7 @@ export function decodeWithPlan(
     }
 
     case "map": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       let off = next;
       const localMap = localKind as Extract<SchemaKind, { tag: "map" }>;
       const remoteMap = remoteKind as Extract<SchemaKind, { tag: "map" }>;
@@ -733,7 +766,7 @@ function decodeEnumWithPlan(
   const localEnum = localKind as Extract<SchemaKind, { tag: "enum" }>;
   const remoteEnum = remoteKind as Extract<SchemaKind, { tag: "enum" }>;
 
-  const { value: discriminant, next } = decodeVarintNumber(buf, offset);
+  const { value: discriminant, next } = decodeU32(buf, offset);
   let off = next;
 
   // Find remote variant by index
@@ -909,7 +942,7 @@ function decodeByKind(
       return { value: result, next: off };
     }
     case "enum": {
-      const { value: discriminant, next } = decodeVarintNumber(buf, offset);
+      const { value: discriminant, next } = decodeU32(buf, offset);
       const variant = kind.variants.find((v) => v.index === discriminant);
       if (!variant) throw new Error(`unknown variant discriminant: ${discriminant}`);
       return decodeVariant(buf, next, variant, registry);
@@ -929,7 +962,7 @@ function decodeByKind(
       if (isByteListKind(kind, registry)) {
         return decodeBytes(buf, offset);
       }
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       const elemKind = resolveTypeRefKind(kind.element, registry);
       const result: unknown[] = [];
       let off = next;
@@ -947,7 +980,7 @@ function decodeByKind(
       return decodeByKind(buf, offset + 1, elemKind, registry);
     }
     case "map": {
-      const { value: len, next } = decodeVarintNumber(buf, offset);
+      const { value: len, next } = decodeU32(buf, offset);
       const keyKind = resolveTypeRefKind(kind.key, registry);
       const valKind = resolveTypeRefKind(kind.value, registry);
       const result = new Map<unknown, unknown>();
@@ -1040,6 +1073,10 @@ function decodePrimitive(
       return decodeU64(buf, offset);
     case "i64":
       return decodeI64(buf, offset);
+    case "u128":
+      return decodeU128(buf, offset);
+    case "i128":
+      return decodeI128(buf, offset);
     case "f32":
       return decodeF32(buf, offset);
     case "f64":
@@ -1053,15 +1090,10 @@ function decodePrimitive(
     case "never":
       throw new Error("decodePrimitive: received bytes for never primitive");
     case "payload": {
-      // 4-byte LE u32 length prefix
-      const len =
-        buf[offset] |
-        (buf[offset + 1] << 8) |
-        (buf[offset + 2] << 16) |
-        (buf[offset + 3] << 24);
+      const { value: len, next } = decodeU32(buf, offset);
       return {
-        value: buf.subarray(offset + 4, offset + 4 + len),
-        next: offset + 4 + len,
+        value: buf.subarray(next, next + len),
+        next: next + len,
       };
     }
     default:

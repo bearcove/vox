@@ -1,7 +1,7 @@
 // Translation plan for schema evolution.
 //
-// Ported from Rust's vox-postcard/src/plan.rs. Compares remote and local
-// schemas and produces a plan that drives single-pass postcard decoding with
+// Compares remote and local schemas and produces a plan that drives single-pass
+// binette compact decoding with
 // field reordering, skipping, and default-filling.
 
 import type {

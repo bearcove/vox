@@ -31,7 +31,7 @@
     "vitest": "^4.0.0"
   },
   "license": "MIT OR Apache-2.0",
-  "description": "Postcard serialization helpers for Vox service definitions",
+  "description": "binette compact serialization helpers for Vox service definitions",
   "repository": "https://github.com/bearcove/vox",
   "homepage": "https://github.com/bearcove/vox",
   "keywords": [
