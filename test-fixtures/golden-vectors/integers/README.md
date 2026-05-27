@@ -1,4 +1,4 @@
-# binette Primitive Fixtures
+# binette Integer Fixtures
 
 Generated from the Rust fixture generator:
 

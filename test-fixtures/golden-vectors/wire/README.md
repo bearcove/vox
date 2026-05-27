@@ -9,5 +9,5 @@ Regenerate:
 cargo run -p vox-core --bin generate_golden_vectors
 ```
 
-These fixtures are for postcard-level golden coverage only. Cross-language
+These fixtures are for binette-level golden coverage. Cross-language
 interoperability is covered by spec tests.

@@ -28,7 +28,10 @@ fn write_fixture(path: &str, bytes: &[u8]) {
 }
 
 fn encode_message(message: &Message<'_>) -> Vec<u8> {
-    vox_postcard::to_vec(message).expect("serialize message fixture")
+    let writer_plan =
+        binette::writer_plan_for::<Message<'static>>().expect("build message writer plan");
+    binette::encode_peek_to_vec_with_plan(facet_reflect::Peek::new(message), &writer_plan)
+        .expect("serialize message fixture")
 }
 
 fn sample_metadata() -> Metadata<'static> {
@@ -54,25 +57,25 @@ fn sample_metadata() -> Metadata<'static> {
 fn main() {
     macro_rules! write_value {
         ($path:literal, $value:expr) => {{
-            let bytes = vox_postcard::to_vec(&$value).expect("serialize fixture");
+            let bytes = binette::encode_to_vec(&$value).expect("serialize fixture");
             write_fixture($path, &bytes);
         }};
     }
 
     // -------------------------------------------------------------------------
-    // Varint
+    // Integer values
     // -------------------------------------------------------------------------
-    write_value!("varint/u64_0.bin", 0u64);
-    write_value!("varint/u64_1.bin", 1u64);
-    write_value!("varint/u64_127.bin", 127u64);
-    write_value!("varint/u64_128.bin", 128u64);
-    write_value!("varint/u64_255.bin", 255u64);
-    write_value!("varint/u64_256.bin", 256u64);
-    write_value!("varint/u64_16383.bin", 16383u64);
-    write_value!("varint/u64_16384.bin", 16384u64);
-    write_value!("varint/u64_65535.bin", 65535u64);
-    write_value!("varint/u64_65536.bin", 65536u64);
-    write_value!("varint/u64_1048576.bin", 1_048_576u64);
+    write_value!("integers/u64_0.bin", 0u64);
+    write_value!("integers/u64_1.bin", 1u64);
+    write_value!("integers/u64_127.bin", 127u64);
+    write_value!("integers/u64_128.bin", 128u64);
+    write_value!("integers/u64_255.bin", 255u64);
+    write_value!("integers/u64_256.bin", 256u64);
+    write_value!("integers/u64_16383.bin", 16383u64);
+    write_value!("integers/u64_16384.bin", 16384u64);
+    write_value!("integers/u64_65535.bin", 65535u64);
+    write_value!("integers/u64_65536.bin", 65536u64);
+    write_value!("integers/u64_1048576.bin", 1_048_576u64);
 
     // -------------------------------------------------------------------------
     // Primitives
@@ -300,9 +303,6 @@ fn main() {
         initial_channel_credit: 16,
     };
     let meta = sample_metadata();
-
-    // Hello and HelloYourself are no longer MessagePayload variants.
-    // They are CBOR-encoded handshake messages exchanged before postcard traffic.
 
     write_fixture(
         "wire/message_protocol_error.bin",
