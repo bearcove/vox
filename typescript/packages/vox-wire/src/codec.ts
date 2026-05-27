@@ -9,7 +9,7 @@ import {
   type TranslationPlan,
   type SchemaKind,
   type SchemaRegistry,
-} from "@bearcove/vox-postcard";
+} from "@bearcove/binette";
 
 import type { Message } from "./types.ts";
 import {

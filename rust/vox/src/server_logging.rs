@@ -75,7 +75,7 @@ impl ServerLogging {
         self.payload_printer().format_peek(payload)
     }
 
-    fn format_postcard_bytes(&self, bytes: &[u8]) -> String {
+    fn format_binette_bytes(&self, bytes: &[u8]) -> String {
         self.payload_printer().format(bytes)
     }
 }
@@ -128,12 +128,12 @@ impl ServerMiddleware for ServerLogging {
                     "rpc response payload"
                 );
             }
-            ServerResponsePayload::PostcardBytes(bytes) => {
+            ServerResponsePayload::BinetteBytes(bytes) => {
                 trace!(
                     target: "vox::server",
                     service = method.service_name,
                     method = method.method_name,
-                    ret = %self.format_postcard_bytes(bytes),
+                    ret = %self.format_binette_bytes(bytes),
                     metadata = ?RedactedMetadata(response.metadata()),
                     "rpc response payload"
                 );

@@ -81,7 +81,7 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     // Server (handler interface + dispatcher)
     output.push_str(&generate_server(service));
 
-    // Pre-computed CBOR send schema table (must come before descriptor)
+    // Pre-computed binette send schema table (must come before descriptor)
     output.push_str(&generate_send_schema_table(service));
 
     // Service descriptor
@@ -295,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_typescript_contains_no_postcard_primitive_usage() {
+    fn generated_typescript_contains_no_direct_codec_primitive_usage() {
         let echo = method_descriptor::<(String,), String>("TestSvc", "echo", &["message"], None);
         let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
             "TestSvc",
@@ -312,12 +312,12 @@ mod tests {
 
         let generated = generate_service(&service);
         assert!(
-            !generated.contains("import * as pc from \"@bearcove/vox-postcard\""),
-            "generated TypeScript must not import postcard primitive namespace:\n{generated}"
+            !generated.contains("import * as pc from \"@bearcove/binette\""),
+            "generated TypeScript must not import the binette primitive namespace:\n{generated}"
         );
         assert!(
             !generated.contains("pc."),
-            "generated TypeScript must not call postcard primitives directly:\n{generated}"
+            "generated TypeScript must not call codec primitives directly:\n{generated}"
         );
     }
 

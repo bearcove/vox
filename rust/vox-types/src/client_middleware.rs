@@ -166,7 +166,7 @@ mod tests {
         let mut call = RequestCall {
             method_id: MethodId(1),
             metadata: vec![],
-            args: Payload::PostcardBytes(&[]),
+            args: Payload::BinetteBytes(&[]),
             schemas: Default::default(),
         };
         let mut owned = OwnedMetadata::default();

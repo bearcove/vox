@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use moire::sync::SyncMutex;
-use vox_types::{MaybeSend, MaybeSync, MethodId, OperationId, PostcardPayload};
+use vox_types::{BinettePayload, MaybeSend, MaybeSync, MethodId, OperationId};
 
 /// A sealed response stored in the operation store.
 ///
@@ -11,8 +11,8 @@ use vox_types::{MaybeSend, MaybeSync, MethodId, OperationId, PostcardPayload};
 /// not freeze schemas alongside payloads — that would only matter for
 /// cross-process / cross-version replay, and we don't promise that.
 pub struct SealedResponse {
-    /// Postcard-encoded response payload (without schemas).
-    pub response: PostcardPayload,
+    /// Binette-encoded response payload (without schemas).
+    pub response: BinettePayload,
     /// Method this response was produced for. Replay derives the
     /// response's static `&'static Shape` from this.
     pub method_id: MethodId,
@@ -47,10 +47,10 @@ pub trait OperationStore: MaybeSend + MaybeSync + 'static {
     fn get_sealed(&self, operation_id: OperationId) -> Option<SealedResponse>;
 
     /// Store the sealed response for an operation. `response` is the
-    /// postcard-encoded payload without schemas; `method_id` is needed
+    /// binette-encoded payload without schemas; `method_id` is needed
     /// at replay time to look up the response shape from the running
     /// code.
-    fn seal(&self, operation_id: OperationId, method_id: MethodId, response: &PostcardPayload);
+    fn seal(&self, operation_id: OperationId, method_id: MethodId, response: &BinettePayload);
 
     /// Remove an admitted (but not sealed) operation, e.g. after handler failure.
     fn remove(&self, operation_id: OperationId);
@@ -63,7 +63,7 @@ pub trait OperationStore: MaybeSend + MaybeSync + 'static {
 enum InMemoryState {
     Admitted,
     Sealed {
-        response: PostcardPayload,
+        response: BinettePayload,
         method_id: MethodId,
     },
 }
@@ -129,7 +129,7 @@ impl OperationStore for InMemoryOperationStore {
         }
     }
 
-    fn seal(&self, operation_id: OperationId, method_id: MethodId, response: &PostcardPayload) {
+    fn seal(&self, operation_id: OperationId, method_id: MethodId, response: &BinettePayload) {
         let mut inner = self.inner.lock();
         inner.operations.insert(
             operation_id,

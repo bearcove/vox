@@ -73,7 +73,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .expect("call should still succeed while one root caller remains");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let echoed: u32 = decode_binette_payload(ret_bytes);
@@ -266,7 +266,7 @@ async fn cancel_aborts_in_flight_handler() {
     let response = result.expect("call should receive a response");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError> = decode_binette_payload(ret_bytes);
@@ -363,7 +363,7 @@ async fn cancel_does_not_abort_persist_handler() {
         .expect("persist call should still receive a response");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let value: u32 = decode_binette_payload(ret_bytes);
@@ -405,7 +405,7 @@ async fn caller_injects_operation_id_when_peer_supports_retry() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let operation_id: u64 = decode_binette_payload(ret_bytes);
@@ -527,7 +527,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
         .expect("first call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let value: u32 = decode_binette_payload(ret_bytes);
@@ -573,7 +573,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
         .expect("replay after resume should succeed");
     let replayed = replayed.get();
     let ret_bytes = match &replayed.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let value: u32 = decode_binette_payload(ret_bytes);
@@ -683,7 +683,7 @@ async fn duplicate_operation_id_on_same_connection_is_rejected() {
     for response in [r1, r2] {
         let response = response.get();
         let ret_bytes = match &response.ret {
-            Payload::PostcardBytes(bytes) => *bytes,
+            Payload::BinetteBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
         let value: u32 = decode_binette_payload(ret_bytes);
@@ -780,7 +780,7 @@ async fn call_through_binette_handshake_reaches_handler() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let value: u32 = decode_binette_payload(ret_bytes);
@@ -838,7 +838,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError<std::convert::Infallible>> = decode_binette_payload(ret_bytes);
@@ -1079,7 +1079,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .expect("root call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = decode_binette_payload(ret_bytes);
@@ -1117,7 +1117,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .expect("virtual connection call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = decode_binette_payload(ret_bytes);
@@ -1366,7 +1366,7 @@ async fn echo_call_across_memory_link() {
     // The echo handler sends back the same bytes. Deserialize the response.
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let result: u32 = decode_binette_payload(ret_bytes);
@@ -1424,7 +1424,7 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
     };
     let item = item.get();
     let bytes = match item.item {
-        Payload::PostcardBytes(bytes) => bytes,
+        Payload::BinetteBytes(bytes) => bytes,
         _ => panic!("expected incoming payload"),
     };
     let decoded: u32 = decode_binette_payload(bytes);
@@ -1797,7 +1797,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = decode_binette_payload(ret_bytes);
@@ -1916,7 +1916,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         .expect("proxied call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::BinetteBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = decode_binette_payload(ret_bytes);

@@ -2,7 +2,7 @@ import {
   decodeWithKind,
   decodeWithPlan,
   encodeWithKind,
-} from "@bearcove/vox-postcard";
+} from "@bearcove/binette";
 import {
   type ConnectionSettings,
   type RequestMessage,
@@ -815,7 +815,7 @@ class SessionCore {
       throw SessionError.protocol("session is not resumable");
     }
 
-    // CBOR handshake (including resume key exchange) is performed by the
+    // binette handshake (including resume key exchange) is performed by the
     // caller before the conduit is handed in. Just switch to the new conduit.
     this.conduit = conduit;
     for (const connection of this.connections.values()) {

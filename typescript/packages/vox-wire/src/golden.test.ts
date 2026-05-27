@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decodeString, decodeU32, encodeU16, encodeU32, encodeU64 } from "@bearcove/vox-postcard";
+import { decodeString, decodeU32, encodeU16, encodeU32, encodeU64 } from "@bearcove/binette";
 import {
   type Message,
   MetadataFlagValues,

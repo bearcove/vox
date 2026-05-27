@@ -27,7 +27,7 @@ pub fn generate_send_schema_table(service: &ServiceDescriptor) -> String {
     let mut schema_ids_seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
 
     // Collect all schemas (extracted + constructed) with temporary IDs.
-    // We'll finalize content hashes and CBOR-encode at the end.
+    // We'll finalize content hashes before emitting the schema table.
     let mut all_schemas: Vec<Schema> = Vec::new();
 
     /// Extract schemas for a shape, append to all_schemas, return root TypeRef.
@@ -107,7 +107,7 @@ pub fn generate_send_schema_table(service: &ServiceDescriptor) -> String {
         }
     }
 
-    // Generate TypeScript output — Schema objects as typed literals, not CBOR bytes.
+    // Generate TypeScript output — Schema objects as typed literals.
     let mut out = String::new();
 
     out.push_str("// Schema objects for wire schema exchange (TypeScript \u{2192} Rust)\n");
@@ -117,7 +117,7 @@ pub fn generate_send_schema_table(service: &ServiceDescriptor) -> String {
     ));
 
     // schemas: Map<bigint, Schema>
-    out.push_str("  schemas: new Map<bigint, import(\"@bearcove/vox-postcard\").Schema>([\n");
+    out.push_str("  schemas: new Map<bigint, import(\"@bearcove/binette\").Schema>([\n");
     for schema in &deduped_schemas {
         let id_hex = hex_u64(schema.id.0);
         let schema_ts = render_schema(schema);

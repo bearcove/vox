@@ -529,9 +529,9 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
             let request_call = call.get();
             let method_id = request_call.method_id;
             let args_bytes = match &request_call.args {
-                #vox::Payload::PostcardBytes(bytes) => bytes,
+                #vox::Payload::BinetteBytes(bytes) => bytes,
                 _ => {
-                    reply.send_error(#vox::VoxError::<::core::convert::Infallible>::InvalidPayload("args not PostcardBytes".into())).await;
+                    reply.send_error(#vox::VoxError::<::core::convert::Infallible>::InvalidPayload("args not BinetteBytes".into())).await;
                     return;
                 }
             };
@@ -994,8 +994,8 @@ fn generate_client_method(
                 // claims one). Pass-through off-Unix.
                 #vox::provide_fds(__vox_frame_fds, move || response.try_repack(|resp, _bytes| {
                     let ret_bytes = match &resp.ret {
-                        #vox::Payload::PostcardBytes(bytes) => bytes,
-                        _ => return Err(#vox::VoxError::<#err_ty>::InvalidPayload("response not PostcardBytes".into())),
+                        #vox::Payload::BinetteBytes(bytes) => bytes,
+                        _ => return Err(#vox::VoxError::<#err_ty>::InvalidPayload("response not BinetteBytes".into())),
                     };
                     let result: Result<#ok_ty_decode, #vox::VoxError<#err_ty>> =
                         #vox::schema_deser::schema_deserialize_response_borrowed::<Result<#ok_ty_decode, #vox::VoxError<#err_ty>>>(ret_bytes, method_id, &schema_tracker)
@@ -1050,8 +1050,8 @@ fn generate_client_method(
                 #vox::provide_fds(__vox_frame_fds, move || {
                     let response = response.get();
                     let ret_bytes = match &response.ret {
-                        #vox::Payload::PostcardBytes(bytes) => bytes,
-                        _ => return Err(#vox::VoxError::<#err_ty>::InvalidPayload("response not PostcardBytes".into())),
+                        #vox::Payload::BinetteBytes(bytes) => bytes,
+                        _ => return Err(#vox::VoxError::<#err_ty>::InvalidPayload("response not BinetteBytes".into())),
                     };
                     let result: Result<#ok_ty_decode, #vox::VoxError<#err_ty>> =
                         #vox::schema_deser::schema_deserialize_response::<Result<#ok_ty_decode, #vox::VoxError<#err_ty>>>(

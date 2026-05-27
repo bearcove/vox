@@ -1,11 +1,9 @@
-import type { Schema } from "@bearcove/vox-postcard";
-import type { ConnectionSettings, Parity, MetadataEntry, MetadataValue, Metadata } from "@bearcove/vox-wire";
-import { messageSchemasCbor } from "@bearcove/vox-wire";
-import { decodeCbor, type CborMap, type CborValue } from "./cbor.ts";
+import type { Schema } from "@bearcove/binette";
+import { decodeWithTypeRef, encodeWithTypeRef } from "@bearcove/binette";
+import type { ConnectionSettings, Parity, MetadataEntry, Metadata } from "@bearcove/vox-wire";
+import { handshakeMessageRootRef, handshakeMessageSchemaRegistry, messageSchemas } from "@bearcove/vox-wire";
 import type { Link } from "./link.ts";
-import { normalizeSchemaList } from "./schema_cbor.ts";
-
-const DEFAULT_INITIAL_CHANNEL_CREDIT = 16;
+import { normalizeSchemaList, schemaListFromRust, schemaListToRust } from "./schema_binette.ts";
 
 export type { MetadataEntry, Metadata };
 
@@ -28,7 +26,7 @@ type HandshakeMessage =
 interface HelloMessage {
   parity: Parity;
   connection_settings: ConnectionSettings;
-  message_payload_schema: CborValue[];
+  message_payload_schema: Schema[];
   supports_retry: boolean;
   resume_key: Uint8Array | null;
   metadata: Metadata;
@@ -36,384 +34,104 @@ interface HelloMessage {
 
 interface HelloYourselfMessage {
   connection_settings: ConnectionSettings;
-  message_payload_schema: CborValue[];
+  message_payload_schema: Schema[];
   supports_retry: boolean;
   resume_key: Uint8Array | null;
   metadata: Metadata;
 }
 
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  let total = 0;
-  for (const chunk of chunks) {
-    total += chunk.length;
-  }
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return out;
+type RustSchema = ReturnType<typeof schemaListToRust>[number];
+
+type WireResumeKey = { bytes: Uint8Array };
+
+type WireHelloMessage = Omit<HelloMessage, "message_payload_schema" | "resume_key"> & {
+  message_payload_schema: RustSchema[];
+  resume_key: WireResumeKey | null;
+};
+
+type WireHelloYourselfMessage = Omit<HelloYourselfMessage, "message_payload_schema" | "resume_key"> & {
+  message_payload_schema: RustSchema[];
+  resume_key: WireResumeKey | null;
+};
+
+type WireHandshakeMessage =
+  | { tag: "Hello"; value: WireHelloMessage }
+  | { tag: "HelloYourself"; value: WireHelloYourselfMessage }
+  | { tag: "LetsGo"; value: Record<string, never> }
+  | { tag: "Sorry"; value: { reason: string } };
+
+function resumeKeyToWire(resumeKey: Uint8Array | null): WireResumeKey | null {
+  return resumeKey === null ? null : { bytes: resumeKey };
 }
 
-function encodeMajor(major: number, value: number | bigint): Uint8Array {
-  const big = typeof value === "bigint" ? value : BigInt(value);
-
-  if (big < 24n) {
-    return Uint8Array.of((major << 5) | Number(big));
-  }
-  if (big <= 0xffn) {
-    return Uint8Array.of((major << 5) | 24, Number(big));
-  }
-  if (big <= 0xffffn) {
-    return Uint8Array.of((major << 5) | 25, Number((big >> 8n) & 0xffn), Number(big & 0xffn));
-  }
-  if (big <= 0xffff_ffffn) {
-    return Uint8Array.of(
-      (major << 5) | 26,
-      Number((big >> 24n) & 0xffn),
-      Number((big >> 16n) & 0xffn),
-      Number((big >> 8n) & 0xffn),
-      Number(big & 0xffn),
-    );
-  }
-
-  const out = new Uint8Array(9);
-  out[0] = (major << 5) | 27;
-  let remaining = big;
-  for (let i = 8; i >= 1; i--) {
-    out[i] = Number(remaining & 0xffn);
-    remaining >>= 8n;
-  }
-  return out;
+function resumeKeyFromWire(resumeKey: WireResumeKey | null): Uint8Array | null {
+  return resumeKey === null ? null : resumeKey.bytes.slice();
 }
 
-function encodeUint(value: number | bigint): Uint8Array {
-  return encodeMajor(0, value);
-}
-
-function encodeBool(value: boolean): Uint8Array {
-  return Uint8Array.of(value ? 0xf5 : 0xf4);
-}
-
-function encodeNull(): Uint8Array {
-  return Uint8Array.of(0xf6);
-}
-
-function encodeBytes(value: Uint8Array): Uint8Array {
-  return concatChunks([encodeMajor(2, value.length), value]);
-}
-
-function encodeText(value: string): Uint8Array {
-  const encoded = new TextEncoder().encode(value);
-  return concatChunks([encodeMajor(3, encoded.length), encoded]);
-}
-
-function encodeArray(items: Uint8Array[]): Uint8Array {
-  return concatChunks([encodeMajor(4, items.length), ...items]);
-}
-
-function encodeMap(entries: Array<[string, Uint8Array]>): Uint8Array {
-  const chunks: Uint8Array[] = [encodeMajor(5, entries.length)];
-  for (const [key, value] of entries) {
-    chunks.push(encodeText(key), value);
-  }
-  return concatChunks(chunks);
-}
-
-function encodeParity(parity: Parity): Uint8Array {
-  switch (parity.tag) {
-    case "Odd":
-      return encodeMap([["Odd", encodeNull()]]);
-    case "Even":
-      return encodeMap([["Even", encodeNull()]]);
+function messageToWire(message: HandshakeMessage): WireHandshakeMessage {
+  switch (message.tag) {
+    case "Hello":
+      return {
+        tag: "Hello",
+        value: {
+          ...message.value,
+          message_payload_schema: schemaListToRust(message.value.message_payload_schema),
+          resume_key: resumeKeyToWire(message.value.resume_key),
+        },
+      };
+    case "HelloYourself":
+      return {
+        tag: "HelloYourself",
+        value: {
+          ...message.value,
+          message_payload_schema: schemaListToRust(message.value.message_payload_schema),
+          resume_key: resumeKeyToWire(message.value.resume_key),
+        },
+      };
+    case "LetsGo":
+      return { tag: "LetsGo", value: {} };
+    case "Sorry":
+      return { tag: "Sorry", value: { reason: message.reason } };
   }
 }
 
-function encodeConnectionSettings(settings: ConnectionSettings): Uint8Array {
-  return encodeMap([
-    ["parity", encodeParity(settings.parity)],
-    ["max_concurrent_requests", encodeUint(settings.max_concurrent_requests)],
-    ["initial_channel_credit", encodeUint(settings.initial_channel_credit)],
-  ]);
-}
-
-function encodeResumeKey(resumeKey: Uint8Array | null): Uint8Array {
-  if (resumeKey === null) {
-    return encodeNull();
+function messageFromWire(message: WireHandshakeMessage): HandshakeMessage {
+  switch (message.tag) {
+    case "Hello":
+      return {
+        tag: "Hello",
+        value: {
+          ...message.value,
+          message_payload_schema: schemaListFromRust(message.value.message_payload_schema),
+          resume_key: resumeKeyFromWire(message.value.resume_key),
+        },
+      };
+    case "HelloYourself":
+      return {
+        tag: "HelloYourself",
+        value: {
+          ...message.value,
+          message_payload_schema: schemaListFromRust(message.value.message_payload_schema),
+          resume_key: resumeKeyFromWire(message.value.resume_key),
+        },
+      };
+    case "LetsGo":
+      return { tag: "LetsGo" };
+    case "Sorry":
+      return { tag: "Sorry", reason: message.value.reason };
   }
-  return encodeMap([["bytes", encodeBytes(resumeKey)]]);
-}
-
-function encodeMetadataValue(value: MetadataValue): Uint8Array {
-  switch (value.tag) {
-    case "String":
-      return encodeMap([["String", encodeText(value.value)]]);
-    case "Bytes":
-      return encodeMap([["Bytes", encodeBytes(value.value)]]);
-    case "U64":
-      return encodeMap([["U64", encodeUint(value.value)]]);
-  }
-}
-
-function encodeMetadataEntry(entry: MetadataEntry): Uint8Array {
-  return encodeMap([
-    ["key", encodeText(entry.key)],
-    ["value", encodeMetadataValue(entry.value)],
-    ["flags", encodeUint(entry.flags)],
-  ]);
-}
-
-function encodeMetadata(entries: Metadata): Uint8Array {
-  return encodeArray(entries.map(encodeMetadataEntry));
-}
-
-function encodeHelloMessage(
-  settings: ConnectionSettings,
-  supportsRetry: boolean,
-  resumeKey: Uint8Array | null,
-  metadata: MetadataEntry[],
-): Uint8Array {
-  return encodeMap([
-    ["parity", encodeParity(settings.parity)],
-    ["connection_settings", encodeConnectionSettings(settings)],
-    ["message_payload_schema", messageSchemasCbor],
-    ["supports_retry", encodeBool(supportsRetry)],
-    ["resume_key", encodeResumeKey(resumeKey)],
-    ["metadata", encodeMetadata(metadata)],
-  ]);
-}
-
-function encodeHelloYourselfMessage(
-  settings: ConnectionSettings,
-  supportsRetry: boolean,
-  sessionResumeKey: Uint8Array | null,
-  metadata: MetadataEntry[],
-): Uint8Array {
-  return encodeMap([
-    ["connection_settings", encodeConnectionSettings(settings)],
-    ["message_payload_schema", messageSchemasCbor],
-    ["supports_retry", encodeBool(supportsRetry)],
-    ["resume_key", encodeResumeKey(sessionResumeKey)],
-    ["metadata", encodeMetadata(metadata)],
-  ]);
 }
 
 function encodeHandshakeMessage(message: HandshakeMessage): Uint8Array {
-  switch (message.tag) {
-    case "Hello":
-      return encodeMap([["Hello", encodeHelloMessage(message.value.connection_settings, message.value.supports_retry, message.value.resume_key, message.value.metadata)]]);
-    case "HelloYourself":
-      return encodeMap([
-        [
-          "HelloYourself",
-          encodeHelloYourselfMessage(
-            message.value.connection_settings,
-            message.value.supports_retry,
-            message.value.resume_key,
-            message.value.metadata,
-          ),
-        ],
-      ]);
-    case "LetsGo":
-      return encodeMap([["LetsGo", encodeMap([])]]);
-    case "Sorry":
-      return encodeMap([["Sorry", encodeMap([["reason", encodeText(message.reason)]])]]);
-  }
-}
-
-function expectMap(value: CborValue, context: string): CborMap {
-  if (
-    value === null ||
-    typeof value !== "object" ||
-    value instanceof Uint8Array ||
-    Array.isArray(value)
-  ) {
-    throw new Error(`expected map for ${context}`);
-  }
-  return value as CborMap;
-}
-
-function expectArray(value: CborValue, context: string): CborValue[] {
-  if (!Array.isArray(value)) {
-    throw new Error(`expected array for ${context}`);
-  }
-  return value;
-}
-
-function expectString(value: CborValue, context: string): string {
-  if (typeof value !== "string") {
-    throw new Error(`expected string for ${context}`);
-  }
-  return value;
-}
-
-function expectNumber(value: CborValue, context: string): number {
-  if (typeof value !== "number") {
-    throw new Error(`expected number for ${context}`);
-  }
-  return value;
-}
-
-function expectBool(value: CborValue, context: string): boolean {
-  if (typeof value !== "boolean") {
-    throw new Error(`expected boolean for ${context}`);
-  }
-  return value;
-}
-
-function parseParity(value: CborValue): Parity {
-  const map = expectMap(value, "parity");
-  const keys = Object.keys(map);
-  if (keys.length !== 1) {
-    throw new Error(`expected parity enum map with 1 entry, got ${keys.length}`);
-  }
-  const variant = keys[0];
-  if (variant === "Odd") {
-    return { tag: "Odd" };
-  }
-  if (variant === "Even") {
-    return { tag: "Even" };
-  }
-  throw new Error(`unknown parity variant ${variant}`);
-}
-
-function parseConnectionSettings(value: CborValue): ConnectionSettings {
-  const map = expectMap(value, "connection_settings");
-  return {
-    parity: parseParity(map["parity"]),
-    max_concurrent_requests: expectNumber(
-      map["max_concurrent_requests"],
-      "connection_settings.max_concurrent_requests",
-    ),
-    initial_channel_credit:
-      map["initial_channel_credit"] === undefined
-        ? DEFAULT_INITIAL_CHANNEL_CREDIT
-        : expectNumber(
-            map["initial_channel_credit"],
-            "connection_settings.initial_channel_credit",
-          ),
-  };
-}
-
-function parseResumeKey(value: CborValue): Uint8Array | null {
-  if (value === null) {
-    return null;
-  }
-  const map = expectMap(value, "resume_key");
-  const bytes = map["bytes"];
-  if (!(bytes instanceof Uint8Array)) {
-    throw new Error("expected byte string for resume_key.bytes");
-  }
-  return bytes.slice();
-}
-
-function parseMetadataValue(value: CborValue): MetadataValue {
-  const map = expectMap(value, "MetadataValue");
-  const keys = Object.keys(map);
-  if (keys.length !== 1) {
-    throw new Error(`expected MetadataValue enum map with 1 entry, got ${keys.length}`);
-  }
-  const tag = keys[0];
-  switch (tag) {
-    case "String":
-      return { tag: "String", value: expectString(map[tag], "MetadataValue.String") };
-    case "Bytes": {
-      const bytes = map[tag];
-      if (!(bytes instanceof Uint8Array)) {
-        throw new Error("expected byte string for MetadataValue.Bytes");
-      }
-      return { tag: "Bytes", value: bytes };
-    }
-    case "U64":
-      return { tag: "U64", value: expectBigintOrNumber(map[tag], "MetadataValue.U64") };
-    default:
-      throw new Error(`unknown MetadataValue variant ${tag}`);
-  }
-}
-
-function expectBigintOrNumber(value: CborValue, context: string): bigint {
-  if (typeof value === "bigint") return value;
-  if (typeof value === "number") return BigInt(value);
-  throw new Error(`expected number or bigint for ${context}`);
-}
-
-function parseMetadataEntry(value: CborValue): MetadataEntry {
-  const map = expectMap(value, "MetadataEntry");
-  return {
-    key: expectString(map["key"], "MetadataEntry.key"),
-    value: parseMetadataValue(map["value"]),
-    flags: map["flags"] === undefined ? 0n : expectBigintOrNumber(map["flags"], "MetadataEntry.flags"),
-  };
-}
-
-function parseMetadata(value: CborValue): Metadata {
-  if (value === undefined || value === null) {
-    return [];
-  }
-  const arr = expectArray(value, "metadata");
-  return arr.map(parseMetadataEntry);
-}
-
-function parseHello(value: CborValue): HelloMessage {
-  const map = expectMap(value, "Hello");
-  return {
-    parity: parseParity(map["parity"]),
-    connection_settings: parseConnectionSettings(map["connection_settings"]),
-    message_payload_schema: expectArray(map["message_payload_schema"], "Hello.message_payload_schema"),
-    supports_retry:
-      map["supports_retry"] === undefined
-        ? false
-        : expectBool(map["supports_retry"], "Hello.supports_retry"),
-    resume_key:
-      map["resume_key"] === undefined ? null : parseResumeKey(map["resume_key"]),
-    metadata: parseMetadata(map["metadata"]),
-  };
-}
-
-function parseHelloYourself(value: CborValue): HelloYourselfMessage {
-  const map = expectMap(value, "HelloYourself");
-  return {
-    connection_settings: parseConnectionSettings(map["connection_settings"]),
-    message_payload_schema: expectArray(
-      map["message_payload_schema"],
-      "HelloYourself.message_payload_schema",
-    ),
-    supports_retry:
-      map["supports_retry"] === undefined
-        ? false
-        : expectBool(map["supports_retry"], "HelloYourself.supports_retry"),
-    resume_key:
-      map["resume_key"] === undefined ? null : parseResumeKey(map["resume_key"]),
-    metadata: parseMetadata(map["metadata"]),
-  };
+  return encodeWithTypeRef(messageToWire(message), handshakeMessageRootRef, handshakeMessageSchemaRegistry);
 }
 
 function parseHandshakeMessage(bytes: Uint8Array): HandshakeMessage {
-  const decoded = decodeCbor(bytes);
-  const root = expectMap(decoded.value, "handshake message");
-  const keys = Object.keys(root);
-  if (keys.length !== 1) {
-    throw new Error(`expected handshake enum map with 1 entry, got ${keys.length}`);
+  const decoded = decodeWithTypeRef(bytes, 0, handshakeMessageRootRef, handshakeMessageSchemaRegistry);
+  if (decoded.next !== bytes.length) {
+    throw new Error(`handshake: trailing ${bytes.length - decoded.next} bytes`);
   }
-
-  const tag = keys[0];
-  const payload = root[tag];
-
-  switch (tag) {
-    case "Hello":
-      return { tag: "Hello", value: parseHello(payload) };
-    case "HelloYourself":
-      return { tag: "HelloYourself", value: parseHelloYourself(payload) };
-    case "LetsGo":
-      return { tag: "LetsGo" };
-    case "Sorry": {
-      const map = expectMap(payload, "Sorry");
-      return { tag: "Sorry", reason: expectString(map["reason"], "Sorry.reason") };
-    }
-    default:
-      throw new Error(`unknown handshake message ${tag}`);
-  }
+  return messageFromWire(decoded.value as WireHandshakeMessage);
 }
 
 async function recvHandshake(link: Link): Promise<HandshakeMessage> {
@@ -462,7 +180,7 @@ export async function handshakeAsInitiator(
     value: {
       parity: settings.parity,
       connection_settings: settings,
-      message_payload_schema: [],
+      message_payload_schema: messageSchemas,
       supports_retry: supportsRetry,
       resume_key: resumeKey,
       metadata,
@@ -519,7 +237,7 @@ export async function handshakeAsAcceptor(
     tag: "HelloYourself",
     value: {
       connection_settings: settings,
-      message_payload_schema: [],
+      message_payload_schema: messageSchemas,
       supports_retry: supportsRetry,
       resume_key: sessionResumeKey,
       metadata,

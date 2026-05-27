@@ -15,7 +15,7 @@ describe("stable frame codec", () => {
     };
 
     const encoded = encodeStableFrame(frame);
-    expect(Array.from(encoded)).toEqual([7, 0, 3, 0, 0, 0, 1, 2, 3]);
+    expect(Array.from(encoded)).toEqual([7, 0, 0, 0, 0, 3, 0, 0, 0, 1, 2, 3]);
 
     const decoded = decodeStableFrame(encoded, 0);
     expect(decoded.next).toBe(encoded.length);
@@ -37,7 +37,7 @@ describe("stable frame codec", () => {
 
   it("rejects truncated payload bytes", () => {
     expect(() =>
-      decodeStableFrame(Uint8Array.of(1, 0, 4, 0, 0, 0, 0xaa, 0xbb), 0),
+      decodeStableFrame(Uint8Array.of(1, 0, 0, 0, 0, 4, 0, 0, 0, 0xaa, 0xbb), 0),
     ).toThrow("stable frame payload: overrun");
   });
 });

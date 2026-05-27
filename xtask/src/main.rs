@@ -359,9 +359,20 @@ fn codegen_typescript_wire(
         .join("wire.generated.ts");
 
     let config = WireTypeGenConfig {
-        types: vec![WireType {
-            shape: <rt::Message<'static> as facet::Facet<'static>>::SHAPE,
-        }],
+        types: vec![
+            WireType {
+                shape: <rt::Message<'static> as facet::Facet<'static>>::SHAPE,
+                schema_prefix: "message",
+            },
+            WireType {
+                shape: <rt::HandshakeMessage as facet::Facet<'static>>::SHAPE,
+                schema_prefix: "handshakeMessage",
+            },
+            WireType {
+                shape: <rt::SchemaPayload as facet::Facet<'static>>::SHAPE,
+                schema_prefix: "schemaPayload",
+            },
+        ],
     };
 
     let code = generate_wire(&config)?;

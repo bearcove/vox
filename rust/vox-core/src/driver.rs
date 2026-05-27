@@ -41,7 +41,7 @@ use crate::session::{
 };
 use crate::{InMemoryOperationStore, OperationStore};
 use moire::sync::mpsc;
-use vox_types::{OperationId, PostcardPayload};
+use vox_types::{BinettePayload, OperationId};
 
 /// A pending response for one outbound request attempt.
 ///
@@ -1102,7 +1102,7 @@ async fn replay_sealed_response(
 
 fn incoming_args_bytes<'a>(call: &'a RequestCall<'a>) -> &'a [u8] {
     match &call.args {
-        Payload::PostcardBytes(bytes) => bytes,
+        Payload::BinetteBytes(bytes) => bytes,
         Payload::Value { .. } => {
             panic!("incoming request payload should always be decoded as incoming bytes")
         }
@@ -1123,7 +1123,7 @@ impl ReplySink for DriverReplySink {
             self.method_id,
             match &response.ret {
                 Payload::Value { .. } => "Value",
-                Payload::PostcardBytes(_) => "PostcardBytes",
+                Payload::BinetteBytes(_) => "BinetteBytes",
             },
             self.operation_id
         );
@@ -1134,7 +1134,7 @@ impl ReplySink for DriverReplySink {
             operation_id = ?self.operation_id,
             payload = match &response.ret {
                 Payload::Value { .. } => "value",
-                Payload::PostcardBytes(_) => "postcard-bytes",
+                Payload::BinetteBytes(_) => "binette-bytes",
             },
             "vox driver sending reply"
         );
@@ -1163,7 +1163,7 @@ impl ReplySink for DriverReplySink {
                 &writer_plan,
             )
             .expect("binette encode failed for response store");
-            let encoded_for_store: PostcardPayload = encoded_bytes.into();
+            let encoded_for_store: BinettePayload = encoded_bytes.into();
             response.schemas = schemas_for_wire;
 
             // Send the full response (with schemas) on the wire.
@@ -2659,7 +2659,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                             let encoded = binette::encode_to_vec(&error)
                                 .expect("serialize runtime-generated error response");
                             let mut response = RequestResponse {
-                                ret: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                                ret: Payload::BinetteBytes(Box::leak(encoded.into_boxed_slice())),
                                 metadata: Default::default(),
                                 schemas: Default::default(),
                             };

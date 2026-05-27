@@ -578,10 +578,10 @@ pub(crate) struct ConnectionSender {
 }
 
 fn forwarded_payload<'a>(payload: &'a vox_types::Payload<'a>) -> vox_types::Payload<'a> {
-    let vox_types::Payload::PostcardBytes(bytes) = payload else {
+    let vox_types::Payload::BinetteBytes(bytes) = payload else {
         unreachable!("proxy forwarding expects decoded incoming payload bytes")
     };
-    vox_types::Payload::PostcardBytes(bytes)
+    vox_types::Payload::BinetteBytes(bytes)
 }
 
 fn forwarded_request_body<'a>(body: &'a RequestBody<'a>) -> RequestBody<'a> {
@@ -2605,7 +2605,7 @@ impl SessionCore {
                     None => return,
                 }
             }
-            vox_types::Payload::PostcardBytes(_) => {
+            vox_types::Payload::BinetteBytes(_) => {
                 tracing::error!(
                     "schema attachment failed: missing forwarded response schemas for method {:?}",
                     method_id
@@ -2756,7 +2756,7 @@ impl SessionCore {
                 vox_types::Payload::Value { shape, .. } => Self::get_or_plan_binding_for_shape(
                     conn_state, key, request_id, "response", shape,
                 )?,
-                vox_types::Payload::PostcardBytes(_) => {
+                vox_types::Payload::BinetteBytes(_) => {
                     let Some(source) = forwarded_schemas else {
                         tracing::error!(
                             "schema attachment failed: missing forwarded response schemas for method {:?}",
@@ -2804,7 +2804,7 @@ impl SessionCore {
             vox_types::Payload::Value { shape, .. } => {
                 Self::get_or_plan_binding_for_shape(conn_state, key, request_id, "args", shape)?
             }
-            vox_types::Payload::PostcardBytes(_) => {
+            vox_types::Payload::BinetteBytes(_) => {
                 let Some(source) = forwarded_schemas else {
                     tracing::error!(
                         "schema attachment failed: missing forwarded args schemas for method {:?}",

@@ -231,6 +231,16 @@ mod tests {
     use std::io::{Read, Seek, Write};
     use vox_types::{Fd, collect_fds, provide_fds};
 
+    fn decode_binette<T: facet::Facet<'static>>(bytes: &[u8]) -> T {
+        let writer_plan = binette::writer_plan_for::<T>().expect("build binette writer plan");
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(writer_plan.schema_bundle())
+            .expect("install binette writer schema");
+        binette::decode_from_slice(bytes, writer_plan.root(), &registry)
+            .expect("decode binette test value")
+    }
+
     fn temp_file_with(seed: &[u8]) -> std::fs::File {
         let mut path = std::env::temp_dir();
         let nanos = std::time::SystemTime::now()
@@ -277,7 +287,7 @@ mod tests {
         let (_txb, mut rx) = b.split();
 
         let fd_msg = Fd::new(OwnedFd::from(temp_file_with(b"through-the-link")));
-        let (body, fds) = collect_fds(|| vox_postcard::to_vec(&fd_msg).unwrap());
+        let (body, fds) = collect_fds(|| binette::encode_to_vec(&fd_msg).unwrap());
         assert_eq!(fds.len(), 1);
         tx.send_with_fds(body, fds).await.unwrap();
 
@@ -289,7 +299,7 @@ mod tests {
             Backing::Boxed(b) => b.to_vec(),
             Backing::Shared(s) => s.as_bytes().to_vec(),
         };
-        let decoded: Fd = provide_fds(frame_fds, || vox_postcard::from_slice(&bytes).unwrap());
+        let decoded: Fd = provide_fds(frame_fds, || decode_binette(&bytes));
         let mut f = std::fs::File::from(decoded.into_owned_fd().unwrap());
         let mut got = String::new();
         f.read_to_string(&mut got).unwrap();

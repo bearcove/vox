@@ -111,12 +111,12 @@ where
         let request_call = call.get();
         let method_id = request_call.method_id;
         let args_bytes = match &request_call.args {
-            ::vox::Payload::PostcardBytes(bytes) => bytes,
+            ::vox::Payload::BinetteBytes(bytes) => bytes,
             _ => {
                 reply
                     .send_error(
                         ::vox::VoxError::<::core::convert::Infallible>::InvalidPayload(
-                            "args not PostcardBytes".into(),
+                            "args not BinetteBytes".into(),
                         ),
                     )
                     .await;
@@ -258,11 +258,11 @@ impl StreamerClient {
         ::vox::provide_fds(__vox_frame_fds, move || {
             let response = response.get();
             let ret_bytes = match &response.ret {
-                ::vox::Payload::PostcardBytes(bytes) => bytes,
+                ::vox::Payload::BinetteBytes(bytes) => bytes,
                 _ => {
                     return Err(
                         ::vox::VoxError::<::core::convert::Infallible>::InvalidPayload(
-                            "response not PostcardBytes".into(),
+                            "response not BinetteBytes".into(),
                         ),
                     );
                 }

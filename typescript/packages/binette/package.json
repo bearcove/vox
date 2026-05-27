@@ -1,5 +1,5 @@
 {
-  "name": "@bearcove/vox-postcard",
+  "name": "@bearcove/binette",
   "version": "0.2.0",
   "private": false,
   "type": "module",
@@ -31,15 +31,17 @@
     "vitest": "^4.0.0"
   },
   "license": "MIT OR Apache-2.0",
-  "description": "binette compact serialization helpers for Vox service definitions",
+  "description": "TypeScript implementation of binette compact serialization",
   "repository": "https://github.com/bearcove/vox",
   "homepage": "https://github.com/bearcove/vox",
   "keywords": [
+    "binette",
+    "binary",
+    "serialization",
     "vox",
     "ipc",
     "rpc",
-    "typescript",
-    "shared-memory"
+    "typescript"
   ],
   "readme": "README.md"
 }

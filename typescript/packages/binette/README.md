@@ -1,11 +1,6 @@
-# @bearcove/vox-postcard
+# @bearcove/binette
 
-binette compact serialization utilities for Vox TypeScript packages.
-
-## Role in the Vox stack
-
-This package still has its historical package name while Vox migrates its TypeScript package graph,
-but the codec semantics are binette compact.
+binette compact serialization utilities for TypeScript.
 
 ## What this package provides
 

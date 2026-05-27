@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveTypeRef } from "@bearcove/vox-postcard";
+import { resolveTypeRef } from "@bearcove/binette";
 
 import {
   MetadataFlagValues,

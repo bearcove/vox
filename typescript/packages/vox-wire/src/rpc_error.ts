@@ -2,7 +2,7 @@
 // r[impl core.error.vox-error] - VoxError wraps call results
 // r[impl call.error.protocol] - Protocol errors use discriminants 1-3
 
-import type { DecodeResult } from "@bearcove/vox-postcard";
+import type { DecodeResult } from "@bearcove/binette";
 
 /** RAPACE error discriminants */
 export const RpcErrorCode = {

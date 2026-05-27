@@ -4,8 +4,10 @@ import {
   encodeWithKind,
   decodeWithTypeRef,
   encodeWithTypeRef,
+  concat,
+  encodeU32,
   resolveTypeRef,
-} from "@bearcove/vox-postcard";
+} from "@bearcove/binette";
 import {
   RpcError,
   RpcErrorCode,
@@ -724,17 +726,21 @@ export class Driver {
 }
 
 function encodeUnknownMethod(): Uint8Array {
-  return new Uint8Array([0x01, 0x01]);
+  return encodeVoxError(1);
 }
 
 function encodeInvalidPayload(): Uint8Array {
-  return new Uint8Array([0x01, 0x02]);
+  return encodeVoxError(2);
 }
 
 function encodeCancelled(): Uint8Array {
-  return new Uint8Array([0x01, 0x03]);
+  return encodeVoxError(3);
 }
 
 function encodeIndeterminate(): Uint8Array {
-  return new Uint8Array([0x01, 0x04]);
+  return encodeVoxError(4);
+}
+
+function encodeVoxError(discriminant: number): Uint8Array {
+  return concat(encodeU32(1), encodeU32(discriminant));
 }

@@ -6,9 +6,13 @@ export type {
   Schema,
   SchemaRegistry,
   TypeRef,
-} from "@bearcove/vox-postcard";
+} from "@bearcove/binette";
 export {
-  messageSchemasCbor,
+  messageSchemas,
   messageSchemaRegistry,
   messageRootRef,
+  handshakeMessageSchemaRegistry,
+  handshakeMessageRootRef,
+  schemaPayloadSchemaRegistry,
+  schemaPayloadRootRef,
 } from "./wire.generated.ts";

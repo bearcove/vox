@@ -26,21 +26,33 @@ importers:
 
   typescript/generated:
     dependencies:
+      '@bearcove/binette':
+        specifier: workspace:*
+        version: link:../packages/binette
       '@bearcove/vox-core':
         specifier: workspace:*
         version: link:../packages/vox-core
-      '@bearcove/vox-postcard':
-        specifier: workspace:*
-        version: link:../packages/vox-postcard
       '@bearcove/vox-ws':
         specifier: workspace:*
         version: link:../packages/vox-ws
 
+  typescript/packages/binette:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.0.0
+        version: 25.9.0
+      '@vitest/coverage-v8':
+        specifier: ^4.0.0
+        version: 4.1.7(vitest@4.1.7)
+      vitest:
+        specifier: ^4.0.0
+        version: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
+
   typescript/packages/vox-core:
     dependencies:
-      '@bearcove/vox-postcard':
+      '@bearcove/binette':
         specifier: workspace:*
-        version: link:../vox-postcard
+        version: link:../binette
       '@bearcove/vox-wire':
         specifier: workspace:*
         version: link:../vox-wire
@@ -59,18 +71,6 @@ importers:
         specifier: ^4.0.0
         version: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
 
-  typescript/packages/vox-postcard:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.0.0
-        version: 25.9.0
-      '@vitest/coverage-v8':
-        specifier: ^4.0.0
-        version: 4.1.7(vitest@4.1.7)
-      vitest:
-        specifier: ^4.0.0
-        version: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
-
   typescript/packages/vox-tcp:
     dependencies:
       '@bearcove/vox-core':
@@ -83,9 +83,9 @@ importers:
 
   typescript/packages/vox-wire:
     dependencies:
-      '@bearcove/vox-postcard':
+      '@bearcove/binette':
         specifier: workspace:*
-        version: link:../vox-postcard
+        version: link:../binette
     devDependencies:
       '@types/node':
         specifier: ^25.0.0

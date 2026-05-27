@@ -491,7 +491,7 @@ pub enum PrimitiveType {
     Bytes,
     /// An opaque payload — a length-prefixed byte sequence whose
     /// length prefix is a little-endian u32 (not a varint like other
-    /// postcard sequences).
+    /// binette sequences).
     Payload,
 }
 
@@ -767,21 +767,21 @@ impl SchemaPayload {
     }
 }
 
-/// Transparent wrapper around borrowed bytes that are already postcard-encoded.
+/// Transparent wrapper around borrowed bytes that are already binette-encoded.
 /// Used as a sentinel type for passthrough detection in serializers.
 #[repr(transparent)]
-pub struct RawPostcardBorrowed<'a>(pub &'a [u8]);
+pub struct RawBinetteBorrowed<'a>(pub &'a [u8]);
 
 /// Sentinel shape for borrowed passthrough bytes. Serializers check against
 /// this to distinguish pre-encoded bytes from regular `&[u8]`/`Vec<u8>` values.
-pub static RAW_POSTCARD_BORROWED_SHAPE: Shape =
-    Shape::builder_for_sized::<RawPostcardBorrowed<'static>>("RawPostcardBorrowed").build();
+pub static RAW_BINETTE_BORROWED_SHAPE: Shape =
+    Shape::builder_for_sized::<RawBinetteBorrowed<'static>>("RawBinetteBorrowed").build();
 
-/// Create an `OpaqueSerialize` for already-encoded postcard bytes.
+/// Create an `OpaqueSerialize` for already-encoded binette bytes.
 /// The serializer detects the sentinel shape and writes bytes directly (passthrough).
 pub fn opaque_encoded_borrowed(bytes: &&[u8]) -> OpaqueSerialize {
     OpaqueSerialize {
-        ptr: PtrConst::new((bytes as *const &[u8]).cast::<RawPostcardBorrowed<'_>>()),
-        shape: &RAW_POSTCARD_BORROWED_SHAPE,
+        ptr: PtrConst::new((bytes as *const &[u8]).cast::<RawBinetteBorrowed<'_>>()),
+        shape: &RAW_BINETTE_BORROWED_SHAPE,
     }
 }

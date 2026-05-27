@@ -29,8 +29,8 @@ pub trait MsgFamily: 'static {
 /// - Recv: `MsgFamily::Msg<'static>` (owned, via `SelfRef`)
 ///
 /// Two implementations:
-/// - `BareConduit`: Link + postcard. If the link dies, it's dead.
-/// - `StableConduit`: Link + postcard + seq/ack/replay. Handles reconnect
+/// - `BareConduit`: Link + binette. If the link dies, it's dead.
+/// - `StableConduit`: Link + binette + seq/ack/replay. Handles reconnect
 ///   transparently. Replay buffer stores encoded bytes (no clone needed).
 // r[impl conduit]
 pub trait Conduit {

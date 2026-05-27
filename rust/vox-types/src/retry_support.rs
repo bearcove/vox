@@ -28,28 +28,28 @@ impl std::fmt::Display for OperationId {
     }
 }
 
-/// Postcard-encoded bytes for a response payload (without schemas).
+/// Binette-encoded bytes for a response payload (without schemas).
 ///
 /// This is the format stored in the operation store. Schemas are stored
 /// separately, deduplicated by SchemaHash. Backed by `Bytes` so the buffer
 /// can be shared (cheap arc-clone) between the wire-send path and the
 /// retry store without copying.
 #[derive(Clone, Debug)]
-pub struct PostcardPayload(pub Bytes);
+pub struct BinettePayload(pub Bytes);
 
-impl PostcardPayload {
+impl BinettePayload {
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl From<Vec<u8>> for PostcardPayload {
+impl From<Vec<u8>> for BinettePayload {
     fn from(v: Vec<u8>) -> Self {
         Self(Bytes::from(v))
     }
 }
 
-impl From<Bytes> for PostcardPayload {
+impl From<Bytes> for BinettePayload {
     fn from(b: Bytes) -> Self {
         Self(b)
     }

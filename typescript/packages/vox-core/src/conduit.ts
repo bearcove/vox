@@ -6,7 +6,7 @@ import {
   type Schema,
   type SchemaKind,
   type SchemaRegistry,
-} from "@bearcove/vox-postcard";
+} from "@bearcove/binette";
 import {
   decodeMessage,
   decodeMessageWithPlan,

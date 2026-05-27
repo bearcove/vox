@@ -23,12 +23,9 @@ members = [
   "rust/subject-rust",
   "rust/vox-codegen",
   "rust/facet-cbor",
-  "rust/vox-postcard",
   "rust/vox-jit-cal",
   "rust/vox-jit-abi",
-  "rust/vox-jit",
   "rust/vox-swift-abi",
-  "rust/vox-jit-tests",
   "rust/wasm-browser-tests",
   "rust/wasm-inprocess-tests",
   "typescript/peer-server",
@@ -65,14 +62,12 @@ vox-local = { path = "rust/vox-local", version = "0.8.2" }
 vox-ffi = { path = "rust/vox-ffi", version = "0.8.2" }
 subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
-vox-postcard = { path = "rust/vox-postcard", version = "0.8.2" }
 vox-jit-cal = { path = "rust/vox-jit-cal", version = "0.8.2" }
 vox-jit-abi = { path = "rust/vox-jit-abi", version = "0.8.2" }
-vox-jit = { path = "rust/vox-jit", version = "0.8.2" }
 vox-swift-abi = { path = "rust/vox-swift-abi", version = "0.8.2" }
 facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
-binette = { git = "https://github.com/bearcove/binette", rev = "b20c00b5a6658f90b9b13c087d79d98e6ff74969" }
+binette = { git = "https://github.com/bearcove/binette", rev = "ffe85ce3f9c353a827da7ed499faed640e057ad0" }
 
 # Not internal crates
 moire = { version = "1.0.0", git = "https://github.com/bearcove/moire", rev = "cf162e7" }
@@ -102,7 +97,6 @@ passfd = "0.1"
 # facet ecosystem
 facet = { version = "0.46", features = ["camino", "reflect"] }
 facet-core = { version = "0.46" }
-facet-postcard = { version = "0.46", features = ["camino"] }
 facet-path = { version = "0.46" }
 facet-reflect = { version = "0.46" }
 facet-format = { version = "0.47" }
@@ -158,7 +152,6 @@ eyre = "0.6"
 # [patch."https://github.com/facet-rs/facet"]
 # facet = { path = "../facet/facet" }
 # facet-core = { path = "../facet/facet-core" }
-# facet-postcard = { path = "../facet/facet-postcard" }
 # facet-path = { path = "../facet/facet-path" }
 # facet-reflect = { path = "../facet/facet-reflect" }
 # facet-format = { path = "../facet/facet-format" }

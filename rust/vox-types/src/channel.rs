@@ -661,7 +661,7 @@ where
     T: Facet<'static>,
 {
     msg.try_repack(|item, _backing_bytes| {
-        let Payload::PostcardBytes(bytes) = item.item else {
+        let Payload::BinetteBytes(bytes) = item.item else {
             return Err(RxError::Protocol(
                 "incoming channel item payload was not Incoming".into(),
             ));
@@ -1385,7 +1385,7 @@ impl<T: std::fmt::Debug> std::error::Error for TrySendError<T> {}
 ///
 /// In method args, the handler holds it (handler receives ← caller).
 ///
-/// Channel IDs are serialized inline in the postcard payload.
+/// Channel IDs are serialized inline in the binette payload.
 #[derive(Facet)]
 #[facet(proxy = crate::ChannelId)]
 pub struct Rx<T> {
@@ -1727,6 +1727,16 @@ mod tests {
         binette::encode_to_vec(value).expect("encode binette test value")
     }
 
+    fn decode_binette<T: Facet<'static>>(bytes: &[u8]) -> T {
+        let writer_plan = binette::writer_plan_for::<T>().expect("build binette writer plan");
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(writer_plan.schema_bundle())
+            .expect("install binette writer schema");
+        binette::decode_from_slice(bytes, writer_plan.root(), &registry)
+            .expect("decode binette test value")
+    }
+
     struct CountingSink {
         send_calls: AtomicUsize,
         close_calls: AtomicUsize,
@@ -1961,7 +1971,7 @@ mod tests {
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
-                item: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                item: Payload::BinetteBytes(Box::leak(encoded.into_boxed_slice())),
             },
         );
         tx.send(IncomingChannelMessage::Item(item))
@@ -2048,7 +2058,7 @@ mod tests {
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
-                item: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                item: Payload::BinetteBytes(Box::leak(encoded.into_boxed_slice())),
             },
         );
         tx.send(IncomingChannelMessage::Item(item))
@@ -2139,8 +2149,7 @@ mod tests {
         let args = Args { data: 42, tx };
 
         let binder = TestBinder::new();
-        let bytes =
-            with_channel_binder(&binder, || vox_postcard::to_vec(&args).expect("serialize"));
+        let bytes = with_channel_binder(&binder, || encode_binette(&args));
 
         // The channel ID should be in the serialized bytes (after the u32 data field).
         assert!(!bytes.is_empty());
@@ -2174,8 +2183,7 @@ mod tests {
         let args = Args { data: 42, rx };
 
         let binder = TestBinder::new();
-        let bytes =
-            with_channel_binder(&binder, || vox_postcard::to_vec(&args).expect("serialize"));
+        let bytes = with_channel_binder(&binder, || encode_binette(&args));
 
         assert!(!bytes.is_empty());
 
@@ -2200,14 +2208,12 @@ mod tests {
             tx: Tx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (varint 7).
-        let mut bytes = vox_postcard::to_vec(&42_u32).unwrap();
-        bytes.extend_from_slice(&vox_postcard::to_vec(&ChannelId(7)).unwrap());
+        // Simulate wire bytes: a u32 (42) followed by a channel ID (7).
+        let mut bytes = encode_binette(&42_u32);
+        bytes.extend_from_slice(&encode_binette(&ChannelId(7)));
 
         let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
-        });
+        let args: Args = with_channel_binder(&binder, || decode_binette(&bytes));
 
         assert_eq!(args.data, 42);
         assert_eq!(args.tx.channel_id, ChannelId(7));
@@ -2229,14 +2235,12 @@ mod tests {
             rx: Rx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (varint 7).
-        let mut bytes = vox_postcard::to_vec(&42_u32).unwrap();
-        bytes.extend_from_slice(&vox_postcard::to_vec(&ChannelId(7)).unwrap());
+        // Simulate wire bytes: a u32 (42) followed by a channel ID (7).
+        let mut bytes = encode_binette(&42_u32);
+        bytes.extend_from_slice(&encode_binette(&ChannelId(7)));
 
         let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
-        });
+        let args: Args = with_channel_binder(&binder, || decode_binette(&bytes));
 
         assert_eq!(args.data, 42);
         assert_eq!(args.rx.channel_id, ChannelId(7));
@@ -2262,14 +2266,10 @@ mod tests {
         let args = Args { tx };
 
         let caller_binder = TestBinder::new();
-        let bytes = with_channel_binder(&caller_binder, || {
-            vox_postcard::to_vec(&args).expect("serialize")
-        });
+        let bytes = with_channel_binder(&caller_binder, || encode_binette(&args));
 
         let callee_binder = TestBinder::new();
-        let deserialized: Args = with_channel_binder(&callee_binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
-        });
+        let deserialized: Args = with_channel_binder(&callee_binder, || decode_binette(&bytes));
 
         // The caller binder starts at ID 100, so the deserialized Tx should have that ID.
         assert_eq!(deserialized.tx.channel_id, ChannelId(100));

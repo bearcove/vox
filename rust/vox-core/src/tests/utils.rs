@@ -274,7 +274,7 @@ impl Handler<DriverReplySink> for EchoHandler {
     ) {
         let call = call.get();
         let args_bytes = match &call.args {
-            Payload::PostcardBytes(bytes) => *bytes,
+            Payload::BinetteBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
 
@@ -399,7 +399,7 @@ impl OperationStore for CountingOperationStore {
         &self,
         operation_id: vox_types::OperationId,
         method_id: vox_types::MethodId,
-        response: &vox_types::PostcardPayload,
+        response: &vox_types::BinettePayload,
     ) {
         self.inner.seal(operation_id, method_id, response)
     }
@@ -424,7 +424,7 @@ impl Handler<DriverReplySink> for ReplayHandler {
         self.release.notified().await;
         let call = call.get();
         let args_bytes = match &call.args {
-            Payload::PostcardBytes(bytes) => *bytes,
+            Payload::BinetteBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
         let result: u32 = decode_binette_payload(args_bytes);
@@ -503,7 +503,7 @@ impl Handler<DriverReplySink> for RetryAfterResumeHandler {
 
         let call = call.get();
         let args_bytes = match &call.args {
-            Payload::PostcardBytes(bytes) => *bytes,
+            Payload::BinetteBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
         let result: u32 = decode_binette_payload(args_bytes);

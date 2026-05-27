@@ -253,7 +253,7 @@ mod tests {
                         flags: MetadataFlags::NONE,
                     },
                 ],
-                args: crate::Payload::PostcardBytes(&[]),
+                args: crate::Payload::BinetteBytes(&[]),
                 schemas: Default::default(),
             })
             .await;
