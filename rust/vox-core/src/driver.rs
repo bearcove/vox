@@ -1103,6 +1103,7 @@ async fn replay_sealed_response(
 fn incoming_args_bytes<'a>(call: &'a RequestCall<'a>) -> &'a [u8] {
     match &call.args {
         Payload::BinetteBytes(bytes) => bytes,
+        Payload::BinetteOwned(bytes) => bytes,
         Payload::Value { .. } => {
             panic!("incoming request payload should always be decoded as incoming bytes")
         }
@@ -1123,7 +1124,7 @@ impl ReplySink for DriverReplySink {
             self.method_id,
             match &response.ret {
                 Payload::Value { .. } => "Value",
-                Payload::BinetteBytes(_) => "BinetteBytes",
+                Payload::BinetteBytes(_) | Payload::BinetteOwned(_) => "BinetteBytes",
             },
             self.operation_id
         );
@@ -1134,7 +1135,7 @@ impl ReplySink for DriverReplySink {
             operation_id = ?self.operation_id,
             payload = match &response.ret {
                 Payload::Value { .. } => "value",
-                Payload::BinetteBytes(_) => "binette-bytes",
+                Payload::BinetteBytes(_) | Payload::BinetteOwned(_) => "binette-bytes",
             },
             "vox driver sending reply"
         );
@@ -2123,6 +2124,7 @@ impl DriverCaller {
                         method_id: call.method_id,
                         args: call.args.reborrow(),
                         metadata: call.metadata.clone(),
+                        channels: Vec::new(),
                         schemas: Default::default(),
                     }),
                 }),
@@ -2217,6 +2219,7 @@ impl DriverCaller {
                                 method_id: call.method_id,
                                 args: call.args.reborrow(),
                                 metadata: call.metadata.clone(),
+                                channels: Vec::new(),
                                 schemas: Default::default(),
                             }),
                         }),

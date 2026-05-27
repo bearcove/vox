@@ -970,6 +970,7 @@ fn generate_client_method(
                     method_id,
                     args: #vox::Payload::outgoing(&args),
                     metadata,
+                    channels: ::std::vec::Vec::new(),
                     schemas: Default::default(),
                 };
                 let with_tracker = match self.caller.call(req).await {
@@ -1025,6 +1026,7 @@ fn generate_client_method(
                     method_id,
                     args: #vox::Payload::outgoing(&args),
                     metadata,
+                    channels: ::std::vec::Vec::new(),
                     schemas: Default::default(),
                 };
                 let with_tracker = match self.caller.call(req).await {

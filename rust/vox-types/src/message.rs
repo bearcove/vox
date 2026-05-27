@@ -154,6 +154,9 @@ structstruck::strike! {
                                     /// Metadata associated with this call
                                     pub metadata: Metadata<'payload>,
 
+                                    /// Channel IDs for channel endpoints appearing in the argument tuple.
+                                    pub channels: Vec<ChannelId>,
+
                                     /// Argument tuple
                                     pub args: Payload<'payload>,
 
@@ -286,6 +289,9 @@ pub enum Payload<'payload> {
     // r[impl zerocopy.payload.bytes]
     /// Raw bytes borrowed from the backing (zero-copy).
     BinetteBytes(&'payload [u8]),
+
+    /// Raw bytes owned by this payload while preparing an outbound frame.
+    BinetteOwned(Vec<u8>),
 }
 
 impl<'payload> Payload<'payload> {
@@ -321,6 +327,7 @@ impl<'payload> Payload<'payload> {
                 _lt: PhantomData,
             },
             Payload::BinetteBytes(bytes) => Payload::BinetteBytes(bytes),
+            Payload::BinetteOwned(bytes) => Payload::BinetteBytes(bytes),
         }
     }
 }
@@ -344,6 +351,10 @@ impl FacetOpaqueAdapter for PayloadAdapter {
             Payload::BinetteBytes(bytes) => OpaqueSerialize {
                 ptr: PtrConst::new((bytes as *const &[u8]).cast::<u8>()),
                 shape: <&[u8] as Facet>::SHAPE,
+            },
+            Payload::BinetteOwned(bytes) => OpaqueSerialize {
+                ptr: PtrConst::new((bytes as *const Vec<u8>).cast::<u8>()),
+                shape: <Vec<u8> as Facet>::SHAPE,
             },
         }
     }

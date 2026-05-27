@@ -589,6 +589,7 @@ fn forwarded_request_body<'a>(body: &'a RequestBody<'a>) -> RequestBody<'a> {
         RequestBody::Call(call) => RequestBody::Call(vox_types::RequestCall {
             method_id: call.method_id,
             metadata: call.metadata.clone(),
+            channels: call.channels.clone(),
             args: forwarded_payload(&call.args),
             schemas: call.schemas.clone(),
         }),
@@ -2411,6 +2412,37 @@ impl SessionCore {
                             ) {
                                 schema_sends.push(schema_send);
                             }
+                            if let vox_types::Payload::Value { ptr, shape, .. } =
+                                call.args.reborrow()
+                            {
+                                let writer_plan =
+                                    binette::writer_plan_for_shape(shape).map_err(|error| {
+                                        tracing::error!(
+                                            ?error,
+                                            "failed to prepare request args writer plan"
+                                        );
+                                    })?;
+                                // SAFETY: `Payload::Value` is constructed from a live value
+                                // reference, and this encode happens synchronously before
+                                // `prepare_outbound_batch` returns.
+                                let peek =
+                                    unsafe { facet_reflect::Peek::unchecked_new(ptr, shape) };
+                                let encode =
+                                    || binette::encode_peek_to_vec_with_plan(peek, &writer_plan);
+                                let (encoded, channels) = if let Some(binder) = binder {
+                                    vox_types::collect_request_channels(binder, encode)
+                                } else {
+                                    (encode(), Vec::new())
+                                };
+                                call.channels = channels;
+                                call.args =
+                                    vox_types::Payload::BinetteOwned(encoded.map_err(|error| {
+                                        tracing::error!(
+                                            ?error,
+                                            "failed to encode request args payload"
+                                        );
+                                    })?);
+                            }
                             call.schemas = Default::default();
                         }
                         RequestBody::Response(resp) => {
@@ -2605,7 +2637,7 @@ impl SessionCore {
                     None => return,
                 }
             }
-            vox_types::Payload::BinetteBytes(_) => {
+            vox_types::Payload::BinetteBytes(_) | vox_types::Payload::BinetteOwned(_) => {
                 tracing::error!(
                     "schema attachment failed: missing forwarded response schemas for method {:?}",
                     method_id
@@ -2756,7 +2788,7 @@ impl SessionCore {
                 vox_types::Payload::Value { shape, .. } => Self::get_or_plan_binding_for_shape(
                     conn_state, key, request_id, "response", shape,
                 )?,
-                vox_types::Payload::BinetteBytes(_) => {
+                vox_types::Payload::BinetteBytes(_) | vox_types::Payload::BinetteOwned(_) => {
                     let Some(source) = forwarded_schemas else {
                         tracing::error!(
                             "schema attachment failed: missing forwarded response schemas for method {:?}",
@@ -2804,7 +2836,7 @@ impl SessionCore {
             vox_types::Payload::Value { shape, .. } => {
                 Self::get_or_plan_binding_for_shape(conn_state, key, request_id, "args", shape)?
             }
-            vox_types::Payload::BinetteBytes(_) => {
+            vox_types::Payload::BinetteBytes(_) | vox_types::Payload::BinetteOwned(_) => {
                 let Some(source) = forwarded_schemas else {
                     tracing::error!(
                         "schema attachment failed: missing forwarded args schemas for method {:?}",

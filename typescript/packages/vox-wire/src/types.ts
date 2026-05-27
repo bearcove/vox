@@ -138,6 +138,7 @@ export function messageRequest(
             method_id: methodId,
             args: payload,
             metadata,
+            channels: _channels,
             schemas,
           },
         },

@@ -166,6 +166,7 @@ mod tests {
         let mut call = RequestCall {
             method_id: MethodId(1),
             metadata: vec![],
+            channels: Vec::new(),
             args: Payload::BinetteBytes(&[]),
             schemas: Default::default(),
         };

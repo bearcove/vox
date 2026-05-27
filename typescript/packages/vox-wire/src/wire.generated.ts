@@ -52,11 +52,14 @@ export type RequestId = bigint;
 
 export type MethodId = bigint;
 
+export type ChannelId = bigint;
+
 export type SchemaPayloadBytes = Uint8Array;
 
 export interface RequestCall {
   method_id: MethodId;
   metadata: MetadataEntry[];
+  channels: ChannelId[];
   args: Uint8Array;
   schemas: SchemaPayloadBytes;
 }
@@ -90,8 +93,6 @@ export interface SchemaMessage {
   direction: BindingDirection;
   schemas: SchemaPayloadBytes;
 }
-
-export type ChannelId = bigint;
 
 export interface ChannelItem {
   item: Uint8Array;
@@ -624,8 +625,8 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
     type_params: [],
     kind: { tag: "primitive", primitive_type: "u8" },
   }],
-  [2327808632475989147n, {
-    id: 0x204e099e33d1b49bn,
+  [592048201868213766n, {
+    id: 0x083760b3ea437e06n,
     type_params: [],
     kind: {
       tag: "struct",
@@ -638,6 +639,15 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
             tag: "concrete",
             type_id: 0x0a96b404b4d79d67n,
             args: [{ tag: "concrete", type_id: 0xa251968d339b3a3fn, args: [] }],
+          },
+          required: true,
+        },
+        {
+          name: "channels",
+          type_ref: {
+            tag: "concrete",
+            type_id: 0x0a96b404b4d79d67n,
+            args: [{ tag: "concrete", type_id: 0xd9356298b81639acn, args: [] }],
           },
           required: true,
         },
@@ -700,8 +710,8 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       }],
     },
   }],
-  [15762469341685469490n, {
-    id: 0xdabf8a5a6625d132n,
+  [1408391049376271190n, {
+    id: 0x138b9c328ae98b56n,
     type_params: [],
     kind: {
       tag: "enum",
@@ -709,7 +719,7 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       variants: [{
         name: "Call",
         index: 0,
-        payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: 0x204e099e33d1b49bn, args: [] } },
+        payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: 0x083760b3ea437e06n, args: [] } },
       }, {
         name: "Response",
         index: 1,
@@ -721,15 +731,15 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       }],
     },
   }],
-  [14895311984549778772n, {
-    id: 0xceb6c754c9b55554n,
+  [11546959479668437832n, {
+    id: 0xa03f0a77e5777348n,
     type_params: [],
     kind: {
       tag: "struct",
       name: "RequestMessage",
       fields: [{ name: "id", type_ref: { tag: "concrete", type_id: 0xd9356298b81639acn, args: [] }, required: true }, {
         name: "body",
-        type_ref: { tag: "concrete", type_id: 0xdabf8a5a6625d132n, args: [] },
+        type_ref: { tag: "concrete", type_id: 0x138b9c328ae98b56n, args: [] },
         required: true,
       }],
     },
@@ -888,8 +898,8 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       }],
     },
   }],
-  [11404656770198272752n, {
-    id: 0x9e457ae874ebfaf0n,
+  [1889434862242910152n, {
+    id: 0x1a389eff1e3a4fc8n,
     type_params: [],
     kind: {
       tag: "enum",
@@ -917,7 +927,7 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       }, {
         name: "RequestMessage",
         index: 5,
-        payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: 0xceb6c754c9b55554n, args: [] } },
+        payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: 0xa03f0a77e5777348n, args: [] } },
       }, {
         name: "SchemaMessage",
         index: 6,
@@ -937,8 +947,8 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
       }],
     },
   }],
-  [1533027651292629175n, {
-    id: 0x15466886ca2608b7n,
+  [12209999889422496884n, {
+    id: 0xa972a23544963474n,
     type_params: [],
     kind: {
       tag: "struct",
@@ -947,14 +957,14 @@ export const messageSchemaRegistry: import("@bearcove/vox-binette").SchemaRegist
         name: "connection_id",
         type_ref: { tag: "concrete", type_id: 0xd9356298b81639acn, args: [] },
         required: true,
-      }, { name: "payload", type_ref: { tag: "concrete", type_id: 0x9e457ae874ebfaf0n, args: [] }, required: true }],
+      }, { name: "payload", type_ref: { tag: "concrete", type_id: 0x1a389eff1e3a4fc8n, args: [] }, required: true }],
     },
   }],
 ]);
 
 export const messageRootRef: import("@bearcove/vox-binette").TypeRef = {
   tag: "concrete",
-  type_id: 0x15466886ca2608b7n,
+  type_id: 0xa972a23544963474n,
   args: [],
 };
 

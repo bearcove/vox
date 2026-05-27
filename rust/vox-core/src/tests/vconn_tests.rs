@@ -62,6 +62,7 @@ async fn open_virtual_connection_and_call() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -259,6 +260,7 @@ async fn close_virtual_connection() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -332,6 +334,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&11_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -485,6 +488,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&7_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })

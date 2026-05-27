@@ -371,6 +371,7 @@ fn main() {
                     method_id: MethodId(0xE5A1_D6B2_C390_F001),
                     args: Payload::outgoing(&args_call),
                     metadata: meta.clone(),
+                    channels: vec![ChannelId(3), ChannelId(5)],
                     schemas: Default::default(),
                 }),
             }),

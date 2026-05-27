@@ -6,10 +6,10 @@ use std::time::Duration;
 use moire::task::FutureExt;
 use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
-    ChannelItem, ChannelMessage, ChannelSink, ConnectionSettings, HandshakeResult,
+    ChannelItem, ChannelMessage, ChannelSink, ConnectionSettings, Handler, HandshakeResult,
     IncomingChannelMessage, Message, MessagePayload, Metadata, MetadataEntry, MethodId, Parity,
-    Payload, RequestBody, RequestCall, RequestCancel, RequestMessage, RequestResponse, RetryPolicy,
-    Rx, SelfRef, SessionRole, Tx, VoxError, channel, ensure_operation_id,
+    Payload, ReplySink, RequestBody, RequestCall, RequestCancel, RequestMessage, RequestResponse,
+    RetryPolicy, Rx, SelfRef, SessionRole, Tx, VoxError, channel, ensure_operation_id,
 };
 
 use super::utils::*;
@@ -18,7 +18,9 @@ use crate::session::{
     SessionAcceptOutcome, SessionError, SessionHandle, SessionKeepaliveConfig, SessionRegistry,
     acceptor_conduit, acceptor_on, initiator_conduit, initiator_on, proxy_connections,
 };
-use crate::{Attachment, BareConduit, Driver, NoopClient, TransportMode, memory_link_pair};
+use crate::{
+    Attachment, BareConduit, Driver, DriverReplySink, NoopClient, TransportMode, memory_link_pair,
+};
 
 // r[verify rpc.caller.liveness.refcounted]
 #[tokio::test]
@@ -66,6 +68,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&42_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -194,6 +197,82 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
         .expect("client session task failed");
 }
 
+#[tokio::test]
+async fn request_call_carries_channel_ids_out_of_band() {
+    #[derive(Clone)]
+    struct CaptureChannels {
+        seen: Arc<std::sync::Mutex<Option<tokio::sync::oneshot::Sender<Vec<ChannelId>>>>>,
+    }
+
+    impl Handler<DriverReplySink> for CaptureChannels {
+        async fn handle(
+            &self,
+            call: SelfRef<RequestCall<'static>>,
+            reply: DriverReplySink,
+            _schemas: Arc<vox_types::SchemaRecvTracker>,
+        ) {
+            let channels = call.get().channels.clone();
+            let sender = self
+                .seen
+                .lock()
+                .expect("capture mutex poisoned")
+                .take()
+                .expect("capture sender already used");
+            let _ = sender.send(channels);
+
+            let result = 0_u32;
+            reply
+                .send_reply(RequestResponse {
+                    ret: Payload::outgoing(&result),
+                    schemas: Default::default(),
+                    metadata: Default::default(),
+                })
+                .await;
+        }
+    }
+
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let (seen_tx, seen_rx) = tokio::sync::oneshot::channel();
+    let handler = CaptureChannels {
+        seen: Arc::new(std::sync::Mutex::new(Some(seen_tx))),
+    };
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(handler)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+
+    let _server_caller = server_task.await.expect("server setup failed");
+    let (updates, _rx) = channel::<u32>();
+    let args = SubscribeArgs { updates };
+
+    let _response = caller
+        .caller
+        .call(RequestCall {
+            method_id: MethodId(1),
+            args: Payload::outgoing(&args),
+            channels: Vec::new(),
+            schemas: Default::default(),
+            metadata: Default::default(),
+        })
+        .await
+        .expect("channel-bearing call should succeed");
+
+    let channels = seen_rx.await.expect("handler should report channels");
+    assert_eq!(channels, vec![ChannelId(1)]);
+}
+
 // r[verify rpc.cancel]
 // r[verify rpc.cancel.channels]
 #[tokio::test]
@@ -237,6 +316,7 @@ async fn cancel_aborts_in_flight_handler() {
                 .call(RequestCall {
                     method_id: MethodId(1),
                     args: Payload::outgoing(&args_value),
+                    channels: Vec::new(),
                     schemas: Default::default(),
                     metadata: Default::default(),
                 })
@@ -328,6 +408,7 @@ async fn cancel_does_not_abort_persist_handler() {
                 .call(RequestCall {
                     method_id: MethodId(1),
                     args: Payload::outgoing(&99_u32),
+                    channels: Vec::new(),
                     schemas: Default::default(),
                     metadata: Default::default(),
                 })
@@ -397,6 +478,7 @@ async fn caller_injects_operation_id_when_peer_supports_retry() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&7_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -442,6 +524,7 @@ async fn builder_uses_custom_operation_store() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&7_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -508,6 +591,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
                     .call(RequestCall {
                         method_id: MethodId(1),
                         args: Payload::outgoing(&11_u32),
+                        channels: Vec::new(),
                         schemas: Default::default(),
                         metadata,
                     })
@@ -566,6 +650,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&11_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata,
         })
@@ -634,6 +719,7 @@ async fn duplicate_operation_id_on_same_connection_is_rejected() {
                     .call(RequestCall {
                         method_id: MethodId(1),
                         args: Payload::outgoing(&11_u32),
+                        channels: Vec::new(),
                         schemas: Default::default(),
                         metadata,
                     })
@@ -658,6 +744,7 @@ async fn duplicate_operation_id_on_same_connection_is_rejected() {
                     .call(RequestCall {
                         method_id: MethodId(1),
                         args: Payload::outgoing(&11_u32),
+                        channels: Vec::new(),
                         schemas: Default::default(),
                         metadata,
                     })
@@ -770,6 +857,7 @@ async fn call_through_binette_handshake_reaches_handler() {
         caller.caller.call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&42_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         }),
@@ -828,6 +916,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
         caller.caller.call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&123_u32),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         }),
@@ -889,6 +978,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
                 .call(RequestCall {
                     method_id: MethodId(1),
                     args: Payload::outgoing(&123_u32),
+                    channels: Vec::new(),
                     schemas: Default::default(),
                     metadata: Default::default(),
                 })
@@ -963,6 +1053,7 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
                 .call(RequestCall {
                     method_id: MethodId(1),
                     args: Payload::outgoing(&123_u32),
+                    channels: Vec::new(),
                     schemas: Default::default(),
                     metadata: Default::default(),
                 })
@@ -1072,6 +1163,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -1110,6 +1202,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -1357,6 +1450,7 @@ async fn echo_call_across_memory_link() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -1789,6 +1883,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })
@@ -1909,6 +2004,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         .call(RequestCall {
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
+            channels: Vec::new(),
             schemas: Default::default(),
             metadata: Default::default(),
         })

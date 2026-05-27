@@ -236,6 +236,7 @@ impl<'a> ServerResponse<'a> {
                 ServerResponsePayload::Value(peek)
             }
             Payload::BinetteBytes(bytes) => ServerResponsePayload::BinetteBytes(bytes),
+            Payload::BinetteOwned(bytes) => ServerResponsePayload::BinetteBytes(bytes),
         };
         Self {
             metadata: &response.metadata,

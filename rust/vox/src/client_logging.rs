@@ -254,6 +254,7 @@ mod tests {
                     },
                 ],
                 args: crate::Payload::BinetteBytes(&[]),
+                channels: Vec::new(),
                 schemas: Default::default(),
             })
             .await;

@@ -49,6 +49,24 @@ pub fn with_channel_binder<R>(binder: &dyn ChannelBinder, f: impl FnOnce() -> R)
     f()
 }
 
+/// Run `f` under a channel binder that records newly allocated request
+/// channel IDs in traversal order.
+pub fn collect_request_channels<R>(
+    binder: &dyn ChannelBinder,
+    f: impl FnOnce() -> R,
+) -> (R, Vec<ChannelId>) {
+    let recording = RecordingChannelBinder {
+        inner: binder,
+        channels: Mutex::new(Vec::new()),
+    };
+    let result = with_channel_binder(&recording, f);
+    let channels = recording
+        .channels
+        .into_inner()
+        .expect("request channel collector mutex poisoned");
+    (result, channels)
+}
+
 /// Set the thread-local channel binder, returning a guard that restores
 /// the previous value on drop.
 ///
@@ -1714,6 +1732,81 @@ pub trait ChannelBinder: crate::MaybeSend + crate::MaybeSync {
     /// for the lifetime of any bound channel handle.
     fn channel_liveness(&self) -> Option<ChannelLivenessHandle> {
         None
+    }
+}
+
+struct RecordingChannelBinder<'a> {
+    inner: &'a dyn ChannelBinder,
+    channels: Mutex<Vec<ChannelId>>,
+}
+
+impl RecordingChannelBinder<'_> {
+    fn record(&self, channel_id: ChannelId) {
+        self.channels
+            .lock()
+            .expect("request channel collector mutex poisoned")
+            .push(channel_id);
+    }
+}
+
+impl ChannelBinder for RecordingChannelBinder<'_> {
+    fn create_tx(&self) -> (ChannelId, Arc<dyn ChannelSink>) {
+        let (channel_id, sink) = self.inner.create_tx();
+        self.record(channel_id);
+        (channel_id, sink)
+    }
+
+    fn create_tx_with_context(
+        &self,
+        debug_context: Option<ChannelDebugContext>,
+    ) -> (ChannelId, Arc<dyn ChannelSink>) {
+        let (channel_id, sink) = self.inner.create_tx_with_context(debug_context);
+        self.record(channel_id);
+        (channel_id, sink)
+    }
+
+    fn create_rx(&self) -> (ChannelId, BoundChannelReceiver) {
+        let (channel_id, receiver) = self.inner.create_rx();
+        self.record(channel_id);
+        (channel_id, receiver)
+    }
+
+    fn create_rx_with_context(
+        &self,
+        debug_context: Option<ChannelDebugContext>,
+    ) -> (ChannelId, BoundChannelReceiver) {
+        let (channel_id, receiver) = self.inner.create_rx_with_context(debug_context);
+        self.record(channel_id);
+        (channel_id, receiver)
+    }
+
+    fn bind_tx(&self, channel_id: ChannelId) -> Arc<dyn ChannelSink> {
+        self.inner.bind_tx(channel_id)
+    }
+
+    fn bind_tx_with_context(
+        &self,
+        channel_id: ChannelId,
+        debug_context: Option<ChannelDebugContext>,
+    ) -> Arc<dyn ChannelSink> {
+        self.inner.bind_tx_with_context(channel_id, debug_context)
+    }
+
+    fn register_rx(&self, channel_id: ChannelId) -> BoundChannelReceiver {
+        self.inner.register_rx(channel_id)
+    }
+
+    fn register_rx_with_context(
+        &self,
+        channel_id: ChannelId,
+        debug_context: Option<ChannelDebugContext>,
+    ) -> BoundChannelReceiver {
+        self.inner
+            .register_rx_with_context(channel_id, debug_context)
+    }
+
+    fn channel_liveness(&self) -> Option<ChannelLivenessHandle> {
+        self.inner.channel_liveness()
     }
 }
 

@@ -477,6 +477,7 @@ mod tests {
             RequestCall {
                 method_id: crate::MethodId(1),
                 metadata: Metadata::default(),
+                channels: Vec::new(),
                 args: Payload::BinetteBytes(&[]),
                 schemas: Default::default(),
             },
