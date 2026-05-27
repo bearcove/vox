@@ -20,13 +20,13 @@ For a Node server/client setup, start with:
     "@bearcove/vox-tcp": "7.0.0",
     "@bearcove/vox-ws": "7.0.0",
     "@bearcove/vox-wire": "7.0.0",
-    "@bearcove/vox-postcard": "7.0.0"
+    "@bearcove/binette": "7.0.0"
   }
 }
 ```
 
 Generated files import from `@bearcove/vox-core` and transport packages. The
-wire/postcard packages handle low-level encoding and are typically not used
+wire/binette packages handle low-level encoding and are typically not used
 directly.
 
 ## 2) Generate TypeScript bindings from Rust
