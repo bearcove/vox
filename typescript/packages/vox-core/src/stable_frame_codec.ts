@@ -5,7 +5,7 @@ import {
   encodeOption,
   encodeU32,
   type DecodeResult,
-} from "@bearcove/vox-binette";
+} from "@bearcove/binette";
 
 export interface PacketAck {
   max_delivered: number;
