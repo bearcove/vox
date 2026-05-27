@@ -1,7 +1,8 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use facet::Facet;
-use vox_types::schema::{PlanCacheKey, SchemaRecvTracker};
+use vox_types::schema::{self as vox_schema, PlanCacheKey, SchemaRecvTracker};
 use vox_types::{BindingDirection, MethodId};
 
 #[derive(Debug)]
@@ -15,7 +16,7 @@ impl std::fmt::Display for SchemaDeserializeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Protocol(message) => write!(f, "protocol error: {message}"),
-            Self::Plan(message) => write!(f, "binette plan error: {message}"),
+            Self::Plan(message) => write!(f, "translation plan failed: {message}"),
             Self::Decode(message) => write!(f, "binette decode error: {message}"),
         }
     }
@@ -94,15 +95,9 @@ fn build_resolved_plan<T: Facet<'static>>(
     direction: BindingDirection,
     tracker: &SchemaRecvTracker,
 ) -> Result<ResolvedPlan, SchemaDeserializeError> {
-    require_remote_binding(method_id, direction, tracker)?;
+    let (remote_root, registry) = require_remote_binding(method_id, direction, tracker)?;
 
-    let writer_plan = binette::writer_plan_for::<T>()
-        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
-    let mut registry = binette::SchemaRegistry::new();
-    registry
-        .install_bundle(writer_plan.schema_bundle())
-        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
-    let plan = binette::reader_plan_for::<T>(writer_plan.root(), &registry)
+    let plan = binette::reader_plan_for::<T>(&remote_root, &registry)
         .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
 
     Ok(ResolvedPlan { plan, registry })
@@ -112,7 +107,7 @@ fn require_remote_binding(
     method_id: MethodId,
     direction: BindingDirection,
     tracker: &SchemaRecvTracker,
-) -> Result<(), SchemaDeserializeError> {
+) -> Result<(binette::TypeRef, binette::SchemaRegistry), SchemaDeserializeError> {
     let dir_name = match direction {
         BindingDirection::Args => "args",
         BindingDirection::Response => "response",
@@ -134,7 +129,200 @@ fn require_remote_binding(
             "remote root type ref {remote_root_ref:?} not found in received schemas"
         ))
     })?;
-    Ok(())
+    binette_bundle_from_vox_schemas(remote_root_ref, registry)
+}
+
+fn binette_bundle_from_vox_schemas(
+    root: vox_schema::TypeRef,
+    registry: vox_schema::SchemaRegistry,
+) -> Result<(binette::TypeRef, binette::SchemaRegistry), SchemaDeserializeError> {
+    let argless_schema_ids = registry
+        .values()
+        .filter_map(|schema| {
+            matches!(
+                schema.kind,
+                vox_schema::SchemaKind::Primitive { .. } | vox_schema::SchemaKind::Channel { .. }
+            )
+            .then_some(schema.id)
+        })
+        .collect::<HashSet<_>>();
+
+    let bundle = binette::SchemaBundle {
+        schemas: registry
+            .into_values()
+            .map(|schema| binette_schema_from_vox_schema(schema, &argless_schema_ids))
+            .collect::<Result<_, _>>()?,
+        root: binette_type_ref_from_vox_type_ref(root, &argless_schema_ids),
+        attachments: Vec::new(),
+    };
+    let bundle = binette::canonicalize_schema_bundle(bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(&bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
+    Ok((bundle.root, registry))
+}
+
+fn binette_schema_from_vox_schema(
+    schema: vox_schema::Schema,
+    argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+) -> Result<binette::Schema, SchemaDeserializeError> {
+    let type_params = if matches!(schema.kind, vox_schema::SchemaKind::Channel { .. }) {
+        Vec::new()
+    } else {
+        schema
+            .type_params
+            .iter()
+            .map(|param| param.0.clone())
+            .collect()
+    };
+
+    Ok(binette::Schema {
+        id: binette::TypeId(schema.id.0),
+        type_params,
+        kind: binette_schema_kind_from_vox_schema_kind(schema.kind, argless_schema_ids)?,
+    })
+}
+
+fn binette_schema_kind_from_vox_schema_kind(
+    kind: vox_schema::SchemaKind,
+    argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+) -> Result<binette::SchemaKind, SchemaDeserializeError> {
+    Ok(match kind {
+        vox_schema::SchemaKind::Struct { name, fields } => binette::SchemaKind::Struct {
+            name,
+            fields: fields
+                .into_iter()
+                .map(|field| binette::Field {
+                    name: field.name,
+                    type_ref: binette_type_ref_from_vox_type_ref(
+                        field.type_ref,
+                        argless_schema_ids,
+                    ),
+                    required: field.required,
+                })
+                .collect(),
+        },
+        vox_schema::SchemaKind::Enum { name, variants } => binette::SchemaKind::Enum {
+            name,
+            variants: variants
+                .into_iter()
+                .map(|variant| binette::Variant {
+                    name: variant.name,
+                    index: variant.index,
+                    payload: binette_variant_payload_from_vox_variant_payload(
+                        variant.payload,
+                        argless_schema_ids,
+                    ),
+                })
+                .collect(),
+        },
+        vox_schema::SchemaKind::Tuple { elements } => binette::SchemaKind::Tuple {
+            elements: elements
+                .into_iter()
+                .map(|type_ref| binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids))
+                .collect(),
+        },
+        vox_schema::SchemaKind::List { element } => binette::SchemaKind::List {
+            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+        },
+        vox_schema::SchemaKind::Map { key, value } => binette::SchemaKind::Map {
+            key: binette_type_ref_from_vox_type_ref(key, argless_schema_ids),
+            value: binette_type_ref_from_vox_type_ref(value, argless_schema_ids),
+        },
+        vox_schema::SchemaKind::Array { element, length } => binette::SchemaKind::Array {
+            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+            dimensions: vec![length],
+        },
+        vox_schema::SchemaKind::Option { element } => binette::SchemaKind::Option {
+            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+        },
+        vox_schema::SchemaKind::Channel { .. } => {
+            binette::SchemaKind::Primitive(binette::Primitive::U64)
+        }
+        vox_schema::SchemaKind::Primitive { primitive_type } => {
+            binette::SchemaKind::Primitive(binette_primitive_from_vox_primitive(primitive_type))
+        }
+    })
+}
+
+fn binette_variant_payload_from_vox_variant_payload(
+    payload: vox_schema::VariantPayload,
+    argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+) -> binette::VariantPayload {
+    match payload {
+        vox_schema::VariantPayload::Unit => binette::VariantPayload::Unit,
+        vox_schema::VariantPayload::Newtype { type_ref } => binette::VariantPayload::Newtype {
+            type_ref: binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids),
+        },
+        vox_schema::VariantPayload::Tuple { types } => binette::VariantPayload::Tuple {
+            elements: types
+                .into_iter()
+                .map(|type_ref| binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids))
+                .collect(),
+        },
+        vox_schema::VariantPayload::Struct { fields } => binette::VariantPayload::Struct {
+            fields: fields
+                .into_iter()
+                .map(|field| binette::Field {
+                    name: field.name,
+                    type_ref: binette_type_ref_from_vox_type_ref(
+                        field.type_ref,
+                        argless_schema_ids,
+                    ),
+                    required: field.required,
+                })
+                .collect(),
+        },
+    }
+}
+
+fn binette_type_ref_from_vox_type_ref(
+    type_ref: vox_schema::TypeRef,
+    argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+) -> binette::TypeRef {
+    match type_ref {
+        vox_schema::TypeRef::Concrete { type_id, args } => binette::TypeRef::Concrete {
+            type_id: binette::TypeId(type_id.0),
+            args: if argless_schema_ids.contains(&type_id) {
+                Vec::new()
+            } else {
+                args.into_iter()
+                    .map(|type_ref| {
+                        binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids)
+                    })
+                    .collect()
+            },
+        },
+        vox_schema::TypeRef::Var { name } => binette::TypeRef::Var { name: name.0 },
+    }
+}
+
+fn binette_primitive_from_vox_primitive(
+    primitive: vox_schema::PrimitiveType,
+) -> binette::Primitive {
+    match primitive {
+        vox_schema::PrimitiveType::Bool => binette::Primitive::Bool,
+        vox_schema::PrimitiveType::U8 => binette::Primitive::U8,
+        vox_schema::PrimitiveType::U16 => binette::Primitive::U16,
+        vox_schema::PrimitiveType::U32 => binette::Primitive::U32,
+        vox_schema::PrimitiveType::U64 => binette::Primitive::U64,
+        vox_schema::PrimitiveType::U128 => binette::Primitive::U128,
+        vox_schema::PrimitiveType::I8 => binette::Primitive::I8,
+        vox_schema::PrimitiveType::I16 => binette::Primitive::I16,
+        vox_schema::PrimitiveType::I32 => binette::Primitive::I32,
+        vox_schema::PrimitiveType::I64 => binette::Primitive::I64,
+        vox_schema::PrimitiveType::I128 => binette::Primitive::I128,
+        vox_schema::PrimitiveType::F32 => binette::Primitive::F32,
+        vox_schema::PrimitiveType::F64 => binette::Primitive::F64,
+        vox_schema::PrimitiveType::Char => binette::Primitive::Char,
+        vox_schema::PrimitiveType::String => binette::Primitive::String,
+        vox_schema::PrimitiveType::Unit => binette::Primitive::Unit,
+        vox_schema::PrimitiveType::Never => binette::Primitive::Never,
+        vox_schema::PrimitiveType::Bytes => binette::Primitive::Bytes,
+        vox_schema::PrimitiveType::Payload => binette::Primitive::Payload,
+    }
 }
 
 #[cfg(test)]

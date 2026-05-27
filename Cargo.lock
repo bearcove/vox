@@ -66,15 +66,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arc-swap"
-version = "1.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a3a1fd6f75306b68087b831f025c712524bcb19aad54e557b1129cfa0a2b207"
-dependencies = [
- "rustversion",
-]
-
-[[package]]
 name = "ariadne"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -875,15 +866,6 @@ dependencies = [
  "facet-reflect",
  "facet-toml",
  "facet-value",
-]
-
-[[package]]
-name = "facet-cbor"
-version = "0.3.4"
-dependencies = [
- "facet",
- "facet-core",
- "facet-reflect",
 ]
 
 [[package]]
@@ -2018,12 +2000,6 @@ name = "multimap"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
-
-[[package]]
-name = "museair"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb41311b1064dea78399acd92ca903b13be1120eef0a8555803da792e2c50511"
 
 [[package]]
 name = "mutants"
@@ -3808,7 +3784,6 @@ name = "vox-codegen"
 version = "0.8.2"
 dependencies = [
  "facet",
- "facet-cbor",
  "facet-core",
  "heck",
  "vox",
@@ -3865,24 +3840,6 @@ dependencies = [
  "js-sys",
  "vox-types",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "vox-jit-abi"
-version = "0.8.2"
-dependencies = [
- "arc-swap",
- "facet-core",
- "museair",
- "vox-jit-cal",
-]
-
-[[package]]
-name = "vox-jit-cal"
-version = "0.8.2"
-dependencies = [
- "facet",
- "facet-core",
 ]
 
 [[package]]
@@ -3945,15 +3902,6 @@ dependencies = [
  "tracing",
  "vox-core",
  "vox-fdpass",
- "vox-types",
-]
-
-[[package]]
-name = "vox-swift-abi"
-version = "0.8.2"
-dependencies = [
- "vox-jit-abi",
- "vox-jit-cal",
  "vox-types",
 ]
 
@@ -4538,7 +4486,6 @@ version = "0.2.2"
 dependencies = [
  "dprint-plugin-typescript",
  "facet",
- "facet-cbor",
  "figue",
  "prettyplease",
  "proc-macro2",

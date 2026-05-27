@@ -22,10 +22,6 @@ members = [
   "rust/vox-bench",
   "rust/subject-rust",
   "rust/vox-codegen",
-  "rust/facet-cbor",
-  "rust/vox-jit-cal",
-  "rust/vox-jit-abi",
-  "rust/vox-swift-abi",
   "rust/wasm-browser-tests",
   "rust/wasm-inprocess-tests",
   "typescript/peer-server",
@@ -62,10 +58,6 @@ vox-local = { path = "rust/vox-local", version = "0.8.2" }
 vox-ffi = { path = "rust/vox-ffi", version = "0.8.2" }
 subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
-vox-jit-cal = { path = "rust/vox-jit-cal", version = "0.8.2" }
-vox-jit-abi = { path = "rust/vox-jit-abi", version = "0.8.2" }
-vox-swift-abi = { path = "rust/vox-swift-abi", version = "0.8.2" }
-facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
 binette = { git = "https://github.com/bearcove/binette", rev = "c1dc477ecbe8b547e50748451f096bb09db7fb14" }
 

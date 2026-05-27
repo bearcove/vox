@@ -209,16 +209,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if typescript || none_specified {
                 codegen_typescript(&workspace_root)?;
             }
-            if swift || swift_client || swift_server || none_specified {
-                codegen_swift(
-                    &workspace_root,
-                    swift || none_specified,
-                    swift_client || none_specified,
-                    swift_server || none_specified,
-                )?;
-            }
-            if swift_wire || none_specified {
-                codegen_swift_wire(&workspace_root)?;
+            if swift || swift_client || swift_server || swift_wire {
+                return Err(swift_codegen_parked_error());
             }
         }
     }
@@ -246,78 +238,8 @@ fn fmt_typescript(path: &std::path::Path, text: String) -> String {
     }
 }
 
-fn fmt_swift(path: &std::path::Path, text: String) -> String {
-    fn try_swift_formatter(
-        path: &std::path::Path,
-        text: &str,
-        program: &str,
-        args: &[&str],
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
-        use std::io::{ErrorKind, Write};
-        use std::process::{Command, Stdio};
-
-        let mut child = match Command::new(program)
-            .args(args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
-            Ok(child) => child,
-            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-            Err(e) => {
-                return Err(format!(
-                    "failed to start {program} while formatting {}: {e}",
-                    path.display()
-                )
-                .into());
-            }
-        };
-
-        let mut stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| format!("failed to open stdin for {program}"))?;
-        stdin.write_all(text.as_bytes())?;
-        drop(stdin);
-
-        let output = child.wait_with_output()?;
-        if output.status.success() {
-            let stdout = String::from_utf8(output.stdout)?;
-            return Ok(Some(stdout));
-        }
-
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!(
-            "{program} {} failed while formatting {}: {}",
-            args.join(" "),
-            path.display(),
-            stderr.trim()
-        )
-        .into())
-    }
-
-    match try_swift_formatter(path, &text, "swift-format", &["format", "-"]) {
-        Ok(Some(formatted)) => formatted,
-        Ok(None) => match try_swift_formatter(path, &text, "swift", &["format", "-"]) {
-            Ok(Some(formatted)) => formatted,
-            Ok(None) => {
-                eprintln!(
-                    "warning: neither swift-format nor `swift format` found, leaving {} unformatted",
-                    path.display()
-                );
-                text
-            }
-            Err(e) => {
-                eprintln!("warning: swift format failed for {}: {e}", path.display());
-                text
-            }
-        },
-        Err(e) => {
-            eprintln!("warning: swift-format failed for {}: {e}", path.display());
-            text
-        }
-    }
+fn swift_codegen_parked_error() -> Box<dyn std::error::Error> {
+    "Swift codegen is parked during the binette migration; the expected next Swift path is a Rust FFI binette codec boundary.".into()
 }
 
 fn codegen_typescript(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -380,111 +302,6 @@ fn codegen_typescript_wire(
     Ok(())
 }
 
-fn codegen_swift(
-    workspace_root: &std::path::Path,
-    swift: bool,
-    swift_client: bool,
-    swift_server: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Output directly to subject sources
-    let out_dir = workspace_root
-        .join("swift")
-        .join("subject")
-        .join("Sources")
-        .join("subject-swift");
-    std::fs::create_dir_all(&out_dir)?;
-
-    let testbed = spec_proto::testbed_service_descriptor();
-    if swift && !swift_client && !swift_server {
-        let code = vox_codegen::targets::swift::generate_service(testbed);
-        let out_path = out_dir.join("Testbed.swift");
-        write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-        return Ok(());
-    }
-
-    if swift_client || (swift && !swift_server) {
-        let code = vox_codegen::targets::swift::generate_service_with_bindings(
-            testbed,
-            vox_codegen::targets::swift::SwiftBindings::Client,
-        );
-        let out_path = out_dir.join("TestbedClient.swift");
-        write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-    }
-
-    if swift_server || (swift && !swift_client) {
-        let code = vox_codegen::targets::swift::generate_service_with_bindings(
-            testbed,
-            vox_codegen::targets::swift::SwiftBindings::Server,
-        );
-        let out_path = out_dir.join("TestbedServer.swift");
-        write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-    }
-
-    Ok(())
-}
-
-fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-    use vox_codegen::targets::swift::wire::{WireType, generate_wire_types};
-    use vox_types as rt;
-
-    let out_path = workspace_root
-        .join("swift")
-        .join("vox-runtime")
-        .join("Sources")
-        .join("VoxRuntime")
-        .join("Wire.swift");
-
-    macro_rules! wire_type {
-        ($swift_name:literal, $ty:ty) => {
-            WireType {
-                swift_name: $swift_name.to_string(),
-                shape: <$ty as facet::Facet<'static>>::SHAPE,
-            }
-        };
-    }
-
-    let types = vec![
-        wire_type!("Parity", rt::Parity),
-        wire_type!("ConnectionSettings", rt::ConnectionSettings),
-        wire_type!("MetadataValue", rt::MetadataValue<'static>),
-        wire_type!("MetadataEntry", rt::MetadataEntry<'static>),
-        wire_type!("ProtocolError", rt::ProtocolError<'static>),
-        wire_type!("Ping", rt::Ping),
-        wire_type!("Pong", rt::Pong),
-        wire_type!("ConnectionOpen", rt::ConnectionOpen<'static>),
-        wire_type!("ConnectionAccept", rt::ConnectionAccept<'static>),
-        wire_type!("ConnectionReject", rt::ConnectionReject<'static>),
-        wire_type!("ConnectionClose", rt::ConnectionClose<'static>),
-        wire_type!("RequestCall", rt::RequestCall<'static>),
-        wire_type!("RequestResponse", rt::RequestResponse<'static>),
-        wire_type!("RequestCancel", rt::RequestCancel<'static>),
-        wire_type!("RequestBody", rt::RequestBody<'static>),
-        wire_type!("RequestMessage", rt::RequestMessage<'static>),
-        wire_type!("SchemaMessage", rt::SchemaMessage),
-        wire_type!("ChannelItem", rt::ChannelItem<'static>),
-        wire_type!("ChannelClose", rt::ChannelClose<'static>),
-        wire_type!("ChannelReset", rt::ChannelReset<'static>),
-        wire_type!("ChannelGrantCredit", rt::ChannelGrantCredit),
-        wire_type!("ChannelBody", rt::ChannelBody<'static>),
-        wire_type!("ChannelMessage", rt::ChannelMessage<'static>),
-        wire_type!("MessagePayload", rt::MessagePayload<'static>),
-        wire_type!("Message", rt::Message<'static>),
-    ];
-
-    let (code, cbor_bytes) = generate_wire_types(&types);
-    write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-
-    let bin_path = workspace_root
-        .join("swift")
-        .join("vox-runtime")
-        .join("Sources")
-        .join("VoxRuntime")
-        .join("wireMessageSchemas.bin");
-    write_if_changed(&bin_path, cbor_bytes)?;
-
-    Ok(())
-}
-
 fn generate_spec_matrix(
     workspace_root: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -517,11 +334,6 @@ fn generate_spec_matrix(
             mod_name: "lang_typescript_transport_ws",
             spec_const: "SUBJECT_TYPESCRIPT_WS",
             ignore: false,
-        },
-        Combo {
-            mod_name: "lang_swift_transport_tcp",
-            spec_const: "SUBJECT_SWIFT_TCP",
-            ignore: true,
         },
     ];
 
@@ -828,34 +640,6 @@ fn generate_spec_matrix(
             client_const: "SUBJECT_TYPESCRIPT_TCP",
             ignore: false,
         },
-        // Rust server ↔ Swift client
-        CrossLangCombo {
-            mod_name: "lang_rust_server_swift_client_tcp",
-            server_const: "SUBJECT_RUST_TCP",
-            client_const: "SUBJECT_SWIFT_TCP",
-            ignore: true,
-        },
-        // Swift server ↔ Rust client
-        CrossLangCombo {
-            mod_name: "lang_swift_server_rust_client_tcp",
-            server_const: "SUBJECT_SWIFT_TCP",
-            client_const: "SUBJECT_RUST_TCP",
-            ignore: true,
-        },
-        // TypeScript server ↔ Swift client
-        CrossLangCombo {
-            mod_name: "lang_typescript_server_swift_client_tcp",
-            server_const: "SUBJECT_TYPESCRIPT_TCP",
-            client_const: "SUBJECT_SWIFT_TCP",
-            ignore: false,
-        },
-        // Swift server ↔ TypeScript client
-        CrossLangCombo {
-            mod_name: "lang_swift_server_typescript_client_tcp",
-            server_const: "SUBJECT_SWIFT_TCP",
-            client_const: "SUBJECT_TYPESCRIPT_TCP",
-            ignore: false,
-        },
     ];
 
     // Cross-language scenario names are the single source of truth.
@@ -1021,7 +805,6 @@ fn generate_spec_matrix(
         const SUBJECT_RUST_TCP: SubjectSpec = SubjectSpec::tcp(SubjectLanguage::Rust);
         const SUBJECT_TYPESCRIPT_TCP: SubjectSpec = SubjectSpec::tcp(SubjectLanguage::TypeScript);
         const SUBJECT_TYPESCRIPT_WS: SubjectSpec = SubjectSpec::ws(SubjectLanguage::TypeScript);
-        const SUBJECT_SWIFT_TCP: SubjectSpec = SubjectSpec::tcp(SubjectLanguage::Swift);
 
         #(#combo_mods)*
 

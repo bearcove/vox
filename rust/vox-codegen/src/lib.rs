@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 
-//! Code generation for vox RPC bindings across multiple languages.
+//! Code generation for vox RPC bindings.
 //!
 //! # This Is Where Code Generation Actually Happens
 //!
@@ -8,11 +8,10 @@
 //! consumes that metadata and generates actual protocol implementations for:
 //!
 //! - **TypeScript** — Browser and Node.js clients
-//! - **Swift** — iOS/macOS clients
-//! - **Go** — Server and client implementations
-//! - **Java** — Android and server implementations
-//! - **Python** — Client bindings
-//! - **Rust** — Extended codegen beyond what the proc macro provides
+//!
+//! Swift-native code generation is parked during the binette migration. The
+//! expected next Swift path is a Rust FFI codec boundary rather than a separate
+//! Swift-native binette codec.
 //!
 //! # Usage: In Your build.rs
 //!
@@ -27,16 +26,13 @@
 //!     let ts_code = vox_codegen::targets::typescript::generate(&detail);
 //!     std::fs::write("generated/calculator.ts", ts_code).unwrap();
 //!
-//!     // Generate Go server
-//!     let go_code = vox_codegen::targets::go::generate(&detail);
-//!     std::fs::write("generated/calculator.go", go_code).unwrap();
 //! }
 //! ```
 //!
 //! # The Pipeline
 //!
 //! ```text
-//! #[service] trait     →    ServiceDescriptor    →    vox-codegen    →    .ts, .go, .swift, ...
+//! #[service] trait     →    ServiceDescriptor    →    vox-codegen    →    .ts
 //!   (your code)            (runtime metadata)     (build script)       (generated code)
 //! ```
 //!
