@@ -39,6 +39,12 @@ private struct VoxSwiftCallReader {
     var payload: [UInt8]
 }
 
+private struct VoxSwiftArgs {
+    var title: String
+    var retry: UInt16?
+    var output: VoxSwiftChannel
+}
+
 private typealias CVariantProject = @convention(c) (UnsafePointer<UInt8>?, UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>?
 
 final class VoxSwiftBinetteCanaryTests: XCTestCase {
@@ -113,6 +119,24 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         XCTAssertEqual(decodedValue.payload, writerValue.payload)
         XCTAssertEqual(decodedValue.retry, writerValue.retry)
         XCTAssertEqual(decodedValue.outcome, writerValue.outcome)
+    }
+
+    func testSwiftMethodArgsUseTupleDescriptorThroughVoxCodec() throws {
+        let arena = BinetteCAbiDescriptorArena()
+        let descriptor = voxSwiftArgsDescriptor(in: arena)
+        let codec = try VoxSwiftLocalCodec(descriptor: descriptor)
+
+        var args = VoxSwiftArgs(
+            title: "tuple-shaped args",
+            retry: 144,
+            output: VoxSwiftChannel()
+        )
+
+        let encoded = try codec.encode(&args)
+        let decoded = try codec.decode(encoded, as: VoxSwiftArgs.self)
+
+        XCTAssertEqual(decoded.title, args.title)
+        XCTAssertEqual(decoded.retry, args.retry)
     }
 }
 
@@ -250,6 +274,33 @@ private func voxSwiftCallReaderDescriptor(
                 name: binetteLocalStr("payload"),
                 offset: MemoryLayout<VoxSwiftCallReader>.offset(of: \VoxSwiftCallReader.payload)!,
                 descriptor: parts.bytes
+            ),
+        ]
+    )
+}
+
+private func voxSwiftArgsDescriptor(
+    in arena: BinetteCAbiDescriptorArena
+) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    let parts = commonDescriptors(in: arena)
+    return arena.tuple(
+        typeID: 0xB1_0000_0000_2200,
+        layout: binetteLayout(of: VoxSwiftArgs.self),
+        fields: [
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("0"),
+                offset: MemoryLayout<VoxSwiftArgs>.offset(of: \VoxSwiftArgs.title)!,
+                descriptor: parts.string
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("1"),
+                offset: MemoryLayout<VoxSwiftArgs>.offset(of: \VoxSwiftArgs.retry)!,
+                descriptor: parts.optionalU16
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("2"),
+                offset: MemoryLayout<VoxSwiftArgs>.offset(of: \VoxSwiftArgs.output)!,
+                descriptor: parts.channel
             ),
         ]
     )

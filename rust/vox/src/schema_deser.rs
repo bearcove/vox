@@ -417,4 +417,60 @@ mod tests {
         };
         assert_eq!(decoded, ("hello".to_string(), 42));
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn remote_vox_arg_schema_drives_binette_local_tuple_decode() {
+        type Args = (String, u32);
+
+        let method_id = MethodId(3);
+        let extracted = extract_schemas(<Args as Facet>::SHAPE).expect("schema extraction");
+        let tracker = SchemaRecvTracker::new();
+        tracker
+            .record_received(
+                method_id,
+                BindingDirection::Args,
+                SchemaPayload {
+                    schemas: extracted.schemas.clone(),
+                    root: extracted.root.clone(),
+                },
+            )
+            .expect("record received schemas");
+
+        let writer_bundle =
+            binette_schema_bundle_for_remote_binding(method_id, BindingDirection::Args, &tracker)
+                .expect("Vox schemas should convert to a binette writer bundle");
+        let mut writer_registry = binette::SchemaRegistry::new();
+        writer_registry
+            .install_bundle(&writer_bundle)
+            .expect("writer bundle should install");
+
+        let mut local_descriptor = binette::local_access::rust_facet_descriptor_for::<Args>()
+            .expect("local tuple descriptor");
+        let reader_bundle = binette::local_access::synthetic_schema_bundle_for_local_descriptor(
+            &mut local_descriptor,
+        )
+        .expect("local tuple descriptor should synthesize a reader bundle");
+        let reader_plan = binette::reader_plan_for_bundles(&writer_bundle, &reader_bundle)
+            .expect("remote writer tuple should plan into local tuple descriptor");
+        let decoder = binette::hybrid_local_stencil_decoder_from_plan(
+            &reader_plan,
+            &writer_registry,
+            &local_descriptor,
+            &binette::local_access::LocalThunkBindings::new(),
+        )
+        .expect("tuple method args should compile to local decode stencil");
+
+        let bytes = binette::encode_to_vec(&("swift-bound args".to_string(), 0xCAFE_BABEu32))
+            .expect("encode writer args");
+        let mut out = std::mem::MaybeUninit::<Args>::uninit();
+        unsafe {
+            decoder
+                .decode_raw_into(&bytes, out.as_mut_ptr().cast())
+                .expect("local tuple decode should succeed");
+        }
+        let decoded = unsafe { out.assume_init() };
+
+        assert_eq!(decoded, ("swift-bound args".to_string(), 0xCAFE_BABE));
+    }
 }
