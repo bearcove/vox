@@ -140,41 +140,34 @@ weight = 11
 >   * a transport-prologue magic number
 >   * a transport-prologue version
 >   * the requested conduit mode
->   * the requested wire compression mode as a field distinct from the conduit
->     mode
 
 > r[transport.prologue.requested-mode]
 >
 > The requested conduit mode is an exact request, not a preference list. This
-> spec defines two conduit modes:
+> spec currently defines one conduit mode:
 >
 >   * `bare`
->   * `stable`
-
-> r[transport.prologue.compression]
 >
-> The requested wire compression mode is an exact request. `none` is the
-> baseline mode and MUST be supported. Any compressed mode MUST be named in the
-> transport prologue before compressed bytes are sent.
+> Mode values other than `bare` MUST be rejected. In particular, the historical
+> `stable` mode is not a current Vox conduit mode.
 
 > r[transport.prologue.accept]
 >
 > The acceptor MUST reply with either:
 >
->   * `TransportAccept`, acknowledging the requested conduit and compression
->     modes, or
+>   * `TransportAccept`, acknowledging the requested conduit mode, or
 >   * `TransportReject`, refusing the request
 
 > r[transport.prologue.no-fallback]
 >
-> If the acceptor does not support the requested conduit mode or compression
-> mode, it MUST reject the transport prologue. It MUST NOT silently fall back
-> to a different conduit or compression mode.
+> If the acceptor does not support the requested conduit mode, it MUST reject
+> the transport prologue. It MUST NOT silently fall back to a different conduit
+> mode.
 
 > r[transport.prologue.post-accept]
 >
 > After `TransportAccept`, all subsequent payloads on that link attachment are
-> interpreted according to the selected conduit mode and wire compression mode.
+> interpreted according to the selected conduit mode.
 
 > r[transport.prologue.reject-close]
 >
@@ -200,25 +193,13 @@ weight = 11
 > serialization/deserialization. It begins immediately after the transport
 > prologue has accepted `bare`.
 
-> r[conduit.stable]
+> r[link.source]
 >
-> `StableConduit` provides automatic reconnection (over fresh links) and replay of
-> missed messages. It comes with its own Packet framing.
-
-`StableConduit` begins only after the transport prologue has accepted `stable`.
-Its own stable-conduit handshake is separate from, and ordered after, the
-transport prologue.
-
-`StableConduit` continuity does not, by itself, answer what happens to an RPC
-whose outcome is now ambiguous. Operation-level retry and session resumption
-semantics are defined in [Retry](./retry/).
-
-> r[stable.link-source]
->
-> A stable conduit that reconnects MUST be driven by a link source that can
-> produce fresh link attachments for the same endpoint and role. Each
-> attachment produced by the source MUST start at the transport prologue; no
-> conduit or session state may be smuggled through the link source itself.
+> A session that may establish or resume over more than one attachment MUST be
+> driven by a link source that can produce fresh link attachments for the same
+> endpoint and role. Each attachment produced by the source MUST start at the
+> transport prologue; no conduit or session state may be smuggled through the
+> link source itself.
 
 > r[conduit.split]
 >
@@ -309,8 +290,9 @@ starts only after that conduit has been selected and initialized.
 >   * GrantCredit
 >   * SchemaMessage
 >
-> Application-level schemas are delivered by standalone `SchemaMessage`
-> payloads before the `Request` or `Response` payloads that need them
+> Application-level schemas are delivered either inline on `RequestCall.schemas`
+> / `RequestResponse.schemas` or by a `SchemaMessage` that binds a method and
+> direction before the `Request` or `Response` payloads that need it
 > (see `r[schema.format.delivery+3]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
@@ -379,9 +361,9 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.protocol-schema.session-scoped]
 >
 > Protocol schemas are exchanged once per session during the handshake. They
-> are immutable for the session lifetime. Transparent reconnection (via
-> `StableConduit`) does not re-exchange protocol schemas. Session resumption
-> (new handshake) does.
+> are immutable for the session lifetime. Replacing the underlying link
+> attachment for the same session does not re-exchange protocol schemas.
+> Session resumption with a new handshake does.
 
 > r[session.handshake.unversioned]
 >

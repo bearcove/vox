@@ -28,10 +28,8 @@ pub trait MsgFamily: 'static {
 /// - Send: `MsgFamily::Msg<'a>` for any `'a` (borrowed data serialized in place)
 /// - Recv: `MsgFamily::Msg<'static>` (owned, via `SelfRef`)
 ///
-/// Two implementations:
-/// - `BareConduit`: Link + binette. If the link dies, it's dead.
-/// - `StableConduit`: Link + binette + seq/ack/replay. Handles reconnect
-///   transparently. Replay buffer stores encoded bytes (no clone needed).
+/// Current Vox uses `BareConduit`: Link + binette. If the link dies, the
+/// conduit is dead; retry and resumption are modeled above this layer.
 // r[impl conduit]
 pub trait Conduit {
     type Msg: MsgFamily;

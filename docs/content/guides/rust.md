@@ -32,17 +32,17 @@ The best way to learn the Rust API is to run the examples in order, from simples
 > }
 > ```
 
-## 3) `stable_conduit_reconnect` (reconnect + preserved state/channels)
+## 3) `reconnect` (link loss behavior)
 
-- Source: [rust-examples/examples/stable_conduit_reconnect.rs](https://github.com/bearcove/vox/blob/main/rust-examples/examples/stable_conduit_reconnect.rs)
-- Run: `cargo run -p rust-examples --example stable_conduit_reconnect`
-- Learn: forced link cuts with `StableConduit`, automatic re-establish, service state continuity, and channel continuity across reconnect.
+- Source: [rust-examples/examples/reconnect.rs](https://github.com/bearcove/vox/blob/main/rust-examples/examples/reconnect.rs)
+- Run: `cargo run -p rust-examples --example reconnect`
+- Learn: what happens when a bare transport link dies, and where session
+  resumption/retry policy must be modeled above the conduit layer.
 
 > ```rust
-> println!("[demo] intentionally cutting physical link #1 mid-channel");
+> println!("[client] server killed");
 > ...
-> assert_eq!(transformed_count, 3);
-> assert_eq!(second, 2);
+> println!("[client] second call failed: {e}");
 > ```
 
 ## 4) `memory_proxying` (connection-level proxying)
