@@ -125,8 +125,10 @@ def comparison_label(row: BenchRow) -> str:
         "hybrid_encode": "hybrid encode",
         "reflective_decode": "interpreted decode",
         "interp_decode": "interpreted decode",
+        "serde_decode": "interpreted decode",
         "reflective_encode": "interpreted encode",
         "interp_encode": "interpreted encode",
+        "serde_encode": "interpreted encode",
     }
     label = aliases.get(op, op)
     if tail:
