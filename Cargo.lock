@@ -4150,6 +4150,7 @@ dependencies = [
 name = "vox-bench"
 version = "0.8.2"
 dependencies = [
+ "binette",
  "dhat",
  "divan",
  "facet",
