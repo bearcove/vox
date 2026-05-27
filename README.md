@@ -161,7 +161,7 @@ let client = DownstreamClient::new(caller);
 ```
 rust/           # Rust implementation
 typescript/     # TypeScript packages
-swift/          # Parked Swift packages
+swift/          # Parked Swift status; no active runtime
 spec/           # Compliance test suite
 docs/           # Specifications
 ```
