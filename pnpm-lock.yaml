@@ -37,6 +37,10 @@ importers:
         version: link:../packages/vox-ws
 
   typescript/packages/vox-binette:
+    dependencies:
+      '@bearcove/binette':
+        specifier: link:/Users/amos/binette/typescript/binette
+        version: link:../../../../../../../binette/typescript/binette
     devDependencies:
       '@types/node':
         specifier: ^25.0.0

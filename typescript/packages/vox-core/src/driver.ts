@@ -4,10 +4,9 @@ import {
   encodeWithKind,
   decodeWithTypeRef,
   encodeWithTypeRef,
-  concat,
-  encodeU32,
   resolveTypeRef,
 } from "@bearcove/vox-binette";
+import { concat, encodeU32 } from "@bearcove/binette";
 import {
   RpcError,
   RpcErrorCode,

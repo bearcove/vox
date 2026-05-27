@@ -5,11 +5,11 @@ import {
   decodeWithTypeRef,
   encodeWithTypeRef,
   resolveTypeRef,
-  type DecodeResult,
   type TranslationPlan,
   type SchemaKind,
   type SchemaRegistry,
 } from "@bearcove/vox-binette";
+import type { DecodeResult } from "@bearcove/binette";
 
 import type { Message } from "./types.ts";
 import {

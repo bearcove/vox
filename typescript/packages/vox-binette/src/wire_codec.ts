@@ -4,24 +4,24 @@
 // binette bytes into local types in a single pass, handling field reordering,
 // skipping, and default-filling.
 
-import type { DecodeResult } from "./index.ts";
 import {
   decodeBool,
-  decodeU8,
-  decodeI8,
-  decodeU16,
-  decodeI16,
-  decodeU32,
-  decodeI32,
-  decodeU64,
-  decodeI64,
-  decodeU128,
-  decodeI128,
+  decodeBytes,
   decodeF32,
   decodeF64,
+  decodeI8,
+  decodeI16,
+  decodeI32,
+  decodeI64,
+  decodeI128,
   decodeString,
-  decodeBytes,
-} from "./index.ts";
+  decodeU8,
+  decodeU16,
+  decodeU32,
+  decodeU64,
+  decodeU128,
+  type DecodeResult,
+} from "@bearcove/binette";
 import type {
   SchemaKind,
   SchemaRegistry,

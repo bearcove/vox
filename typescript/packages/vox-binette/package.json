@@ -25,6 +25,9 @@
     "dist",
     "README.md"
   ],
+  "dependencies": {
+    "@bearcove/binette": "link:/Users/amos/binette/typescript/binette"
+  },
   "devDependencies": {
     "@types/node": "^25.0.0",
     "@vitest/coverage-v8": "^4.0.0",
