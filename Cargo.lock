@@ -250,7 +250,9 @@ name = "binette"
 version = "0.0.0"
 dependencies = [
  "blake3",
+ "facet",
  "facet-core",
+ "facet-json",
  "facet-reflect",
  "facet-value",
  "libc",
