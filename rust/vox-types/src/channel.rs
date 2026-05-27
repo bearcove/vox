@@ -38,12 +38,14 @@ struct ChannelDecodePlan {
 std::thread_local! {
     static CHANNEL_BINDER: std::cell::RefCell<Option<&'static dyn ChannelBinder>> =
         const { std::cell::RefCell::new(None) };
+    static REQUEST_CHANNEL_SOURCE: std::cell::RefCell<Option<VecDeque<ChannelId>>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// Set the thread-local channel binder for the duration of `f`.
 ///
-/// Any `Tx<T>` or `Rx<T>` deserialized (via `TryFrom<ChannelId>`) during `f`
-/// will be bound through this binder.
+/// Any `Tx<T>` or `Rx<T>` deserialized during `f` will be bound through this
+/// binder.
 pub fn with_channel_binder<R>(binder: &dyn ChannelBinder, f: impl FnOnce() -> R) -> R {
     let _guard = set_channel_binder(binder);
     f()
@@ -65,6 +67,34 @@ pub fn collect_request_channels<R>(
         .into_inner()
         .expect("request channel collector mutex poisoned");
     (result, channels)
+}
+
+/// Provide request channel IDs for the duration of argument materialization.
+pub fn provide_request_channels<R>(channels: Vec<ChannelId>, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<VecDeque<ChannelId>>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            REQUEST_CHANNEL_SOURCE.with(|cell| {
+                *cell.borrow_mut() = self.0.take();
+            });
+        }
+    }
+
+    let source = channels.into_iter().collect();
+    let _restore = Restore(REQUEST_CHANNEL_SOURCE.with(|cell| cell.borrow_mut().replace(source)));
+    f()
+}
+
+fn take_request_channel_id() -> Result<ChannelId, String> {
+    REQUEST_CHANNEL_SOURCE.with(|cell| {
+        let mut borrow = cell.borrow_mut();
+        let Some(source) = borrow.as_mut() else {
+            return Err("deserializing a channel requires Request.channels".to_string());
+        };
+        source
+            .pop_front()
+            .ok_or_else(|| "Request.channels did not contain enough channel IDs".to_string())
+    })
 }
 
 /// Set the thread-local channel binder, returning a guard that restores
@@ -1030,12 +1060,12 @@ impl ReplenisherSlot {
 ///
 /// In method args, the handler holds it (handler sends → caller).
 ///
-/// Current Rust payload encoding serializes the channel ID through the
-/// `ChannelId` proxy while the channel binder allocates/binds the endpoint.
+/// Payload encoding serializes a unit placeholder while the channel ID travels
+/// out-of-band in `Request.channels`.
 // r[impl rpc.channel]
 // r[impl rpc.channel.direction]
 #[derive(Facet)]
-#[facet(proxy = crate::ChannelId)]
+#[facet(proxy = ())]
 pub struct Tx<T> {
     pub(crate) channel_id: ChannelId,
     pub(crate) sink: SinkSlot,
@@ -1306,7 +1336,7 @@ impl<T> Drop for Tx<T> {
     }
 }
 
-impl<T> TryFrom<&Tx<T>> for ChannelId {
+impl<T> TryFrom<&Tx<T>> for () {
     type Error = String;
 
     fn try_from(value: &Tx<T>) -> Result<Self, Self::Error> {
@@ -1318,11 +1348,11 @@ impl<T> TryFrom<&Tx<T>> for ChannelId {
             let Some(binder) = *borrow else {
                 return Err("serializing Tx requires an active ChannelBinder".to_string());
             };
-            let (channel_id, bound) = binder.create_rx_with_context(Some(value.debug_context));
+            let (_channel_id, bound) = binder.create_rx_with_context(Some(value.debug_context));
             if let Some(core) = &value.core.inner {
                 core.bind_retryable_receiver(bound);
             }
-            Ok(channel_id)
+            Ok(())
         })
     }
 }
@@ -1349,6 +1379,15 @@ impl<T> TryFrom<ChannelId> for Tx<T> {
         })?;
 
         Ok(tx)
+    }
+}
+
+impl<T> TryFrom<()> for Tx<T> {
+    type Error = String;
+
+    fn try_from((): ()) -> Result<Self, Self::Error> {
+        let channel_id = take_request_channel_id()?;
+        channel_id.try_into()
     }
 }
 
@@ -1402,10 +1441,10 @@ impl<T: std::fmt::Debug> std::error::Error for TrySendError<T> {}
 ///
 /// In method args, the handler holds it (handler receives ← caller).
 ///
-/// Current Rust payload encoding serializes the channel ID through the
-/// `ChannelId` proxy while the channel binder allocates/binds the endpoint.
+/// Payload encoding serializes a unit placeholder while the channel ID travels
+/// out-of-band in `Request.channels`.
 #[derive(Facet)]
-#[facet(proxy = crate::ChannelId)]
+#[facet(proxy = ())]
 pub struct Rx<T> {
     pub(crate) channel_id: ChannelId,
     pub(crate) receiver: ReceiverSlot,
@@ -1587,7 +1626,7 @@ impl<T> Drop for Rx<T> {
     }
 }
 
-impl<T> TryFrom<&Rx<T>> for ChannelId {
+impl<T> TryFrom<&Rx<T>> for () {
     type Error = String;
 
     fn try_from(value: &Rx<T>) -> Result<Self, Self::Error> {
@@ -1599,12 +1638,12 @@ impl<T> TryFrom<&Rx<T>> for ChannelId {
             let Some(binder) = *borrow else {
                 return Err("serializing Rx requires an active ChannelBinder".to_string());
             };
-            let (channel_id, sink) = binder.create_tx_with_context(Some(value.debug_context));
+            let (_channel_id, sink) = binder.create_tx_with_context(Some(value.debug_context));
             let liveness = binder.channel_liveness();
             if let Some(core) = &value.core.inner {
                 core.set_binding(ChannelBinding::Sink(BoundChannelSink { sink, liveness }));
             }
-            Ok(channel_id)
+            Ok(())
         })
     }
 }
@@ -1632,6 +1671,15 @@ impl<T> TryFrom<ChannelId> for Rx<T> {
         })?;
 
         Ok(rx)
+    }
+}
+
+impl<T> TryFrom<()> for Rx<T> {
+    type Error = String;
+
+    fn try_from((): ()) -> Result<Self, Self::Error> {
+        let channel_id = take_request_channel_id()?;
+        channel_id.try_into()
     }
 }
 
@@ -2242,10 +2290,10 @@ mod tests {
         let args = Args { data: 42, tx };
 
         let binder = TestBinder::new();
-        let bytes = with_channel_binder(&binder, || encode_binette(&args));
+        let (bytes, channels) = collect_request_channels(&binder, || encode_binette(&args));
 
-        // The channel ID should be in the serialized bytes (after the u32 data field).
-        assert!(!bytes.is_empty());
+        assert_eq!(channels, vec![ChannelId(100)]);
+        assert_eq!(bytes, encode_binette(&42_u32));
 
         // The kept Rx should now have a receiver binding in the shared core.
         assert!(
@@ -2276,9 +2324,10 @@ mod tests {
         let args = Args { data: 42, rx };
 
         let binder = TestBinder::new();
-        let bytes = with_channel_binder(&binder, || encode_binette(&args));
+        let (bytes, channels) = collect_request_channels(&binder, || encode_binette(&args));
 
-        assert!(!bytes.is_empty());
+        assert_eq!(channels, vec![ChannelId(100)]);
+        assert_eq!(bytes, encode_binette(&42_u32));
 
         // The kept Tx should now have a sink binding in the shared core.
         assert!(tx.core.inner.is_some());
@@ -2301,12 +2350,13 @@ mod tests {
             tx: Tx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (7).
-        let mut bytes = encode_binette(&42_u32);
-        bytes.extend_from_slice(&encode_binette(&ChannelId(7)));
+        // Simulate wire bytes: a u32 (42) followed by a unit channel placeholder.
+        let bytes = encode_binette(&42_u32);
 
         let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || decode_binette(&bytes));
+        let args: Args = with_channel_binder(&binder, || {
+            provide_request_channels(vec![ChannelId(7)], || decode_binette(&bytes))
+        });
 
         assert_eq!(args.data, 42);
         assert_eq!(args.tx.channel_id, ChannelId(7));
@@ -2328,12 +2378,13 @@ mod tests {
             rx: Rx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (7).
-        let mut bytes = encode_binette(&42_u32);
-        bytes.extend_from_slice(&encode_binette(&ChannelId(7)));
+        // Simulate wire bytes: a u32 (42) followed by a unit channel placeholder.
+        let bytes = encode_binette(&42_u32);
 
         let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || decode_binette(&bytes));
+        let args: Args = with_channel_binder(&binder, || {
+            provide_request_channels(vec![ChannelId(7)], || decode_binette(&bytes))
+        });
 
         assert_eq!(args.data, 42);
         assert_eq!(args.rx.channel_id, ChannelId(7));
@@ -2344,8 +2395,8 @@ mod tests {
     }
 
     // Round-trip: serialize with caller binder, deserialize with callee binder.
-    // Verifies the channel ID allocated during serialization appears in the
-    // deserialized handle.
+    // Verifies the channel ID allocated during serialization travels through
+    // the request channel list, not through payload bytes.
     #[test]
     fn channel_id_round_trips_through_ser_deser() {
         use facet::Facet;
@@ -2359,10 +2410,12 @@ mod tests {
         let args = Args { tx };
 
         let caller_binder = TestBinder::new();
-        let bytes = with_channel_binder(&caller_binder, || encode_binette(&args));
+        let (bytes, channels) = collect_request_channels(&caller_binder, || encode_binette(&args));
 
         let callee_binder = TestBinder::new();
-        let deserialized: Args = with_channel_binder(&callee_binder, || decode_binette(&bytes));
+        let deserialized: Args = with_channel_binder(&callee_binder, || {
+            provide_request_channels(channels, || decode_binette(&bytes))
+        });
 
         // The caller binder starts at ID 100, so the deserialized Tx should have that ID.
         assert_eq!(deserialized.tx.channel_id, ChannelId(100));

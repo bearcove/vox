@@ -1,6 +1,5 @@
 ---
 source: rust/vox-macros-core/src/lib.rs
-assertion_line: 1347
 expression: "generate(quote!\n{\n    trait WordLab\n    {\n        async fn is_short(&self, word: &str) -> bool; async fn\n        classify(&self, word: String) -> &'vox str; async fn\n        transform(&self, prefix: &str, input: Rx<String>, output: Tx<String>)\n        -> u32;\n    }\n})"
 ---
 #[allow(non_snake_case, clippy::all)]
@@ -122,6 +121,7 @@ where
     ) {
         let request_call = call.get();
         let method_id = request_call.method_id;
+        let request_channels = request_call.channels.clone();
         let args_bytes = match &request_call.args {
             ::vox::Payload::BinetteBytes(bytes) => bytes,
             _ => {
@@ -138,9 +138,11 @@ where
         if method_id == word_lab_service_descriptor().methods[0usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(&'_ str,), _> =
-                ::vox::schema_deser::schema_deserialize_args_borrowed(
-                    args_bytes, method_id, &schemas,
-                );
+                ::vox::provide_request_channels(request_channels.clone(), || {
+                    ::vox::schema_deser::schema_deserialize_args_borrowed(
+                        args_bytes, method_id, &schemas,
+                    )
+                });
             drop(_binder_guard);
             let args: (&'_ str,) = match deser_result {
                 Ok(v) => v,
@@ -193,9 +195,11 @@ where
         if method_id == word_lab_service_descriptor().methods[1usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(String,), _> =
-                ::vox::schema_deser::schema_deserialize_args_borrowed(
-                    args_bytes, method_id, &schemas,
-                );
+                ::vox::provide_request_channels(request_channels.clone(), || {
+                    ::vox::schema_deser::schema_deserialize_args_borrowed(
+                        args_bytes, method_id, &schemas,
+                    )
+                });
             drop(_binder_guard);
             let args: (String,) = match deser_result {
                 Ok(v) => v,
@@ -247,9 +251,11 @@ where
         if method_id == word_lab_service_descriptor().methods[2usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(&'_ str, Rx<String>, Tx<String>), _> =
-                ::vox::schema_deser::schema_deserialize_args_borrowed(
-                    args_bytes, method_id, &schemas,
-                );
+                ::vox::provide_request_channels(request_channels.clone(), || {
+                    ::vox::schema_deser::schema_deserialize_args_borrowed(
+                        args_bytes, method_id, &schemas,
+                    )
+                });
             drop(_binder_guard);
             let args: (&'_ str, Rx<String>, Tx<String>) = match deser_result {
                 Ok(v) => v,
@@ -339,6 +345,7 @@ impl WordLabClient {
             method_id,
             args: ::vox::Payload::outgoing(&args),
             metadata,
+            channels: ::std::vec::Vec::new(),
             schemas: Default::default(),
         };
         let with_tracker = match self.caller.call(req).await {
@@ -412,6 +419,7 @@ impl WordLabClient {
             method_id,
             args: ::vox::Payload::outgoing(&args),
             metadata,
+            channels: ::std::vec::Vec::new(),
             schemas: Default::default(),
         };
         let with_tracker = match self.caller.call(req).await {
@@ -490,6 +498,7 @@ impl WordLabClient {
             method_id,
             args: ::vox::Payload::outgoing(&args),
             metadata,
+            channels: ::std::vec::Vec::new(),
             schemas: Default::default(),
         };
         let with_tracker = match self.caller.call(req).await {

@@ -528,6 +528,7 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
         quote! {
             let request_call = call.get();
             let method_id = request_call.method_id;
+            let request_channels = request_call.channels.clone();
             let args_bytes = match &request_call.args {
                 #vox::Payload::BinetteBytes(bytes) => bytes,
                 _ => {
@@ -764,10 +765,13 @@ fn generate_dispatch_arm(
         if method_id == #descriptor_fn_name().methods[#idx].id {
             // Channel binding: set guard so Tx<T>/Rx<T> deser binds through the binder.
             let _binder_guard = reply.channel_binder().map(#vox::set_channel_binder);
-            let deser_result: ::core::result::Result<#args_tuple_type, _> = #vox::schema_deser::schema_deserialize_args_borrowed(
-                args_bytes,
-                method_id,
-                &schemas,
+            let deser_result: ::core::result::Result<#args_tuple_type, _> = #vox::provide_request_channels(
+                request_channels.clone(),
+                || #vox::schema_deser::schema_deserialize_args_borrowed(
+                    args_bytes,
+                    method_id,
+                    &schemas,
+                )
             );
             drop(_binder_guard);
             #args_let = match deser_result {

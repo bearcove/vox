@@ -239,7 +239,7 @@ fn binette_schema_kind_from_vox_schema_kind(
             element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
         },
         vox_schema::SchemaKind::Channel { .. } => {
-            binette::SchemaKind::Primitive(binette::Primitive::U64)
+            binette::SchemaKind::Primitive(binette::Primitive::Unit)
         }
         vox_schema::SchemaKind::Primitive { primitive_type } => {
             binette::SchemaKind::Primitive(binette_primitive_from_vox_primitive(primitive_type))
