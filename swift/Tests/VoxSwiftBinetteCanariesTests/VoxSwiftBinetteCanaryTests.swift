@@ -1,5 +1,6 @@
 import BinetteSwiftProbes
 import CBinette
+import VoxSwiftBinetteCanaries
 import XCTest
 
 private struct VoxSwiftChannel {
@@ -43,19 +44,8 @@ private typealias CVariantProject = @convention(c) (UnsafePointer<UInt8>?, Unsaf
 final class VoxSwiftBinetteCanaryTests: XCTestCase {
     func testVoxShapedSwiftValueEncodesAndDecodesThroughBinetteLocalAccess() throws {
         let arena = BinetteCAbiDescriptorArena()
-
         let descriptor = voxSwiftCallDescriptor(in: arena)
-
-        var handle: OpaquePointer?
-        let status = binette_local_descriptor_import(descriptor, &handle)
-        XCTAssertEqual(status, BINETTE_STATUS_OK)
-        let imported = try XCTUnwrap(handle)
-        defer { binette_local_descriptor_free(imported) }
-
-        var schemaBundle = BinetteByteBuffer()
-        let schemaStatus = binette_local_descriptor_synthetic_schema_bundle(imported, &schemaBundle)
-        XCTAssertEqual(schemaStatus, BINETTE_STATUS_OK)
-        defer { binette_byte_buffer_free(schemaBundle) }
+        let codec = try VoxSwiftLocalCodec(descriptor: descriptor)
 
         let values = [
             VoxSwiftCall(
@@ -79,8 +69,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         for var value in values {
             let decodedValue = try roundTrip(
                 value: &value,
-                imported: imported,
-                schemaBundle: schemaBundle
+                codec: codec
             )
 
             XCTAssertEqual(decodedValue.method, value.method)
@@ -94,25 +83,11 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
     func testSwiftValueDecodesAcrossWriterReaderSchemaBundles() throws {
         let writerArena = BinetteCAbiDescriptorArena()
         let writerDescriptor = voxSwiftCallWithLegacyDescriptor(in: writerArena)
-        var writerHandle: OpaquePointer?
-        XCTAssertEqual(binette_local_descriptor_import(writerDescriptor, &writerHandle), BINETTE_STATUS_OK)
-        let importedWriter = try XCTUnwrap(writerHandle)
-        defer { binette_local_descriptor_free(importedWriter) }
-
-        var writerBundle = BinetteByteBuffer()
-        XCTAssertEqual(binette_local_descriptor_synthetic_schema_bundle(importedWriter, &writerBundle), BINETTE_STATUS_OK)
-        defer { binette_byte_buffer_free(writerBundle) }
+        let writerCodec = try VoxSwiftLocalCodec(descriptor: writerDescriptor)
 
         let readerArena = BinetteCAbiDescriptorArena()
         let readerDescriptor = voxSwiftCallReaderDescriptor(in: readerArena)
-        var readerHandle: OpaquePointer?
-        XCTAssertEqual(binette_local_descriptor_import(readerDescriptor, &readerHandle), BINETTE_STATUS_OK)
-        let importedReader = try XCTUnwrap(readerHandle)
-        defer { binette_local_descriptor_free(importedReader) }
-
-        var readerBundle = BinetteByteBuffer()
-        XCTAssertEqual(binette_local_descriptor_synthetic_schema_bundle(importedReader, &readerBundle), BINETTE_STATUS_OK)
-        defer { binette_byte_buffer_free(readerBundle) }
+        let readerCodec = try VoxSwiftLocalCodec(descriptor: readerDescriptor)
 
         var writerValue = VoxSwiftCallWithLegacyField(
             method: 7,
@@ -124,33 +99,8 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             output: VoxSwiftChannel()
         )
 
-        var encoded = BinetteByteBuffer()
-        let encodeStatus = withUnsafePointer(to: &writerValue) { pointer in
-            binette_local_encode_with_schema_bundle(
-                importedWriter,
-                UnsafePointer(writerBundle.ptr),
-                writerBundle.len,
-                UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self),
-                &encoded
-            )
-        }
-        XCTAssertEqual(encodeStatus, BINETTE_STATUS_OK)
-        defer { binette_byte_buffer_free(encoded) }
-
-        let decoded = UnsafeMutablePointer<VoxSwiftCallReader>.allocate(capacity: 1)
-        let decodeStatus = binette_local_decode_with_schema_bundles(
-            importedReader,
-            UnsafePointer(writerBundle.ptr),
-            writerBundle.len,
-            UnsafePointer(readerBundle.ptr),
-            readerBundle.len,
-            UnsafePointer(encoded.ptr),
-            encoded.len,
-            UnsafeMutableRawPointer(decoded).assumingMemoryBound(to: UInt8.self)
-        )
-        XCTAssertEqual(decodeStatus, BINETTE_STATUS_OK)
-        let decodedValue = decoded.move()
-        decoded.deallocate()
+        let encoded = try writerCodec.encode(&writerValue)
+        let decodedValue = try readerCodec.decode(encoded, writer: writerCodec, as: VoxSwiftCallReader.self)
 
         XCTAssertEqual(decodedValue.method, writerValue.method)
         XCTAssertEqual(decodedValue.title, writerValue.title)
@@ -162,37 +112,10 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
 
 private func roundTrip(
     value: inout VoxSwiftCall,
-    imported: OpaquePointer,
-    schemaBundle: BinetteByteBuffer
+    codec: VoxSwiftLocalCodec
 ) throws -> VoxSwiftCall {
-        var encoded = BinetteByteBuffer()
-        let encodeStatus = withUnsafePointer(to: &value) { pointer in
-            binette_local_encode_with_schema_bundle(
-                imported,
-                UnsafePointer(schemaBundle.ptr),
-                schemaBundle.len,
-                UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self),
-                &encoded
-            )
-        }
-        XCTAssertEqual(encodeStatus, BINETTE_STATUS_OK)
-        defer { binette_byte_buffer_free(encoded) }
-
-        let decoded = UnsafeMutablePointer<VoxSwiftCall>.allocate(capacity: 1)
-        let decodeStatus = binette_local_decode_with_schema_bundles(
-            imported,
-            UnsafePointer(schemaBundle.ptr),
-            schemaBundle.len,
-            UnsafePointer(schemaBundle.ptr),
-            schemaBundle.len,
-            UnsafePointer(encoded.ptr),
-            encoded.len,
-            UnsafeMutableRawPointer(decoded).assumingMemoryBound(to: UInt8.self)
-        )
-        XCTAssertEqual(decodeStatus, BINETTE_STATUS_OK)
-        let decodedValue = decoded.move()
-        decoded.deallocate()
-        return decodedValue
+    let encoded = try codec.encode(&value)
+    return try codec.decode(encoded, as: VoxSwiftCall.self)
 }
 
 private func voxSwiftCallDescriptor(
