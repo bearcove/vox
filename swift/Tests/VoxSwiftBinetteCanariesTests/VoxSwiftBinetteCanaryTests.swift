@@ -1,6 +1,6 @@
 import BinetteSwiftProbes
 import CBinette
-import VoxSwiftBinetteCanaries
+import VoxSwift
 import XCTest
 
 private struct VoxSwiftChannel {

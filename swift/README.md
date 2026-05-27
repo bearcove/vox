@@ -1,6 +1,7 @@
 # Swift Status
 
-Swift support is active again through binette local access.
+Swift support is active again through the `VoxSwift` package and binette local
+access.
 
 The Swift side does not define a separate codec. Swift code describes local
 values with binette C ABI descriptors and thunks, and binette remains the

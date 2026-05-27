@@ -3,11 +3,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "VoxSwiftBinetteCanaries",
+    name: "VoxSwift",
     products: [
         .library(
-            name: "VoxSwiftBinetteCanaries",
-            targets: ["VoxSwiftBinetteCanaries"]
+            name: "VoxSwift",
+            targets: ["VoxSwift"]
         ),
     ],
     dependencies: [
@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "VoxSwiftBinetteCanaries",
+            name: "VoxSwift",
             dependencies: [
                 .product(name: "BinetteSwiftProbes", package: "probes"),
             ]
@@ -23,7 +23,7 @@ let package = Package(
         .testTarget(
             name: "VoxSwiftBinetteCanariesTests",
             dependencies: [
-                "VoxSwiftBinetteCanaries",
+                "VoxSwift",
                 .product(name: "BinetteSwiftProbes", package: "probes"),
             ]
         ),
