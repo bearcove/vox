@@ -1,8 +1,11 @@
 # Swift Status
 
-Swift support is parked during the binette migration.
+Swift support is active again through binette local access.
 
-The previous native Swift runtime and subject carried the retired postcard/CBOR
-protocol model, so they have been removed from the active tree. The expected
-next Swift path is a Rust FFI boundary that calls the Rust binette
-implementation instead of maintaining a separate Swift-native codec.
+The Swift side does not define a separate codec. Swift code describes local
+values with binette C ABI descriptors and thunks, and binette remains the
+shared schema/value/wire layer.
+
+The canaries in this directory are intentionally small: they keep the Vox side
+honest that Swift is in bounds while the full Swift RPC runtime is rebuilt on
+top of binette.

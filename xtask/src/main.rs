@@ -43,16 +43,16 @@ enum Commands {
         /// Generate TypeScript bindings into `typescript/generated/`
         #[facet(args::named, default)]
         typescript: bool,
-        /// Deprecated: Swift codegen is parked during the binette migration.
+        /// Reserved: Swift runtime work now goes through binette local access.
         #[facet(args::named, default)]
         swift: bool,
-        /// Deprecated: Swift codegen is parked during the binette migration.
+        /// Reserved: Swift runtime work now goes through binette local access.
         #[facet(args::named, default)]
         swift_client: bool,
-        /// Deprecated: Swift codegen is parked during the binette migration.
+        /// Reserved: Swift runtime work now goes through binette local access.
         #[facet(args::named, default)]
         swift_server: bool,
-        /// Deprecated: Swift codegen is parked during the binette migration.
+        /// Reserved: Swift runtime work now goes through binette local access.
         #[facet(args::named, default)]
         swift_wire: bool,
     },
@@ -239,7 +239,7 @@ fn fmt_typescript(path: &std::path::Path, text: String) -> String {
 }
 
 fn swift_codegen_parked_error() -> Box<dyn std::error::Error> {
-    "Swift codegen is parked during the binette migration; the expected next Swift path is a Rust FFI binette codec boundary.".into()
+    "Swift codegen is not restored yet; active Swift work goes through binette C ABI local-access descriptors. Use `just swift` for the current Swift canaries.".into()
 }
 
 fn codegen_typescript(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {

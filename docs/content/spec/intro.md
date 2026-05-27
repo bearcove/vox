@@ -10,10 +10,10 @@ weight = 10
 > Rust traits *are* the schema. Implementations for other languages are generated
 > from Rust definitions.
 
-The currently specified runtimes are Rust and TypeScript. Swift is out of scope
-for the current protocol/runtime specification; when Swift support returns, it
-is expected to call the Rust binette implementation through FFI instead of
-carrying a separate Swift-native codec.
+The currently specified runtimes are Rust and TypeScript. Swift support is being
+rebuilt through binette local access: Swift produces C ABI descriptors and
+thunks for its local values, and binette remains the shared schema/value/wire
+contract. Swift does not carry a separate Swift-native codec.
 
 This specification describes the current protocol model. The current line
 introduces a transport prologue below the conduit/session layers so conduit

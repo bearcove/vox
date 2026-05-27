@@ -1,5 +1,7 @@
 # cf. https://github.com/casey/just
 
+BINETTE_DIR := env_var_or_default("BINETTE_DIR", "/Users/amos/binette")
+
 list:
     just --list
 
@@ -29,19 +31,20 @@ ts:
     SUBJECT_CMD="./typescript/subject/subject-ts.sh" cargo nextest run -p spec-tests typescript_
 
 swift:
-    @echo "Swift is parked during the binette migration; the next Swift path is Rust FFI-backed binette."
-    @false
+    cargo build --manifest-path {{BINETTE_DIR}}/Cargo.toml -p binette
+    cd {{BINETTE_DIR}}/swift/probes && swift test
+    cd swift && swift test
 
 swift-subject-cov *args:
-    @echo "Swift coverage is parked during the binette migration."
+    @echo "Swift coverage has not been restored on the binette local-access path yet."
     @false
 
 swift-subject-cov-tcp *args:
-    @echo "Swift coverage is parked during the binette migration."
+    @echo "Swift TCP coverage has not been restored on the binette local-access path yet."
     @false
 
 swift-subject-cov-html:
-    @echo "Swift coverage is parked during the binette migration."
+    @echo "Swift HTML coverage has not been restored on the binette local-access path yet."
     @false
 
 examples:

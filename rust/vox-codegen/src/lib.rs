@@ -9,9 +9,9 @@
 //!
 //! - **TypeScript** — Browser and Node.js clients
 //!
-//! Swift-native code generation is parked during the binette migration. The
-//! expected next Swift path is a Rust FFI codec boundary rather than a separate
-//! Swift-native binette codec.
+//! Swift-native code generation is not restored yet. The active Swift runtime
+//! path goes through binette local-access descriptors and thunks rather than a
+//! separate Swift-native binette codec.
 //!
 //! # Usage: In Your build.rs
 //!

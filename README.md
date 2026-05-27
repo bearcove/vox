@@ -30,9 +30,9 @@ pub trait Calculator {
 
 Implementations for other languages are **generated from Rust definitions**
 using Rust tooling. TypeScript is the active non-Rust runtime in the binette
-migration. Swift support is parked for now; the expected next Swift path is to
-use the Rust binette implementation through FFI rather than maintaining a
-separate Swift-native codec.
+migration. Swift is coming back through binette's C ABI local-access surface:
+Swift describes its local values with descriptors and thunks, while binette
+remains the shared wire/schema/value layer.
 
 ## Implementing a Service
 
@@ -144,7 +144,7 @@ let client = DownstreamClient::new(caller);
 |----------|--------|
 | Rust | Reference implementation |
 | TypeScript | Generated client/server |
-| Swift | Parked during binette migration; likely Rust FFI codec |
+| Swift | Binette C ABI local-access integration in progress |
 
 ## Transport Bindings
 
@@ -161,7 +161,7 @@ let client = DownstreamClient::new(caller);
 ```
 rust/           # Rust implementation
 typescript/     # TypeScript packages
-swift/          # Parked Swift status; no active runtime
+swift/          # Swift/binette local-access canaries
 spec/           # Compliance test suite
 docs/           # Specifications
 ```

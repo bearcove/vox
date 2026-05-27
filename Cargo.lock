@@ -252,7 +252,6 @@ dependencies = [
  "blake3",
  "facet",
  "facet-core",
- "facet-json",
  "facet-reflect",
  "facet-value",
  "libc",

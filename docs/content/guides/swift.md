@@ -1,15 +1,19 @@
 +++
 title = "Swift Status"
-description = "Current status of Swift support during the binette migration."
+description = "Current status of Swift support through binette local access."
 weight = 22
 +++
 
-Swift support is parked during the binette migration.
+Swift support is being rebuilt around binette local access.
 
-The expected next Swift path is a Rust FFI codec boundary: binette stays in
-Rust, and Swift calls into that implementation instead of maintaining a
-separate Swift-native codec. The old descriptor-driven Swift codegen path is
-not part of the active binette protocol direction.
+The wire contract is binette, not Swift and not Rust. Swift describes local
+values by handing binette a tree of C ABI descriptors: layout facts, field
+offsets, enum projection/constructor thunks, sequence thunks, option layout,
+and external attachment markers such as Vox channels. The shared binette
+runtime then uses the same schema/value machinery as Rust.
 
-Current protocol documentation covers Rust and TypeScript. Swift material will
-be rewritten when the FFI-backed Swift path is active again.
+The current Swift work in this repository is a canary for that boundary. It
+depends on the local binette checkout's Swift probes and verifies that a
+Vox-shaped Swift value can cross the descriptor import surface. Full Swift RPC
+client/server support will build on this path rather than reintroducing a
+separate Swift-native codec.
