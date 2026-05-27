@@ -100,7 +100,13 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         )
 
         let encoded = try writerCodec.encode(&writerValue)
-        let decodedValue = try readerCodec.decode(encoded, writer: writerCodec, as: VoxSwiftCallReader.self)
+        let decodedValue = try writerCodec.withSchemaBundle { writerSchema in
+            try readerCodec.decode(
+                encoded,
+                writerSchemaBundle: writerSchema,
+                as: VoxSwiftCallReader.self
+            )
+        }
 
         XCTAssertEqual(decodedValue.method, writerValue.method)
         XCTAssertEqual(decodedValue.title, writerValue.title)

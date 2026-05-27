@@ -58,12 +58,22 @@ public final class VoxSwiftLocalCodec {
     }
 
     public func decode<T>(_ bytes: [UInt8], writer: VoxSwiftLocalCodec, as _: T.Type) throws -> T {
+        try writer.withSchemaBundle { writerSchema in
+            try decode(bytes, writerSchemaBundle: writerSchema, as: T.self)
+        }
+    }
+
+    public func decode<T>(
+        _ bytes: [UInt8],
+        writerSchemaBundle: UnsafeBufferPointer<UInt8>,
+        as _: T.Type
+    ) throws -> T {
         let decoded = UnsafeMutablePointer<T>.allocate(capacity: 1)
         let status = bytes.withUnsafeBufferPointer { buffer in
             binette_local_decode_with_schema_bundles(
                 handle,
-                UnsafePointer(writer.schemaBundle.ptr),
-                writer.schemaBundle.len,
+                writerSchemaBundle.baseAddress,
+                writerSchemaBundle.count,
                 UnsafePointer(schemaBundle.ptr),
                 schemaBundle.len,
                 buffer.baseAddress,
