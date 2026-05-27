@@ -1,4 +1,4 @@
-//! Tests for different transport modes (bare, stable, CBOR handshake).
+//! Tests for different transport modes with the binette handshake.
 
 use vox::memory_link_pair;
 
@@ -17,7 +17,7 @@ impl Echo for EchoService {
 }
 
 #[tokio::test]
-async fn call_through_cbor_handshake_reaches_handler() {
+async fn call_through_binette_handshake_reaches_handler() {
     let (client_link, server_link) = memory_link_pair(16);
 
     let server = tokio::spawn(async move {

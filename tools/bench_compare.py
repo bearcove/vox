@@ -115,10 +115,14 @@ def comparison_label(row: BenchRow) -> str:
     op = row.path[2]
     tail = row.path[3:]
     aliases = {
-        "jit_decode": "optimized decode",
-        "stencil_decode": "optimized decode",
-        "jit_encode": "optimized encode",
-        "stencil_encode": "optimized encode",
+        "jit_decode": "strict decode",
+        "strict_decode": "strict decode",
+        "stencil_decode": "hybrid decode",
+        "hybrid_decode": "hybrid decode",
+        "jit_encode": "strict encode",
+        "strict_encode": "strict encode",
+        "stencil_encode": "hybrid encode",
+        "hybrid_encode": "hybrid encode",
         "reflective_decode": "interpreted decode",
         "interp_decode": "interpreted decode",
         "reflective_encode": "interpreted encode",
@@ -128,6 +132,22 @@ def comparison_label(row: BenchRow) -> str:
     if tail:
         return " / ".join((label, *tail))
     return label
+
+
+def comparison_sort_key(label: str) -> tuple[int, int, str]:
+    mode_order = {
+        "interpreted": 0,
+        "hybrid": 1,
+        "strict": 2,
+    }
+    op_order = {
+        "encode": 0,
+        "decode": 1,
+    }
+    words = label.split()
+    mode = mode_order.get(words[0], 9) if words else 9
+    op = op_order.get(words[1], 9) if len(words) > 1 else 9
+    return (op, mode, label)
 
 
 def emit_html(rows: list[BenchRow], output: Path) -> None:
@@ -141,7 +161,7 @@ def emit_html(rows: list[BenchRow], output: Path) -> None:
     groups = []
     for group, labels in sorted(by_group.items()):
         entries = []
-        for label, source_rows in sorted(labels.items()):
+        for label, source_rows in sorted(labels.items(), key=lambda item: comparison_sort_key(item[0])):
             values = [
                 {
                     "source": source,

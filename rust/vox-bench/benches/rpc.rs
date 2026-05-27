@@ -184,9 +184,19 @@ mod codec {
         });
     }
 
-    fn stencil_encode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
+    fn hybrid_encode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
         let encoder = binette::hybrid_stencil_encoder_from_plan::<T>(&fixture.writer_plan)
             .expect("binette stencil encoder");
+        bencher.bench_local(|| {
+            black_box(
+                binette::encode_to_vec_with_stencil(black_box(&fixture.value), &encoder).unwrap(),
+            )
+        });
+    }
+
+    fn strict_encode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
+        let encoder = binette::strict_stencil_encoder_from_plan::<T>(&fixture.writer_plan)
+            .expect("binette strict stencil encoder");
         bencher.bench_local(|| {
             black_box(
                 binette::encode_to_vec_with_stencil(black_box(&fixture.value), &encoder).unwrap(),
@@ -207,10 +217,22 @@ mod codec {
         });
     }
 
-    fn stencil_decode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
+    fn hybrid_decode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
         let decoder =
             binette::hybrid_stencil_decoder_for::<T>(fixture.writer_plan.root(), &fixture.registry)
                 .expect("binette stencil decoder");
+        bencher.bench_local(|| {
+            black_box(
+                binette::decode_from_slice_with_stencil::<T>(black_box(&fixture.bytes), &decoder)
+                    .unwrap(),
+            )
+        });
+    }
+
+    fn strict_decode<T: Facet<'static>>(bencher: Bencher, fixture: &BinetteFixture<T>) {
+        let decoder =
+            binette::strict_stencil_decoder_for::<T>(fixture.writer_plan.root(), &fixture.registry)
+                .expect("binette strict stencil decoder");
         bencher.bench_local(|| {
             black_box(
                 binette::decode_from_slice_with_stencil::<T>(black_box(&fixture.bytes), &decoder)
@@ -229,9 +251,9 @@ mod codec {
         }
 
         #[divan::bench(args = [1, 4, 16])]
-        fn stencil_encode(bencher: Bencher, n: usize) {
+        fn hybrid_encode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::new((make_gnarly_payload(n, 0),));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
         }
 
         #[divan::bench(args = [1, 4, 16])]
@@ -241,9 +263,9 @@ mod codec {
         }
 
         #[divan::bench(args = [1, 4, 16])]
-        fn stencil_decode(bencher: Bencher, n: usize) {
+        fn hybrid_decode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::<GnarlyArgs>::new((make_gnarly_payload(n, 0),));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
         }
     }
 
@@ -259,11 +281,11 @@ mod codec {
         }
 
         #[divan::bench(args = [1, 4, 16])]
-        fn stencil_encode(bencher: Bencher, n: usize) {
+        fn hybrid_encode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::new(Ok::<_, VoxError<std::convert::Infallible>>(
                 make_gnarly_payload(n, 0),
             ));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
         }
 
         #[divan::bench(args = [1, 4, 16])]
@@ -273,9 +295,9 @@ mod codec {
         }
 
         #[divan::bench(args = [1, 4, 16])]
-        fn stencil_decode(bencher: Bencher, n: usize) {
+        fn hybrid_decode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::<GnarlyResponse>::new(Ok(make_gnarly_payload(n, 0)));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
         }
     }
 
@@ -290,9 +312,15 @@ mod codec {
         }
 
         #[divan::bench]
-        fn stencil_encode(bencher: Bencher) {
+        fn hybrid_encode(bencher: Bencher) {
             let fixture = BinetteFixture::new(make_wide(0xDEAD_BEEF));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
+        }
+
+        #[divan::bench]
+        fn strict_encode(bencher: Bencher) {
+            let fixture = BinetteFixture::new(make_wide(0xDEAD_BEEF));
+            super::strict_encode(bencher, &fixture);
         }
 
         #[divan::bench]
@@ -302,9 +330,15 @@ mod codec {
         }
 
         #[divan::bench]
-        fn stencil_decode(bencher: Bencher) {
+        fn hybrid_decode(bencher: Bencher) {
             let fixture = BinetteFixture::<WideStruct>::new(make_wide(0xDEAD_BEEF));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
+        }
+
+        #[divan::bench]
+        fn strict_decode(bencher: Bencher) {
+            let fixture = BinetteFixture::<WideStruct>::new(make_wide(0xDEAD_BEEF));
+            super::strict_decode(bencher, &fixture);
         }
     }
 
@@ -319,9 +353,15 @@ mod codec {
         }
 
         #[divan::bench(args = [0u32, 1, 7, 9, 11, 15])]
-        fn stencil_encode(bencher: Bencher, variant: u32) {
+        fn hybrid_encode(bencher: Bencher, variant: u32) {
             let fixture = BinetteFixture::new(make_many_variants(variant));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
+        }
+
+        #[divan::bench(args = [0u32, 1, 7, 9, 11, 15])]
+        fn strict_encode(bencher: Bencher, variant: u32) {
+            let fixture = BinetteFixture::new(make_many_variants(variant));
+            super::strict_encode(bencher, &fixture);
         }
 
         #[divan::bench(args = [0u32, 1, 7, 9, 11, 15])]
@@ -331,9 +371,15 @@ mod codec {
         }
 
         #[divan::bench(args = [0u32, 1, 7, 9, 11, 15])]
-        fn stencil_decode(bencher: Bencher, variant: u32) {
+        fn hybrid_decode(bencher: Bencher, variant: u32) {
             let fixture = BinetteFixture::<ManyVariants>::new(make_many_variants(variant));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
+        }
+
+        #[divan::bench(args = [0u32, 1, 7, 9, 11, 15])]
+        fn strict_decode(bencher: Bencher, variant: u32) {
+            let fixture = BinetteFixture::<ManyVariants>::new(make_many_variants(variant));
+            super::strict_decode(bencher, &fixture);
         }
     }
 
@@ -348,9 +394,9 @@ mod codec {
         }
 
         #[divan::bench(args = [4u32, 6, 8])]
-        fn stencil_encode(bencher: Bencher, depth: u32) {
+        fn hybrid_encode(bencher: Bencher, depth: u32) {
             let fixture = BinetteFixture::new(make_tree(depth, 0xC0FFEE));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
         }
 
         #[divan::bench(args = [4u32, 6, 8])]
@@ -360,9 +406,9 @@ mod codec {
         }
 
         #[divan::bench(args = [4u32, 6, 8])]
-        fn stencil_decode(bencher: Bencher, depth: u32) {
+        fn hybrid_decode(bencher: Bencher, depth: u32) {
             let fixture = BinetteFixture::<Tree>::new(make_tree(depth, 0xC0FFEE));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
         }
     }
 
@@ -377,9 +423,15 @@ mod codec {
         }
 
         #[divan::bench(args = [64usize, 256, 1024])]
-        fn stencil_encode(bencher: Bencher, n: usize) {
+        fn hybrid_encode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::new(make_numeric_buffer(n, 0));
-            super::stencil_encode(bencher, &fixture);
+            super::hybrid_encode(bencher, &fixture);
+        }
+
+        #[divan::bench(args = [64usize, 256, 1024])]
+        fn strict_encode(bencher: Bencher, n: usize) {
+            let fixture = BinetteFixture::new(make_numeric_buffer(n, 0));
+            super::strict_encode(bencher, &fixture);
         }
 
         #[divan::bench(args = [64usize, 256, 1024])]
@@ -389,9 +441,9 @@ mod codec {
         }
 
         #[divan::bench(args = [64usize, 256, 1024])]
-        fn stencil_decode(bencher: Bencher, n: usize) {
+        fn hybrid_decode(bencher: Bencher, n: usize) {
             let fixture = BinetteFixture::<NumericBuffer>::new(make_numeric_buffer(n, 0));
-            super::stencil_decode(bencher, &fixture);
+            super::hybrid_decode(bencher, &fixture);
         }
     }
 }

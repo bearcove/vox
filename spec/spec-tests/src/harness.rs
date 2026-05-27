@@ -1332,7 +1332,7 @@ where
             vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
         )
         .await
-        .map_err(|e| format!("server CBOR handshake: {e}"));
+        .map_err(|e| format!("server binette handshake: {e}"));
         let handshake_result = match handshake_result {
             Ok(r) => r,
             Err(err) => {
@@ -1377,7 +1377,7 @@ where
         vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
     )
     .await
-    .map_err(|e| format!("client CBOR handshake: {e}"))?;
+    .map_err(|e| format!("client binette handshake: {e}"))?;
     let client_conduit =
         vox_core::BareConduit::<vox_types::MessageFamily, _>::new(vox_types::SplitLink {
             tx: client_tx,
