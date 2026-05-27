@@ -23,6 +23,7 @@ jit = ["dep:vox-jit"]
 
 [dependencies]
 bitflags.workspace = true
+binette.workspace = true
 blake3.workspace = true
 bytes.workspace = true
 facet.workspace = true

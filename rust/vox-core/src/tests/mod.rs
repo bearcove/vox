@@ -322,7 +322,7 @@ async fn rx_recv_decodes_channel_items() {
     let (tx_items, rx_items) = vox_types::channel_mailbox("vox_core.tests.rx_recv_items", 4);
     rx.bind(rx_items);
 
-    let payload_bytes = vox_postcard::to_vec(&42_u32).expect("serialize channel item");
+    let payload_bytes = binette::encode_to_vec(&42_u32).expect("serialize channel item");
     let backing = Backing::Boxed(payload_bytes.into_boxed_slice());
     let item_ref = SelfRef::try_new(backing, |bytes| {
         Ok::<_, std::convert::Infallible>(ChannelItem {

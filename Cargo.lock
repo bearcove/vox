@@ -4393,6 +4393,7 @@ dependencies = [
 name = "vox-types"
 version = "0.8.2"
 dependencies = [
+ "binette",
  "bitflags 2.11.1",
  "blake3",
  "bytes",

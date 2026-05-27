@@ -1,4 +1,3 @@
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
@@ -6,12 +5,10 @@ use std::panic::Location;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use facet::Facet;
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 use facet_core::ConstTypeId;
 use facet_core::PtrConst;
 #[cfg(target_arch = "wasm32")]
@@ -28,10 +25,9 @@ use crate::{
 };
 use crate::{ChannelId, ConnectionId};
 
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 struct ChannelDecodePlan {
-    plan: vox_postcard::TranslationPlan,
-    registry: vox_schema::SchemaRegistry,
+    root: binette::TypeRef,
+    registry: binette::SchemaRegistry,
 }
 
 // ---------------------------------------------------------------------------
@@ -631,7 +627,6 @@ fn observe_optional_replenisher_channel(
     }
 }
 
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 fn channel_decode_plan<T: Facet<'static>>() -> Arc<ChannelDecodePlan> {
     static PLANS: OnceLock<Mutex<HashMap<ConstTypeId, Arc<ChannelDecodePlan>>>> = OnceLock::new();
 
@@ -641,44 +636,24 @@ fn channel_decode_plan<T: Facet<'static>>() -> Arc<ChannelDecodePlan> {
     plans
         .entry(key)
         .or_insert_with(|| {
+            let writer_plan =
+                binette::writer_plan_for::<T>().expect("build binette channel payload plan");
+            let mut registry = binette::SchemaRegistry::new();
+            registry
+                .install_bundle(writer_plan.schema_bundle())
+                .expect("install binette channel payload schema");
             Arc::new(ChannelDecodePlan {
-                plan: vox_postcard::build_identity_plan(T::SHAPE),
-                registry: vox_schema::SchemaRegistry::new(),
+                root: writer_plan.root().clone(),
+                registry,
             })
         })
         .clone()
 }
 
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
 fn decode_channel_payload<T: Facet<'static>>(bytes: &'static [u8]) -> Result<T, RxError> {
-    if vox_jit::require_pure_jit() && vox_jit::force_fallback() {
-        panic!(
-            "VOX_JIT_REQUIRE_PURE=1 but channel payload decode for '{}' was forced off by VOX_CODEC",
-            T::SHAPE
-        );
-    }
-
     let resolved = channel_decode_plan::<T>();
-    match vox_jit::global_runtime().try_decode_borrowed::<T>(
-        bytes,
-        0,
-        &resolved.plan,
-        &resolved.registry,
-    ) {
-        Some(result) => result.map_err(RxError::Deserialize),
-        None if vox_jit::require_pure_jit() => {
-            panic!(
-                "VOX_JIT_REQUIRE_PURE=1 but channel payload decode for '{}' did not use the JIT",
-                T::SHAPE
-            )
-        }
-        None => vox_postcard::from_slice_borrowed(bytes).map_err(RxError::Deserialize),
-    }
-}
-
-#[cfg(not(all(feature = "jit", not(target_arch = "wasm32"))))]
-fn decode_channel_payload<T: Facet<'static>>(bytes: &'static [u8]) -> Result<T, RxError> {
-    vox_postcard::from_slice_borrowed(bytes).map_err(RxError::Deserialize)
+    binette::decode_from_slice::<T>(bytes, &resolved.root, &resolved.registry)
+        .map_err(RxError::Deserialize)
 }
 
 fn decode_channel_item<T>(msg: SelfRef<ChannelItem<'static>>) -> Result<Option<SelfRef<T>>, RxError>
@@ -1648,7 +1623,7 @@ pub enum RxError {
     Unbound,
     Reset,
     ConnectionClosed(ConnectionCloseReason),
-    Deserialize(vox_postcard::error::DeserializeError),
+    Deserialize(binette::DecodeError),
     Protocol(String),
 }
 
@@ -1747,6 +1722,10 @@ mod tests {
     use super::*;
     use crate::{Backing, ChannelClose, ChannelItem, ChannelReset, Metadata, SelfRef};
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn encode_binette<T: Facet<'static>>(value: &T) -> Vec<u8> {
+        binette::encode_to_vec(value).expect("encode binette test value")
+    }
 
     struct CountingSink {
         send_calls: AtomicUsize,
@@ -1978,7 +1957,7 @@ mod tests {
         rx.bind(rx_inner);
         rx.replenisher.inner = Some(replenisher.clone());
 
-        let encoded = vox_postcard::to_vec(&123_u32).expect("serialize test item");
+        let encoded = encode_binette(&123_u32);
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
@@ -2065,7 +2044,7 @@ mod tests {
 
         let mut rx = Rx::<u32>::paired(core);
 
-        let encoded = vox_postcard::to_vec(&321_u32).expect("serialize test item");
+        let encoded = encode_binette(&321_u32);
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {

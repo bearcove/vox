@@ -1084,8 +1084,14 @@ async fn replay_sealed_response(
     encoded_response: &[u8],
     response_shape: Option<&'static facet_core::Shape>,
 ) -> Result<(), ()> {
+    let writer_plan = binette::writer_plan_for::<RequestResponse<'static>>().map_err(|_| ())?;
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(writer_plan.schema_bundle())
+        .map_err(|_| ())?;
     let mut response: RequestResponse<'_> =
-        vox_postcard::from_slice_borrowed(encoded_response).map_err(|_| ())?;
+        binette::decode_from_slice(encoded_response, writer_plan.root(), &registry)
+            .map_err(|_| ())?;
     if let Some(shape) = response_shape {
         sender.prepare_replay_schemas(request_id, method_id, shape, &mut response);
     } else {
@@ -1150,12 +1156,13 @@ impl ReplySink for DriverReplySink {
             sender.prepare_response_for_method(self.request_id, self.method_id, &mut response);
 
             let schemas_for_wire = std::mem::take(&mut response.schemas);
-            #[cfg(not(target_arch = "wasm32"))]
-            let encoded_bytes: Vec<u8> =
-                vox_jit::encode!(&response).expect("JIT encode failed for response store");
-            #[cfg(target_arch = "wasm32")]
-            let encoded_bytes: Vec<u8> =
-                vox_postcard::to_vec(&response).expect("postcard encode failed for response store");
+            let writer_plan = binette::writer_plan_for::<RequestResponse<'static>>()
+                .expect("binette response store writer plan");
+            let encoded_bytes: Vec<u8> = binette::encode_peek_to_vec_with_plan(
+                facet_reflect::Peek::new(&response),
+                &writer_plan,
+            )
+            .expect("binette encode failed for response store");
             let encoded_for_store: PostcardPayload = encoded_bytes.into();
             response.schemas = schemas_for_wire;
 

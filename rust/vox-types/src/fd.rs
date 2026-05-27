@@ -1,6 +1,6 @@
 //! `Fd` — a file descriptor that travels across a vox connection.
 //!
-//! On the wire an [`Fd`] is encoded as a small varint *index* into a
+//! On the wire an [`Fd`] is encoded as a small integer *index* into a
 //! per-message fd table; the descriptors themselves travel out-of-band in
 //! `SCM_RIGHTS` ancillary data on a Unix-domain socket. This mirrors the
 //! `Tx<T>` → [`ChannelId`](crate::ChannelId) indirection: the bytes on the
@@ -99,7 +99,7 @@ mod unix {
         inner: Cell<Option<OwnedFd>>,
         /// Scratch the adapter points `OpaqueSerialize` at. Holds
         /// `NOT_COLLECTED` until the first `serialize_map`, then the index
-        /// assigned by the send collector. Serialized as a postcard varint.
+        /// assigned by the send collector. Serialized as a binette `u32`.
         wire_index: Cell<u32>,
     }
 
@@ -292,10 +292,10 @@ mod unix {
                 OpaqueDeserialize::Borrowed(b) => *b,
                 OpaqueDeserialize::Owned(b) => b.as_slice(),
             };
-            let mut cursor = vox_postcard::decode::Cursor::new(bytes);
-            let index = cursor
-                .read_varint()
-                .map_err(|e| format!("Fd index varint: {e}"))? as u32;
+            let index_bytes: [u8; 4] = bytes
+                .try_into()
+                .map_err(|_| format!("Fd index expected 4 bytes, got {}", bytes.len()))?;
+            let index = u32::from_le_bytes(index_bytes);
             let owned = take_fd(index)?;
             Ok(Fd {
                 inner: Cell::new(Some(owned)),
@@ -330,17 +330,21 @@ mod unix {
         }
 
         #[test]
-        fn fd_round_trips_through_postcard() {
+        fn fd_round_trips_through_binette() {
             let file = temp_file_with(b"vox-fd-payload");
             let msg = Fd::new(OwnedFd::from(file));
+            let plan = binette::writer_plan_for::<Fd>().expect("writer plan");
+            let mut registry = binette::SchemaRegistry::new();
+            registry.install_bundle(plan.schema_bundle()).unwrap();
 
-            let (bytes, collected) = collect_fds(|| vox_postcard::to_vec(&msg).expect("encode"));
+            let (bytes, collected) =
+                collect_fds(|| binette::encode_to_vec_with_plan(&msg, &plan).expect("encode"));
             assert_eq!(collected.len(), 1, "one fd collected");
-            assert_eq!(&bytes[..4], &1u32.to_le_bytes());
-            assert_eq!(bytes[4], 0);
+            assert_eq!(&bytes[..4], &4u32.to_le_bytes());
+            assert_eq!(&bytes[4..8], &0u32.to_le_bytes());
 
             let decoded: Fd = provide_fds(collected, || {
-                vox_postcard::from_slice(&bytes).expect("decode")
+                binette::decode_from_slice(&bytes, plan.root(), &registry).unwrap()
             });
 
             let mut f = std::fs::File::from(decoded.into_owned_fd().expect("owned fd"));
@@ -352,8 +356,14 @@ mod unix {
         #[test]
         fn missing_source_is_a_clean_error() {
             let msg = Fd::new(OwnedFd::from(temp_file_with(b"x")));
-            let (bytes, _fds) = collect_fds(|| vox_postcard::to_vec(&msg).unwrap());
-            let r = std::panic::catch_unwind(|| vox_postcard::from_slice::<Fd>(&bytes));
+            let plan = binette::writer_plan_for::<Fd>().expect("writer plan");
+            let mut registry = binette::SchemaRegistry::new();
+            registry.install_bundle(plan.schema_bundle()).unwrap();
+            let (bytes, _fds) =
+                collect_fds(|| binette::encode_to_vec_with_plan(&msg, &plan).unwrap());
+            let r = std::panic::catch_unwind(|| {
+                binette::decode_from_slice::<Fd>(&bytes, plan.root(), &registry)
+            });
             assert!(
                 r.is_err() || r.unwrap().is_err(),
                 "decoding an Fd with no source must fail"
