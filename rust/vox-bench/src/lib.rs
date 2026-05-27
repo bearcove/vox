@@ -3,100 +3,7 @@ pub mod pb {
     tonic::include_proto!("adder");
 }
 
-use facet::Facet;
 use spec_proto::{GnarlyAttr, GnarlyEntry, GnarlyKind, GnarlyPayload};
-use vox_jit::abi::{BorrowedDecodeFn, OwnedDecodeFn};
-use vox_jit::cache::{CompiledDecoder, CompiledEncoder};
-use vox_jit::cal::BorrowMode;
-
-pub fn jit_encode<T>(value: &T) -> Vec<u8>
-where
-    T: Facet<'static>,
-{
-    let ptr = facet::PtrConst::new((value as *const T).cast::<u8>());
-    vox_jit::global_runtime()
-        .try_encode_ptr(ptr, T::SHAPE)
-        .expect("JIT encode unsupported")
-        .expect("JIT encode failed")
-}
-
-pub fn jit_decode<T>(
-    bytes: &[u8],
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> T
-where
-    T: Facet<'static>,
-{
-    vox_jit::global_runtime()
-        .try_decode_owned::<T>(bytes, 0, plan, registry)
-        .expect("JIT decode unsupported")
-        .expect("JIT decode failed")
-}
-
-/// Resolve a pre-compiled JIT decoder for `T`. The returned reference has
-/// `'static` lifetime (entries live for the process lifetime).
-pub fn prepare_jit_decoder<T: Facet<'static>>(
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> &'static CompiledDecoder {
-    vox_jit::global_runtime()
-        .prepare_decoder(0, T::SHAPE, plan, registry, BorrowMode::Owned)
-        .expect("JIT decoder unsupported for shape")
-}
-
-/// Same as `prepare_jit_decoder` but for borrowed-mode decoders.
-pub fn prepare_jit_decoder_borrowed<T: Facet<'static>>(
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> &'static CompiledDecoder {
-    vox_jit::global_runtime()
-        .prepare_decoder(0, T::SHAPE, plan, registry, BorrowMode::Borrowed)
-        .expect("JIT borrowed decoder unsupported for shape")
-}
-
-/// Resolve the raw owned-mode decode function pointer for `T`. Bench code
-/// holds this outside the timed loop so the in-loop work is just an
-/// indirect call — comparable to serde's monomorphized `from_bytes`. No
-/// per-call `OnceLock` acquire-load.
-pub fn prepare_jit_decoder_owned_fn<T: Facet<'static>>(
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> OwnedDecodeFn {
-    prepare_jit_decoder::<T>(plan, registry)
-        .owned_fn_ptr()
-        .expect("owned decode_fn missing")
-}
-
-/// Same as `prepare_jit_decoder_owned_fn` but for borrowed-mode decoders.
-pub fn prepare_jit_decoder_borrowed_fn<T: Facet<'static>>(
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> BorrowedDecodeFn {
-    prepare_jit_decoder_borrowed::<T>(plan, registry)
-        .borrowed_fn_ptr()
-        .expect("borrowed decode_fn missing")
-}
-
-/// Resolve a pre-compiled JIT encoder for `T`.
-pub fn prepare_jit_encoder<T: Facet<'static>>() -> &'static CompiledEncoder {
-    vox_jit::global_runtime()
-        .prepare_encoder(T::SHAPE)
-        .expect("JIT encoder unsupported for shape")
-}
-
-/// Decode `bytes` via a pre-resolved JIT decoder. Skips the global cache
-/// lookup that `jit_decode` performs on every call — fair comparison vs
-/// `postcard::from_bytes` which has zero per-call dispatch overhead.
-pub fn jit_decode_pre<T: Facet<'static>>(decode_fn: OwnedDecodeFn, bytes: &[u8]) -> T {
-    vox_jit::decode_owned_with::<T>(decode_fn, bytes).expect("JIT decode failed")
-}
-
-/// Encode `value` via a pre-resolved JIT encoder.
-pub fn jit_encode_pre<T: Facet<'static>>(encoder: &'static CompiledEncoder, value: &T) -> Vec<u8> {
-    let ptr = facet::PtrConst::new((value as *const T).cast::<u8>());
-    vox_jit::encode_with(encoder, ptr).expect("JIT encode failed")
-}
 
 pub fn make_gnarly_payload(entry_count: usize, seq: usize) -> GnarlyPayload {
     let entries = (0..entry_count)
@@ -168,95 +75,18 @@ pub fn make_gnarly_payload(entry_count: usize, seq: usize) -> GnarlyPayload {
     }
 }
 
-/// Borrowed mirror of `spec_proto::GnarlyPayload` used by codec benches to
-/// measure zero-copy decode (where every leaf string and byte slice points
-/// directly into the input buffer instead of being heap-allocated). The wire
-/// format matches the owned variant byte-for-byte (postcard encodes
-/// `String`/`&str` and `Vec<u8>`/`&[u8]` identically), so the same encoded
-/// bytes feed both decoders.
-///
-/// We **duplicate** the types here rather than parameterizing
-/// `spec_proto::GnarlyPayload` over a lifetime — the spec types are the
-/// authoritative shape and shouldn't carry bench-only lifetime baggage.
-pub mod borrowed {
-    use facet::Facet;
-    use serde::{Deserialize, Serialize};
-
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
-    pub struct GnarlyAttr<'a> {
-        #[serde(borrow)]
-        pub key: &'a str,
-        #[serde(borrow)]
-        pub value: &'a str,
-    }
-
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
-    #[repr(u8)]
-    pub enum GnarlyKind<'a> {
-        File {
-            #[serde(borrow)]
-            mime: &'a str,
-            #[serde(borrow)]
-            tags: Vec<&'a str>,
-        } = 0,
-        Directory {
-            child_count: u32,
-            #[serde(borrow)]
-            children: Vec<&'a str>,
-        } = 1,
-        Symlink {
-            #[serde(borrow)]
-            target: &'a str,
-            hops: Vec<u32>,
-        } = 2,
-    }
-
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
-    pub struct GnarlyEntry<'a> {
-        pub id: u64,
-        pub parent: Option<u64>,
-        #[serde(borrow)]
-        pub name: &'a str,
-        #[serde(borrow)]
-        pub path: &'a str,
-        #[serde(borrow)]
-        pub attrs: Vec<GnarlyAttr<'a>>,
-        #[serde(borrow)]
-        pub chunks: Vec<&'a [u8]>,
-        #[serde(borrow)]
-        pub kind: GnarlyKind<'a>,
-    }
-
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
-    pub struct GnarlyPayload<'a> {
-        pub revision: u64,
-        #[serde(borrow)]
-        pub mount: &'a str,
-        #[serde(borrow)]
-        pub entries: Vec<GnarlyEntry<'a>>,
-        #[serde(borrow)]
-        pub footer: Option<&'a str>,
-        #[serde(borrow)]
-        pub digest: &'a [u8],
-    }
-}
-
 /// Shape catalogue for diverse codec benches: each type stresses a different
 /// axis of decode/encode that GnarlyPayload doesn't (which is dominated by
-/// "many small allocations + lots of strings"). Each derives both `Facet` and
-/// `serde::{Serialize, Deserialize}` from a single definition since vox-bench
-/// owns the types — postcard's wire format is the same for both codecs.
+/// "many small allocations + lots of strings").
 pub mod shapes {
     use facet::Facet;
-    use serde::{Deserialize, Serialize};
 
     /// 64 primitive fields. Tests per-field decode dispatch and the cost of
-    /// emitting a long straight-line decoder. Zero allocations: pure varint /
-    /// fixed-bytes reads. JIT and serde should both be very fast here; the
-    /// gap (if any) reflects raw codegen quality on a flat-struct workload.
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
+    /// emitting a long straight-line decoder. Zero allocations: pure scalar
+    /// reads and writes.
+    #[derive(Debug, Clone, PartialEq, Facet)]
     pub struct WideStruct {
-        // 16 × u32 (varint, 1-5 bytes each)
+        // 16 x u32
         pub a00: u32,
         pub a01: u32,
         pub a02: u32,
@@ -273,7 +103,7 @@ pub mod shapes {
         pub a13: u32,
         pub a14: u32,
         pub a15: u32,
-        // 16 × i64 (zigzag varint)
+        // 16 x i64
         pub b00: i64,
         pub b01: i64,
         pub b02: i64,
@@ -396,11 +226,10 @@ pub mod shapes {
         }
     }
 
-    /// 16 variants with diverse primitive payloads. Tests enum dispatch (the
-    /// varint variant-index read + branch-on-variant pattern) at scale. Each
+    /// 16 variants with diverse primitive payloads. Tests enum dispatch at scale. Each
     /// variant has a different shape so the per-variant decode body is also
     /// non-trivial. Constructor cycles through variants by `seq % 16`.
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Facet)]
     #[repr(u8)]
     pub enum ManyVariants {
         V00 = 0,
@@ -464,11 +293,11 @@ pub mod shapes {
         }
     }
 
-    /// Recursive binary tree. Tests JIT recursion + heavy `Box<T>` allocation
+    /// Recursive binary tree. Tests recursive codec paths + heavy `Box<T>` allocation
     /// patterns. A balanced tree of depth d has 2^d leaves and 2^d - 1 internal
     /// nodes, requiring 2*(2^d - 1) Box allocations to decode. Good stress for
-    /// the allocator and for the JIT's nested-decode call discipline.
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
+    /// the allocator and for nested-decode call discipline.
+    #[derive(Debug, Clone, PartialEq, Facet)]
     #[repr(u8)]
     pub enum Tree {
         Leaf(u64) = 0,
@@ -487,12 +316,9 @@ pub mod shapes {
     }
 
     /// Numerical buffer: large `Vec<f32>` + `Vec<f64>` payloads, no strings.
-    /// Audio-sample-shaped workload. f32/f64 are postcard-encoded as fixed
-    /// 4/8 little-endian bytes (NOT varint), so on LE the wire layout matches
-    /// the in-memory `[f32]` / `[f64]` slice byte-for-byte. The JIT can
-    /// memcpy these directly (alignment guaranteed by the allocator); current
-    /// code falls back to a per-element loop, leaving wins on the table.
-    #[derive(Debug, Clone, PartialEq, Facet, Serialize, Deserialize)]
+    /// Audio-sample-shaped workload that should eventually hit binette bulk
+    /// list paths for primitive vectors.
+    #[derive(Debug, Clone, PartialEq, Facet)]
     pub struct NumericBuffer {
         pub sample_rate: u32,
         pub channels: u32,
