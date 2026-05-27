@@ -65,7 +65,7 @@ fn decode_handshake(bytes: &[u8]) -> Result<HandshakeMessage, HandshakeError> {
         .map_err(|e| HandshakeError::Decode(e.to_string()))
 }
 
-/// Send a Binette-encoded handshake message on a raw link.
+/// Send a binette-encoded handshake message on a raw link.
 async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(), HandshakeError> {
     let bytes = encode_handshake(msg)?;
     vox_types::dlog!(
@@ -76,7 +76,7 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
     tx.send(bytes).await.map_err(HandshakeError::Io)
 }
 
-/// Receive and decode a Binette handshake message from a raw link.
+/// Receive and decode a binette handshake message from a raw link.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()
@@ -103,7 +103,7 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 
 // r[impl session.handshake]
 // r[impl session.handshake.self-describing]
-/// Perform the Binette handshake as the initiator.
+/// Perform the binette handshake as the initiator.
 ///
 /// Three-step exchange:
 /// 1. Send Hello
@@ -177,7 +177,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 
 // r[impl session.handshake]
 // r[impl session.handshake.self-describing]
-/// Perform the Binette handshake as the acceptor.
+/// Perform the binette handshake as the acceptor.
 ///
 /// Three-step exchange:
 /// 1. Receive Hello

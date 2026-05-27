@@ -87,7 +87,7 @@ pub fn acceptor_conduit<I: IntoConduit>(
     SessionAcceptorBuilder::new(into_conduit.into_conduit(), handshake_result)
 }
 
-/// Convenience: perform CBOR handshake as initiator on a raw link, then return
+/// Convenience: perform binette handshake as initiator on a raw link, then return
 /// a builder with the conduit ready to go.
 pub async fn initiator_on_link<L: Link>(
     link: L,
@@ -112,7 +112,7 @@ where
     ))
 }
 
-/// Convenience: perform CBOR handshake as acceptor on a raw link, then return
+/// Convenience: perform binette handshake as acceptor on a raw link, then return
 /// a builder with the conduit ready to go.
 pub async fn acceptor_on_link<L: Link>(
     link: L,
@@ -1082,7 +1082,7 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
         C::Tx: MaybeSend + MaybeSync + 'static,
         C::Rx: MaybeSend + 'static,
     {
-        // With the CBOR handshake, resume detection happens at the link level
+        // With the binette handshake, resume detection happens at the link level
         // before the conduit is created. If the peer sent a resume key in the Hello
         // that matches a known session, we resume. Otherwise, we establish.
         if let (Some(registry), Some(resume_key)) = (

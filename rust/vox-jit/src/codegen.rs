@@ -5939,8 +5939,8 @@ mod tests {
         ir::{from_slice_ir, lower, lower_encode, lower_with_cal},
     };
     use vox_types::{
-        BindingDirection, CborPayload, ConnectionId, Message, MessagePayload, MetadataEntry,
-        MethodId, RequestBody, RequestCall, RequestId, VoxError,
+        BindingDirection, ConnectionId, Message, MessagePayload, MetadataEntry, MethodId,
+        RequestBody, RequestCall, RequestId, SchemaPayloadBytes, VoxError,
     };
 
     fn compile_shape<T: Facet<'static>>() -> Result<(), CodegenError> {
@@ -6061,7 +6061,7 @@ mod tests {
                     method_id: MethodId(42),
                     metadata: vec![MetadataEntry::str("kind", "bench")],
                     args: vox_types::Payload::outgoing(args),
-                    schemas: CborPayload::default(),
+                    schemas: SchemaPayloadBytes::default(),
                 }),
             }),
         }
@@ -6073,7 +6073,7 @@ mod tests {
             payload: MessagePayload::SchemaMessage(vox_types::SchemaMessage {
                 method_id: MethodId(42),
                 direction: BindingDirection::Args,
-                schemas: CborPayload(vec![0xde, 0xad, 0xbe, 0xef, 7, 8, 9]),
+                schemas: SchemaPayloadBytes(vec![0xde, 0xad, 0xbe, 0xef, 7, 8, 9]),
             }),
         }
     }

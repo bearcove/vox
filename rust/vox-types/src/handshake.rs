@@ -4,7 +4,7 @@ use crate::{ConnectionSettings, Metadata, Parity, Schema, SessionResumeKey};
 
 // r[impl session.handshake]
 // r[impl session.handshake.self-describing]
-/// CBOR-encoded handshake message exchanged before postcard traffic begins.
+/// Handshake message exchanged before framed binette traffic begins.
 #[derive(Debug, Clone, Facet)]
 #[repr(u8)]
 pub enum HandshakeMessage {
@@ -23,7 +23,7 @@ pub struct Hello {
     /// Connection limits advertised by the initiator for the root connection.
     pub connection_settings: ConnectionSettings,
     // r[impl session.handshake.protocol-schema]
-    /// The initiator's schema for MessagePayload — the postcard enum used
+    /// The initiator's schema for MessagePayload — the binette enum used
     /// for all subsequent communication.
     pub message_payload_schema: Vec<Schema>,
     /// Whether the initiator supports operation-level retry.
@@ -69,7 +69,7 @@ pub struct Sorry {
     pub reason: String,
 }
 
-/// Fixed-size resume key bytes, CBOR-serializable.
+/// Fixed-size resume key bytes, binette-serializable.
 #[derive(Debug, Clone, Facet)]
 pub struct ResumeKeyBytes {
     pub bytes: Vec<u8>,
@@ -93,7 +93,7 @@ impl ResumeKeyBytes {
     }
 }
 
-/// Result of a completed CBOR handshake.
+/// Result of a completed binette handshake.
 #[derive(Debug, Clone)]
 pub struct HandshakeResult {
     pub role: crate::SessionRole,

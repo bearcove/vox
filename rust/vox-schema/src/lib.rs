@@ -1,7 +1,7 @@
 //! Canonical schema model and wire payload types for vox.
 //!
 //! This crate contains the transport-independent schema data model, content
-//! hashing, and CBOR schema payload helpers shared by vox runtimes and codecs.
+//! hashing, and binette schema payload helpers shared by vox runtimes and codecs.
 
 use facet::{Facet, OpaqueSerialize, PtrConst};
 use facet_core::Shape;
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 // Schema data types
 // ============================================================================
 
-/// A content hash that uniquely identifies a type's postcard-level structure.
+/// A content hash that uniquely identifies a type's binette-level structure.
 ///
 /// Computed via blake3, truncated to 64 bits. The same type always produces
 /// the same TypeSchemaId regardless of connection, session, process, or
@@ -681,16 +681,16 @@ pub fn schema_child_ids(kind: &SchemaKind) -> Vec<SchemaHash> {
     refs
 }
 
-/// CBOR-encoded schema payload (schemas + method bindings).
+/// binette-encoded schema payload (schemas + method bindings).
 ///
 /// Newtype over `Vec<u8>` so the type system distinguishes raw bytes from
-/// CBOR-encoded schema data. Empty when no new schemas need to be sent.
+/// encoded schema data. Empty when no new schemas need to be sent.
 #[derive(Facet, Clone, Debug, Default)]
 #[repr(transparent)]
 #[facet(transparent)]
-pub struct CborPayload(pub Vec<u8>);
+pub struct SchemaPayloadBytes(pub Vec<u8>);
 
-impl CborPayload {
+impl SchemaPayloadBytes {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -732,7 +732,7 @@ pub enum BindingDirection {
     Response,
 }
 
-/// CBOR-encoded payload inside a schema wire message.
+/// binette-encoded payload inside a schema wire message.
 /// A struct so new fields can be added without breaking the wire format.
 #[derive(Facet, Clone, Debug)]
 pub struct SchemaPayload {
@@ -748,14 +748,22 @@ pub struct SchemaPayload {
 }
 
 impl SchemaPayload {
-    /// CBOR-encode this prepared message for embedding in RequestCall/RequestResponse.
-    pub fn to_cbor(&self) -> CborPayload {
-        CborPayload(facet_cbor::to_vec(self).expect("schema CBOR serialization should not fail"))
+    /// binette-encode this prepared message for embedding in RequestCall/RequestResponse.
+    pub fn to_binette(&self) -> SchemaPayloadBytes {
+        SchemaPayloadBytes(
+            binette::encode_to_vec(self).expect("schema payload serialization should not fail"),
+        )
     }
 
-    /// Parse a CBOR-encoded schema message from bytes.
-    pub fn from_cbor(bytes: &[u8]) -> Result<SchemaPayload, facet_cbor::CborError> {
-        facet_cbor::from_slice(bytes)
+    /// Parse a binette-encoded schema message from bytes.
+    pub fn from_binette(bytes: &[u8]) -> Result<SchemaPayload, binette::DecodeError> {
+        let bundle = binette::schema_bundle_for::<SchemaPayload>()
+            .expect("schema payload schema extraction should not fail");
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(&bundle)
+            .expect("schema payload schema should install");
+        binette::decode_from_slice(bytes, &bundle.root, &registry)
     }
 }
 

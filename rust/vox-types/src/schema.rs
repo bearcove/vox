@@ -64,7 +64,7 @@ impl std::fmt::Display for SchemaExtractError {
 /// A value for which a schema can be attached
 pub trait Schematic {
     fn direction(&self) -> BindingDirection;
-    fn attach_schemas(&mut self, schemas: CborPayload);
+    fn attach_schemas(&mut self, schemas: SchemaPayloadBytes);
 }
 
 impl<'payload> Schematic for RequestCall<'payload> {
@@ -72,7 +72,7 @@ impl<'payload> Schematic for RequestCall<'payload> {
         BindingDirection::Args
     }
 
-    fn attach_schemas(&mut self, schemas: CborPayload) {
+    fn attach_schemas(&mut self, schemas: SchemaPayloadBytes) {
         self.schemas = schemas;
     }
 }
@@ -82,7 +82,7 @@ impl<'payload> Schematic for RequestResponse<'payload> {
         BindingDirection::Response
     }
 
-    fn attach_schemas(&mut self, schemas: CborPayload) {
+    fn attach_schemas(&mut self, schemas: SchemaPayloadBytes) {
         self.schemas = schemas;
     }
 }
@@ -100,7 +100,7 @@ impl std::error::Error for SchemaExtractError {}
 // r[impl schema.tracking.sent]
 // r[impl schema.type-id.per-connection]
 pub struct SchemaSendTracker {
-    /// Per-method, per-direction: the CborPayload that was sent. Keyed by
+    /// Per-method, per-direction: the SchemaPayloadBytes that was sent. Keyed by
     /// (method_id, direction). If present, schemas were already sent.
     sent_bindings: HashSet<(MethodId, BindingDirection)>,
 
@@ -116,12 +116,12 @@ pub struct PreparedSchemaPlan {
 }
 
 impl PreparedSchemaPlan {
-    pub fn to_cbor(&self) -> CborPayload {
+    pub fn to_binette(&self) -> SchemaPayloadBytes {
         SchemaPayload {
             schemas: self.schemas.clone(),
             root: self.root.clone(),
         }
-        .to_cbor()
+        .to_binette()
     }
 }
 
@@ -196,16 +196,16 @@ impl SchemaSendTracker {
         method_id: MethodId,
         direction: BindingDirection,
         prepared: &PreparedSchemaPlan,
-    ) -> CborPayload {
+    ) -> SchemaPayloadBytes {
         let key = (method_id, direction);
         if self.sent_bindings.contains(&key) {
-            return CborPayload::default();
+            return SchemaPayloadBytes::default();
         }
         let schema_payload = SchemaPayload {
             schemas: self.unsent_schemas_for_prepared_plan(prepared),
             root: prepared.root.clone(),
         };
-        schema_payload.to_cbor()
+        schema_payload.to_binette()
     }
 
     /// Mark a previously previewed schema payload as successfully sent.
@@ -233,7 +233,7 @@ impl SchemaSendTracker {
         method_id: MethodId,
         direction: BindingDirection,
         prepared: PreparedSchemaPlan,
-    ) -> CborPayload {
+    ) -> SchemaPayloadBytes {
         let schema_payload = SchemaPayload {
             schemas: self.unsent_schemas_for_prepared_plan(&prepared),
             root: prepared.root.clone(),
@@ -245,12 +245,12 @@ impl SchemaSendTracker {
             schema_payload.root,
             schema_payload.schemas.len()
         );
-        let cbor = schema_payload.to_cbor();
+        let schema_bytes = schema_payload.to_binette();
         self.mark_prepared_plan_sent(method_id, direction, &prepared);
-        cbor
+        schema_bytes
     }
 
-    /// Prepare schemas for a method call/response, returning a CBOR payload
+    /// Prepare schemas for a method call/response, returning a binette payload
     /// to inline in the request/response. Returns empty payload if schemas
     /// were already sent for this shape.
     ///
@@ -264,20 +264,20 @@ impl SchemaSendTracker {
         method_id: MethodId,
         shape: &'static Shape,
         schematic: &mut impl Schematic,
-    ) -> Result<CborPayload, SchemaExtractError> {
+    ) -> Result<SchemaPayloadBytes, SchemaExtractError> {
         let key = (method_id, schematic.direction());
 
         // Fast path: already sent for this method+direction.
         if self.sent_bindings.contains(&key) {
-            let empty = CborPayload::default();
+            let empty = SchemaPayloadBytes::default();
             schematic.attach_schemas(empty.clone());
             return Ok(empty);
         }
 
         let prepared = Self::plan_for_shape(shape)?;
-        let cbor = self.commit_prepared_plan(method_id, schematic.direction(), prepared);
-        schematic.attach_schemas(cbor.clone());
-        Ok(cbor)
+        let schema_bytes = self.commit_prepared_plan(method_id, schematic.direction(), prepared);
+        schematic.attach_schemas(schema_bytes.clone());
+        Ok(schema_bytes)
     }
 
     /// Prepare schemas for sending, sourcing them from a `SchemaSource`.
@@ -290,7 +290,7 @@ impl SchemaSendTracker {
         direction: BindingDirection,
         root_type: &TypeRef,
         source: &dyn SchemaSource,
-    ) -> CborPayload {
+    ) -> SchemaPayloadBytes {
         let prepared = Self::plan_from_source(root_type, source);
         self.commit_prepared_plan(method_id, direction, prepared)
     }
@@ -299,10 +299,10 @@ impl SchemaSendTracker {
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
-        prepared: &CborPayload,
-    ) -> CborPayload {
-        let prepared_payload = SchemaPayload::from_cbor(&prepared.0)
-            .expect("prepared schema payloads must be valid CBOR");
+        prepared: &SchemaPayloadBytes,
+    ) -> SchemaPayloadBytes {
+        let prepared_payload = SchemaPayload::from_binette(&prepared.0)
+            .expect("prepared schema payloads must be valid binette schema payloads");
         self.commit_prepared_plan(
             method_id,
             direction,
@@ -1292,7 +1292,7 @@ mod tests {
     struct TestSchematic {
         direction: BindingDirection,
         shape: &'static Shape,
-        attached: CborPayload,
+        attached: SchemaPayloadBytes,
     }
 
     impl TestSchematic {
@@ -1300,7 +1300,7 @@ mod tests {
             Self {
                 direction,
                 shape,
-                attached: CborPayload::default(),
+                attached: SchemaPayloadBytes::default(),
             }
         }
     }
@@ -1310,7 +1310,7 @@ mod tests {
             self.direction
         }
 
-        fn attach_schemas(&mut self, schemas: CborPayload) {
+        fn attach_schemas(&mut self, schemas: SchemaPayloadBytes) {
             self.attached = schemas;
         }
     }
@@ -1326,7 +1326,7 @@ mod tests {
     // r[verify schema.principles.self-describing]
     // r[verify schema.format.self-contained]
     #[test]
-    fn cbor_round_trip() {
+    fn binette_round_trip() {
         let schema = Schema {
             id: SchemaHash(1),
             type_params: vec![],
@@ -1338,8 +1338,8 @@ mod tests {
             schemas: vec![schema.clone()],
             root: TypeRef::concrete(schema.id),
         }
-        .to_cbor();
-        let payload = SchemaPayload::from_cbor(&bytes.0).expect("should parse CBOR");
+        .to_binette();
+        let payload = SchemaPayload::from_binette(&bytes.0).expect("should parse binette");
         assert_eq!(payload.schemas.len(), 1);
         assert_eq!(payload.schemas[0].id, schema.id);
         assert_eq!(payload.root, TypeRef::concrete(schema.id));
@@ -1562,8 +1562,11 @@ mod tests {
     }
 
     #[test]
-    fn cbor_payload_is_bytes() {
-        let schemas = extract_schemas(CborPayload::SHAPE).unwrap().schemas.clone();
+    fn binette_payload_is_bytes() {
+        let schemas = extract_schemas(SchemaPayloadBytes::SHAPE)
+            .unwrap()
+            .schemas
+            .clone();
         assert_eq!(schemas.len(), 1);
         assert!(matches!(
             schemas[0].kind,
@@ -1727,7 +1730,7 @@ mod tests {
             .attach_schemas_for_shape_if_needed(method, schematic.shape, &mut schematic)
             .unwrap();
         assert!(!first.is_empty(), "should return schemas");
-        let parsed = SchemaPayload::from_cbor(&first.0).expect("should parse CBOR");
+        let parsed = SchemaPayload::from_binette(&first.0).expect("should parse binette");
         assert!(
             parsed.schemas.len() >= 3,
             "should include transitive deps, got {}",
@@ -1905,7 +1908,7 @@ mod tests {
             .attach_schemas_for_shape_if_needed(method, args_schematic.shape, &mut args_schematic)
             .unwrap();
         assert!(!args.is_empty(), "should send args");
-        let args_parsed = SchemaPayload::from_cbor(&args.0).expect("parse args CBOR");
+        let args_parsed = SchemaPayload::from_binette(&args.0).expect("parse args binette");
 
         // Send response binding for the same method — should NOT be deduplicated
         let mut response_schematic =
@@ -1918,7 +1921,8 @@ mod tests {
             )
             .unwrap();
         assert!(!response.is_empty(), "should send response");
-        let response_parsed = SchemaPayload::from_cbor(&response.0).expect("parse response CBOR");
+        let response_parsed =
+            SchemaPayload::from_binette(&response.0).expect("parse response binette");
         assert_ne!(args_parsed.root, response_parsed.root);
 
         // Record received bindings and verify they go to separate maps
@@ -2377,7 +2381,7 @@ mod tests {
     }
 
     #[test]
-    fn schema_payload_cbor_round_trip() {
+    fn schema_payload_binette_round_trip() {
         let payload = SchemaPayload {
             schemas: vec![],
             root: TypeRef::Concrete {
@@ -2385,8 +2389,8 @@ mod tests {
                 args: vec![TypeRef::concrete(SchemaHash(456))],
             },
         };
-        let bytes = payload.to_cbor();
-        let parsed = SchemaPayload::from_cbor(&bytes.0).expect("should parse CBOR");
+        let bytes = payload.to_binette();
+        let parsed = SchemaPayload::from_binette(&bytes.0).expect("should parse binette");
         match &parsed.root {
             TypeRef::Concrete { type_id, args } => {
                 assert_eq!(*type_id, SchemaHash(123));

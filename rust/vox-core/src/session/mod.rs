@@ -1068,21 +1068,21 @@ impl Session {
         self.maybe_request_shutdown_after_root_closed();
     }
 
-    fn record_received_schema_cbor(
+    fn record_received_schema_binette(
         &mut self,
         conn_id: ConnectionId,
         schema_recv_tracker: Arc<vox_types::SchemaRecvTracker>,
         method_id: vox_types::MethodId,
         direction: vox_types::BindingDirection,
-        schemas_cbor: &vox_types::CborPayload,
+        schema_bytes: &vox_types::SchemaPayloadBytes,
         context: &str,
     ) -> bool {
-        let payload = match vox_types::SchemaPayload::from_cbor(&schemas_cbor.0) {
+        let payload = match vox_types::SchemaPayload::from_binette(&schema_bytes.0) {
             Ok(payload) => payload,
             Err(error) => {
                 self.close_connection_for_protocol_error(
                     conn_id,
-                    format!("{context}: invalid schema CBOR: {error}"),
+                    format!("{context}: invalid binette schema payload: {error}"),
                 );
                 return false;
             }
@@ -1482,7 +1482,7 @@ impl Session {
                     Some(ConnectionSlot::Active(state)) => Arc::clone(&state.schema_recv_tracker),
                     _ => return,
                 };
-                let _ = self.record_received_schema_cbor(
+                let _ = self.record_received_schema_binette(
                     conn_id,
                     schema_recv_tracker,
                     schema_msg.method_id,
@@ -1537,7 +1537,7 @@ impl Session {
                 // Record any inlined schemas from the incoming request before routing
                 let response_had_schema_payload = matches!(&r_ref.body, RequestBody::Response(resp) if !resp.schemas.is_empty());
                 {
-                    let schemas_cbor = match &r_ref.body {
+                    let schema_bytes = match &r_ref.body {
                         RequestBody::Call(call) => Some(&call.schemas),
                         RequestBody::Response(resp) => Some(&resp.schemas),
                         _ => None,
@@ -1551,7 +1551,7 @@ impl Session {
                             RequestBody::Response(_) => "Response",
                             RequestBody::Cancel(_) => "Cancel",
                         },
-                        schemas_cbor.map(|s| s.0.len())
+                        schema_bytes.map(|s| s.0.len())
                     );
                     let schema_recv_tracker = match self.conns.get(&conn_id) {
                         Some(ConnectionSlot::Active(state)) => {
@@ -1559,8 +1559,8 @@ impl Session {
                         }
                         _ => return,
                     };
-                    if let Some(schemas_cbor) = schemas_cbor
-                        && !schemas_cbor.is_empty()
+                    if let Some(schema_bytes) = schema_bytes
+                        && !schema_bytes.is_empty()
                     {
                         let (method_id, direction) = match &r_ref.body {
                             RequestBody::Call(call) => {
@@ -1583,12 +1583,12 @@ impl Session {
                             }
                             RequestBody::Cancel(_) => unreachable!(),
                         };
-                        if !self.record_received_schema_cbor(
+                        if !self.record_received_schema_binette(
                             conn_id,
                             schema_recv_tracker,
                             method_id,
                             direction,
-                            schemas_cbor,
+                            schema_bytes,
                             "inlined request schemas",
                         ) {
                             return;
@@ -2613,7 +2613,7 @@ impl SessionCore {
                 return;
             }
         };
-        response.schemas = prepared.to_cbor();
+        response.schemas = prepared.to_binette();
     }
 
     /// Prepare response schemas from an explicit canonical root type and schema source.
@@ -2639,7 +2639,7 @@ impl SessionCore {
         }
         let prepared =
             Self::get_or_plan_binding_from_source(&mut conn_state, key, root_type, source);
-        response.schemas = prepared.to_cbor();
+        response.schemas = prepared.to_binette();
     }
 
     /// Prepare response schemas for a replay using the running code's
@@ -2674,7 +2674,7 @@ impl SessionCore {
             Some(prepared) => prepared,
             None => return,
         };
-        response.schemas = prepared.to_cbor();
+        response.schemas = prepared.to_binette();
     }
 
     fn get_or_plan_binding_for_shape(
@@ -2742,8 +2742,10 @@ impl SessionCore {
                 .get(&key)
                 .cloned()
                 .unwrap_or_else(|| {
-                    let prepared_payload = vox_types::SchemaPayload::from_cbor(&response.schemas.0)
-                        .expect("prepared schema payloads must be valid CBOR");
+                    let prepared_payload = vox_types::SchemaPayload::from_binette(
+                        &response.schemas.0,
+                    )
+                    .expect("prepared schema payloads must be valid binette schema payloads");
                     vox_types::PreparedSchemaPlan {
                         schemas: prepared_payload.schemas,
                         root: prepared_payload.root,

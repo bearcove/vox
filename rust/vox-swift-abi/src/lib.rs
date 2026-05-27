@@ -365,7 +365,7 @@ impl vox_swift_type_descriptor {
 /// Input for compiling a process-local Swift codec.
 ///
 /// The local root describes the concrete Swift value layout for this process.
-/// The remote schema CBOR is the peer's postcard schema payload for the same
+/// The remote schema bytes are the peer's binette schema payload for the same
 /// method direction.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -375,7 +375,7 @@ pub struct vox_swift_codec_config {
     pub method_id: u64,
     pub direction: vox_swift_codec_direction_t,
     pub local_root: *const vox_swift_type_descriptor,
-    pub remote_schema_cbor: vox_swift_bytes,
+    pub remote_schema_binette: vox_swift_bytes,
 }
 
 impl vox_swift_codec_config {
@@ -383,7 +383,7 @@ impl vox_swift_codec_config {
         method_id: u64,
         direction: vox_swift_codec_direction_t,
         local_root: *const vox_swift_type_descriptor,
-        remote_schema_cbor: vox_swift_bytes,
+        remote_schema_binette: vox_swift_bytes,
     ) -> Self {
         Self {
             abi_version: VOX_SWIFT_CODEC_CONFIG_ABI_VERSION,
@@ -391,7 +391,7 @@ impl vox_swift_codec_config {
             method_id,
             direction,
             local_root,
-            remote_schema_cbor,
+            remote_schema_binette,
         }
     }
 }
@@ -412,7 +412,7 @@ struct SwiftCodec {
     local_root: *const vox_swift_type_descriptor,
     remote_root_schema_id: u64,
     remote_schema_count: usize,
-    remote_schema_cbor: Vec<u8>,
+    remote_schema_binette: Vec<u8>,
 }
 
 struct PreparedCodecConfig {
@@ -421,7 +421,7 @@ struct PreparedCodecConfig {
     local_root: *const vox_swift_type_descriptor,
     remote_root_schema_id: u64,
     remote_schema_count: usize,
-    remote_schema_cbor: Vec<u8>,
+    remote_schema_binette: Vec<u8>,
 }
 
 impl PreparedCodecConfig {
@@ -455,26 +455,29 @@ impl PreparedCodecConfig {
         }
 
         let local_root = unsafe { vox_swift_type_descriptor::validate_ptr(config.local_root)? };
-        config.remote_schema_cbor.validate("remote_schema_cbor")?;
+        config
+            .remote_schema_binette
+            .validate("remote_schema_binette")?;
 
-        let remote_schema_cbor = if config.remote_schema_cbor.len == 0 {
+        let remote_schema_binette = if config.remote_schema_binette.len == 0 {
             Vec::new()
         } else {
             unsafe {
                 std::slice::from_raw_parts(
-                    config.remote_schema_cbor.ptr,
-                    config.remote_schema_cbor.len,
+                    config.remote_schema_binette.ptr,
+                    config.remote_schema_binette.len,
                 )
             }
             .to_vec()
         };
 
-        let remote_payload = SchemaPayload::from_cbor(&remote_schema_cbor).map_err(|error| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("remote schema payload CBOR was invalid: {error}"),
-            )
-        })?;
+        let remote_payload =
+            SchemaPayload::from_binette(&remote_schema_binette).map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("remote schema payload binette was invalid: {error}"),
+                )
+            })?;
 
         let remote_root_schema_id = match remote_payload.root {
             TypeRef::Concrete { type_id, .. } => type_id.0,
@@ -492,7 +495,7 @@ impl PreparedCodecConfig {
             local_root,
             remote_root_schema_id,
             remote_schema_count: remote_payload.schemas.len(),
-            remote_schema_cbor,
+            remote_schema_binette,
         })
     }
 }
@@ -548,7 +551,7 @@ pub unsafe extern "C" fn vox_swift_codec_prepare_v1(
             local_root: prepared.local_root,
             remote_root_schema_id: prepared.remote_root_schema_id,
             remote_schema_count: prepared.remote_schema_count,
-            remote_schema_cbor: prepared.remote_schema_cbor,
+            remote_schema_binette: prepared.remote_schema_binette,
         });
 
         unsafe {
@@ -710,7 +713,7 @@ mod tests {
             schemas: Vec::new(),
             root: TypeRef::concrete(SchemaHash(root_id)),
         }
-        .to_cbor()
+        .to_binette()
         .0
     }
 
@@ -727,14 +730,14 @@ mod tests {
     #[test]
     fn codec_prepare_rejects_bad_config_size() {
         let local = vox_swift_type_descriptor::empty();
-        let remote_schema_cbor = schema_payload_bytes(7);
+        let remote_schema_binette = schema_payload_bytes(7);
         let mut config = vox_swift_codec_config::new(
             42,
             VOX_SWIFT_CODEC_DIRECTION_ARGS,
             &local,
             vox_swift_bytes {
-                ptr: remote_schema_cbor.as_ptr(),
-                len: remote_schema_cbor.len(),
+                ptr: remote_schema_binette.as_ptr(),
+                len: remote_schema_binette.len(),
             },
         );
         config.size += 1;
@@ -749,14 +752,14 @@ mod tests {
     #[test]
     fn codec_prepare_accepts_valid_descriptor_and_schema_payload() {
         let local = vox_swift_type_descriptor::empty();
-        let remote_schema_cbor = schema_payload_bytes(7);
+        let remote_schema_binette = schema_payload_bytes(7);
         let config = vox_swift_codec_config::new(
             42,
             VOX_SWIFT_CODEC_DIRECTION_RESPONSE,
             &local,
             vox_swift_bytes {
-                ptr: remote_schema_cbor.as_ptr(),
-                len: remote_schema_cbor.len(),
+                ptr: remote_schema_binette.as_ptr(),
+                len: remote_schema_binette.len(),
             },
         );
         let mut codec = std::ptr::null_mut();
@@ -772,7 +775,7 @@ mod tests {
         assert!(std::ptr::eq(codec_ref.local_root, &local));
         assert_eq!(codec_ref.remote_root_schema_id, 7);
         assert_eq!(codec_ref.remote_schema_count, 0);
-        assert_eq!(codec_ref.remote_schema_cbor, remote_schema_cbor);
+        assert_eq!(codec_ref.remote_schema_binette, remote_schema_binette);
 
         unsafe {
             vox_swift_codec_release_v1(codec);
@@ -782,14 +785,14 @@ mod tests {
     #[test]
     fn codec_encode_and_decode_are_explicitly_unsupported_until_jit_lands() {
         let local = vox_swift_type_descriptor::empty();
-        let remote_schema_cbor = schema_payload_bytes(7);
+        let remote_schema_binette = schema_payload_bytes(7);
         let config = vox_swift_codec_config::new(
             42,
             VOX_SWIFT_CODEC_DIRECTION_ARGS,
             &local,
             vox_swift_bytes {
-                ptr: remote_schema_cbor.as_ptr(),
-                len: remote_schema_cbor.len(),
+                ptr: remote_schema_binette.as_ptr(),
+                len: remote_schema_binette.len(),
             },
         );
         let mut codec = std::ptr::null_mut();
@@ -810,8 +813,8 @@ mod tests {
             unsafe {
                 vox_swift_codec_decode_v1(
                     codec,
-                    remote_schema_cbor.as_ptr(),
-                    remote_schema_cbor.len(),
+                    remote_schema_binette.as_ptr(),
+                    remote_schema_binette.len(),
                     &mut dst,
                 )
             },

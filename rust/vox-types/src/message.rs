@@ -5,7 +5,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    BindingDirection, CborPayload, ChannelId, ConnectionId, Metadata, MethodId, RequestId,
+    BindingDirection, ChannelId, ConnectionId, Metadata, MethodId, RequestId, SchemaPayloadBytes,
 };
 use facet::{Facet, FacetOpaqueAdapter, OpaqueDeserialize, OpaqueSerialize, PtrConst, Shape};
 
@@ -157,9 +157,9 @@ structstruck::strike! {
                                     /// Argument tuple
                                     pub args: Payload<'payload>,
 
-                                    /// CBOR-encoded schemas for this call's args tuple
+                                    /// binette-encoded schemas for this call's args tuple
                                     /// Non-empty on the first call for each method on a connection.
-                                    pub schemas: CborPayload,
+                                    pub schemas: SchemaPayloadBytes,
                                 }),
 
                                 /// Respond to a request
@@ -170,9 +170,9 @@ structstruck::strike! {
                                     /// Return value (`Result<T, VoxError<E>>`, where E could be Infallible depending on signature)
                                     pub ret: Payload<'payload>,
 
-                                    /// CBOR-encoded schemas for this response's return type.
+                                    /// binette-encoded schemas for this response's return type.
                                     /// Non-empty on the first response for each method on a connection.
-                                    pub schemas: CborPayload,
+                                    pub schemas: SchemaPayloadBytes,
                                 }),
 
                                 /// Cancel processing of a request.
@@ -195,8 +195,8 @@ structstruck::strike! {
                     /// Whether the binding applies to request args or responses.
                     pub direction: BindingDirection,
 
-                    /// CBOR-encoded schema payload for this binding.
-                    pub schemas: CborPayload,
+                    /// binette-encoded schema payload for this binding.
+                    pub schemas: SchemaPayloadBytes,
                 }),
 
                 // ========================================================================

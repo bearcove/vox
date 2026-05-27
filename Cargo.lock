@@ -4077,7 +4077,6 @@ version = "0.8.2"
 dependencies = [
  "binette",
  "facet",
- "facet-cbor",
  "facet-core",
  "facet-error",
  "facet-reflect",
@@ -4231,9 +4230,9 @@ dependencies = [
 name = "vox-schema"
 version = "0.8.2"
 dependencies = [
+ "binette",
  "blake3",
  "facet",
- "facet-cbor",
  "facet-core",
  "indexmap",
 ]
@@ -4279,7 +4278,6 @@ dependencies = [
  "blake3",
  "bytes",
  "facet",
- "facet-cbor",
  "facet-core",
  "facet-path",
  "facet-reflect",
