@@ -76,7 +76,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(echoed, 42);
 
     drop(caller);
@@ -128,7 +128,7 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
     };
     // Serializing the args binds the Tx's paired Rx via the thread-local binder.
     let _bytes = vox_types::channel::with_channel_binder(root_caller.caller.driver(), || {
-        vox_postcard::to_vec(&args).expect("serialize args")
+        binette::encode_to_vec(&args).expect("serialize args")
     });
     // The first allocated channel ID is 1 (odd parity).
     let channel_id = ChannelId(1);
@@ -408,7 +408,7 @@ async fn caller_injects_operation_id_when_peer_supports_retry() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let operation_id: u64 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let operation_id: u64 = decode_binette_payload(ret_bytes);
     assert_ne!(operation_id, 0);
 }
 
@@ -530,7 +530,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize");
+    let value: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(value, 11);
     assert_eq!(runs_check.load(Ordering::SeqCst), 1);
 
@@ -576,7 +576,7 @@ async fn operation_replay_after_resume_delivers_sealed_outcome() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize");
+    let value: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(value, 11);
     assert_eq!(
         runs_check.load(Ordering::SeqCst),
@@ -686,7 +686,7 @@ async fn duplicate_operation_id_on_same_connection_is_rejected() {
             Payload::PostcardBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
-        let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize");
+        let value: u32 = decode_binette_payload(ret_bytes);
         assert_eq!(value, 11);
     }
 }
@@ -743,9 +743,9 @@ fn message_plan_from_identical_schemas_round_trips() {
     }
 }
 
-/// Minimal test: establish via real CBOR handshake, send one call, verify handler runs.
+/// Minimal test: establish via real binette handshake, send one call, verify handler runs.
 #[tokio::test]
-async fn call_through_cbor_handshake_reaches_handler() {
+async fn call_through_binette_handshake_reaches_handler() {
     let (client_link, server_link) = memory_link_pair(64);
 
     let (server_result, client_result) = tokio::try_join!(
@@ -1082,7 +1082,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize root response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 100);
 
     // Open a virtual connection and call on it.
@@ -1369,7 +1369,7 @@ async fn echo_call_across_memory_link() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 42);
 }
 
@@ -1427,7 +1427,7 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
         Payload::PostcardBytes(bytes) => bytes,
         _ => panic!("expected incoming payload"),
     };
-    let decoded: u32 = vox_postcard::from_slice(bytes).expect("deserialize buffered item");
+    let decoded: u32 = decode_binette_payload(bytes);
     assert_eq!(decoded, 123);
 }
 
@@ -1800,7 +1800,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 42);
 }
 

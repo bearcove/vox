@@ -73,7 +73,7 @@ async fn open_virtual_connection_and_call() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 123);
 }
 
@@ -270,7 +270,7 @@ async fn close_virtual_connection() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize");
+    let result: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(result, 42);
 
     // Close the virtual connection.
@@ -342,7 +342,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(echoed, 11);
 
     drop(vconn_caller);
@@ -495,7 +495,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = decode_binette_payload(ret_bytes);
     assert_eq!(echoed, 7);
 
     drop(vconn_caller);

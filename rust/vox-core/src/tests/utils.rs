@@ -427,7 +427,7 @@ impl Handler<DriverReplySink> for ReplayHandler {
             Payload::PostcardBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
-        let result: u32 = vox_postcard::from_slice(args_bytes).expect("deserialize args");
+        let result: u32 = decode_binette_payload(args_bytes);
         reply
             .send_reply(RequestResponse {
                 ret: Payload::outgoing(&result),
@@ -506,7 +506,7 @@ impl Handler<DriverReplySink> for RetryAfterResumeHandler {
             Payload::PostcardBytes(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
-        let result: u32 = vox_postcard::from_slice(args_bytes).expect("deserialize args");
+        let result: u32 = decode_binette_payload(args_bytes);
         reply
             .send_reply(RequestResponse {
                 ret: Payload::outgoing(&result),

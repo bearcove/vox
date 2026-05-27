@@ -30,16 +30,11 @@ mod memory_link;
 #[cfg(not(target_arch = "wasm32"))]
 pub use memory_link::*;
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::panic::AssertUnwindSafe;
-
 mod session;
 pub use session::*;
 
 mod driver;
 pub use driver::*;
-
-use vox_types::{Backing, SelfRef};
 
 /// Pre-built translation plan for deserializing the `Message` wire type.
 ///
@@ -69,67 +64,6 @@ impl MessagePlan {
     pub fn from_handshake(result: &vox_types::HandshakeResult) -> Result<Self, String> {
         let _ = result;
         Self::for_shape(<vox_types::Message<'static> as facet::Facet<'static>>::SHAPE)
-    }
-}
-
-/// Deserialize postcard-encoded `backing` bytes into `T` in place, returning
-/// a [`vox_types::SelfRef`] that keeps the backing storage alive for the
-/// value. Uses the identity plan; for plan-aware decoding, use
-/// [`deserialize_postcard_with_plan`].
-// r[impl zerocopy.framing.value]
-#[allow(dead_code)]
-pub(crate) fn deserialize_postcard<T: facet::Facet<'static>>(
-    backing: Backing,
-) -> Result<SelfRef<T>, vox_postcard::DeserializeError> {
-    let plan = vox_postcard::build_identity_plan(T::SHAPE);
-    let registry = vox_types::SchemaRegistry::new();
-    deserialize_postcard_with_plan(backing, &plan, &registry)
-}
-
-/// Deserialize postcard-encoded `backing` bytes into `T` using a pre-built
-/// translation plan and schema registry for the remote peer's type layout.
-// r[impl zerocopy.framing.value]
-#[allow(dead_code)]
-pub(crate) fn deserialize_postcard_with_plan<T: facet::Facet<'static>>(
-    backing: Backing,
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> Result<SelfRef<T>, vox_postcard::DeserializeError> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        SelfRef::try_new(backing, |bytes| {
-            match std::panic::catch_unwind(AssertUnwindSafe(|| {
-                vox_jit::global_runtime().try_decode_owned::<T>(bytes, 0, plan, registry)
-            })) {
-                Ok(Some(result)) => result,
-                Ok(None) => vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry),
-                Err(payload) => {
-                    tracing::warn!(
-                        shape = %T::SHAPE,
-                        panic = %panic_payload_message(&payload),
-                        "vox message JIT decode panicked; falling back"
-                    );
-                    vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry)
-                }
-            }
-        })
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        SelfRef::try_new(backing, |bytes| {
-            vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry)
-        })
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
-    if let Some(message) = payload.downcast_ref::<&'static str>() {
-        (*message).to_owned()
-    } else if let Some(message) = payload.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_owned()
     }
 }
 

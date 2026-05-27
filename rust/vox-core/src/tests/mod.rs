@@ -373,24 +373,3 @@ async fn rx_recv_signals_reset() {
         "expected RxError::Reset"
     );
 }
-
-#[test]
-fn test_deser_postcard_borrowed() {
-    // A reply
-    #[derive(Facet)]
-    struct Reply<'a> {
-        s: &'a str,
-    }
-
-    let payload = vox_postcard::to_vec(&Reply {
-        s: "IAMA borrowed string AMA",
-    })
-    .unwrap();
-
-    let backing = Backing::Boxed(payload.into_boxed_slice());
-
-    // now deser with Backing
-    let reply = crate::deserialize_postcard::<Reply>(backing).unwrap();
-    let reply = reply.map(|reply| reply.s.to_string());
-    assert_eq!(reply.get(), "IAMA borrowed string AMA");
-}
