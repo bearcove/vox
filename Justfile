@@ -25,6 +25,9 @@ ts-typecheck:
 ts-codegen:
     cargo xtask codegen --typescript
 
+swift-codegen:
+    cargo xtask codegen --swift
+
 ts:
     just ts-typecheck
     just ts-codegen
@@ -32,6 +35,7 @@ ts:
 
 swift:
     cargo build --manifest-path {{BINETTE_DIR}}/Cargo.toml -p binette
+    just swift-codegen
     cd {{BINETTE_DIR}}/swift/probes && swift test
     cd swift && swift test
 

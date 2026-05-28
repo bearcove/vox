@@ -2,6 +2,7 @@ import BinetteSwiftProbes
 import CBinette
 import CVox
 import VoxSwift
+import VoxSwiftGenerated
 import XCTest
 
 private struct VoxSwiftChannel {
@@ -357,6 +358,61 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
 
         XCTAssertEqual(reply.message, "3405691582:hello from vox swift:6:accepted:stream attached")
         XCTAssertEqual(reply.retry, 144)
+    }
+
+    func testGeneratedSwiftCanaryRunsThroughRustVoxDriver() throws {
+        let methodCodec = try SwiftCanaryMethodCodecs().submit()
+
+        var args = SwiftCanarySubmitArgs(
+            call: SwiftCall(
+                method: 0xCAFE_BABE,
+                title: "hello from generated swift",
+                payload: [2, 3, 5, 7],
+                retry: 377,
+                outcome: .accepted("generated descriptor"),
+                output: VoxSwift.VoxSwiftChannel()
+            )
+        )
+        let request = try methodCodec.encodeArgs(&args)
+
+        var responseSchemaPayload = VoxByteBuffer()
+        var responsePayload = VoxByteBuffer()
+        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            request.payload.withUnsafeBufferPointer { payloadBuffer in
+                vox_canary_driver_call_generated_swift_submit(
+                    schemaBuffer.baseAddress,
+                    schemaBuffer.count,
+                    payloadBuffer.baseAddress,
+                    payloadBuffer.count,
+                    &responseSchemaPayload,
+                    &responsePayload
+                )
+            }
+        }
+        defer {
+            vox_byte_buffer_free(responseSchemaPayload)
+            vox_byte_buffer_free(responsePayload)
+        }
+
+        XCTAssertEqual(status, VOX_STATUS_OK)
+
+        let responseSchemaBytes = Array(
+            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
+        )
+        let responseBytes = Array(
+            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
+        )
+
+        let reply = try methodCodec.decodeResponse(
+            VoxSwiftWirePayload(
+                schemaPayload: responseSchemaBytes,
+                payload: responseBytes
+            ),
+            as: SwiftReply.self
+        )
+
+        XCTAssertEqual(reply.message, "3405691582:hello from generated swift:4:accepted:generated descriptor")
+        XCTAssertEqual(reply.retry, 377)
     }
 }
 

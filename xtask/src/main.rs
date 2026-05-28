@@ -6,6 +6,7 @@ use std::process::ExitCode;
 
 use facet::Facet;
 use figue as args;
+use vox_types::{ServiceDescriptor, Tx, method_descriptor};
 use xshell::{Shell, cmd};
 
 /// Development tasks for vox
@@ -43,16 +44,16 @@ enum Commands {
         /// Generate TypeScript bindings into `typescript/generated/`
         #[facet(args::named, default)]
         typescript: bool,
-        /// Reserved: Swift runtime work now goes through binette local access.
+        /// Generate Swift binette descriptor bindings into `swift/Sources/VoxSwiftGenerated/`
         #[facet(args::named, default)]
         swift: bool,
-        /// Reserved: Swift runtime work now goes through binette local access.
+        /// Generate Swift client-facing binette descriptor bindings.
         #[facet(args::named, default)]
         swift_client: bool,
-        /// Reserved: Swift runtime work now goes through binette local access.
+        /// Generate Swift server-facing binette descriptor bindings.
         #[facet(args::named, default)]
         swift_server: bool,
-        /// Reserved: Swift runtime work now goes through binette local access.
+        /// Generate Swift wire/schema descriptor bindings.
         #[facet(args::named, default)]
         swift_wire: bool,
     },
@@ -210,7 +211,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 codegen_typescript(&workspace_root)?;
             }
             if swift || swift_client || swift_server || swift_wire {
-                return Err(swift_codegen_parked_error());
+                codegen_swift(&workspace_root)?;
             }
         }
     }
@@ -238,8 +239,43 @@ fn fmt_typescript(path: &std::path::Path, text: String) -> String {
     }
 }
 
-fn swift_codegen_parked_error() -> Box<dyn std::error::Error> {
-    "Swift codegen is not restored yet; active Swift work goes through binette C ABI local-access descriptors. Use `just swift` for the current Swift canaries.".into()
+#[allow(dead_code)]
+mod swift_codegen_canary {
+    use super::*;
+
+    #[derive(Facet)]
+    struct SwiftCall {
+        method: u32,
+        title: String,
+        payload: Vec<u8>,
+        retry: Option<u16>,
+        outcome: SwiftOutcome,
+        output: Tx<u32>,
+    }
+
+    #[derive(Facet)]
+    struct SwiftReply {
+        message: String,
+        retry: Option<u16>,
+    }
+
+    #[derive(Facet)]
+    #[repr(u8)]
+    enum SwiftOutcome {
+        Accepted(String),
+        Rejected(u32),
+    }
+
+    pub fn service_descriptor() -> &'static ServiceDescriptor {
+        let submit =
+            method_descriptor::<(SwiftCall,), SwiftReply>("SwiftCanary", "submit", &["call"], None);
+        let methods = Box::leak(vec![submit].into_boxed_slice());
+        Box::leak(Box::new(ServiceDescriptor {
+            service_name: "SwiftCanary",
+            methods,
+            doc: None,
+        }))
+    }
 }
 
 fn codegen_typescript(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -263,6 +299,44 @@ fn codegen_typescript(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
     }
 
     codegen_typescript_wire(workspace_root)?;
+
+    Ok(())
+}
+
+fn codegen_swift(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let out_dir = workspace_root
+        .join("swift")
+        .join("Sources")
+        .join("VoxSwiftGenerated");
+    std::fs::create_dir_all(&out_dir)?;
+
+    let canary = swift_codegen_canary::service_descriptor();
+    let swift = vox_codegen::targets::swift::generate_service(canary)?;
+    write_if_changed(&out_dir.join("SwiftCanary.generated.swift"), swift)?;
+
+    let testbed = spec_proto::testbed_service_descriptor();
+    match vox_codegen::targets::swift::generate_service(testbed) {
+        Ok(swift) => {
+            write_if_changed(&out_dir.join("Testbed.generated.swift"), swift)?;
+        }
+        Err(error) => {
+            println!(
+                "Swift Testbed generation is not complete yet; first unsupported shape: {error}"
+            );
+        }
+    }
+
+    let evolved = spec_proto::evolved::testbed_service_descriptor();
+    match vox_codegen::targets::swift::generate_service(evolved) {
+        Ok(swift) => {
+            write_if_changed(&out_dir.join("TestbedEvolved.generated.swift"), swift)?;
+        }
+        Err(error) => {
+            println!(
+                "Swift evolved Testbed generation is not complete yet; first unsupported shape: {error}"
+            );
+        }
+    }
 
     Ok(())
 }

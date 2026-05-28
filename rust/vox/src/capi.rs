@@ -239,6 +239,46 @@ pub extern "C" fn vox_canary_driver_call_swift_rich(
     }
 }
 
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_canary_driver_call_generated_swift_submit(
+    schema_payload_ptr: *const u8,
+    schema_payload_len: usize,
+    payload_ptr: *const u8,
+    payload_len: usize,
+    response_schema_payload_out: *mut VoxByteBuffer,
+    response_payload_out: *mut VoxByteBuffer,
+) -> i32 {
+    let Some(response_schema_payload_out) = (unsafe { response_schema_payload_out.as_mut() })
+    else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_schema_payload_out = VoxByteBuffer::empty();
+    let Some(response_payload_out) = (unsafe { response_payload_out.as_mut() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_payload_out = VoxByteBuffer::empty();
+
+    let Some(schema_payload_ptr) = (unsafe { schema_payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let Some(payload_ptr) = (unsafe { payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_payload =
+        unsafe { std::slice::from_raw_parts(schema_payload_ptr, schema_payload_len) };
+    let payload = unsafe { std::slice::from_raw_parts(payload_ptr, payload_len) };
+
+    match driver_call_generated_swift_submit(schema_payload, payload) {
+        Ok((response_schema_payload, response_payload)) => {
+            *response_schema_payload_out = VoxByteBuffer::from_vec(response_schema_payload);
+            *response_payload_out = VoxByteBuffer::from_vec(response_payload);
+            VOX_STATUS_OK
+        }
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
 fn accept_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(), String> {
     type Args = (String, Option<u16>, ());
 
@@ -285,6 +325,23 @@ enum SwiftCanaryOutcome {
     rejected(u32),
 }
 
+#[derive(Debug, Clone, PartialEq, Facet)]
+struct GeneratedSwiftCall {
+    method: u32,
+    title: String,
+    payload: Vec<u8>,
+    retry: Option<u16>,
+    outcome: GeneratedSwiftOutcome,
+    output: (),
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+enum GeneratedSwiftOutcome {
+    Accepted(String),
+    Rejected(u32),
+}
+
 fn call_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
     accept_swift_args(schema_payload, payload)?;
 
@@ -307,6 +364,9 @@ struct SwiftCanaryDriverHandler;
 
 #[derive(Clone)]
 struct SwiftRichCanaryDriverHandler;
+
+#[derive(Clone)]
+struct GeneratedSwiftSubmitCanaryDriverHandler;
 
 impl crate::Handler<crate::DriverReplySink> for SwiftCanaryDriverHandler {
     async fn handle(
@@ -391,6 +451,61 @@ impl crate::Handler<crate::DriverReplySink> for SwiftRichCanaryDriverHandler {
     }
 }
 
+impl crate::Handler<crate::DriverReplySink> for GeneratedSwiftSubmitCanaryDriverHandler {
+    async fn handle(
+        &self,
+        call: crate::SelfRef<crate::RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let method_id = swift_canary_submit_method_id();
+        let call = call.get();
+        let decoded = match &call.args {
+            vox_types::Payload::BinetteBytes(bytes) => {
+                crate::schema_deser::schema_deserialize_args_borrowed::<(GeneratedSwiftCall,)>(
+                    bytes, method_id, &schemas,
+                )
+            }
+            _ => Err(crate::schema_deser::SchemaDeserializeError::Protocol(
+                "generated Swift canary expected incoming binette bytes".to_owned(),
+            )),
+        };
+
+        let reply_value = match decoded {
+            Ok((call,)) => reply_for_generated_swift_call(call),
+            Err(error) => SwiftCanaryReply {
+                message: format!("decode error: {error}"),
+                retry: None,
+            },
+        };
+
+        reply
+            .send_reply(crate::RequestResponse {
+                ret: crate::Payload::outgoing(&reply_value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+fn reply_for_generated_swift_call(call: GeneratedSwiftCall) -> SwiftCanaryReply {
+    let outcome = match call.outcome {
+        GeneratedSwiftOutcome::Accepted(message) => format!("accepted:{message}"),
+        GeneratedSwiftOutcome::Rejected(code) => format!("rejected:{code}"),
+    };
+    SwiftCanaryReply {
+        message: format!(
+            "{}:{}:{}:{}",
+            call.method,
+            call.title,
+            call.payload.len(),
+            outcome
+        ),
+        retry: call.retry,
+    }
+}
+
 fn reply_for_swift_canary_call(call: SwiftCanaryCall) -> SwiftCanaryReply {
     let outcome = match call.outcome {
         SwiftCanaryOutcome::accepted(message) => format!("accepted:{message}"),
@@ -430,6 +545,22 @@ fn driver_call_swift_rich(
         vox_types::MethodId(0xB1_0000_0000_7000),
         SwiftRichCanaryDriverHandler,
     )
+}
+
+fn driver_call_generated_swift_submit(
+    schema_payload: &[u8],
+    payload: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+    driver_call_with_handler(
+        schema_payload,
+        payload,
+        swift_canary_submit_method_id(),
+        GeneratedSwiftSubmitCanaryDriverHandler,
+    )
+}
+
+fn swift_canary_submit_method_id() -> vox_types::MethodId {
+    vox_types::method_id_name_only("SwiftCanary", "submit")
 }
 
 async fn call_driver_once<H>(

@@ -32,10 +32,18 @@ let package = Package(
                 .product(name: "BinetteSwiftProbes", package: "probes"),
             ]
         ),
+        .target(
+            name: "VoxSwiftGenerated",
+            dependencies: [
+                "VoxSwift",
+                .product(name: "BinetteSwiftProbes", package: "probes"),
+            ]
+        ),
         .testTarget(
             name: "VoxSwiftBinetteCanariesTests",
             dependencies: [
                 "VoxSwift",
+                "VoxSwiftGenerated",
                 .product(name: "BinetteSwiftProbes", package: "probes"),
             ]
         ),

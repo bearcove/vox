@@ -63,6 +63,13 @@ int32_t vox_canary_driver_call_swift_rich(const uint8_t *schema_payload_ptr,
                                           struct VoxByteBuffer *response_schema_payload_out,
                                           struct VoxByteBuffer *response_payload_out);
 
+int32_t vox_canary_driver_call_generated_swift_submit(const uint8_t *schema_payload_ptr,
+                                                      size_t schema_payload_len,
+                                                      const uint8_t *payload_ptr,
+                                                      size_t payload_len,
+                                                      struct VoxByteBuffer *response_schema_payload_out,
+                                                      struct VoxByteBuffer *response_payload_out);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
