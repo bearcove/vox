@@ -92,6 +92,17 @@ public final class VoxSwiftLocalCodec {
         return value
     }
 
+    public func decodeVoxPayload<T>(
+        _ bytes: [UInt8],
+        writerSchemaPayload: [UInt8],
+        as _: T.Type
+    ) throws -> T {
+        let writerSchemaBundle = try Self.binetteSchemaBundle(fromVoxSchemaPayload: writerSchemaPayload)
+        return try writerSchemaBundle.withUnsafeBufferPointer { writerSchema in
+            try decode(bytes, writerSchemaBundle: writerSchema, as: T.self)
+        }
+    }
+
     public func withSchemaBundle<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R {
         try body(UnsafeBufferPointer(start: schemaBundle.ptr, count: schemaBundle.len))
     }
@@ -108,5 +119,21 @@ public final class VoxSwiftLocalCodec {
         }
         defer { vox_byte_buffer_free(payload) }
         return Array(UnsafeBufferPointer(start: payload.ptr, count: payload.len))
+    }
+
+    public static func binetteSchemaBundle(fromVoxSchemaPayload schemaPayload: [UInt8]) throws -> [UInt8] {
+        var bundle = VoxByteBuffer()
+        let status = schemaPayload.withUnsafeBufferPointer { buffer in
+            vox_binette_schema_bundle_from_schema_payload(
+                buffer.baseAddress,
+                buffer.count,
+                &bundle
+            )
+        }
+        guard status == VOX_STATUS_OK else {
+            throw VoxSwiftBinetteError.schemaPayload(status)
+        }
+        defer { vox_byte_buffer_free(bundle) }
+        return Array(UnsafeBufferPointer(start: bundle.ptr, count: bundle.len))
     }
 }

@@ -1,4 +1,9 @@
-use crate::schema_deser::encode_vox_schema_payload_from_binette_schema_bundle_bytes;
+use facet::Facet;
+
+use crate::schema_deser::{
+    encode_binette_schema_bundle_from_vox_schema_payload_bytes,
+    encode_vox_schema_payload_from_binette_schema_bundle_bytes,
+};
 
 pub const VOX_STATUS_OK: i32 = 0;
 pub const VOX_STATUS_NULL_POINTER: i32 = 1;
@@ -65,6 +70,31 @@ pub extern "C" fn vox_schema_payload_from_binette_schema_bundle(
 
 // r[impl schema.exchange.required]
 #[unsafe(no_mangle)]
+pub extern "C" fn vox_binette_schema_bundle_from_schema_payload(
+    schema_payload_ptr: *const u8,
+    schema_payload_len: usize,
+    out: *mut VoxByteBuffer,
+) -> i32 {
+    let Some(out) = (unsafe { out.as_mut() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *out = VoxByteBuffer::empty();
+    let Some(schema_payload_ptr) = (unsafe { schema_payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_payload =
+        unsafe { std::slice::from_raw_parts(schema_payload_ptr, schema_payload_len) };
+    match encode_binette_schema_bundle_from_vox_schema_payload_bytes(schema_payload) {
+        Ok(bytes) => {
+            *out = VoxByteBuffer::from_vec(bytes);
+            VOX_STATUS_OK
+        }
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
 pub extern "C" fn vox_canary_accept_swift_args(
     schema_payload_ptr: *const u8,
     schema_payload_len: usize,
@@ -83,6 +113,46 @@ pub extern "C" fn vox_canary_accept_swift_args(
 
     match accept_swift_args(schema_payload, payload) {
         Ok(()) => VOX_STATUS_OK,
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_canary_call_swift_args(
+    schema_payload_ptr: *const u8,
+    schema_payload_len: usize,
+    payload_ptr: *const u8,
+    payload_len: usize,
+    response_schema_payload_out: *mut VoxByteBuffer,
+    response_payload_out: *mut VoxByteBuffer,
+) -> i32 {
+    let Some(response_schema_payload_out) = (unsafe { response_schema_payload_out.as_mut() })
+    else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_schema_payload_out = VoxByteBuffer::empty();
+    let Some(response_payload_out) = (unsafe { response_payload_out.as_mut() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_payload_out = VoxByteBuffer::empty();
+
+    let Some(schema_payload_ptr) = (unsafe { schema_payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let Some(payload_ptr) = (unsafe { payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_payload =
+        unsafe { std::slice::from_raw_parts(schema_payload_ptr, schema_payload_len) };
+    let payload = unsafe { std::slice::from_raw_parts(payload_ptr, payload_len) };
+
+    match call_swift_args(schema_payload, payload) {
+        Ok((response_schema_payload, response_payload)) => {
+            *response_schema_payload_out = VoxByteBuffer::from_vec(response_schema_payload);
+            *response_payload_out = VoxByteBuffer::from_vec(response_payload);
+            VOX_STATUS_OK
+        }
         Err(_) => VOX_STATUS_SCHEMA,
     }
 }
@@ -107,6 +177,29 @@ fn accept_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(), String
     } else {
         Err(format!("unexpected Swift args payload: {decoded:?}"))
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+struct SwiftCanaryReply {
+    message: String,
+    retry: Option<u16>,
+}
+
+fn call_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
+    accept_swift_args(schema_payload, payload)?;
+
+    let reply = SwiftCanaryReply {
+        message: "rust vox response".to_owned(),
+        retry: Some(233),
+    };
+    let response_payload = binette::encode_to_vec(&reply).map_err(|error| error.to_string())?;
+    let response_schema_payload =
+        vox_types::SchemaSendTracker::plan_for_shape(SwiftCanaryReply::SHAPE)
+            .map_err(|error| error.to_string())?
+            .to_binette()
+            .0;
+
+    Ok((response_schema_payload, response_payload))
 }
 
 #[cfg(test)]

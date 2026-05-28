@@ -33,10 +33,21 @@ int32_t vox_schema_payload_from_binette_schema_bundle(const uint8_t *schema_bund
                                                       size_t schema_bundle_len,
                                                       struct VoxByteBuffer *out);
 
+int32_t vox_binette_schema_bundle_from_schema_payload(const uint8_t *schema_payload_ptr,
+                                                      size_t schema_payload_len,
+                                                      struct VoxByteBuffer *out);
+
 int32_t vox_canary_accept_swift_args(const uint8_t *schema_payload_ptr,
                                      size_t schema_payload_len,
                                      const uint8_t *payload_ptr,
                                      size_t payload_len);
+
+int32_t vox_canary_call_swift_args(const uint8_t *schema_payload_ptr,
+                                   size_t schema_payload_len,
+                                   const uint8_t *payload_ptr,
+                                   size_t payload_len,
+                                   struct VoxByteBuffer *response_schema_payload_out,
+                                   struct VoxByteBuffer *response_payload_out);
 
 #ifdef __cplusplus
 }  // extern "C"

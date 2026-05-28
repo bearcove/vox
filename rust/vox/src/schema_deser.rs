@@ -105,6 +105,18 @@ pub fn encode_vox_schema_payload_from_binette_schema_bundle_bytes(
     encode_vox_schema_payload_from_binette_schema_bundle(bundle)
 }
 
+// r[impl schema.exchange.required]
+pub fn encode_binette_schema_bundle_from_vox_schema_payload_bytes(
+    bytes: &[u8],
+) -> Result<Vec<u8>, SchemaDeserializeError> {
+    let payload = vox_schema::SchemaPayload::from_binette(bytes)
+        .map_err(|error| SchemaDeserializeError::Decode(error.to_string()))?;
+    let registry = vox_schema::build_registry(&payload.schemas);
+    let bundle = binette_schema_bundle_from_vox_schemas(payload.root, registry)?;
+    binette::encode_schema_bundle_to_vec(&bundle)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
+}
+
 fn schema_deserialize_with_direction<T: Facet<'static>>(
     bytes: &[u8],
     method_id: MethodId,
