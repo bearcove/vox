@@ -64,6 +64,8 @@ impl<'a> SwiftGenerator<'a> {
         self.line("import VoxSwift");
         self.line("");
 
+        self.emit_tuple_carrier_types()?;
+        self.emit_result_carrier_types()?;
         self.emit_named_types()?;
         self.emit_variant_payload_types()?;
         self.emit_method_arg_types()?;
@@ -154,6 +156,50 @@ impl<'a> SwiftGenerator<'a> {
                 }
                 _ => {}
             }
+        }
+        Ok(())
+    }
+
+    fn emit_result_carrier_types(&mut self) -> Result<(), SwiftCodegenError> {
+        let results = collect_result_shapes(self.service)?;
+        if results.is_empty() {
+            return Ok(());
+        }
+        self.line("// Result carrier types");
+        for shape in results {
+            let ShapeKind::Result { ok, err } = classify_shape(shape) else {
+                continue;
+            };
+            let type_name = result_carrier_type_name(shape)?;
+            self.line(&format!("public enum {type_name} {{"));
+            self.line(&format!("    case ok({})", swift_type(ok)?));
+            self.line(&format!("    case err({})", swift_type(err)?));
+            self.line("}");
+            self.line("");
+        }
+        Ok(())
+    }
+
+    fn emit_tuple_carrier_types(&mut self) -> Result<(), SwiftCodegenError> {
+        let tuples = collect_tuple_shapes(self.service)?;
+        if tuples.is_empty() {
+            return Ok(());
+        }
+        self.line("// Tuple carrier types");
+        for shape in tuples {
+            let type_name = tuple_carrier_type_name(shape)?;
+            self.line(&format!("public struct {type_name} {{"));
+            let fields = tuple_field_likes(shape)?;
+            for field in &fields {
+                self.line(&format!(
+                    "    public var {}: {}",
+                    field.swift_field,
+                    swift_type(field.shape)?
+                ));
+            }
+            self.emit_public_init("    ", &fields)?;
+            self.line("}");
+            self.line("");
         }
         Ok(())
     }
@@ -378,11 +424,22 @@ impl<'a> SwiftGenerator<'a> {
                         .enumerate()
                         .map(|(index, element)| FieldLike {
                             name: index.to_string(),
-                            swift_field: index.to_string(),
+                            swift_field: format!("field{index}"),
                             shape: element.shape,
                         })
                         .collect::<Vec<_>>(),
                 )
+            }
+            ShapeKind::TupleStruct { fields } => {
+                for field in fields {
+                    self.emit_shape_descriptor(field.shape())?;
+                }
+                self.emit_tuple_descriptor(&fn_name, shape, &tuple_field_likes(shape)?)
+            }
+            ShapeKind::Result { ok, err } => {
+                self.emit_shape_descriptor(ok)?;
+                self.emit_shape_descriptor(err)?;
+                self.emit_result_descriptor(&fn_name, shape, ok, err)
             }
             _ => Err(unsupported(
                 shape,
@@ -449,10 +506,10 @@ impl<'a> SwiftGenerator<'a> {
         shape: &'static Shape,
         element: &'static Shape,
     ) -> Result<(), SwiftCodegenError> {
-        if !swift_array_fixed_element_supported(element) {
+        if !swift_array_element_supported(element) {
             return Err(unsupported(
                 shape,
-                "Swift Array descriptors currently require fixed-layout element values",
+                "Swift Array descriptors currently require element values that the Swift binette target can describe",
             ));
         }
         self.emit_shape_descriptor(element)?;
@@ -484,6 +541,9 @@ impl<'a> SwiftGenerator<'a> {
             "            elementProjectInto: {prefix}ProjectElementInto,"
         ));
         self.line(&format!(
+            "            elementDropProjected: {prefix}DropProjectedElement,"
+        ));
+        self.line(&format!(
             "            writeFixedElements: {prefix}WriteFixedElements"
         ));
         self.line("        )");
@@ -513,11 +573,19 @@ impl<'a> SwiftGenerator<'a> {
         self.line(&format!(
             "    guard index >= 0, index < values.count, outLen == MemoryLayout<{element_type}>.size else {{ return false }}"
         ));
-        self.line("    var element = values[index]");
-        self.line("    withUnsafeBytes(of: &element) { bytes in");
-        self.line("        UnsafeMutableRawPointer(out!).copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)");
-        self.line("    }");
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: {element_type}.self).initialize(to: values[index])"
+        ));
         self.line("    return true");
+        self.line("}");
+        self.line("");
+
+        self.line(&format!(
+            "private func {prefix}DropProjectedElement(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {{"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {element_type}.self).deinitialize(count: 1)"
+        ));
         self.line("}");
         self.line("");
 
@@ -565,11 +633,64 @@ impl<'a> SwiftGenerator<'a> {
             descriptor_fn_name(inner)?
         ));
         let (swift_type, representation) = match classify_shape(inner) {
-            ShapeKind::Scalar(ScalarType::U16) => {
-                ("UInt16", "binetteDirectOptionalU16Representation()")
-            }
-            ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
-                ("String", "binetteThunkOptionalStringRepresentation()")
+            ShapeKind::Scalar(ScalarType::Bool) => (
+                "Bool".to_owned(),
+                "binetteDirectOptionalRepresentation(Bool.self, sampleA: false, sampleB: true)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::U8) => (
+                "UInt8".to_owned(),
+                "binetteDirectOptionalRepresentation(UInt8.self, sampleA: 0, sampleB: 1)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::U16) => (
+                "UInt16".to_owned(),
+                "binetteDirectOptionalU16Representation()".to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::U32) => (
+                "UInt32".to_owned(),
+                "binetteDirectOptionalRepresentation(UInt32.self, sampleA: 0, sampleB: 1)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::U64) => (
+                "UInt64".to_owned(),
+                "binetteDirectOptionalRepresentation(UInt64.self, sampleA: 0, sampleB: 1)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::I32) => (
+                "Int32".to_owned(),
+                "binetteDirectOptionalRepresentation(Int32.self, sampleA: 0, sampleB: 1)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::I64) => (
+                "Int64".to_owned(),
+                "binetteDirectOptionalRepresentation(Int64.self, sampleA: 0, sampleB: 1)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::F64) => (
+                "Double".to_owned(),
+                "binetteDirectOptionalRepresentation(Double.self, sampleA: 0.0, sampleB: 1.0)"
+                    .to_owned(),
+            ),
+            ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => (
+                "String".to_owned(),
+                "binetteThunkOptionalStringRepresentation()".to_owned(),
+            ),
+            ShapeKind::Enum(EnumInfo { variants, .. })
+                if variants.len() >= 2
+                    && variants
+                        .iter()
+                        .all(|variant| matches!(classify_variant(variant), VariantKind::Unit)) =>
+            {
+                let swift_type = swift_type(inner)?;
+                let sample_a = swift_ident(variants[0].name);
+                let sample_b = swift_ident(variants[1].name);
+                (
+                    swift_type.clone(),
+                    format!(
+                        "binetteDirectOptionalRepresentation({swift_type}.self, sampleA: .{sample_a}, sampleB: .{sample_b})"
+                    ),
+                )
             }
             _ => {
                 return Err(unsupported(
@@ -763,6 +884,92 @@ impl<'a> SwiftGenerator<'a> {
         self.line("}");
         self.line("");
         self.emit_enum_thunks(&type_name, variants)?;
+        Ok(())
+    }
+
+    fn emit_result_descriptor(
+        &mut self,
+        fn_name: &str,
+        shape: &'static Shape,
+        ok: &'static Shape,
+        err: &'static Shape,
+    ) -> Result<(), SwiftCodegenError> {
+        let type_name = result_carrier_type_name(shape)?;
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
+        ));
+        self.line("    return arena.enumeration(");
+        self.line(&format!(
+            "        typeID: {},",
+            concrete_or_synthetic_type_id(shape)?
+        ));
+        self.line(&format!(
+            "        layout: binetteLayout(of: {type_name}.self),"
+        ));
+        self.line("        tag: BinetteLocalEnumTagAccessAbi(");
+        self.line("            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("            direct_offset: 0,");
+        self.line(&format!(
+            "            thunk: BinetteLocalEnumTagThunkAbi(call: {prefix}Tag, context: nil)"
+        ));
+        self.line("        ),");
+        self.line("        variants: [");
+        self.emit_synthetic_newtype_variant_descriptor(&type_name, "Ok", 0, ok)?;
+        self.emit_synthetic_newtype_variant_descriptor(&type_name, "Err", 1, err)?;
+        self.line("        ]");
+        self.line("    )");
+        self.line("}");
+        self.line("");
+
+        self.emit_result_thunks(&type_name, ok, err)?;
+        Ok(())
+    }
+
+    fn emit_synthetic_newtype_variant_descriptor(
+        &mut self,
+        type_name: &str,
+        variant_name: &str,
+        index: usize,
+        payload: &'static Shape,
+    ) -> Result<(), SwiftCodegenError> {
+        let prefix = type_name.to_lower_camel_case();
+        let variant_camel = variant_name.to_upper_camel_case();
+        self.line("            BinetteLocalVariantAbi(");
+        self.line(&format!(
+            "                name: binetteLocalStr(\"{variant_name}\"),"
+        ));
+        self.line(&format!("                index: {index},"));
+        self.line("                project: BinetteLocalVariantProjectAccessAbi(");
+        self.line("                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("                    direct_offset: 0,");
+        self.line(&format!(
+            "                    thunk: BinetteLocalVariantProjectThunkAbi(call: {prefix}Project{variant_camel}Borrowed, context: nil)"
+        ));
+        self.line("                ),");
+        self.line("                project_into: BinetteLocalVariantProjectIntoAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Project{variant_camel}Into,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                drop_projected: BinetteLocalVariantDropAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Drop{variant_camel}Projected,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                construct: BinetteLocalVariantConstructAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Construct{variant_camel},"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line(&format!(
+            "                payload: {}(in: arena)",
+            descriptor_fn_name(payload)?
+        ));
+        self.line("            ),");
         Ok(())
     }
 
@@ -1028,8 +1235,54 @@ impl<'a> SwiftGenerator<'a> {
     ) -> Result<(), SwiftCodegenError> {
         let prefix = type_name.to_lower_camel_case();
         let variant_camel = variant.name.to_upper_camel_case();
+        self.emit_newtype_case_thunks(
+            type_name,
+            &prefix,
+            &swift_ident(variant.name),
+            &variant_camel,
+            inner,
+        )
+    }
+
+    fn emit_result_thunks(
+        &mut self,
+        type_name: &str,
+        ok: &'static Shape,
+        err: &'static Shape,
+    ) -> Result<(), SwiftCodegenError> {
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {prefix}Tag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {{"
+        ));
+        self.line(&format!(
+            "    switch UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee {{"
+        ));
+        self.line("    case .ok(_): return 0");
+        self.line("    case .err(_): return 1");
+        self.line("    }");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}ProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {{ nil }}"
+        ));
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}ProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {{ nil }}"
+        ));
+        self.line("");
+        self.emit_newtype_case_thunks(type_name, &prefix, "ok", "Ok", ok)?;
+        self.emit_newtype_case_thunks(type_name, &prefix, "err", "Err", err)
+    }
+
+    fn emit_newtype_case_thunks(
+        &mut self,
+        type_name: &str,
+        prefix: &str,
+        variant_ident: &str,
+        variant_camel: &str,
+        inner: &'static Shape,
+    ) -> Result<(), SwiftCodegenError> {
         let inner_type = swift_type(inner)?;
-        let variant_ident = swift_ident(variant.name);
         self.line(&format!(
             "private func {prefix}Project{variant_camel}Into(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
         ));
@@ -1062,25 +1315,71 @@ impl<'a> SwiftGenerator<'a> {
             "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
         ));
         match classify_shape(inner) {
+            _ if is_bytes(inner) => {
+                self.line(
+                    "    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)",
+                );
+                self.line("    let payloadValue = Array(bytes)");
+            }
             ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
                 self.line(
                     "    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)",
                 );
                 self.line("    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }");
             }
-            ShapeKind::Scalar(ScalarType::U32) => {
+            ShapeKind::Scalar(
+                ScalarType::Bool
+                | ScalarType::U8
+                | ScalarType::U16
+                | ScalarType::U32
+                | ScalarType::U64
+                | ScalarType::I32
+                | ScalarType::I64
+                | ScalarType::F64,
+            ) => {
+                let inner_type = swift_type(inner)?;
+                self.line(
+                    &format!(
+                        "    guard payloadLen == MemoryLayout<{inner_type}>.size else {{ return false }}"
+                    ),
+                );
+                let zero = if matches!(classify_shape(inner), ShapeKind::Scalar(ScalarType::Bool)) {
+                    "false"
+                } else {
+                    "0"
+                };
+                self.line(&format!("    var payloadValue: {inner_type} = {zero}"));
+                self.line("    withUnsafeMutableBytes(of: &payloadValue) { out in");
+                self.line("        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))");
+                self.line("    }");
+            }
+            ShapeKind::Enum(EnumInfo { variants, .. })
+                if variants
+                    .iter()
+                    .all(|variant| matches!(classify_variant(variant), VariantKind::Unit)) =>
+            {
                 self.line(
                     "    guard payloadLen == MemoryLayout<UInt32>.size else { return false }",
                 );
-                self.line("    var payloadValue: UInt32 = 0");
-                self.line("    withUnsafeMutableBytes(of: &payloadValue) { out in");
+                self.line("    var payloadIndex: UInt32 = 0");
+                self.line("    withUnsafeMutableBytes(of: &payloadIndex) { out in");
                 self.line("        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))");
+                self.line("    }");
+                self.line(&format!("    let payloadValue: {inner_type}"));
+                self.line("    switch payloadIndex {");
+                for (index, variant) in variants.iter().enumerate() {
+                    self.line(&format!(
+                        "    case {index}: payloadValue = .{}",
+                        swift_ident(variant.name)
+                    ));
+                }
+                self.line("    default: return false");
                 self.line("    }");
             }
             _ => {
                 return Err(unsupported(
                     inner,
-                    "enum newtype construction currently supports String and UInt32 payload bytes",
+                    "enum newtype construction currently supports byte sequences, fixed scalar payload bytes, and unit-enum payload bytes",
                 ));
             }
         }
@@ -1262,6 +1561,148 @@ fn collect_named_shapes(service: &ServiceDescriptor) -> Vec<NamedShape> {
     out
 }
 
+fn collect_tuple_shapes(
+    service: &ServiceDescriptor,
+) -> Result<Vec<&'static Shape>, SwiftCodegenError> {
+    fn visit(
+        shape: &'static Shape,
+        seen: &mut BTreeSet<String>,
+        out: &mut Vec<&'static Shape>,
+    ) -> Result<(), SwiftCodegenError> {
+        match classify_shape(shape) {
+            ShapeKind::Tuple { elements } => {
+                for element in elements {
+                    visit(element.shape, seen, out)?;
+                }
+                if seen.insert(tuple_carrier_type_name(shape)?) {
+                    out.push(shape);
+                }
+            }
+            ShapeKind::TupleStruct { fields } => {
+                for field in fields {
+                    visit(field.shape(), seen, out)?;
+                }
+                if seen.insert(tuple_carrier_type_name(shape)?) {
+                    out.push(shape);
+                }
+            }
+            ShapeKind::Struct(StructInfo { fields, .. }) => {
+                for field in fields {
+                    visit(field.shape(), seen, out)?;
+                }
+            }
+            ShapeKind::Enum(EnumInfo { variants, .. }) => {
+                for variant in variants {
+                    match classify_variant(variant) {
+                        VariantKind::Newtype { inner } => visit(inner, seen, out)?,
+                        VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                            for field in fields {
+                                visit(field.shape(), seen, out)?;
+                            }
+                        }
+                        VariantKind::Unit => {}
+                    }
+                }
+            }
+            ShapeKind::List { element }
+            | ShapeKind::Slice { element }
+            | ShapeKind::Array { element, .. }
+            | ShapeKind::Set { element }
+            | ShapeKind::Option { inner: element }
+            | ShapeKind::Tx { inner: element }
+            | ShapeKind::Rx { inner: element }
+            | ShapeKind::Pointer { pointee: element } => visit(element, seen, out)?,
+            ShapeKind::Map { key, value } => {
+                visit(key, seen, out)?;
+                visit(value, seen, out)?;
+            }
+            ShapeKind::Result { ok, err } => {
+                visit(ok, seen, out)?;
+                visit(err, seen, out)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for method in service.methods {
+        for arg in method.args {
+            visit(arg.shape, &mut seen, &mut out)?;
+        }
+        visit(method.return_shape, &mut seen, &mut out)?;
+    }
+    Ok(out)
+}
+
+fn collect_result_shapes(
+    service: &ServiceDescriptor,
+) -> Result<Vec<&'static Shape>, SwiftCodegenError> {
+    fn visit(
+        shape: &'static Shape,
+        seen: &mut BTreeSet<String>,
+        out: &mut Vec<&'static Shape>,
+    ) -> Result<(), SwiftCodegenError> {
+        match classify_shape(shape) {
+            ShapeKind::Result { ok, err } => {
+                visit(ok, seen, out)?;
+                visit(err, seen, out)?;
+                if seen.insert(result_carrier_type_name(shape)?) {
+                    out.push(shape);
+                }
+            }
+            ShapeKind::Struct(StructInfo { fields, .. }) | ShapeKind::TupleStruct { fields } => {
+                for field in fields {
+                    visit(field.shape(), seen, out)?;
+                }
+            }
+            ShapeKind::Enum(EnumInfo { variants, .. }) => {
+                for variant in variants {
+                    match classify_variant(variant) {
+                        VariantKind::Newtype { inner } => visit(inner, seen, out)?,
+                        VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                            for field in fields {
+                                visit(field.shape(), seen, out)?;
+                            }
+                        }
+                        VariantKind::Unit => {}
+                    }
+                }
+            }
+            ShapeKind::Tuple { elements } => {
+                for element in elements {
+                    visit(element.shape, seen, out)?;
+                }
+            }
+            ShapeKind::List { element }
+            | ShapeKind::Slice { element }
+            | ShapeKind::Array { element, .. }
+            | ShapeKind::Set { element }
+            | ShapeKind::Option { inner: element }
+            | ShapeKind::Tx { inner: element }
+            | ShapeKind::Rx { inner: element }
+            | ShapeKind::Pointer { pointee: element } => visit(element, seen, out)?,
+            ShapeKind::Map { key, value } => {
+                visit(key, seen, out)?;
+                visit(value, seen, out)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for method in service.methods {
+        for arg in method.args {
+            visit(arg.shape, &mut seen, &mut out)?;
+        }
+        visit(method.return_shape, &mut seen, &mut out)?;
+    }
+    Ok(out)
+}
+
 fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
     if is_bytes(shape) {
         return Ok("[UInt8]".to_owned());
@@ -1281,6 +1722,7 @@ fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
         ShapeKind::List { element } | ShapeKind::Slice { element } => {
             Ok(format!("[{}]", swift_type(element)?))
         }
+        ShapeKind::Tuple { .. } | ShapeKind::TupleStruct { .. } => tuple_carrier_type_name(shape),
         ShapeKind::Option { inner } => Ok(format!("{}?", swift_type(inner)?)),
         ShapeKind::Struct(StructInfo {
             name: Some(name), ..
@@ -1289,6 +1731,7 @@ fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
             name: Some(name), ..
         }) => Ok(name.to_upper_camel_case()),
         ShapeKind::Tx { .. } | ShapeKind::Rx { .. } => Ok("VoxSwiftChannel".to_owned()),
+        ShapeKind::Result { .. } => result_carrier_type_name(shape),
         _ => Err(unsupported(
             shape,
             "no Swift type spelling for this shape yet",
@@ -1330,6 +1773,9 @@ fn descriptor_fn_name(shape: &'static Shape) -> Result<String, SwiftCodegenError
                 .replace(['[', ']', '?', ' '], "")
                 .to_upper_camel_case()
         )),
+        ShapeKind::Tuple { .. } | ShapeKind::TupleStruct { .. } => {
+            Ok(format!("descriptorFor{}", tuple_carrier_type_name(shape)?))
+        }
         ShapeKind::Option { inner } => Ok(format!(
             "descriptorForOptional{}",
             swift_type(inner)?
@@ -1348,6 +1794,9 @@ fn descriptor_fn_name(shape: &'static Shape) -> Result<String, SwiftCodegenError
                 .replace(['[', ']', '?', ' '], "")
                 .to_upper_camel_case()
         )),
+        ShapeKind::Result { .. } => {
+            Ok(format!("descriptorFor{}", result_carrier_type_name(shape)?))
+        }
         ShapeKind::Struct(StructInfo {
             name: Some(name), ..
         })
@@ -1416,7 +1865,70 @@ fn descriptor_helper_prefix(fn_name: &str) -> String {
         .to_lower_camel_case()
 }
 
-fn swift_array_fixed_element_supported(shape: &'static Shape) -> bool {
+fn tuple_carrier_type_name(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
+    let fields = tuple_field_likes(shape)?;
+    let mut name = format!("VoxTuple{}", fields.len());
+    for field in fields {
+        name.push_str(&swift_type_name_fragment(field.shape)?);
+    }
+    Ok(name)
+}
+
+fn result_carrier_type_name(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
+    let ShapeKind::Result { ok, err } = classify_shape(shape) else {
+        return Err(unsupported(shape, "shape is not a result"));
+    };
+    Ok(format!(
+        "VoxResult{}{}",
+        swift_type_name_fragment(ok)?,
+        swift_type_name_fragment(err)?
+    ))
+}
+
+fn tuple_field_likes(shape: &'static Shape) -> Result<Vec<FieldLike>, SwiftCodegenError> {
+    match classify_shape(shape) {
+        ShapeKind::Tuple { elements } => Ok(elements
+            .iter()
+            .enumerate()
+            .map(|(index, element)| FieldLike {
+                name: index.to_string(),
+                swift_field: format!("field{index}"),
+                shape: element.shape,
+            })
+            .collect()),
+        ShapeKind::TupleStruct { fields } => Ok(fields
+            .iter()
+            .enumerate()
+            .map(|(index, field)| FieldLike {
+                name: index.to_string(),
+                swift_field: format!("field{index}"),
+                shape: field.shape(),
+            })
+            .collect()),
+        _ => Err(unsupported(shape, "shape is not a tuple")),
+    }
+}
+
+fn swift_type_name_fragment(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
+    let fragment = swift_type(shape)?
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_upper_camel_case();
+    if fragment.is_empty() {
+        Err(unsupported(
+            shape,
+            "shape has no usable Swift type name fragment",
+        ))
+    } else {
+        Ok(fragment)
+    }
+}
+
+fn swift_array_element_supported(shape: &'static Shape) -> bool {
+    if is_bytes(shape) {
+        return true;
+    }
     match classify_shape(shape) {
         ShapeKind::Scalar(
             ScalarType::Bool
@@ -1426,14 +1938,56 @@ fn swift_array_fixed_element_supported(shape: &'static Shape) -> bool {
             | ScalarType::U64
             | ScalarType::I32
             | ScalarType::I64
-            | ScalarType::F64,
+            | ScalarType::F64
+            | ScalarType::Str
+            | ScalarType::String
+            | ScalarType::CowStr,
         ) => true,
+        ShapeKind::Option { inner } => match classify_shape(inner) {
+            ShapeKind::Scalar(
+                ScalarType::Bool
+                | ScalarType::U8
+                | ScalarType::U16
+                | ScalarType::U32
+                | ScalarType::U64
+                | ScalarType::I32
+                | ScalarType::I64
+                | ScalarType::F64
+                | ScalarType::Str
+                | ScalarType::String
+                | ScalarType::CowStr,
+            ) => true,
+            ShapeKind::Enum(EnumInfo { variants, .. }) => {
+                variants.len() >= 2
+                    && variants
+                        .iter()
+                        .all(|variant| matches!(classify_variant(variant), VariantKind::Unit))
+            }
+            _ => false,
+        },
+        ShapeKind::List { element } | ShapeKind::Slice { element } => {
+            swift_array_element_supported(element)
+        }
         ShapeKind::Struct(StructInfo { fields, .. }) => fields
             .iter()
-            .all(|field| swift_array_fixed_element_supported(field.shape())),
+            .all(|field| swift_array_element_supported(field.shape())),
+        ShapeKind::Enum(EnumInfo { variants, .. }) => {
+            variants
+                .iter()
+                .all(|variant| match classify_variant(variant) {
+                    VariantKind::Unit => true,
+                    VariantKind::Newtype { inner } => swift_array_element_supported(inner),
+                    VariantKind::Tuple { fields } | VariantKind::Struct { fields } => fields
+                        .iter()
+                        .all(|field| swift_array_element_supported(field.shape())),
+                })
+        }
         ShapeKind::Tuple { elements } => elements
             .iter()
-            .all(|element| swift_array_fixed_element_supported(element.shape)),
+            .all(|element| swift_array_element_supported(element.shape)),
+        ShapeKind::TupleStruct { fields } => fields
+            .iter()
+            .all(|field| swift_array_element_supported(field.shape())),
         _ => false,
     }
 }
@@ -1546,10 +2100,15 @@ mod tests {
     }
 
     #[test]
-    fn generated_swift_rejects_unsupported_optional_before_runtime() {
+    fn generated_swift_rejects_unsupported_aggregate_optional_before_runtime() {
+        #[derive(Facet)]
+        struct BadPayload {
+            value: u32,
+        }
+
         #[derive(Facet)]
         struct BadCall {
-            maybe: Option<bool>,
+            maybe: Option<BadPayload>,
         }
 
         let submit = method_descriptor::<(BadCall,), ()>("BadSwift", "submit", &["call"], None);
@@ -1560,7 +2119,7 @@ mod tests {
             doc: None,
         };
 
-        let error = generate_service(&service).expect_err("Option<Bool> is not supported yet");
+        let error = generate_service(&service).expect_err("Option<struct> is not supported yet");
         assert!(
             error
                 .to_string()

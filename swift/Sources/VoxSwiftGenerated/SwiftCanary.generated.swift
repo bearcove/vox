@@ -442,6 +442,7 @@ private func descriptorForArrayOfSwiftPoint(in arena: BinetteCAbiDescriptorArena
             elementStride: MemoryLayout<SwiftPoint>.stride,
             len: arrayOfSwiftPointLen,
             elementProjectInto: arrayOfSwiftPointProjectElementInto,
+            elementDropProjected: arrayOfSwiftPointDropProjectedElement,
             writeFixedElements: arrayOfSwiftPointWriteFixedElements
         )
     )
@@ -454,11 +455,12 @@ private func arrayOfSwiftPointLen(_ value: UnsafePointer<UInt8>?, _ context: Uns
 private func arrayOfSwiftPointProjectElementInto(_ value: UnsafePointer<UInt8>?, _ index: Int, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     let values = UnsafeRawPointer(value!).assumingMemoryBound(to: [SwiftPoint].self).pointee
     guard index >= 0, index < values.count, outLen == MemoryLayout<SwiftPoint>.size else { return false }
-    var element = values[index]
-    withUnsafeBytes(of: &element) { bytes in
-        UnsafeMutableRawPointer(out!).copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
-    }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: SwiftPoint.self).initialize(to: values[index])
     return true
+}
+
+private func arrayOfSwiftPointDropProjectedElement(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftPoint.self).deinitialize(count: 1)
 }
 
 private func arrayOfSwiftPointWriteFixedElements(_ value: UnsafeMutablePointer<UInt8>?, _ ptr: UnsafePointer<UInt8>?, _ count: Int, _ elementStride: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
