@@ -251,6 +251,7 @@ mod swift_codegen_canary {
         title: String,
         note: Option<String>,
         payload: Vec<u8>,
+        shape: SwiftShape,
         retry: Option<u16>,
         outcome: SwiftOutcome,
         output: Tx<u32>,
@@ -267,6 +268,14 @@ mod swift_codegen_canary {
     enum SwiftOutcome {
         Accepted(String),
         Rejected(u32),
+    }
+
+    #[derive(Facet)]
+    #[repr(u8)]
+    enum SwiftShape {
+        Circle { radius: f64 },
+        Rectangle { width: f64, height: f64 },
+        Point,
     }
 
     pub fn service_descriptor() -> &'static ServiceDescriptor {

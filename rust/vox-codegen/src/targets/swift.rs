@@ -65,6 +65,7 @@ impl<'a> SwiftGenerator<'a> {
         self.line("");
 
         self.emit_named_types()?;
+        self.emit_variant_payload_types()?;
         self.emit_method_arg_types()?;
         self.emit_descriptor_helpers()?;
         self.emit_method_codecs()?;
@@ -118,10 +119,32 @@ impl<'a> SwiftGenerator<'a> {
                                     swift_type(inner)?
                                 ));
                             }
-                            VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
-                                return Err(unsupported(
-                                    item.shape,
-                                    "Swift descriptor generation supports unit and newtype enum variants first",
+                            VariantKind::Tuple { fields } => {
+                                let fields = fields
+                                    .iter()
+                                    .map(|field| swift_type(field.shape()))
+                                    .collect::<Result<Vec<_>, _>>()?
+                                    .join(", ");
+                                self.line(&format!(
+                                    "    case {}({fields})",
+                                    swift_ident(variant.name)
+                                ));
+                            }
+                            VariantKind::Struct { fields } => {
+                                let fields = fields
+                                    .iter()
+                                    .map(|field| {
+                                        Ok(format!(
+                                            "{}: {}",
+                                            swift_ident(field.name),
+                                            swift_type(field.shape())?
+                                        ))
+                                    })
+                                    .collect::<Result<Vec<_>, SwiftCodegenError>>()?
+                                    .join(", ");
+                                self.line(&format!(
+                                    "    case {}({fields})",
+                                    swift_ident(variant.name)
                                 ));
                             }
                         }
@@ -132,6 +155,52 @@ impl<'a> SwiftGenerator<'a> {
                 _ => {}
             }
         }
+        Ok(())
+    }
+
+    fn emit_variant_payload_types(&mut self) -> Result<(), SwiftCodegenError> {
+        let named = self.named.clone();
+        let mut emitted_header = false;
+        for item in &named {
+            let ShapeKind::Enum(EnumInfo { variants, .. }) = classify_shape(item.shape) else {
+                continue;
+            };
+            for variant in variants {
+                match classify_variant(variant) {
+                    VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                        if !emitted_header {
+                            self.line("// Enum payload carriers");
+                            emitted_header = true;
+                        }
+                        self.emit_variant_payload_type(&item.name, variant, fields)?;
+                    }
+                    VariantKind::Unit | VariantKind::Newtype { .. } => {}
+                }
+            }
+        }
+        if emitted_header {
+            self.line("");
+        }
+        Ok(())
+    }
+
+    fn emit_variant_payload_type(
+        &mut self,
+        enum_type_name: &str,
+        variant: &facet_core::Variant,
+        fields: &[facet_core::Field],
+    ) -> Result<(), SwiftCodegenError> {
+        let payload_type = variant_payload_type_name(enum_type_name, variant.name);
+        self.line(&format!("private struct {payload_type} {{"));
+        for field in variant_payload_fields(variant, fields)? {
+            self.line(&format!(
+                "    var {}: {}",
+                field.swift_field,
+                swift_type(field.shape)?
+            ));
+        }
+        self.line("}");
+        self.line("");
         Ok(())
     }
 
@@ -282,8 +351,14 @@ impl<'a> SwiftGenerator<'a> {
             }
             ShapeKind::Enum(EnumInfo { variants, .. }) => {
                 for variant in variants {
-                    if let VariantKind::Newtype { inner } = classify_variant(variant) {
-                        self.emit_shape_descriptor(inner)?;
+                    match classify_variant(variant) {
+                        VariantKind::Newtype { inner } => self.emit_shape_descriptor(inner)?,
+                        VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                            for field in fields {
+                                self.emit_shape_descriptor(field.shape())?;
+                            }
+                        }
+                        VariantKind::Unit => {}
                     }
                 }
                 self.emit_enum_descriptor(&fn_name, shape, variants)
@@ -493,11 +568,19 @@ impl<'a> SwiftGenerator<'a> {
         type_name: &str,
         fields: &[FieldLike],
     ) -> Result<(), SwiftCodegenError> {
+        let type_id = concrete_or_synthetic_type_id(shape)?;
+        self.emit_aggregate_body_with_type_id(kind, &type_id, type_name, fields)
+    }
+
+    fn emit_aggregate_body_with_type_id(
+        &mut self,
+        kind: &str,
+        type_id: &str,
+        type_name: &str,
+        fields: &[FieldLike],
+    ) -> Result<(), SwiftCodegenError> {
         self.line(&format!("    return arena.{kind}("));
-        self.line(&format!(
-            "        typeID: {},",
-            concrete_or_synthetic_type_id(shape)?
-        ));
+        self.line(&format!("        typeID: {type_id},"));
         self.line(&format!(
             "        layout: binetteLayout(of: {type_name}.self),"
         ));
@@ -532,6 +615,16 @@ impl<'a> SwiftGenerator<'a> {
         variants: &[facet_core::Variant],
     ) -> Result<(), SwiftCodegenError> {
         let type_name = swift_shape_type(shape)?;
+        for (index, variant) in variants.iter().enumerate() {
+            match classify_variant(variant) {
+                VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                    self.emit_variant_payload_descriptor(
+                        shape, &type_name, variant, index, fields,
+                    )?;
+                }
+                VariantKind::Unit | VariantKind::Newtype { .. } => {}
+            }
+        }
         self.line(&format!(
             "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
         ));
@@ -569,7 +662,6 @@ impl<'a> SwiftGenerator<'a> {
         variant: &facet_core::Variant,
         index: usize,
     ) -> Result<(), SwiftCodegenError> {
-        let variant_ident = swift_ident(variant.name);
         self.line("            BinetteLocalVariantAbi(");
         self.line(&format!(
             "                name: binetteLocalStr(\"{}\"),",
@@ -613,15 +705,41 @@ impl<'a> SwiftGenerator<'a> {
             VariantKind::Unit => "nil".to_owned(),
             VariantKind::Newtype { inner } => format!("{}(in: arena)", descriptor_fn_name(inner)?),
             VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
-                return Err(SwiftCodegenError::UnsupportedShape {
-                    shape: type_name.to_owned(),
-                    reason: format!("variant {variant_ident} is not a unit or newtype variant"),
-                });
+                format!(
+                    "{}(in: arena)",
+                    variant_payload_descriptor_name(type_name, variant.name)
+                )
             }
         };
         self.line(&format!("                payload: {payload}"));
         self.line("            ),");
         Ok(())
+    }
+
+    fn emit_variant_payload_descriptor(
+        &mut self,
+        owner_shape: &'static Shape,
+        enum_type_name: &str,
+        variant: &facet_core::Variant,
+        index: usize,
+        fields: &[facet_core::Field],
+    ) -> Result<(), SwiftCodegenError> {
+        let fn_name = variant_payload_descriptor_name(enum_type_name, variant.name);
+        if !self.generated_descriptors.insert(fn_name.clone()) {
+            return Ok(());
+        }
+        let payload_type = variant_payload_type_name(enum_type_name, variant.name);
+        let fields = variant_payload_fields(variant, fields)?;
+        let type_id = synthetic_type_id(owner_shape, 0x9A7E_0000_0000_0000 ^ index as u64)?;
+        let kind = match classify_variant(variant) {
+            VariantKind::Tuple { .. } => "tuple",
+            VariantKind::Struct { .. } => "structure",
+            VariantKind::Unit | VariantKind::Newtype { .. } => unreachable!(),
+        };
+        self.line(&format!(
+            "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
+        ));
+        self.emit_aggregate_body_with_type_id(kind, &type_id, &payload_type, &fields)
     }
 
     fn emit_enum_thunks(
@@ -640,14 +758,15 @@ impl<'a> SwiftGenerator<'a> {
             let pattern = match classify_variant(variant) {
                 VariantKind::Unit => format!(".{}", swift_ident(variant.name)),
                 VariantKind::Newtype { .. } => format!(".{}(_)", swift_ident(variant.name)),
-                VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
-                    return Err(SwiftCodegenError::UnsupportedShape {
-                        shape: type_name.to_owned(),
-                        reason: format!(
-                            "variant {} is not a unit or newtype variant",
-                            variant.name
-                        ),
-                    });
+                VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                    format!(
+                        ".{}({})",
+                        swift_ident(variant.name),
+                        (0..fields.len())
+                            .map(|_| "_")
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
                 }
             };
             self.line(&format!("    case {pattern}: return {index}",));
@@ -672,14 +791,8 @@ impl<'a> SwiftGenerator<'a> {
                 VariantKind::Newtype { inner } => {
                     self.emit_newtype_variant_thunks(type_name, variant, inner)?;
                 }
-                VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
-                    return Err(SwiftCodegenError::UnsupportedShape {
-                        shape: type_name.to_owned(),
-                        reason: format!(
-                            "variant {} is not a unit or newtype variant",
-                            variant.name
-                        ),
-                    });
+                VariantKind::Tuple { fields } | VariantKind::Struct { fields } => {
+                    self.emit_aggregate_variant_thunks(type_name, variant, fields)?;
                 }
             }
         }
@@ -710,6 +823,86 @@ impl<'a> SwiftGenerator<'a> {
         self.line(&format!(
             "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{})",
             swift_ident(variant.name)
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+        Ok(())
+    }
+
+    fn emit_aggregate_variant_thunks(
+        &mut self,
+        type_name: &str,
+        variant: &facet_core::Variant,
+        fields: &[facet_core::Field],
+    ) -> Result<(), SwiftCodegenError> {
+        let prefix = type_name.to_lower_camel_case();
+        let variant_camel = variant.name.to_upper_camel_case();
+        let variant_ident = swift_ident(variant.name);
+        let payload_type = variant_payload_type_name(type_name, variant.name);
+        let is_tuple = matches!(classify_variant(variant), VariantKind::Tuple { .. });
+        let fields = variant_payload_fields(variant, fields)?;
+        let binding_names = fields
+            .iter()
+            .map(|field| field.swift_field.clone())
+            .collect::<Vec<_>>();
+        let pattern = binding_names.join(", ");
+        let init_args = fields
+            .iter()
+            .map(|field| format!("{}: {}", field.swift_field, field.swift_field))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let construct_args = fields
+            .iter()
+            .map(|field| {
+                if is_tuple {
+                    format!("payloadValue.{}", field.swift_field)
+                } else {
+                    format!("{}: payloadValue.{}", field.swift_field, field.swift_field)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        self.line(&format!(
+            "private func {prefix}Project{variant_camel}Into(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    guard outLen == MemoryLayout<{payload_type}>.size else {{ return false }}"
+        ));
+        self.line(&format!(
+            "    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee"
+        ));
+        self.line(&format!(
+            "    guard case let .{variant_ident}({pattern}) = value else {{ return false }}"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: {payload_type}.self).initialize(to: {payload_type}({init_args}))"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+
+        self.line(&format!(
+            "private func {prefix}Drop{variant_camel}Projected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {{"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {payload_type}.self).deinitialize(count: 1)"
+        ));
+        self.line("}");
+        self.line("");
+
+        self.line(&format!(
+            "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    guard payloadLen == MemoryLayout<{payload_type}>.size else {{ return false }}"
+        ));
+        self.line(&format!(
+            "    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: {payload_type}.self).pointee"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident}({construct_args}))"
         ));
         self.line("    return true");
         self.line("}");
@@ -833,6 +1026,53 @@ struct FieldLike {
     name: String,
     swift_field: String,
     shape: &'static Shape,
+}
+
+fn variant_payload_type_name(enum_type_name: &str, variant_name: &str) -> String {
+    format!(
+        "{}{}Payload",
+        enum_type_name,
+        variant_name.to_upper_camel_case()
+    )
+}
+
+fn variant_payload_descriptor_name(enum_type_name: &str, variant_name: &str) -> String {
+    format!(
+        "descriptorFor{}{}Payload",
+        enum_type_name,
+        variant_name.to_upper_camel_case()
+    )
+}
+
+fn variant_payload_fields(
+    variant: &facet_core::Variant,
+    fields: &[facet_core::Field],
+) -> Result<Vec<FieldLike>, SwiftCodegenError> {
+    match classify_variant(variant) {
+        VariantKind::Tuple { .. } => Ok(fields
+            .iter()
+            .enumerate()
+            .map(|(index, field)| FieldLike {
+                name: index.to_string(),
+                swift_field: format!("field{index}"),
+                shape: field.shape(),
+            })
+            .collect()),
+        VariantKind::Struct { .. } => Ok(fields
+            .iter()
+            .map(|field| FieldLike {
+                name: field.name.to_owned(),
+                swift_field: swift_ident(field.name),
+                shape: field.shape(),
+            })
+            .collect()),
+        VariantKind::Unit | VariantKind::Newtype { .. } => {
+            Err(SwiftCodegenError::UnsupportedShape {
+                shape: variant.name.to_owned(),
+                reason: "variant has no aggregate payload".to_owned(),
+            })
+        }
+    }
 }
 
 fn collect_named_shapes(service: &ServiceDescriptor) -> Vec<NamedShape> {
@@ -1078,6 +1318,7 @@ mod tests {
         title: String,
         note: Option<String>,
         payload: Vec<u8>,
+        shape: SwiftShape,
         retry: Option<u16>,
         outcome: SwiftOutcome,
         output: Tx<u32>,
@@ -1094,6 +1335,14 @@ mod tests {
     enum SwiftOutcome {
         Accepted(String),
         Rejected(u32),
+    }
+
+    #[derive(Facet)]
+    #[repr(u8)]
+    enum SwiftShape {
+        Circle { radius: f64 },
+        Rectangle { width: f64, height: f64 },
+        Point,
     }
 
     #[test]
@@ -1115,6 +1364,9 @@ mod tests {
         assert!(generated.contains("binette_primitive_f64_type_id()"));
         assert!(generated.contains("binetteThunkOptionalStringRepresentation()"));
         assert!(generated.contains("public enum SwiftOutcome"));
+        assert!(generated.contains("public enum SwiftShape"));
+        assert!(generated.contains("case circle(radius: Double)"));
+        assert!(generated.contains("private struct SwiftShapeCirclePayload"));
         assert!(generated.contains("public struct SwiftCanarySubmitArgs"));
         assert!(generated.contains("public init(call: SwiftCall)"));
         assert!(generated.contains("try VoxSwiftMethodCodec("));

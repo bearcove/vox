@@ -6,6 +6,12 @@ import CBinette
 import VoxSwift
 
 // Named value types
+public enum SwiftShape {
+    case circle(radius: Double)
+    case rectangle(width: Double, height: Double)
+    case point
+}
+
 public enum SwiftOutcome {
     case accepted(String)
     case rejected(UInt32)
@@ -18,16 +24,18 @@ public struct SwiftCall {
     public var title: String
     public var note: String?
     public var payload: [UInt8]
+    public var shape: SwiftShape
     public var retry: UInt16?
     public var outcome: SwiftOutcome
     public var output: VoxSwiftChannel
-    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, note: String?, payload: [UInt8], retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
+    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, note: String?, payload: [UInt8], shape: SwiftShape, retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
         self.method = method
         self.nonce = nonce
         self.ratio = ratio
         self.title = title
         self.note = note
         self.payload = payload
+        self.shape = shape
         self.retry = retry
         self.outcome = outcome
         self.output = output
@@ -43,6 +51,17 @@ public struct SwiftReply {
     }
 }
 
+// Enum payload carriers
+private struct SwiftShapeCirclePayload {
+    var radius: Double
+}
+
+private struct SwiftShapeRectanglePayload {
+    var width: Double
+    var height: Double
+}
+
+
 // Method argument tuple carriers
 public struct SwiftCanarySubmitArgs {
     public var call: SwiftCall
@@ -52,6 +71,193 @@ public struct SwiftCanarySubmitArgs {
 }
 
 // Local binette descriptors
+private func descriptorForDouble(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_f64_type_id(), Double.self)
+}
+
+private func descriptorForSwiftShapeCirclePayload(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.structure(
+        typeID: 0x196C7ACF76FFE754,
+        layout: binetteLayout(of: SwiftShapeCirclePayload.self),
+        fields: [
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("radius"),
+                offset: MemoryLayout<SwiftShapeCirclePayload>.offset(of: \SwiftShapeCirclePayload.radius)!,
+                descriptor: descriptorForDouble(in: arena)
+            ),
+        ]
+    )
+}
+
+private func descriptorForSwiftShapeRectanglePayload(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.structure(
+        typeID: 0x196C7ACF76FFE7D4,
+        layout: binetteLayout(of: SwiftShapeRectanglePayload.self),
+        fields: [
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("width"),
+                offset: MemoryLayout<SwiftShapeRectanglePayload>.offset(of: \SwiftShapeRectanglePayload.width)!,
+                descriptor: descriptorForDouble(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("height"),
+                offset: MemoryLayout<SwiftShapeRectanglePayload>.offset(of: \SwiftShapeRectanglePayload.height)!,
+                descriptor: descriptorForDouble(in: arena)
+            ),
+        ]
+    )
+}
+
+private func descriptorForSwiftShape(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x266C7ACF76FFE719,
+        layout: binetteLayout(of: SwiftShape.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: swiftShapeTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Circle"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftShapeProjectCircleBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftShapeProjectCircleInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftShapeDropCircleProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftShapeConstructCircle,
+                    context: nil
+                ),
+                payload: descriptorForSwiftShapeCirclePayload(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Rectangle"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftShapeProjectRectangleBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftShapeProjectRectangleInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftShapeDropRectangleProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftShapeConstructRectangle,
+                    context: nil
+                ),
+                payload: descriptorForSwiftShapeRectanglePayload(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Point"),
+                index: 2,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftShapeProjectPointBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftShapeProjectPointInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftShapeDropPointProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftShapeConstructPoint,
+                    context: nil
+                ),
+                payload: nil
+            ),
+        ]
+    )
+}
+
+private func swiftShapeTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).pointee {
+    case .circle(_): return 0
+    case .rectangle(_, _): return 1
+    case .point: return 2
+    }
+}
+
+private func swiftShapeProjectCircleBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {
+    nil
+}
+
+private func swiftShapeProjectCircleInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<SwiftShapeCirclePayload>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).pointee
+    guard case let .circle(radius) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: SwiftShapeCirclePayload.self).initialize(to: SwiftShapeCirclePayload(radius: radius))
+    return true
+}
+
+private func swiftShapeDropCircleProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShapeCirclePayload.self).deinitialize(count: 1)
+}
+
+private func swiftShapeConstructCircle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<SwiftShapeCirclePayload>.size else { return false }
+    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: SwiftShapeCirclePayload.self).pointee
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).initialize(to: .circle(radius: payloadValue.radius))
+    return true
+}
+
+private func swiftShapeProjectRectangleBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {
+    nil
+}
+
+private func swiftShapeProjectRectangleInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<SwiftShapeRectanglePayload>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).pointee
+    guard case let .rectangle(width, height) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: SwiftShapeRectanglePayload.self).initialize(to: SwiftShapeRectanglePayload(width: width, height: height))
+    return true
+}
+
+private func swiftShapeDropRectangleProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShapeRectanglePayload.self).deinitialize(count: 1)
+}
+
+private func swiftShapeConstructRectangle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<SwiftShapeRectanglePayload>.size else { return false }
+    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: SwiftShapeRectanglePayload.self).pointee
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).initialize(to: .rectangle(width: payloadValue.width, height: payloadValue.height))
+    return true
+}
+
+private func swiftShapeProjectPointBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {
+    nil
+}
+
+private func swiftShapeProjectPointInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftShapeDropPointProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftShapeConstructPoint(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).initialize(to: .point)
+    return true
+}
+
 private func descriptorForString(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     arena.string()
 }
@@ -178,10 +384,6 @@ private func descriptorForUInt64(in arena: BinetteCAbiDescriptorArena) -> Unsafe
     arena.plain(typeID: binette_primitive_u64_type_id(), UInt64.self)
 }
 
-private func descriptorForDouble(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
-    arena.plain(typeID: binette_primitive_f64_type_id(), Double.self)
-}
-
 private func descriptorForOptionalString(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     let some = descriptorForString(in: arena)
     return arena.option(
@@ -230,7 +432,7 @@ private func descriptorForTxUInt32(in arena: BinetteCAbiDescriptorArena) -> Unsa
 
 private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.structure(
-        typeID: 0x9A8D3C7C41E52736,
+        typeID: 0x1318A71A1F6EBC15,
         layout: binetteLayout(of: SwiftCall.self),
         fields: [
             BinetteLocalFieldAbi(
@@ -262,6 +464,11 @@ private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> Uns
                 name: binetteLocalStr("payload"),
                 offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.payload)!,
                 descriptor: descriptorForBytes(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("shape"),
+                offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.shape)!,
+                descriptor: descriptorForSwiftShape(in: arena)
             ),
             BinetteLocalFieldAbi(
                 name: binetteLocalStr("retry"),
