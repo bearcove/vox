@@ -237,6 +237,62 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         XCTAssertEqual(reply.message, "rust vox response")
         XCTAssertEqual(reply.retry, 233)
     }
+
+    func testSwiftArgsCallRunsThroughRustVoxDriver() throws {
+        let argsArena = BinetteCAbiDescriptorArena()
+        let argsDescriptor = voxSwiftArgsDescriptor(in: argsArena)
+        let argsCodec = try VoxSwiftLocalCodec(descriptor: argsDescriptor)
+
+        let schemaPayload = try argsCodec.voxSchemaPayload()
+        var args = VoxSwiftArgs(
+            title: "swift rpc args",
+            retry: 144,
+            output: VoxSwiftChannel()
+        )
+        let payload = try argsCodec.encode(&args)
+
+        var responseSchemaPayload = VoxByteBuffer()
+        var responsePayload = VoxByteBuffer()
+        let status = schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            payload.withUnsafeBufferPointer { payloadBuffer in
+                vox_canary_driver_call_swift_args(
+                    schemaBuffer.baseAddress,
+                    schemaBuffer.count,
+                    payloadBuffer.baseAddress,
+                    payloadBuffer.count,
+                    &responseSchemaPayload,
+                    &responsePayload
+                )
+            }
+        }
+        defer {
+            vox_byte_buffer_free(responseSchemaPayload)
+            vox_byte_buffer_free(responsePayload)
+        }
+
+        XCTAssertEqual(status, VOX_STATUS_OK)
+        XCTAssertFalse(responseSchemaPayload.ptr == nil)
+        XCTAssertFalse(responsePayload.ptr == nil)
+
+        let responseSchemaBytes = Array(
+            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
+        )
+        let responseBytes = Array(
+            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
+        )
+
+        let replyArena = BinetteCAbiDescriptorArena()
+        let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
+        let replyCodec = try VoxSwiftLocalCodec(descriptor: replyDescriptor)
+        let reply = try replyCodec.decodeVoxPayload(
+            responseBytes,
+            writerSchemaPayload: responseSchemaBytes,
+            as: VoxSwiftReply.self
+        )
+
+        XCTAssertEqual(reply.message, "rust vox response")
+        XCTAssertEqual(reply.retry, 233)
+    }
 }
 
 private func roundTrip(

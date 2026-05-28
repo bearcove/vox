@@ -21,6 +21,8 @@ bundles. The Rust receive path accepts Swift-derived schema payload bytes
 through `SchemaRecvTracker` and consumes Swift-encoded argument bytes through
 the normal Vox argument deserializer. The bridge also converts Rust-produced Vox
 response schema payloads back into binette schema bundles so Swift can decode
-Rust response bytes into Swift local values. Full Swift RPC client/server
-support will build on this path rather than reintroducing a separate
-Swift-native codec.
+Rust response bytes into Swift local values. The current canary sends
+Swift-produced argument schema and payload bytes through the Rust Vox driver
+over an in-memory link and decodes the Rust response back into a Swift value.
+Full Swift RPC client/server support will build on this path rather than
+reintroducing a separate Swift-native codec.

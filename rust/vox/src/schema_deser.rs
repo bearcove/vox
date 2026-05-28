@@ -117,6 +117,20 @@ pub fn encode_binette_schema_bundle_from_vox_schema_payload_bytes(
         .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
 }
 
+// r[impl schema.exchange.required]
+pub fn encode_vox_schema_payload_for_remote_binding(
+    method_id: MethodId,
+    direction: BindingDirection,
+    tracker: &SchemaRecvTracker,
+) -> Result<SchemaPayloadBytes, SchemaDeserializeError> {
+    let (root, registry) = require_remote_vox_binding(method_id, direction, tracker)?;
+    Ok(vox_schema::SchemaPayload {
+        schemas: registry.into_values().collect(),
+        root,
+    }
+    .to_binette())
+}
+
 fn schema_deserialize_with_direction<T: Facet<'static>>(
     bytes: &[u8],
     method_id: MethodId,
