@@ -5,7 +5,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use tokio::sync::Notify;
 use vox_types::{
     Backing, ChannelClose, ChannelItem, ChannelReset, ChannelSink, Conduit, ConduitRx, ConduitTx,
-    IncomingChannelMessage, Metadata, MsgFamily, Payload, Rx, RxError, SelfRef, Tx, TxError,
+    ConnectionId, IncomingChannelMessage, Message, MessageFamily, MessagePayload, Metadata,
+    MsgFamily, Payload, RequestBody, RequestId, RequestMessage, RequestResponse, Rx, RxError,
+    SelfRef, Tx, TxError,
 };
 
 use crate::{
@@ -96,6 +98,93 @@ async fn bidirectional() {
     let received = client_rx.recv().await.unwrap().unwrap();
     let received = received.get();
     assert_eq!(&**received, "from-server");
+}
+
+fn decode_binette_payload<T: Facet<'static>>(bytes: &[u8]) -> T {
+    let writer_plan = binette::writer_plan_for::<T>().expect("payload writer plan");
+    let mut registry = binette::SchemaRegistry::new();
+    registry
+        .install_bundle(writer_plan.schema_bundle())
+        .expect("install payload schema bundle");
+    binette::decode_from_slice(bytes, writer_plan.root(), &registry).expect("decode payload")
+}
+
+// r[verify zerocopy.framing.value.opaque]
+#[tokio::test]
+async fn response_value_payload_crosses_bare_conduit_as_binette_bytes() {
+    let (client_link, server_link) = memory_link_pair(16);
+    let client = BareConduit::<MessageFamily, _>::new(client_link);
+    let server = BareConduit::<MessageFamily, _>::new(server_link);
+    let (client_tx, _client_rx) = client.split();
+    let (_server_tx, mut server_rx) = server.split();
+
+    let ret = 0xFACE_B00C_u64;
+    let msg = Message {
+        connection_id: ConnectionId::ROOT,
+        payload: MessagePayload::RequestMessage(RequestMessage {
+            id: RequestId(7),
+            body: RequestBody::Response(RequestResponse {
+                metadata: Metadata::default(),
+                ret: Payload::outgoing(&ret),
+                schemas: Default::default(),
+            }),
+        }),
+    };
+
+    let prepared = client_tx.prepare_send(msg).unwrap();
+    client_tx.send_prepared(prepared).await.unwrap();
+
+    let received = server_rx.recv().await.unwrap().unwrap();
+    let received = received.get();
+    let MessagePayload::RequestMessage(request) = &received.payload else {
+        panic!("expected request message");
+    };
+    let RequestBody::Response(response) = &request.body else {
+        panic!("expected response body");
+    };
+    let Payload::BinetteBytes(bytes) = &response.ret else {
+        panic!("response payload should arrive as binette bytes");
+    };
+    assert_eq!(decode_binette_payload::<u64>(bytes), ret);
+}
+
+// r[verify zerocopy.framing.value.opaque]
+#[tokio::test]
+async fn channel_value_payload_crosses_bare_conduit_as_binette_bytes() {
+    use vox_types::{ChannelBody, ChannelId, ChannelMessage};
+
+    let (client_link, server_link) = memory_link_pair(16);
+    let client = BareConduit::<MessageFamily, _>::new(client_link);
+    let server = BareConduit::<MessageFamily, _>::new(server_link);
+    let (client_tx, _client_rx) = client.split();
+    let (_server_tx, mut server_rx) = server.split();
+
+    let item = String::from("channel item");
+    let msg = Message {
+        connection_id: ConnectionId::ROOT,
+        payload: MessagePayload::ChannelMessage(ChannelMessage {
+            id: ChannelId(9),
+            body: ChannelBody::Item(ChannelItem {
+                item: Payload::outgoing(&item),
+            }),
+        }),
+    };
+
+    let prepared = client_tx.prepare_send(msg).unwrap();
+    client_tx.send_prepared(prepared).await.unwrap();
+
+    let received = server_rx.recv().await.unwrap().unwrap();
+    let received = received.get();
+    let MessagePayload::ChannelMessage(channel) = &received.payload else {
+        panic!("expected channel message");
+    };
+    let ChannelBody::Item(channel_item) = &channel.body else {
+        panic!("expected channel item body");
+    };
+    let Payload::BinetteBytes(bytes) = &channel_item.item else {
+        panic!("channel item payload should arrive as binette bytes");
+    };
+    assert_eq!(decode_binette_payload::<String>(bytes), item);
 }
 
 #[tokio::test]

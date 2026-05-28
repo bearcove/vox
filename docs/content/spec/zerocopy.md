@@ -169,12 +169,12 @@ insert_anchor_links = "left"
 > the boundary where erased payload behavior is applied:
 >
 > - **Outgoing (`Message<'call>`):** the opaque adapter maps the payload to
->   `(PtrConst, Shape, Option<TypePlanCore>)`, and compact Binette
->   serializes that mapped value.
+>   `(PtrConst, Shape)`. If the mapped shape is bytes, compact Binette stores
+>   those bytes as the payload body; otherwise compact Binette serializes the
+>   mapped value and stores that encoded value as the payload body.
 > - **Incoming (`Message<'static>` inside `SelfRef`):** compact Binette
->   decodes the payload byte sequence and materializes deferred payload state
->   as either a borrowed byte slice (when input backing is stable) or owned
->   bytes.
+>   decodes the payload byte body and materializes it as bytes borrowed from
+>   the decoded message backing.
 >
 > Conduit framing and link framing do not change this mapping contract; they
 > only add/remove their own framing around the same encoded payload bytes.
@@ -361,15 +361,17 @@ insert_anchor_links = "left"
 
 > r[zerocopy.payload.borrowed]
 >
-> **Borrowed** — a type-erased pointer to caller-owned memory (stack,
-> heap, arena, etc.) plus its Shape. Used on the send path when the value
-> is reachable for the borrow lifetime.
+> **Value** — local send-path staging: a type-erased pointer to
+> caller-owned memory (stack, heap, arena, etc.) plus its Shape. The pointed
+> value is encoded into a Binette payload body before it is observed by a
+> receiver.
 
 > r[zerocopy.payload.bytes]
 >
-> **Bytes** — a contiguous byte buffer that is already serialized (e.g.
-> when forwarding a message without deserializing, or when the link
-> provides raw bytes). Paired with a Backing to keep the buffer alive.
+> **BinetteBytes / BinetteOwned** — a contiguous byte buffer that already
+> contains a serialized Binette payload body. `BinetteBytes` borrows from
+> stable backing, and `BinetteOwned` owns bytes while preparing an outbound
+> frame.
 
 ## Copy count summary
 

@@ -267,12 +267,16 @@ structstruck::strike! {
 
 }
 
-/// A payload — arguments for a request, or return type for a response.
+/// A binette payload body — arguments for a request, response return values,
+/// or channel items.
 ///
 /// Uses `#[facet(opaque = PayloadAdapter)]` so that format crates handle
 /// serialization/deserialization through the adapter contract:
-/// - **Send path:** `serialize_map` extracts `(ptr, shape)` from `Borrowed` or `Owned`.
-/// - **Recv path:** `deserialize_build` produces `RawBorrowed` or `RawOwned`.
+/// - **Send path:** `Value` is local staging: `serialize_map` exposes the
+///   pointed value and its shape, then binette stores the encoded value as a
+///   payload byte body.
+/// - **Recv path:** `deserialize_build` borrows the payload byte body from
+///   the decoded message backing.
 // r[impl zerocopy.payload]
 #[derive(Debug, Facet)]
 #[repr(u8)]

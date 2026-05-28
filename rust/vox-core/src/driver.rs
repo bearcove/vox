@@ -2101,11 +2101,9 @@ impl DriverCaller {
         );
 
         // r[impl schema.exchange.caller+2]
-        // Schemas are attached by SessionCore::send() when it sees a Call
-        // with Payload::Value — no separate prepare step needed.
-        //
-        // Channel binding happens during serialization via the thread-local
-        // ChannelBinder — no post-hoc walk needed.
+        // SessionCore::send() attaches the args schema, pre-encodes the local
+        // payload into binette bytes, and records any channel endpoints before
+        // the outer request message is serialized.
         self.shared.mark_outbound_progress();
         tracing::debug!(
             conn_id = ?self.sender.connection_id(),
