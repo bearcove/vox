@@ -98,6 +98,8 @@
 mod highlevel;
 pub use highlevel::*;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod capi;
 mod client_logging;
 mod observer;
 pub mod schema_deser;

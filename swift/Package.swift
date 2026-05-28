@@ -15,8 +15,20 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CVox",
+            linkerSettings: [
+                .unsafeFlags([
+                    "-L", "../target/debug",
+                    "-lvox",
+                    "-Xlinker", "-rpath",
+                    "-Xlinker", "../target/debug",
+                ]),
+            ]
+        ),
+        .target(
             name: "VoxSwift",
             dependencies: [
+                "CVox",
                 .product(name: "BinetteSwiftProbes", package: "probes"),
             ]
         ),

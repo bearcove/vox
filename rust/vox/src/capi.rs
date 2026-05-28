@@ -1,0 +1,94 @@
+use crate::schema_deser::encode_vox_schema_payload_from_binette_schema_bundle_bytes;
+
+pub const VOX_STATUS_OK: i32 = 0;
+pub const VOX_STATUS_NULL_POINTER: i32 = 1;
+pub const VOX_STATUS_SCHEMA: i32 = 2;
+
+#[repr(C)]
+pub struct VoxByteBuffer {
+    pub ptr: *mut u8,
+    pub len: usize,
+    pub cap: usize,
+}
+
+impl VoxByteBuffer {
+    fn empty() -> Self {
+        Self {
+            ptr: std::ptr::null_mut(),
+            len: 0,
+            cap: 0,
+        }
+    }
+
+    fn from_vec(mut bytes: Vec<u8>) -> Self {
+        let buffer = Self {
+            ptr: bytes.as_mut_ptr(),
+            len: bytes.len(),
+            cap: bytes.capacity(),
+        };
+        std::mem::forget(bytes);
+        buffer
+    }
+}
+
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_byte_buffer_free(buffer: VoxByteBuffer) {
+    if !buffer.ptr.is_null() {
+        drop(unsafe { Vec::from_raw_parts(buffer.ptr, buffer.len, buffer.cap) });
+    }
+}
+
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_schema_payload_from_binette_schema_bundle(
+    schema_bundle_ptr: *const u8,
+    schema_bundle_len: usize,
+    out: *mut VoxByteBuffer,
+) -> i32 {
+    let Some(out) = (unsafe { out.as_mut() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *out = VoxByteBuffer::empty();
+    let Some(schema_bundle_ptr) = (unsafe { schema_bundle_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_bundle = unsafe { std::slice::from_raw_parts(schema_bundle_ptr, schema_bundle_len) };
+    match encode_vox_schema_payload_from_binette_schema_bundle_bytes(schema_bundle) {
+        Ok(bytes) => {
+            *out = VoxByteBuffer::from_vec(bytes.0);
+            VOX_STATUS_OK
+        }
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // r[verify schema.exchange.required]
+    #[test]
+    fn c_api_converts_binette_schema_bundle_to_vox_schema_payload_bytes() {
+        let bundle = binette::schema_bundle_for::<(String, u32)>()
+            .expect("test schema bundle should extract");
+        let bundle_bytes =
+            binette::encode_schema_bundle_to_vec(&bundle).expect("schema bundle should encode");
+        let mut out = VoxByteBuffer::empty();
+
+        let status = vox_schema_payload_from_binette_schema_bundle(
+            bundle_bytes.as_ptr(),
+            bundle_bytes.len(),
+            &mut out,
+        );
+
+        assert_eq!(status, VOX_STATUS_OK);
+        assert!(!out.ptr.is_null());
+        assert_ne!(out.len, 0);
+        let payload_bytes = unsafe { std::slice::from_raw_parts(out.ptr, out.len) };
+        let payload = vox_types::SchemaPayload::from_binette(payload_bytes)
+            .expect("converted schema payload should parse");
+        assert!(!payload.schemas.is_empty());
+        vox_byte_buffer_free(out);
+    }
+}

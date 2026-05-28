@@ -1,9 +1,11 @@
 import BinetteSwiftProbes
 import CBinette
+import CVox
 
 public enum VoxSwiftBinetteError: Error, Equatable {
     case importDescriptor(Int32)
     case schemaBundle(Int32)
+    case schemaPayload(Int32)
     case encode(Int32)
     case decode(Int32)
 }
@@ -92,5 +94,19 @@ public final class VoxSwiftLocalCodec {
 
     public func withSchemaBundle<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R {
         try body(UnsafeBufferPointer(start: schemaBundle.ptr, count: schemaBundle.len))
+    }
+
+    public func voxSchemaPayload() throws -> [UInt8] {
+        var payload = VoxByteBuffer()
+        let status = vox_schema_payload_from_binette_schema_bundle(
+            UnsafePointer(schemaBundle.ptr),
+            schemaBundle.len,
+            &payload
+        )
+        guard status == VOX_STATUS_OK else {
+            throw VoxSwiftBinetteError.schemaPayload(status)
+        }
+        defer { vox_byte_buffer_free(payload) }
+        return Array(UnsafeBufferPointer(start: payload.ptr, count: payload.len))
     }
 }

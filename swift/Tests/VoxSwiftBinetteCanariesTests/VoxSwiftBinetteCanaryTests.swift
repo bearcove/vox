@@ -138,6 +138,16 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         XCTAssertEqual(decoded.title, args.title)
         XCTAssertEqual(decoded.retry, args.retry)
     }
+
+    func testSwiftDescriptorProducesVoxSchemaPayloadBytes() throws {
+        let arena = BinetteCAbiDescriptorArena()
+        let descriptor = voxSwiftArgsDescriptor(in: arena)
+        let codec = try VoxSwiftLocalCodec(descriptor: descriptor)
+
+        let payload = try codec.voxSchemaPayload()
+
+        XCTAssertFalse(payload.isEmpty)
+    }
 }
 
 private func roundTrip(

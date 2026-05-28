@@ -17,6 +17,9 @@ categories.workspace = true
 [package.metadata."docs.rs"]
 rustdoc-args = ["--html-in-header", "arborium-header.html"]
 
+[lib]
+crate-type = ["rlib", "cdylib", "staticlib"]
+
 [features]
 default = ["runtime", "transport-tcp", "transport-local"]
 runtime = ["dep:vox-core"]

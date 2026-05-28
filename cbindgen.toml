@@ -1,0 +1,13 @@
+language = "C"
+pragma_once = true
+include_version = true
+cpp_compat = true
+usize_is_size_t = true
+style = "both"
+
+include_guard = "VOX_H"
+
+[export]
+include = [
+  "VoxByteBuffer",
+]
