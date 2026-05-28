@@ -199,6 +199,46 @@ pub extern "C" fn vox_canary_driver_call_swift_args(
     }
 }
 
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_canary_driver_call_swift_rich(
+    schema_payload_ptr: *const u8,
+    schema_payload_len: usize,
+    payload_ptr: *const u8,
+    payload_len: usize,
+    response_schema_payload_out: *mut VoxByteBuffer,
+    response_payload_out: *mut VoxByteBuffer,
+) -> i32 {
+    let Some(response_schema_payload_out) = (unsafe { response_schema_payload_out.as_mut() })
+    else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_schema_payload_out = VoxByteBuffer::empty();
+    let Some(response_payload_out) = (unsafe { response_payload_out.as_mut() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    *response_payload_out = VoxByteBuffer::empty();
+
+    let Some(schema_payload_ptr) = (unsafe { schema_payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let Some(payload_ptr) = (unsafe { payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_payload =
+        unsafe { std::slice::from_raw_parts(schema_payload_ptr, schema_payload_len) };
+    let payload = unsafe { std::slice::from_raw_parts(payload_ptr, payload_len) };
+
+    match driver_call_swift_rich(schema_payload, payload) {
+        Ok((response_schema_payload, response_payload)) => {
+            *response_schema_payload_out = VoxByteBuffer::from_vec(response_schema_payload);
+            *response_payload_out = VoxByteBuffer::from_vec(response_payload);
+            VOX_STATUS_OK
+        }
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
 fn accept_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(), String> {
     type Args = (String, Option<u16>, ());
 
@@ -227,6 +267,24 @@ struct SwiftCanaryReply {
     retry: Option<u16>,
 }
 
+#[derive(Debug, Clone, PartialEq, Facet)]
+struct SwiftCanaryCall {
+    method: u32,
+    title: String,
+    payload: Vec<u8>,
+    retry: Option<u16>,
+    outcome: SwiftCanaryOutcome,
+    output: (),
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+enum SwiftCanaryOutcome {
+    accepted(String),
+    rejected(u32),
+}
+
 fn call_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
     accept_swift_args(schema_payload, payload)?;
 
@@ -246,6 +304,9 @@ fn call_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(Vec<u8>, Ve
 
 #[derive(Clone)]
 struct SwiftCanaryDriverHandler;
+
+#[derive(Clone)]
+struct SwiftRichCanaryDriverHandler;
 
 impl crate::Handler<crate::DriverReplySink> for SwiftCanaryDriverHandler {
     async fn handle(
@@ -292,10 +353,136 @@ impl crate::Handler<crate::DriverReplySink> for SwiftCanaryDriverHandler {
     }
 }
 
+impl crate::Handler<crate::DriverReplySink> for SwiftRichCanaryDriverHandler {
+    async fn handle(
+        &self,
+        call: crate::SelfRef<crate::RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let method_id = vox_types::MethodId(0xB1_0000_0000_7000);
+        let call = call.get();
+        let decoded = match &call.args {
+            vox_types::Payload::BinetteBytes(bytes) => {
+                crate::schema_deser::schema_deserialize_args_borrowed::<SwiftCanaryCall>(
+                    bytes, method_id, &schemas,
+                )
+            }
+            _ => Err(crate::schema_deser::SchemaDeserializeError::Protocol(
+                "rich driver canary expected incoming binette bytes".to_owned(),
+            )),
+        };
+
+        let reply_value = match decoded {
+            Ok(call) => reply_for_swift_canary_call(call),
+            Err(error) => SwiftCanaryReply {
+                message: format!("decode error: {error}"),
+                retry: None,
+            },
+        };
+
+        reply
+            .send_reply(crate::RequestResponse {
+                ret: crate::Payload::outgoing(&reply_value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+fn reply_for_swift_canary_call(call: SwiftCanaryCall) -> SwiftCanaryReply {
+    let outcome = match call.outcome {
+        SwiftCanaryOutcome::accepted(message) => format!("accepted:{message}"),
+        SwiftCanaryOutcome::rejected(code) => format!("rejected:{code}"),
+    };
+    SwiftCanaryReply {
+        message: format!(
+            "{}:{}:{}:{}",
+            call.method,
+            call.title,
+            call.payload.len(),
+            outcome
+        ),
+        retry: call.retry,
+    }
+}
+
 fn driver_call_swift_args(
     schema_payload: &[u8],
     payload: &[u8],
 ) -> Result<(Vec<u8>, Vec<u8>), String> {
+    driver_call_with_handler(
+        schema_payload,
+        payload,
+        vox_types::MethodId(0xB1_0000_0000_5000),
+        SwiftCanaryDriverHandler,
+    )
+}
+
+fn driver_call_swift_rich(
+    schema_payload: &[u8],
+    payload: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+    driver_call_with_handler(
+        schema_payload,
+        payload,
+        vox_types::MethodId(0xB1_0000_0000_7000),
+        SwiftRichCanaryDriverHandler,
+    )
+}
+
+async fn call_driver_once<H>(
+    schema_payload: Vec<u8>,
+    payload: Vec<u8>,
+    method_id: vox_types::MethodId,
+    handler: H,
+) -> Result<vox_types::WithTracker<crate::SelfRef<crate::RequestResponse<'static>>>, String>
+where
+    H: crate::Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
+    let (client_link, server_link) = crate::memory_link_pair(16);
+    let server_task = tokio::task::spawn(async move {
+        crate::acceptor_on(server_link)
+            .on_connection(handler)
+            .establish::<crate::NoopClient>()
+            .await
+    });
+    let caller = crate::initiator_on(client_link, crate::TransportMode::Bare)
+        .establish::<crate::NoopClient>()
+        .await
+        .map_err(|error| error.to_string())?;
+    let server_guard = server_task
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| error.to_string())?;
+
+    let response = caller
+        .caller
+        .call(crate::RequestCall {
+            method_id,
+            args: crate::Payload::BinetteOwned(payload),
+            channels: Vec::new(),
+            schemas: vox_types::SchemaPayloadBytes(schema_payload),
+            metadata: Default::default(),
+        })
+        .await
+        .map_err(|error| error.to_string())?;
+
+    drop(caller);
+    drop(server_guard);
+    Ok(response)
+}
+
+fn driver_call_with_handler<H>(
+    schema_payload: &[u8],
+    payload: &[u8],
+    method_id: vox_types::MethodId,
+    handler: H,
+) -> Result<(Vec<u8>, Vec<u8>), String>
+where
+    H: crate::Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
     let schema_payload = schema_payload.to_vec();
     let payload = payload.to_vec();
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -304,35 +491,7 @@ fn driver_call_swift_args(
         .map_err(|error| error.to_string())?;
 
     runtime.block_on(async move {
-        let method_id = vox_types::MethodId(0xB1_0000_0000_5000);
-        let (client_link, server_link) = crate::memory_link_pair(16);
-        let server_task = tokio::task::spawn(async move {
-            crate::acceptor_on(server_link)
-                .on_connection(SwiftCanaryDriverHandler)
-                .establish::<crate::NoopClient>()
-                .await
-        });
-        let caller = crate::initiator_on(client_link, crate::TransportMode::Bare)
-            .establish::<crate::NoopClient>()
-            .await
-            .map_err(|error| error.to_string())?;
-        let server_guard = server_task
-            .await
-            .map_err(|error| error.to_string())?
-            .map_err(|error| error.to_string())?;
-
-        let response = caller
-            .caller
-            .call(crate::RequestCall {
-                method_id,
-                args: crate::Payload::BinetteOwned(payload),
-                channels: Vec::new(),
-                schemas: vox_types::SchemaPayloadBytes(schema_payload),
-                metadata: Default::default(),
-            })
-            .await
-            .map_err(|error| error.to_string())?;
-
+        let response = call_driver_once(schema_payload, payload, method_id, handler).await?;
         let response_schema_payload = encode_vox_schema_payload_for_remote_binding(
             method_id,
             vox_types::BindingDirection::Response,
@@ -348,8 +507,6 @@ fn driver_call_swift_args(
             }
         };
 
-        drop(caller);
-        drop(server_guard);
         Ok((response_schema_payload, response_payload))
     })
 }

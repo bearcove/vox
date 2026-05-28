@@ -26,5 +26,7 @@ Swift-produced argument schema and payload bytes through the Rust Vox driver
 over an in-memory link and decodes the Rust response back into a Swift value.
 `VoxSwiftMethodCodec` packages that boundary for generated Swift stubs: encode
 local args into a Vox wire payload and decode a response wire payload into the
-local response type. Full Swift RPC client/server support will build on this
-path rather than reintroducing a separate Swift-native codec.
+local response type. The driver-backed canary covers a Vox-shaped Swift struct
+with string, bytes, option, enum payload thunking, and external channel
+metadata. Full Swift RPC client/server support will build on this path rather
+than reintroducing a separate Swift-native codec.

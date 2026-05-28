@@ -296,6 +296,68 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         XCTAssertEqual(reply.message, "rust vox response")
         XCTAssertEqual(reply.retry, 233)
     }
+
+    func testSwiftRichCallRunsThroughRustVoxDriver() throws {
+        let argsArena = BinetteCAbiDescriptorArena()
+        let argsDescriptor = voxSwiftCallDescriptor(in: argsArena)
+        let replyArena = BinetteCAbiDescriptorArena()
+        let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
+        let methodCodec = try VoxSwiftMethodCodec(
+            argsDescriptor: argsDescriptor,
+            responseDescriptor: replyDescriptor
+        )
+
+        var call = VoxSwiftCall(
+            method: 0xCAFE_BABE,
+            title: "hello from vox swift",
+            payload: [0, 1, 2, 3, 5, 8],
+            retry: 144,
+            outcome: .accepted("stream attached"),
+            output: VoxSwiftChannel()
+        )
+        let request = try methodCodec.encodeArgs(&call)
+
+        var responseSchemaPayload = VoxByteBuffer()
+        var responsePayload = VoxByteBuffer()
+        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            request.payload.withUnsafeBufferPointer { payloadBuffer in
+                vox_canary_driver_call_swift_rich(
+                    schemaBuffer.baseAddress,
+                    schemaBuffer.count,
+                    payloadBuffer.baseAddress,
+                    payloadBuffer.count,
+                    &responseSchemaPayload,
+                    &responsePayload
+                )
+            }
+        }
+        defer {
+            vox_byte_buffer_free(responseSchemaPayload)
+            vox_byte_buffer_free(responsePayload)
+        }
+
+        XCTAssertEqual(status, VOX_STATUS_OK)
+        XCTAssertFalse(responseSchemaPayload.ptr == nil)
+        XCTAssertFalse(responsePayload.ptr == nil)
+
+        let responseSchemaBytes = Array(
+            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
+        )
+        let responseBytes = Array(
+            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
+        )
+
+        let reply = try methodCodec.decodeResponse(
+            VoxSwiftWirePayload(
+                schemaPayload: responseSchemaBytes,
+                payload: responseBytes
+            ),
+            as: VoxSwiftReply.self
+        )
+
+        XCTAssertEqual(reply.message, "3405691582:hello from vox swift:6:accepted:stream attached")
+        XCTAssertEqual(reply.retry, 144)
+    }
 }
 
 private func roundTrip(
