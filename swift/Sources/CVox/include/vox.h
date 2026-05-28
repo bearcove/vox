@@ -17,6 +17,8 @@
 
 #define VOX_STATUS_SCHEMA 2
 
+#define VOX_STATUS_DECODE 3
+
 typedef struct VoxByteBuffer {
   uint8_t *ptr;
   size_t len;

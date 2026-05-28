@@ -372,45 +372,14 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             retry: 144,
             output: VoxSwiftChannel()
         )
-        let request = try methodCodec.encodeArgs(&args)
-
-        var responseSchemaPayload = VoxByteBuffer()
-        var responsePayload = VoxByteBuffer()
-        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
-            request.payload.withUnsafeBufferPointer { payloadBuffer in
-                vox_canary_driver_call_swift_args(
-                    schemaBuffer.baseAddress,
-                    schemaBuffer.count,
-                    payloadBuffer.baseAddress,
-                    payloadBuffer.count,
-                    &responseSchemaPayload,
-                    &responsePayload
-                )
-            }
+        try methodCodec.withCDriverResponse(
+            &args,
+            response: VoxSwiftReply.self,
+            using: vox_canary_driver_call_swift_args
+        ) { reply in
+            XCTAssertEqual(reply.message, "rust vox response")
+            XCTAssertEqual(reply.retry, 233)
         }
-        defer {
-            vox_byte_buffer_free(responseSchemaPayload)
-            vox_byte_buffer_free(responsePayload)
-        }
-
-        XCTAssertEqual(status, VOX_STATUS_OK)
-        XCTAssertFalse(responseSchemaPayload.ptr == nil)
-        XCTAssertFalse(responsePayload.ptr == nil)
-
-        let responseSchemaBytes = Array(
-            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
-        )
-        let responseBytes = Array(
-            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
-        )
-
-        let reply = try methodCodec.decodeResponse(
-            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
-            as: VoxSwiftReply.self
-        )
-
-        XCTAssertEqual(reply.message, "rust vox response")
-        XCTAssertEqual(reply.retry, 233)
     }
 
     func testSwiftRichCallRunsThroughRustVoxDriver() throws {
@@ -432,45 +401,14 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             outcome: .accepted("stream attached"),
             output: VoxSwiftChannel()
         )
-        let request = try methodCodec.encodeArgs(&call)
-
-        var responseSchemaPayload = VoxByteBuffer()
-        var responsePayload = VoxByteBuffer()
-        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
-            request.payload.withUnsafeBufferPointer { payloadBuffer in
-                vox_canary_driver_call_swift_rich(
-                    schemaBuffer.baseAddress,
-                    schemaBuffer.count,
-                    payloadBuffer.baseAddress,
-                    payloadBuffer.count,
-                    &responseSchemaPayload,
-                    &responsePayload
-                )
-            }
+        try methodCodec.withCDriverResponse(
+            &call,
+            response: VoxSwiftReply.self,
+            using: vox_canary_driver_call_swift_rich
+        ) { reply in
+            XCTAssertEqual(reply.message, "3405691582:hello from vox swift:6:accepted:stream attached")
+            XCTAssertEqual(reply.retry, 144)
         }
-        defer {
-            vox_byte_buffer_free(responseSchemaPayload)
-            vox_byte_buffer_free(responsePayload)
-        }
-
-        XCTAssertEqual(status, VOX_STATUS_OK)
-        XCTAssertFalse(responseSchemaPayload.ptr == nil)
-        XCTAssertFalse(responsePayload.ptr == nil)
-
-        let responseSchemaBytes = Array(
-            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
-        )
-        let responseBytes = Array(
-            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
-        )
-
-        let reply = try methodCodec.decodeResponse(
-            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
-            as: VoxSwiftReply.self
-        )
-
-        XCTAssertEqual(reply.message, "3405691582:hello from vox swift:6:accepted:stream attached")
-        XCTAssertEqual(reply.retry, 144)
     }
 
     func testGeneratedSwiftCanaryRunsThroughRustVoxDriver() throws {
@@ -492,54 +430,26 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
                 output: VoxSwift.VoxSwiftChannel()
             )
         )
-        let request = try methodCodec.encodeArgs(&args)
-
-        var responseSchemaPayload = VoxByteBuffer()
-        var responsePayload = VoxByteBuffer()
-        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
-            request.payload.withUnsafeBufferPointer { payloadBuffer in
-                vox_canary_driver_call_generated_swift_submit(
-                    schemaBuffer.baseAddress,
-                    schemaBuffer.count,
-                    payloadBuffer.baseAddress,
-                    payloadBuffer.count,
-                    &responseSchemaPayload,
-                    &responsePayload
-                )
+        try methodCodec.withCDriverResponse(
+            &args,
+            response: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self,
+            using: vox_canary_driver_call_generated_swift_submit
+        ) { wireReply in
+            let reply: SwiftReply
+            switch wireReply {
+            case .ok(let value):
+                reply = value
+            case .err(let error):
+                XCTFail("expected generated Swift canary success, got \(error)")
+                return
             }
+
+            XCTAssertEqual(
+                reply.message,
+                "3405691582:81985529216486895:1.5:hello from generated swift:optional generated note:4:1x2,3x5:rectangle:3x4.5:accepted:generated descriptor"
+            )
+            XCTAssertEqual(reply.retry, 377)
         }
-        defer {
-            vox_byte_buffer_free(responseSchemaPayload)
-            vox_byte_buffer_free(responsePayload)
-        }
-
-        XCTAssertEqual(status, VOX_STATUS_OK)
-
-        let responseSchemaBytes = Array(
-            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
-        )
-        let responseBytes = Array(
-            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
-        )
-
-        let wireReply = try methodCodec.decodeResponse(
-            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
-            as: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self
-        )
-        let reply: SwiftReply
-        switch wireReply {
-        case .ok(let value):
-            reply = value
-        case .err(let error):
-            XCTFail("expected generated Swift canary success, got \(error)")
-            return
-        }
-
-        XCTAssertEqual(
-            reply.message,
-            "3405691582:81985529216486895:1.5:hello from generated swift:optional generated note:4:1x2,3x5:rectangle:3x4.5:accepted:generated descriptor"
-        )
-        XCTAssertEqual(reply.retry, 377)
     }
 }
 

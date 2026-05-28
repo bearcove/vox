@@ -6,10 +6,20 @@ public enum VoxSwiftBinetteError: Error, Equatable {
     case importDescriptor(Int32)
     case schemaBundle(Int32)
     case schemaPayload(Int32)
+    case driver(Int32)
     case encode(Int32)
     case decode(Int32)
     case methodMismatch(expected: UInt64, actual: UInt64)
 }
+
+public typealias VoxSwiftCDriverCall = (
+    UnsafePointer<UInt8>?,
+    Int,
+    UnsafePointer<UInt8>?,
+    Int,
+    UnsafeMutablePointer<VoxByteBuffer>?,
+    UnsafeMutablePointer<VoxByteBuffer>?
+) -> Int32
 
 public struct VoxSwiftWirePayload {
     public var methodId: UInt64
@@ -77,11 +87,56 @@ public final class VoxSwiftMethodCodec {
         )
     }
 
+    public func withCDriverResponse<Args, Response, Result>(
+        _ args: inout Args,
+        response _: Response.Type,
+        using driver: VoxSwiftCDriverCall,
+        _ body: (Response) throws -> Result
+    ) throws -> Result {
+        let request = try encodeArgs(&args)
+        var responseSchemaPayload = VoxByteBuffer()
+        var responsePayload = VoxByteBuffer()
+        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            request.payload.withUnsafeBufferPointer { payloadBuffer in
+                driver(
+                    schemaBuffer.baseAddress,
+                    schemaBuffer.count,
+                    payloadBuffer.baseAddress,
+                    payloadBuffer.count,
+                    &responseSchemaPayload,
+                    &responsePayload
+                )
+            }
+        }
+        guard status == VOX_STATUS_OK else {
+            vox_byte_buffer_free(responseSchemaPayload)
+            vox_byte_buffer_free(responsePayload)
+            throw VoxSwiftBinetteError.driver(status)
+        }
+        defer {
+            vox_byte_buffer_free(responseSchemaPayload)
+            vox_byte_buffer_free(responsePayload)
+        }
+
+        let responseSchemaBytes = Array(
+            UnsafeBufferPointer(start: responseSchemaPayload.ptr, count: responseSchemaPayload.len)
+        )
+        let responseBytes = Array(
+            UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
+        )
+        let decoded: Response = try decodeResponse(
+            wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
+            as: Response.self
+        )
+        return try body(decoded)
+    }
+
 }
 
 public final class VoxSwiftLocalCodec {
     private let handle: OpaquePointer
     private let schemaBundle: BinetteByteBuffer
+    private var cachedSchemaPayload: [UInt8]?
 
     public init(descriptor: UnsafePointer<BinetteLocalDescriptorAbi>) throws {
         var imported: OpaquePointer?
@@ -212,6 +267,15 @@ public final class VoxSwiftLocalCodec {
     }
 
     public func voxSchemaPayload() throws -> [UInt8] {
+        if let cachedSchemaPayload {
+            return cachedSchemaPayload
+        }
+        let schemaPayload = try Self.voxSchemaPayload(fromBinetteSchemaBundle: schemaBundle)
+        cachedSchemaPayload = schemaPayload
+        return schemaPayload
+    }
+
+    private static func voxSchemaPayload(fromBinetteSchemaBundle schemaBundle: BinetteByteBuffer) throws -> [UInt8] {
         var payload = VoxByteBuffer()
         let status = vox_schema_payload_from_binette_schema_bundle(
             UnsafePointer(schemaBundle.ptr),

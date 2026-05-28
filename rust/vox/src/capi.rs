@@ -10,6 +10,7 @@ use crate::schema_deser::{
 pub const VOX_STATUS_OK: i32 = 0;
 pub const VOX_STATUS_NULL_POINTER: i32 = 1;
 pub const VOX_STATUS_SCHEMA: i32 = 2;
+pub const VOX_STATUS_DECODE: i32 = 3;
 
 #[repr(C)]
 pub struct VoxByteBuffer {
@@ -66,7 +67,7 @@ pub extern "C" fn vox_schema_payload_from_binette_schema_bundle(
             *out = VoxByteBuffer::from_vec(bytes.0);
             VOX_STATUS_OK
         }
-        Err(_) => VOX_STATUS_SCHEMA,
+        Err(error) => schema_error_status(&error),
     }
 }
 
@@ -91,7 +92,15 @@ pub extern "C" fn vox_binette_schema_bundle_from_schema_payload(
             *out = VoxByteBuffer::from_vec(bytes);
             VOX_STATUS_OK
         }
-        Err(_) => VOX_STATUS_SCHEMA,
+        Err(error) => schema_error_status(&error),
+    }
+}
+
+fn schema_error_status(error: &crate::schema_deser::SchemaDeserializeError) -> i32 {
+    match error {
+        crate::schema_deser::SchemaDeserializeError::Decode(_) => VOX_STATUS_DECODE,
+        crate::schema_deser::SchemaDeserializeError::Protocol(_)
+        | crate::schema_deser::SchemaDeserializeError::Plan(_) => VOX_STATUS_SCHEMA,
     }
 }
 

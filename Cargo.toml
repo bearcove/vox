@@ -59,7 +59,7 @@ vox-ffi = { path = "rust/vox-ffi", version = "0.8.2" }
 subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
-binette = { git = "https://github.com/bearcove/binette", rev = "13d529dc51dc744a7bc31e2db906673ca02be0ed" }
+binette = { git = "https://github.com/bearcove/binette", rev = "8d03ec38d6861650e081a8ec032be5b3d2b33b4a" }
 
 # Not internal crates
 moire = { version = "1.0.0", git = "https://github.com/bearcove/moire", rev = "cf162e7" }

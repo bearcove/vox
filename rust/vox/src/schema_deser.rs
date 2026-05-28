@@ -989,6 +989,48 @@ mod tests {
     }
 
     #[test]
+    fn binette_list_schema_bundle_can_be_advertised_as_vox_schema_payload() {
+        let mut element = binette::Schema {
+            id: binette::TypeId(0),
+            type_params: Vec::new(),
+            kind: binette::SchemaKind::Enum {
+                name: "local.enum".to_owned(),
+                variants: vec![
+                    binette::Variant {
+                        name: "Red".to_owned(),
+                        index: 0,
+                        payload: binette::VariantPayload::Unit,
+                    },
+                    binette::Variant {
+                        name: "Green".to_owned(),
+                        index: 1,
+                        payload: binette::VariantPayload::Unit,
+                    },
+                ],
+            },
+        };
+        element.id = binette::schema_type_id(&element).expect("enum schema id");
+        let mut list = binette::Schema {
+            id: binette::TypeId(0),
+            type_params: Vec::new(),
+            kind: binette::SchemaKind::List {
+                element: binette::TypeRef::concrete(element.id),
+            },
+        };
+        list.id = binette::schema_type_id(&list).expect("list schema id");
+        let bundle = binette::SchemaBundle {
+            root: binette::TypeRef::concrete(list.id),
+            schemas: vec![element, list],
+            attachments: Vec::new(),
+        };
+
+        let schema_bytes =
+            encode_vox_schema_payload_from_binette_schema_bundle(bundle).expect("convert payload");
+
+        assert!(!schema_bytes.0.is_empty());
+    }
+
+    #[test]
     fn binette_external_schema_requires_vox_specific_metadata_before_advertising() {
         let bundle = binette::SchemaBundle {
             schemas: vec![binette::Schema {

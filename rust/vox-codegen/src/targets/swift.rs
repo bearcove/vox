@@ -1733,7 +1733,9 @@ impl<'a> SwiftGenerator<'a> {
             | ShapeKind::Tuple { .. }
             | ShapeKind::TupleStruct { .. }
             | ShapeKind::Enum(_)
-            | ShapeKind::Option { .. } => {
+            | ShapeKind::Option { .. }
+            | ShapeKind::List { .. }
+            | ShapeKind::Slice { .. } => {
                 self.line(&format!(
                     "    guard payloadLen == MemoryLayout<{inner_type}>.size else {{ return false }}"
                 ));
@@ -2504,6 +2506,25 @@ fn tuple_field_likes(shape: &'static Shape) -> Result<Vec<FieldLike>, SwiftCodeg
 }
 
 fn swift_type_name_fragment(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
+    if is_bytes(shape) {
+        return Ok("Bytes".to_owned());
+    }
+    match classify_shape(shape) {
+        ShapeKind::List { element } | ShapeKind::Slice { element } => {
+            return Ok(format!("ArrayOf{}", swift_type_name_fragment(element)?));
+        }
+        ShapeKind::Option { inner } => {
+            return Ok(format!("Optional{}", swift_type_name_fragment(inner)?));
+        }
+        ShapeKind::Tx { inner } => {
+            return Ok(format!("Tx{}", swift_type_name_fragment(inner)?));
+        }
+        ShapeKind::Rx { inner } => {
+            return Ok(format!("Rx{}", swift_type_name_fragment(inner)?));
+        }
+        _ => {}
+    }
+
     let fragment = swift_type(shape)?
         .chars()
         .filter(|ch| ch.is_ascii_alphanumeric())
