@@ -615,6 +615,7 @@ public final class SwiftCanaryMethodCodecs {
 
     public func submit() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x61FA9915325F479C,
             argsDescriptor: descriptorForSwiftCanarySubmitArgs(in: arena),
             responseDescriptor: descriptorForSwiftReply(in: arena)
         )

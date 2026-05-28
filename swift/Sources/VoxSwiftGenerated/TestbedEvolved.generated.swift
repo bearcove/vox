@@ -471,6 +471,7 @@ public final class TestbedMethodCodecs {
 
     public func echoProfile() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xBD9BCABDDEEBEB04,
             argsDescriptor: descriptorForTestbedEchoProfileArgs(in: arena),
             responseDescriptor: descriptorForProfile(in: arena)
         )
@@ -478,6 +479,7 @@ public final class TestbedMethodCodecs {
 
     public func echoRecord() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x100B0E08DA4B8F1A,
             argsDescriptor: descriptorForTestbedEchoRecordArgs(in: arena),
             responseDescriptor: descriptorForRecord(in: arena)
         )
@@ -485,6 +487,7 @@ public final class TestbedMethodCodecs {
 
     public func echoStatus() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x697590D3FFC36703,
             argsDescriptor: descriptorForTestbedEchoStatusArgs(in: arena),
             responseDescriptor: descriptorForStatus(in: arena)
         )
@@ -492,6 +495,7 @@ public final class TestbedMethodCodecs {
 
     public func echoTag() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x2BD1B3149D73CE97,
             argsDescriptor: descriptorForTestbedEchoTagArgs(in: arena),
             responseDescriptor: descriptorForTag(in: arena)
         )
@@ -499,6 +503,7 @@ public final class TestbedMethodCodecs {
 
     public func echoMeasurement() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x3B3D22B015FA1A3F,
             argsDescriptor: descriptorForTestbedEchoMeasurementArgs(in: arena),
             responseDescriptor: descriptorForMeasurement(in: arena)
         )
@@ -506,6 +511,7 @@ public final class TestbedMethodCodecs {
 
     public func echoConfig() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xE13A477FB964CE28,
             argsDescriptor: descriptorForTestbedEchoConfigArgs(in: arena),
             responseDescriptor: descriptorForConfig(in: arena)
         )

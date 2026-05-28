@@ -362,6 +362,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         let replyArena = BinetteCAbiDescriptorArena()
         let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
         let methodCodec = try VoxSwiftMethodCodec(
+            methodId: 0xB1_0000_0000_5000,
             argsDescriptor: argsDescriptor,
             responseDescriptor: replyDescriptor
         )
@@ -404,10 +405,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         )
 
         let reply = try methodCodec.decodeResponse(
-            VoxSwiftWirePayload(
-                schemaPayload: responseSchemaBytes,
-                payload: responseBytes
-            ),
+            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
             as: VoxSwiftReply.self
         )
 
@@ -421,6 +419,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         let replyArena = BinetteCAbiDescriptorArena()
         let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
         let methodCodec = try VoxSwiftMethodCodec(
+            methodId: 0xB1_0000_0000_7000,
             argsDescriptor: argsDescriptor,
             responseDescriptor: replyDescriptor
         )
@@ -466,10 +465,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         )
 
         let reply = try methodCodec.decodeResponse(
-            VoxSwiftWirePayload(
-                schemaPayload: responseSchemaBytes,
-                payload: responseBytes
-            ),
+            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
             as: VoxSwiftReply.self
         )
 
@@ -479,6 +475,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
 
     func testGeneratedSwiftCanaryRunsThroughRustVoxDriver() throws {
         let methodCodec = try SwiftCanaryMethodCodecs().submit()
+        XCTAssertEqual(methodCodec.methodId, 0x61FA_9915_325F_479C)
 
         var args = SwiftCanarySubmitArgs(
             call: SwiftCall(
@@ -526,10 +523,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         )
 
         let reply = try methodCodec.decodeResponse(
-            VoxSwiftWirePayload(
-                schemaPayload: responseSchemaBytes,
-                payload: responseBytes
-            ),
+            methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
             as: SwiftReply.self
         )
 

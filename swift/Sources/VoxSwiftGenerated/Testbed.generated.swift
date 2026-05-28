@@ -3235,6 +3235,7 @@ public final class TestbedMethodCodecs {
 
     public func echo() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x880BC4EEE23574BE,
             argsDescriptor: descriptorForTestbedEchoArgs(in: arena),
             responseDescriptor: descriptorForString(in: arena)
         )
@@ -3242,6 +3243,7 @@ public final class TestbedMethodCodecs {
 
     public func reverse() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x1C223F30E180392A,
             argsDescriptor: descriptorForTestbedReverseArgs(in: arena),
             responseDescriptor: descriptorForString(in: arena)
         )
@@ -3249,6 +3251,7 @@ public final class TestbedMethodCodecs {
 
     public func divide() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xFB68D9318F830875,
             argsDescriptor: descriptorForTestbedDivideArgs(in: arena),
             responseDescriptor: descriptorForVoxResultInt64MathError(in: arena)
         )
@@ -3256,6 +3259,7 @@ public final class TestbedMethodCodecs {
 
     public func lookup() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xA15FF52094712A3B,
             argsDescriptor: descriptorForTestbedLookupArgs(in: arena),
             responseDescriptor: descriptorForVoxResultPersonLookupError(in: arena)
         )
@@ -3263,6 +3267,7 @@ public final class TestbedMethodCodecs {
 
     public func sum() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x51F9CFD8E86577C9,
             argsDescriptor: descriptorForTestbedSumArgs(in: arena),
             responseDescriptor: descriptorForInt64(in: arena)
         )
@@ -3270,6 +3275,7 @@ public final class TestbedMethodCodecs {
 
     public func generate() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x239E5B99B1F8207A,
             argsDescriptor: descriptorForTestbedGenerateArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3277,6 +3283,7 @@ public final class TestbedMethodCodecs {
 
     public func generateRetryNonIdem() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x34419529478CC7B8,
             argsDescriptor: descriptorForTestbedGenerateRetryNonIdemArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3284,6 +3291,7 @@ public final class TestbedMethodCodecs {
 
     public func generateRetryIdem() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xE2D27FD9098C6EA2,
             argsDescriptor: descriptorForTestbedGenerateRetryIdemArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3291,6 +3299,7 @@ public final class TestbedMethodCodecs {
 
     public func transform() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xCB469CFF8D798FEB,
             argsDescriptor: descriptorForTestbedTransformArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3298,6 +3307,7 @@ public final class TestbedMethodCodecs {
 
     public func postReplyGenerate() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xEC36E84751A897BE,
             argsDescriptor: descriptorForTestbedPostReplyGenerateArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3305,6 +3315,7 @@ public final class TestbedMethodCodecs {
 
     public func postReplySum() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xC1CE3C397E4CA6E7,
             argsDescriptor: descriptorForTestbedPostReplySumArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3312,6 +3323,7 @@ public final class TestbedMethodCodecs {
 
     public func echoPoint() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x81F5386D589DFBE4,
             argsDescriptor: descriptorForTestbedEchoPointArgs(in: arena),
             responseDescriptor: descriptorForPoint(in: arena)
         )
@@ -3319,6 +3331,7 @@ public final class TestbedMethodCodecs {
 
     public func createPerson() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x68FFA90B7728BDE7,
             argsDescriptor: descriptorForTestbedCreatePersonArgs(in: arena),
             responseDescriptor: descriptorForPerson(in: arena)
         )
@@ -3326,6 +3339,7 @@ public final class TestbedMethodCodecs {
 
     public func rectangleArea() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x223FE0282D263107,
             argsDescriptor: descriptorForTestbedRectangleAreaArgs(in: arena),
             responseDescriptor: descriptorForDouble(in: arena)
         )
@@ -3333,6 +3347,7 @@ public final class TestbedMethodCodecs {
 
     public func parseColor() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xD4F16EA9ECA132E6,
             argsDescriptor: descriptorForTestbedParseColorArgs(in: arena),
             responseDescriptor: descriptorForOptionalColor(in: arena)
         )
@@ -3340,6 +3355,7 @@ public final class TestbedMethodCodecs {
 
     public func shapeArea() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x04385A4BE2A882F5,
             argsDescriptor: descriptorForTestbedShapeAreaArgs(in: arena),
             responseDescriptor: descriptorForDouble(in: arena)
         )
@@ -3347,6 +3363,7 @@ public final class TestbedMethodCodecs {
 
     public func createCanvas() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xEF421EB5B08C973A,
             argsDescriptor: descriptorForTestbedCreateCanvasArgs(in: arena),
             responseDescriptor: descriptorForCanvas(in: arena)
         )
@@ -3354,6 +3371,7 @@ public final class TestbedMethodCodecs {
 
     public func echoGnarly() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xB6FACAE6A7A86E99,
             argsDescriptor: descriptorForTestbedEchoGnarlyArgs(in: arena),
             responseDescriptor: descriptorForGnarlyPayload(in: arena)
         )
@@ -3361,6 +3379,7 @@ public final class TestbedMethodCodecs {
 
     public func processMessage() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xE08F0F5254E7A997,
             argsDescriptor: descriptorForTestbedProcessMessageArgs(in: arena),
             responseDescriptor: descriptorForMessage(in: arena)
         )
@@ -3368,6 +3387,7 @@ public final class TestbedMethodCodecs {
 
     public func getPoints() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x598518523A6266BF,
             argsDescriptor: descriptorForTestbedGetPointsArgs(in: arena),
             responseDescriptor: descriptorForArrayOfPoint(in: arena)
         )
@@ -3375,6 +3395,7 @@ public final class TestbedMethodCodecs {
 
     public func swapPair() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x7D55A713AD612BF2,
             argsDescriptor: descriptorForTestbedSwapPairArgs(in: arena),
             responseDescriptor: descriptorForVoxTuple2StringInt32(in: arena)
         )
@@ -3382,6 +3403,7 @@ public final class TestbedMethodCodecs {
 
     public func echoBytes() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x44056C7842FA336C,
             argsDescriptor: descriptorForTestbedEchoBytesArgs(in: arena),
             responseDescriptor: descriptorForBytes(in: arena)
         )
@@ -3389,6 +3411,7 @@ public final class TestbedMethodCodecs {
 
     public func echoBool() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x5136D8F01A5F496C,
             argsDescriptor: descriptorForTestbedEchoBoolArgs(in: arena),
             responseDescriptor: descriptorForBool(in: arena)
         )
@@ -3396,6 +3419,7 @@ public final class TestbedMethodCodecs {
 
     public func echoU64() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x85E2380DBF7FFE65,
             argsDescriptor: descriptorForTestbedEchoU64Args(in: arena),
             responseDescriptor: descriptorForUInt64(in: arena)
         )
@@ -3403,6 +3427,7 @@ public final class TestbedMethodCodecs {
 
     public func echoOptionString() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xB1A5BFD205B3FBFC,
             argsDescriptor: descriptorForTestbedEchoOptionStringArgs(in: arena),
             responseDescriptor: descriptorForOptionalString(in: arena)
         )
@@ -3410,6 +3435,7 @@ public final class TestbedMethodCodecs {
 
     public func sumLarge() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x9A7BED545E088054,
             argsDescriptor: descriptorForTestbedSumLargeArgs(in: arena),
             responseDescriptor: descriptorForInt64(in: arena)
         )
@@ -3417,6 +3443,7 @@ public final class TestbedMethodCodecs {
 
     public func generateLarge() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x8EDFBD65D162F685,
             argsDescriptor: descriptorForTestbedGenerateLargeArgs(in: arena),
             responseDescriptor: descriptorForVoid(in: arena)
         )
@@ -3424,6 +3451,7 @@ public final class TestbedMethodCodecs {
 
     public func allColors() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xFBFB05BBCAADE4A0,
             argsDescriptor: descriptorForTestbedAllColorsArgs(in: arena),
             responseDescriptor: descriptorForArrayOfColor(in: arena)
         )
@@ -3431,6 +3459,7 @@ public final class TestbedMethodCodecs {
 
     public func describePoint() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x62FEB14A8FCF9B6D,
             argsDescriptor: descriptorForTestbedDescribePointArgs(in: arena),
             responseDescriptor: descriptorForTaggedPoint(in: arena)
         )
@@ -3438,6 +3467,7 @@ public final class TestbedMethodCodecs {
 
     public func echoShape() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x4125B5E678B7B4A5,
             argsDescriptor: descriptorForTestbedEchoShapeArgs(in: arena),
             responseDescriptor: descriptorForShape(in: arena)
         )
@@ -3445,6 +3475,7 @@ public final class TestbedMethodCodecs {
 
     public func echoStatusV1() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xC7C5AA845CFB8BF6,
             argsDescriptor: descriptorForTestbedEchoStatusV1Args(in: arena),
             responseDescriptor: descriptorForStatus(in: arena)
         )
@@ -3452,6 +3483,7 @@ public final class TestbedMethodCodecs {
 
     public func echoTagV1() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x6619071BE5D5C259,
             argsDescriptor: descriptorForTestbedEchoTagV1Args(in: arena),
             responseDescriptor: descriptorForTag(in: arena)
         )
@@ -3459,6 +3491,7 @@ public final class TestbedMethodCodecs {
 
     public func echoProfile() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xBD9BCABDDEEBEB04,
             argsDescriptor: descriptorForTestbedEchoProfileArgs(in: arena),
             responseDescriptor: descriptorForProfile(in: arena)
         )
@@ -3466,6 +3499,7 @@ public final class TestbedMethodCodecs {
 
     public func echoRecord() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x100B0E08DA4B8F1A,
             argsDescriptor: descriptorForTestbedEchoRecordArgs(in: arena),
             responseDescriptor: descriptorForRecord(in: arena)
         )
@@ -3473,6 +3507,7 @@ public final class TestbedMethodCodecs {
 
     public func echoStatus() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x697590D3FFC36703,
             argsDescriptor: descriptorForTestbedEchoStatusArgs(in: arena),
             responseDescriptor: descriptorForStatus(in: arena)
         )
@@ -3480,6 +3515,7 @@ public final class TestbedMethodCodecs {
 
     public func echoTag() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x2BD1B3149D73CE97,
             argsDescriptor: descriptorForTestbedEchoTagArgs(in: arena),
             responseDescriptor: descriptorForTag(in: arena)
         )
@@ -3487,6 +3523,7 @@ public final class TestbedMethodCodecs {
 
     public func echoMeasurement() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0x3B3D22B015FA1A3F,
             argsDescriptor: descriptorForTestbedEchoMeasurementArgs(in: arena),
             responseDescriptor: descriptorForMeasurement(in: arena)
         )
@@ -3494,6 +3531,7 @@ public final class TestbedMethodCodecs {
 
     public func echoConfig() throws -> VoxSwiftMethodCodec {
         try VoxSwiftMethodCodec(
+            methodId: 0xE13A477FB964CE28,
             argsDescriptor: descriptorForTestbedEchoConfigArgs(in: arena),
             responseDescriptor: descriptorForConfig(in: arena)
         )

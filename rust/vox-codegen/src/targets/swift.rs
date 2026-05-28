@@ -312,6 +312,7 @@ impl<'a> SwiftGenerator<'a> {
                 "    public func {method_name}() throws -> VoxSwiftMethodCodec {{"
             ));
             self.line("        try VoxSwiftMethodCodec(");
+            self.line(&format!("            methodId: {},", hex_u64(method.id.0)));
             self.line(&format!(
                 "            argsDescriptor: {args_descriptor}(in: arena),"
             ));
@@ -2074,6 +2075,7 @@ mod tests {
         assert!(generated.contains("public struct SwiftCanarySubmitArgs"));
         assert!(generated.contains("public init(call: SwiftCall)"));
         assert!(generated.contains("try VoxSwiftMethodCodec("));
+        assert!(generated.contains(&format!("methodId: {},", super::hex_u64(submit.id.0))));
         assert!(generated.contains("arena.tuple("));
         assert!(generated.contains("arena.structure("));
         assert!(generated.contains("arena.enumeration("));
