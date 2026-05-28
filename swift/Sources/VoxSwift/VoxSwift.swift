@@ -20,6 +20,10 @@ public struct VoxSwiftWirePayload {
     }
 }
 
+public struct VoxSwiftChannel {
+    public init() {}
+}
+
 public final class VoxSwiftMethodCodec {
     private let argsCodec: VoxSwiftLocalCodec
     private let responseCodec: VoxSwiftLocalCodec

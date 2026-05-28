@@ -9,6 +9,7 @@ Language binding generator for Vox service descriptors.
 ## What this crate provides
 
 - TypeScript code generation target
+- Swift binette local-access descriptor and method-codec target
 - Rendering of service descriptors into client/server scaffolding
 
 ## Fits with

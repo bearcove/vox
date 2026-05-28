@@ -8,10 +8,11 @@
 //! consumes that metadata and generates actual protocol implementations for:
 //!
 //! - **TypeScript** — Browser and Node.js clients
+//! - **Swift** — binette local-access descriptors and method codecs
 //!
-//! Swift-native code generation is not restored yet. The active Swift runtime
-//! path goes through binette local-access descriptors and thunks rather than a
-//! separate Swift-native binette codec.
+//! The Swift target does not generate a separate Swift-native codec. It emits
+//! descriptors for the binette C ABI surface, then uses the shared VoxSwift
+//! method codec runtime.
 //!
 //! # Usage: In Your build.rs
 //!
