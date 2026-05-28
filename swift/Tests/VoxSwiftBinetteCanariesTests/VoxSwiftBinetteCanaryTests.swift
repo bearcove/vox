@@ -376,7 +376,17 @@ private func commonDescriptors(in arena: BinetteCAbiDescriptorArena) -> CommonDe
     let channelDescriptor = arena.externalAttachment(
         typeID: 0xB1_0000_0000_2002,
         kind: "vox.channel",
-        layout: binetteLayout(of: VoxSwiftChannel.self)
+        layout: binetteLayout(of: VoxSwiftChannel.self),
+        metadataFields: [
+            arena.externalMetadataField(
+                "direction",
+                arena.externalMetadataString("tx")
+            ),
+            arena.externalMetadataField(
+                "element",
+                arena.externalMetadataTypeRef(u32Descriptor)
+            ),
+        ]
     )
     return CommonDescriptors(
         u32: u32Descriptor,

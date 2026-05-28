@@ -468,12 +468,70 @@ fn vox_schema_kind_from_binette_schema_kind(
                 "Vox schema model does not have a dynamic value kind".to_string(),
             ));
         }
-        binette::SchemaKind::External { kind, .. } => {
-            return Err(SchemaDeserializeError::Plan(format!(
-                "binette external attachment {kind:?} needs Vox-specific schema metadata before it can become a Vox schema"
-            )));
+        binette::SchemaKind::External { kind, metadata } => {
+            vox_channel_schema_from_binette_external(kind, metadata)?
         }
     })
+}
+
+fn vox_channel_schema_from_binette_external(
+    kind: String,
+    metadata: binette::Value,
+) -> Result<vox_schema::SchemaKind, SchemaDeserializeError> {
+    if kind != "vox.channel" {
+        return Err(SchemaDeserializeError::Plan(format!(
+            "binette external attachment {kind:?} is not a Vox channel"
+        )));
+    }
+
+    let binette::Value::Struct(fields) = metadata else {
+        return Err(SchemaDeserializeError::Plan(
+            "vox.channel external metadata must be a struct".to_owned(),
+        ));
+    };
+    let direction = metadata_field(&fields, "direction")?;
+    let element = metadata_field(&fields, "element")?;
+
+    let direction = match direction {
+        binette::Value::String(direction) if direction == "tx" => vox_schema::ChannelDirection::Tx,
+        binette::Value::String(direction) if direction == "rx" => vox_schema::ChannelDirection::Rx,
+        binette::Value::String(direction) => {
+            return Err(SchemaDeserializeError::Plan(format!(
+                "vox.channel direction must be \"tx\" or \"rx\", got {direction:?}"
+            )));
+        }
+        other => {
+            return Err(SchemaDeserializeError::Plan(format!(
+                "vox.channel direction must be a string, got {other:?}"
+            )));
+        }
+    };
+    let element = binette::type_ref_from_value(element)
+        .map(vox_type_ref_from_binette_type_ref)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
+
+    Ok(vox_schema::SchemaKind::Channel { direction, element })
+}
+
+fn metadata_field<'a>(
+    fields: &'a [binette::FieldValue],
+    name: &str,
+) -> Result<&'a binette::Value, SchemaDeserializeError> {
+    let mut matches = fields
+        .iter()
+        .filter(|field| field.name == name)
+        .map(|field| &field.value);
+    let Some(value) = matches.next() else {
+        return Err(SchemaDeserializeError::Plan(format!(
+            "vox.channel external metadata missing {name:?}"
+        )));
+    };
+    if matches.next().is_some() {
+        return Err(SchemaDeserializeError::Plan(format!(
+            "vox.channel external metadata has duplicate {name:?}"
+        )));
+    }
+    Ok(value)
 }
 
 fn vox_variant_payload_from_binette_variant_payload(
@@ -547,7 +605,7 @@ fn vox_primitive_from_binette_primitive(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vox_types::{SchemaPayload, extract_schemas};
+    use vox_types::{SchemaPayload, Tx, extract_schemas};
 
     #[test]
     fn schema_deserialize_args_handles_nested_unary_tuple() {
@@ -739,6 +797,83 @@ mod tests {
 
         assert!(
             matches!(error, SchemaDeserializeError::Plan(message) if message.contains("vox.channel"))
+        );
+    }
+
+    #[test]
+    fn binette_external_channel_schema_advertises_as_vox_channel() {
+        let channel_id = binette::TypeId(0xB1_0000_0000_3001);
+        let element =
+            binette::TypeRef::concrete(binette::primitive_type_id(binette::Primitive::U32));
+        let bundle = binette::SchemaBundle {
+            schemas: vec![binette::Schema {
+                id: channel_id,
+                type_params: Vec::new(),
+                kind: binette::SchemaKind::External {
+                    kind: "vox.channel".to_string(),
+                    metadata: binette::Value::Struct(vec![
+                        binette::FieldValue {
+                            name: "direction".to_owned(),
+                            value: binette::Value::String("tx".to_owned()),
+                        },
+                        binette::FieldValue {
+                            name: "element".to_owned(),
+                            value: binette::type_ref_to_value(&element)
+                                .expect("type ref metadata should encode"),
+                        },
+                    ]),
+                },
+            }],
+            root: binette::TypeRef::concrete(channel_id),
+            attachments: Vec::new(),
+        };
+
+        let schema_bytes = encode_vox_schema_payload_from_binette_schema_bundle(bundle)
+            .expect("vox.channel metadata should become a Vox Channel schema");
+        let payload =
+            SchemaPayload::from_binette(&schema_bytes.0).expect("converted payload should parse");
+        let channel = payload
+            .schemas
+            .iter()
+            .find(|schema| schema.id == vox_schema::SchemaHash(channel_id.0))
+            .expect("channel schema should be present");
+
+        let vox_schema::SchemaKind::Channel { direction, element } = &channel.kind else {
+            panic!("expected channel schema, got {channel:?}");
+        };
+        assert_eq!(*direction, vox_schema::ChannelDirection::Tx);
+        assert_eq!(
+            *element,
+            vox_schema::TypeRef::concrete(vox_schema::SchemaHash(
+                binette::primitive_type_id(binette::Primitive::U32).0
+            ))
+        );
+    }
+
+    #[test]
+    fn vox_channel_schema_lowers_to_unit_for_binette_payloads() {
+        let extracted = extract_schemas(<Tx<u32> as Facet>::SHAPE).expect("schema extraction");
+        let registry = extracted
+            .schemas
+            .clone()
+            .into_iter()
+            .map(|schema| (schema.id, schema))
+            .collect::<vox_schema::SchemaRegistry>();
+        let bundle = binette_schema_bundle_from_vox_schemas(extracted.root.clone(), registry)
+            .expect("Vox channel schemas should become binette payload schemas");
+        let binette::TypeRef::Concrete { type_id, args } = &bundle.root else {
+            panic!("expected concrete channel root, got {:#?}", bundle.root);
+        };
+        assert!(args.is_empty());
+        let channel = bundle
+            .schemas
+            .iter()
+            .find(|schema| schema.id == *type_id)
+            .expect("channel schema should be present");
+
+        assert_eq!(
+            channel.kind,
+            binette::SchemaKind::Primitive(binette::Primitive::Unit)
         );
     }
 }
