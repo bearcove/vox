@@ -54,7 +54,58 @@ private struct VoxSwiftReply {
 
 private typealias CVariantProject = @convention(c) (UnsafePointer<UInt8>?, UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>?
 
+private func assertBuilds(
+    _ name: String,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ build: () throws -> VoxSwiftMethodCodec
+) {
+    XCTAssertNoThrow(try build(), name, file: file, line: line)
+}
+
 final class VoxSwiftBinetteCanaryTests: XCTestCase {
+    func testGeneratedTestbedMethodCodecsBuildDescriptors() throws {
+        let codecs = TestbedMethodCodecs()
+        assertBuilds("echo") { try codecs.echo() }
+        assertBuilds("reverse") { try codecs.reverse() }
+        assertBuilds("divide") { try codecs.divide() }
+        assertBuilds("lookup") { try codecs.lookup() }
+        assertBuilds("sum") { try codecs.sum() }
+        assertBuilds("generate") { try codecs.generate() }
+        assertBuilds("generateRetryNonIdem") { try codecs.generateRetryNonIdem() }
+        assertBuilds("generateRetryIdem") { try codecs.generateRetryIdem() }
+        assertBuilds("transform") { try codecs.transform() }
+        assertBuilds("postReplyGenerate") { try codecs.postReplyGenerate() }
+        assertBuilds("postReplySum") { try codecs.postReplySum() }
+        assertBuilds("echoPoint") { try codecs.echoPoint() }
+        assertBuilds("createPerson") { try codecs.createPerson() }
+        assertBuilds("rectangleArea") { try codecs.rectangleArea() }
+        assertBuilds("parseColor") { try codecs.parseColor() }
+        assertBuilds("shapeArea") { try codecs.shapeArea() }
+        assertBuilds("createCanvas") { try codecs.createCanvas() }
+        assertBuilds("echoGnarly") { try codecs.echoGnarly() }
+        assertBuilds("processMessage") { try codecs.processMessage() }
+        assertBuilds("getPoints") { try codecs.getPoints() }
+        assertBuilds("swapPair") { try codecs.swapPair() }
+        assertBuilds("echoBytes") { try codecs.echoBytes() }
+        assertBuilds("echoBool") { try codecs.echoBool() }
+        assertBuilds("echoU64") { try codecs.echoU64() }
+        assertBuilds("echoOptionString") { try codecs.echoOptionString() }
+        assertBuilds("sumLarge") { try codecs.sumLarge() }
+        assertBuilds("generateLarge") { try codecs.generateLarge() }
+        assertBuilds("allColors") { try codecs.allColors() }
+        assertBuilds("describePoint") { try codecs.describePoint() }
+        assertBuilds("echoShape") { try codecs.echoShape() }
+        assertBuilds("echoStatusV1") { try codecs.echoStatusV1() }
+        assertBuilds("echoTagV1") { try codecs.echoTagV1() }
+        assertBuilds("echoProfile") { try codecs.echoProfile() }
+        assertBuilds("echoRecord") { try codecs.echoRecord() }
+        assertBuilds("echoStatus") { try codecs.echoStatus() }
+        assertBuilds("echoTag") { try codecs.echoTag() }
+        assertBuilds("echoMeasurement") { try codecs.echoMeasurement() }
+        assertBuilds("echoConfig") { try codecs.echoConfig() }
+    }
+
     func testVoxShapedSwiftValueEncodesAndDecodesThroughBinetteLocalAccess() throws {
         let arena = BinetteCAbiDescriptorArena()
         let descriptor = voxSwiftCallDescriptor(in: arena)

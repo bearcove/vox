@@ -454,6 +454,7 @@ impl<'a> SwiftGenerator<'a> {
         scalar: ScalarType,
     ) -> Result<(), SwiftCodegenError> {
         let (type_id, swift_type) = match scalar {
+            ScalarType::Unit => ("binette_primitive_unit_type_id()", "Void"),
             ScalarType::Bool => ("binette_primitive_bool_type_id()", "Bool"),
             ScalarType::U8 => ("binette_primitive_u8_type_id()", "UInt8"),
             ScalarType::U16 => ("binette_primitive_u16_type_id()", "UInt16"),
@@ -1315,6 +1316,10 @@ impl<'a> SwiftGenerator<'a> {
             "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
         ));
         match classify_shape(inner) {
+            ShapeKind::Scalar(ScalarType::Unit) => {
+                self.line("    guard payloadLen == 0 else { return false }");
+                self.line("    let payloadValue: Void = ()");
+            }
             _ if is_bytes(inner) => {
                 self.line(
                     "    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)",
@@ -1376,10 +1381,21 @@ impl<'a> SwiftGenerator<'a> {
                 self.line("    default: return false");
                 self.line("    }");
             }
+            ShapeKind::Struct(_)
+            | ShapeKind::Tuple { .. }
+            | ShapeKind::TupleStruct { .. }
+            | ShapeKind::Enum(_) => {
+                self.line(&format!(
+                    "    guard payloadLen == MemoryLayout<{inner_type}>.size else {{ return false }}"
+                ));
+                self.line(&format!(
+                    "    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {inner_type}.self).move()"
+                ));
+            }
             _ => {
                 return Err(unsupported(
                     inner,
-                    "enum newtype construction currently supports byte sequences, fixed scalar payload bytes, and unit-enum payload bytes",
+                    "enum newtype construction currently supports byte sequences, fixed scalar payload bytes, unit-enum payload bytes, and descriptor-materialized aggregate payloads",
                 ));
             }
         }
@@ -1709,6 +1725,7 @@ fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
     }
     match classify_shape(shape) {
         ShapeKind::Scalar(ScalarType::Bool) => Ok("Bool".to_owned()),
+        ShapeKind::Scalar(ScalarType::Unit) => Ok("Void".to_owned()),
         ShapeKind::Scalar(ScalarType::U8) => Ok("UInt8".to_owned()),
         ShapeKind::Scalar(ScalarType::U16) => Ok("UInt16".to_owned()),
         ShapeKind::Scalar(ScalarType::U32) => Ok("UInt32".to_owned()),
@@ -1757,6 +1774,7 @@ fn descriptor_fn_name(shape: &'static Shape) -> Result<String, SwiftCodegenError
     }
     match classify_shape(shape) {
         ShapeKind::Scalar(ScalarType::Bool) => Ok("descriptorForBool".to_owned()),
+        ShapeKind::Scalar(ScalarType::Unit) => Ok("descriptorForVoid".to_owned()),
         ShapeKind::Scalar(ScalarType::U8) => Ok("descriptorForUInt8".to_owned()),
         ShapeKind::Scalar(ScalarType::U16) => Ok("descriptorForUInt16".to_owned()),
         ShapeKind::Scalar(ScalarType::U32) => Ok("descriptorForUInt32".to_owned()),

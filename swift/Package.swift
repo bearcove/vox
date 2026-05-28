@@ -37,7 +37,8 @@ let package = Package(
             dependencies: [
                 "VoxSwift",
                 .product(name: "BinetteSwiftProbes", package: "probes"),
-            ]
+            ],
+            exclude: ["TestbedEvolved.generated.swift"]
         ),
         .testTarget(
             name: "VoxSwiftBinetteCanariesTests",
