@@ -29,17 +29,17 @@ pub trait Calculator {
 ```
 
 Implementations for other languages are **generated from Rust definitions**
-using Rust tooling. TypeScript is the active non-Rust runtime in the binette
-migration. Swift is coming back through binette's C ABI local-access surface:
-Swift describes its local values with descriptors and thunks, while binette
-remains the shared wire/schema/value layer. The Swift runtime converts
-descriptor-derived binette schema bundles into Vox schema payload bytes through
-the Vox C ABI, then feeds Swift-encoded argument bytes through the normal Rust
-Vox receive path and decodes Rust-produced response payload bytes back into
-Swift values. `vox-codegen` now has an initial Swift target that emits those
-descriptor-backed method codecs for supported shapes. The current driver canary
-exercises that path over an in-memory link with struct, enum, bytes, option,
-and channel-shaped external metadata in the payload.
+using Rust tooling. TypeScript is the active generated runtime. Swift uses
+binette's C ABI local-access surface: Swift describes its local values with
+descriptors and thunks, while binette remains the shared wire/schema/value
+layer. The Swift runtime converts descriptor-derived binette schema bundles
+into Vox schema payload bytes through the Vox C ABI, then feeds Swift-encoded
+argument bytes through the normal Rust Vox receive path and decodes
+Rust-produced response payload bytes back into Swift values.
+`vox-codegen` now emits descriptor-backed Swift method codecs for the supported
+shape set. The current driver canary exercises that path over an in-memory link
+with struct, enum, bytes, option, and channel-shaped external metadata in the
+payload.
 
 ## Implementing a Service
 
@@ -151,7 +151,7 @@ let client = DownstreamClient::new(caller);
 |----------|--------|
 | Rust | Reference implementation |
 | TypeScript | Generated client/server |
-| Swift | Initial binette C ABI descriptor/codegen path plus driver canaries |
+| Swift | Binette C ABI descriptor/codegen path with driver canaries |
 
 ## Transport Bindings
 

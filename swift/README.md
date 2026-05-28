@@ -9,5 +9,6 @@ shared schema/value/wire layer.
 
 The canaries in this directory are intentionally small but real. They exercise
 Vox-shaped Swift values through binette C ABI descriptor import, schema bundle
-generation, encode/decode, and writer/reader schema translation. Full Swift RPC
-runtime support is still being rebuilt on top of this path.
+generation, encode/decode, writer/reader schema translation, and the Vox driver
+boundary over an in-memory link. Full Swift RPC runtime support is built on top
+of this path.

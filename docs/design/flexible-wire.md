@@ -1,5 +1,11 @@
 # Flexible Wire Protocol
 
+Historical design note. This predates the binette migration and is superseded
+by `docs/content/spec/schemas.md` plus the Binette specification. The current
+protocol uses self-describing binette for schema bundles and compact binette for
+schema-bound payloads; the CBOR/postcard wording below is retained only as
+design history.
+
 Design notes for making the vox wire protocol itself schema-negotiated,
 so protocol evolution doesn't require breaking changes.
 

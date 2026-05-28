@@ -64,7 +64,7 @@ or a persistent store — knows it already has that schema. This is critical for
 operation stores (see `r[schema.interaction.retry]`) and for efficient schema
 tracking across connection resumes.
 
-> r[schema.type-id.hash.channel+3]
+> r[schema.type-id.hash.channel+4]
 >
 > Vox MUST NOT define a separate channel type-ID hash. Channel endpoints are
 > represented with Binette's external-attachment schema kind using external
@@ -73,11 +73,13 @@ tracking across connection resumes.
 >
 > The `"vox.channel"` external metadata contains:
 >
-> - `direction`: `"send"` or `"recv"`
+> - `direction`: `"tx"` or `"rx"`
 > - `element`: the channel item type reference
 >
 > This makes channel positions visible to the Binette schema walk while keeping
-> channel allocation, flow control, and attachment IDs in Vox.
+> channel allocation, flow control, and attachment IDs in Vox. `tx` and `rx`
+> are from the local endpoint's point of view: `tx` means the local value sends
+> items on that channel, and `rx` means the local value receives items from it.
 
 > r[schema.type-id.per-connection]
 >
@@ -125,8 +127,8 @@ struct TypeRef;
 
 /// The direction of a channel endpoint.
 enum ChannelDirection {
-    Send,
-    Recv,
+    Tx,
+    Rx,
 }
 
 /// A Binette schema bundle as specified by Binette.
@@ -191,7 +193,7 @@ Vox schema payloads.
 >
 > Vox channel endpoints MUST be represented as Binette external attachments
 > using the `"vox.channel"` external kind from
-> `r[schema.type-id.hash.channel+3]`. The in-band compact value is Binette
+> `r[schema.type-id.hash.channel+4]`. The in-band compact value is Binette
 > unit. The actual channel ID is carried out-of-band in the message's
 > `channels` field.
 

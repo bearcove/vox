@@ -10,8 +10,8 @@ weight = 10
 > Rust traits *are* the schema. Implementations for other languages are generated
 > from Rust definitions.
 
-The currently specified runtimes are Rust and TypeScript. Swift support is being
-rebuilt through binette local access: Swift produces C ABI descriptors and
+The currently specified runtimes are Rust, TypeScript, and Swift. Swift support
+is built through binette local access: Swift produces C ABI descriptors and
 thunks for its local values, and binette remains the shared schema/value/wire
 contract. Swift does not carry a separate Swift-native codec.
 

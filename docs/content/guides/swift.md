@@ -4,7 +4,7 @@ description = "Current status of Swift support through binette local access."
 weight = 22
 +++
 
-Swift support is being rebuilt around binette local access.
+Swift support is built around binette local access.
 
 The wire contract is binette, not Swift and not Rust. Swift describes local
 values by handing binette a tree of C ABI descriptors: layout facts, field
@@ -24,15 +24,15 @@ bundles so Swift can decode Rust response bytes into Swift local values.
 
 `VoxSwiftMethodCodec` packages that boundary for generated Swift stubs: encode
 local args into a Vox wire payload and decode a response wire payload into the
-local response type. `vox-codegen` now has an initial Swift target that emits
-Swift value declarations, method-argument tuple carriers, binette C ABI
-descriptor functions, and method-codec accessors for the supported shape set.
-Unsupported Swift local layouts are rejected at generation time instead of
-falling back to a fake codec path.
+local response type. `vox-codegen` emits Swift value declarations,
+method-argument tuple carriers, binette C ABI descriptor functions, and
+method-codec accessors for the supported shape set. Unsupported Swift local
+layouts are rejected at generation time instead of falling back to a fake codec
+path.
 
 The driver-backed canary sends Swift-produced argument schema and payload bytes
 through the Rust Vox driver over an in-memory link and decodes the Rust response
 back into a Swift value. It covers a Vox-shaped Swift struct with string, bytes,
 option, enum payload thunking, and external channel metadata. Full Swift RPC
-client/server support will build on this path rather than reintroducing a
-separate Swift-native codec.
+client/server support stays on this path rather than introducing a separate
+Swift-native codec.
