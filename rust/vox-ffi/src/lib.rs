@@ -207,7 +207,8 @@ impl Endpoint {
     pub async fn accept(&'static self) -> io::Result<FfiLink> {
         trace!("ffi endpoint accept: waiting for peer");
         poll_fn(|cx| {
-            if self.peer.lock().expect("peer poisoned").is_some() {
+            let peer = self.peer.lock().expect("peer poisoned");
+            if peer.is_some() {
                 trace!("ffi endpoint accept: peer present, ready");
                 Poll::Ready(())
             } else {
@@ -308,7 +309,8 @@ impl Endpoint {
     }
 
     fn poll_recv(&'static self, cx: &mut std::task::Context<'_>) -> Poll<IncomingFrame> {
-        if let Some(frame) = self.inbox.lock().expect("inbox poisoned").pop_front() {
+        let mut inbox = self.inbox.lock().expect("inbox poisoned");
+        if let Some(frame) = inbox.pop_front() {
             trace!("ffi endpoint poll_recv: got frame len={}", frame.len);
             Poll::Ready(frame)
         } else {
@@ -321,17 +323,16 @@ impl Endpoint {
 #[doc(hidden)]
 pub unsafe fn __endpoint_send(endpoint: &'static Endpoint, buf: *const u8, len: usize) {
     trace!("ffi __endpoint_send: len={len}");
-    endpoint
-        .inbox
-        .lock()
-        .expect("inbox poisoned")
-        .push_back(IncomingFrame { ptr: buf, len });
-    if let Some(waker) = endpoint
-        .recv_waker
-        .lock()
-        .expect("recv_waker poisoned")
-        .take()
-    {
+    let waker = {
+        let mut inbox = endpoint.inbox.lock().expect("inbox poisoned");
+        inbox.push_back(IncomingFrame { ptr: buf, len });
+        endpoint
+            .recv_waker
+            .lock()
+            .expect("recv_waker poisoned")
+            .take()
+    };
+    if let Some(waker) = waker {
         trace!("ffi __endpoint_send: waking recv waiter");
         waker.wake();
     }

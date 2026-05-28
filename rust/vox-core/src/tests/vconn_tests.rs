@@ -1,7 +1,8 @@
 use moire::task::FutureExt;
+use std::sync::{Arc, OnceLock};
 use vox_types::{
     ChannelBinder, ConnectionCloseReason, ConnectionSettings, IncomingChannelMessage, Metadata,
-    MetadataEntry, MethodId, Parity, Payload, RequestCall,
+    MetadataEntry, MethodId, Parity, Payload, ReplySink, RequestCall, RequestResponse,
 };
 
 use super::utils::*;
@@ -10,6 +11,69 @@ use crate::session::{
     initiator_conduit,
 };
 use crate::{Driver, NoopClient};
+
+#[derive(Clone)]
+struct ReverseOpeningHandler {
+    session: Arc<OnceLock<crate::session::SessionHandle>>,
+}
+
+impl vox_types::Handler<crate::DriverReplySink> for ReverseOpeningHandler {
+    async fn handle(
+        &self,
+        call: vox_types::SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let call = call.get();
+        let args_bytes = match &call.args {
+            Payload::PostcardBytes(bytes) => *bytes,
+            _ => panic!("expected incoming payload"),
+        };
+        let input: u32 = vox_postcard::from_slice(args_bytes).expect("deserialize args");
+
+        let session = self.session.get().expect("server session set").clone();
+        let reverse_handle = session
+            .open_connection(
+                ConnectionSettings {
+                    parity: Parity::Even,
+                    max_concurrent_requests: 64,
+                    initial_channel_credit: 16,
+                },
+                vec![MetadataEntry::str("vox-service", "Echo")],
+            )
+            .await
+            .expect("open reverse virtual connection from request handler");
+
+        let mut reverse_driver = Driver::new(reverse_handle, ());
+        let reverse_caller = crate::Caller::new(reverse_driver.caller());
+        moire::task::spawn(async move { reverse_driver.run().await }.named("reverse_vconn_driver"));
+
+        let response = reverse_caller
+            .call(RequestCall {
+                method_id: MethodId(1),
+                args: Payload::outgoing(&input),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+            .expect("reverse vconn echo");
+        let response = response.get();
+        let ret_bytes = match &response.ret {
+            Payload::PostcardBytes(bytes) => *bytes,
+            _ => panic!("expected incoming payload in reverse response"),
+        };
+        let result: u32 =
+            vox_postcard::from_slice(ret_bytes).expect("deserialize reverse response");
+
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&result),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
 
 // r[verify rpc.virtual-connection.open]
 // r[verify rpc.virtual-connection.accept]
@@ -75,6 +139,77 @@ async fn open_virtual_connection_and_call() {
     };
     let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(result, 123);
+}
+
+#[tokio::test]
+async fn request_handler_can_open_reverse_virtual_connection() {
+    let _ = tracing_subscriber::fmt::try_init();
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let server_session = Arc::new(OnceLock::new());
+
+    let server_task = moire::task::spawn({
+        let server_session = server_session.clone();
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(ReverseOpeningHandler {
+                    session: server_session,
+                })
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup")
+    });
+
+    let client_root = initiator_conduit(client_conduit, test_initiator_handshake())
+        .on_connection(EchoAcceptor)
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let client_session = client_root.session.clone().unwrap();
+
+    let server_root = server_task.await.expect("server setup failed");
+    server_session
+        .set(server_root.session.clone().unwrap())
+        .ok()
+        .expect("server session set once");
+
+    let vconn_handle = client_session
+        .open_connection(
+            ConnectionSettings {
+                parity: Parity::Odd,
+                max_concurrent_requests: 64,
+                initial_channel_credit: 16,
+            },
+            vec![MetadataEntry::str("vox-service", "ReverseOpening")],
+        )
+        .await
+        .expect("open forward virtual connection");
+
+    let mut vconn_driver = Driver::new(vconn_handle, ());
+    let caller = crate::Caller::new(vconn_driver.caller());
+    moire::task::spawn(async move { vconn_driver.run().await }.named("forward_vconn_driver"));
+
+    let response = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        caller.call(RequestCall {
+            method_id: MethodId(1),
+            args: Payload::outgoing(&42_u32),
+            schemas: Default::default(),
+            metadata: Default::default(),
+        }),
+    )
+    .await
+    .expect("forward call timed out")
+    .expect("forward call failed");
+
+    let response = response.get();
+    let ret_bytes = match &response.ret {
+        Payload::PostcardBytes(bytes) => *bytes,
+        _ => panic!("expected incoming payload in response"),
+    };
+    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    assert_eq!(result, 42);
 }
 
 // r[verify connection.open.rejection]
