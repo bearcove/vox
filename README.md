@@ -32,7 +32,9 @@ Implementations for other languages are **generated from Rust definitions**
 using Rust tooling. TypeScript is the active non-Rust runtime in the binette
 migration. Swift is coming back through binette's C ABI local-access surface:
 Swift describes its local values with descriptors and thunks, while binette
-remains the shared wire/schema/value layer.
+remains the shared wire/schema/value layer. The Swift canaries now also convert
+descriptor-derived binette schema bundles into Vox schema payload bytes through
+the Vox C ABI.
 
 ## Implementing a Service
 
@@ -144,7 +146,7 @@ let client = DownstreamClient::new(caller);
 |----------|--------|
 | Rust | Reference implementation |
 | TypeScript | Generated client/server |
-| Swift | Binette C ABI local-access integration in progress |
+| Swift | Binette C ABI local-access and schema-payload bridge canaries |
 
 ## Transport Bindings
 
@@ -161,7 +163,7 @@ let client = DownstreamClient::new(caller);
 ```
 rust/           # Rust implementation
 typescript/     # TypeScript packages
-swift/          # Swift/binette local-access canaries
+swift/          # Swift/binette local-access and schema-payload bridge canaries
 spec/           # Compliance test suite
 docs/           # Specifications
 ```
