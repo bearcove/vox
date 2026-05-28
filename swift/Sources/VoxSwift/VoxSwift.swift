@@ -10,6 +10,47 @@ public enum VoxSwiftBinetteError: Error, Equatable {
     case decode(Int32)
 }
 
+public struct VoxSwiftWirePayload {
+    public var schemaPayload: [UInt8]
+    public var payload: [UInt8]
+
+    public init(schemaPayload: [UInt8], payload: [UInt8]) {
+        self.schemaPayload = schemaPayload
+        self.payload = payload
+    }
+}
+
+public final class VoxSwiftMethodCodec {
+    private let argsCodec: VoxSwiftLocalCodec
+    private let responseCodec: VoxSwiftLocalCodec
+
+    public init(
+        argsDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>,
+        responseDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>
+    ) throws {
+        argsCodec = try VoxSwiftLocalCodec(descriptor: argsDescriptor)
+        responseCodec = try VoxSwiftLocalCodec(descriptor: responseDescriptor)
+    }
+
+    public func encodeArgs<T>(_ value: inout T) throws -> VoxSwiftWirePayload {
+        VoxSwiftWirePayload(
+            schemaPayload: try argsCodec.voxSchemaPayload(),
+            payload: try argsCodec.encode(&value)
+        )
+    }
+
+    public func decodeResponse<T>(
+        _ response: VoxSwiftWirePayload,
+        as _: T.Type
+    ) throws -> T {
+        try responseCodec.decodeVoxPayload(
+            response.payload,
+            writerSchemaPayload: response.schemaPayload,
+            as: T.self
+        )
+    }
+}
+
 public final class VoxSwiftLocalCodec {
     private let handle: OpaquePointer
     private let schemaBundle: BinetteByteBuffer

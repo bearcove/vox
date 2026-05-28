@@ -241,20 +241,24 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
     func testSwiftArgsCallRunsThroughRustVoxDriver() throws {
         let argsArena = BinetteCAbiDescriptorArena()
         let argsDescriptor = voxSwiftArgsDescriptor(in: argsArena)
-        let argsCodec = try VoxSwiftLocalCodec(descriptor: argsDescriptor)
+        let replyArena = BinetteCAbiDescriptorArena()
+        let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
+        let methodCodec = try VoxSwiftMethodCodec(
+            argsDescriptor: argsDescriptor,
+            responseDescriptor: replyDescriptor
+        )
 
-        let schemaPayload = try argsCodec.voxSchemaPayload()
         var args = VoxSwiftArgs(
             title: "swift rpc args",
             retry: 144,
             output: VoxSwiftChannel()
         )
-        let payload = try argsCodec.encode(&args)
+        let request = try methodCodec.encodeArgs(&args)
 
         var responseSchemaPayload = VoxByteBuffer()
         var responsePayload = VoxByteBuffer()
-        let status = schemaPayload.withUnsafeBufferPointer { schemaBuffer in
-            payload.withUnsafeBufferPointer { payloadBuffer in
+        let status = request.schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            request.payload.withUnsafeBufferPointer { payloadBuffer in
                 vox_canary_driver_call_swift_args(
                     schemaBuffer.baseAddress,
                     schemaBuffer.count,
@@ -281,12 +285,11 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
         )
 
-        let replyArena = BinetteCAbiDescriptorArena()
-        let replyDescriptor = voxSwiftReplyDescriptor(in: replyArena)
-        let replyCodec = try VoxSwiftLocalCodec(descriptor: replyDescriptor)
-        let reply = try replyCodec.decodeVoxPayload(
-            responseBytes,
-            writerSchemaPayload: responseSchemaBytes,
+        let reply = try methodCodec.decodeResponse(
+            VoxSwiftWirePayload(
+                schemaPayload: responseSchemaBytes,
+                payload: responseBytes
+            ),
             as: VoxSwiftReply.self
         )
 

@@ -24,5 +24,7 @@ response schema payloads back into binette schema bundles so Swift can decode
 Rust response bytes into Swift local values. The current canary sends
 Swift-produced argument schema and payload bytes through the Rust Vox driver
 over an in-memory link and decodes the Rust response back into a Swift value.
-Full Swift RPC client/server support will build on this path rather than
-reintroducing a separate Swift-native codec.
+`VoxSwiftMethodCodec` packages that boundary for generated Swift stubs: encode
+local args into a Vox wire payload and decode a response wire payload into the
+local response type. Full Swift RPC client/server support will build on this
+path rather than reintroducing a separate Swift-native codec.

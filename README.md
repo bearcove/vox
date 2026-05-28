@@ -37,7 +37,8 @@ descriptor-derived binette schema bundles into Vox schema payload bytes through
 the Vox C ABI, then feed Swift-encoded argument bytes through the normal Rust
 Vox receive path and decode Rust-produced response payload bytes back into
 Swift values. The current canary runs those bytes through the Rust Vox driver
-over an in-memory link.
+over an in-memory link, using the Swift method-codec surface intended for
+generated stubs.
 
 ## Implementing a Service
 
