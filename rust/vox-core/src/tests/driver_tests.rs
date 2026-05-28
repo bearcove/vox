@@ -95,6 +95,93 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .expect("server session task failed");
 }
 
+// r[verify schema.exchange.caller+2]
+#[tokio::test]
+async fn preencoded_call_payload_sends_attached_arg_schemas() {
+    #[derive(Clone)]
+    struct SchemaAwareHandler;
+
+    impl Handler<DriverReplySink> for SchemaAwareHandler {
+        async fn handle(
+            &self,
+            call: SelfRef<RequestCall<'static>>,
+            reply: DriverReplySink,
+            schemas: Arc<vox_types::SchemaRecvTracker>,
+        ) {
+            assert!(
+                schemas
+                    .get_remote_args_root(MethodId(0xB1_0000_0000_6000))
+                    .is_some(),
+                "pre-encoded request args must install their attached schema payload"
+            );
+
+            let call = call.get();
+            let args_bytes = match &call.args {
+                Payload::BinetteBytes(bytes) => *bytes,
+                _ => panic!("expected incoming payload bytes"),
+            };
+            let value: u32 = decode_binette_payload(args_bytes);
+            let result = value + 1;
+            reply
+                .send_reply(RequestResponse {
+                    ret: Payload::outgoing(&result),
+                    schemas: Default::default(),
+                    metadata: Default::default(),
+                })
+                .await;
+        }
+    }
+
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(SchemaAwareHandler)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let server_caller_guard = server_task.await.expect("server setup failed");
+
+    let extracted = vox_types::extract_schemas(<u32 as Facet>::SHAPE).expect("schema extraction");
+    let args_schema_payload = vox_types::SchemaPayload {
+        schemas: extracted.schemas.to_vec(),
+        root: extracted.root.clone(),
+    }
+    .to_binette();
+    let args_payload = binette::encode_to_vec(&41_u32).expect("encode pre-encoded args payload");
+
+    let response = caller
+        .caller
+        .call(RequestCall {
+            method_id: MethodId(0xB1_0000_0000_6000),
+            args: Payload::BinetteOwned(args_payload),
+            channels: Vec::new(),
+            schemas: args_schema_payload,
+            metadata: Default::default(),
+        })
+        .await
+        .expect("pre-encoded call should succeed");
+    let response = response.get();
+    let ret_bytes = match &response.ret {
+        Payload::BinetteBytes(bytes) => *bytes,
+        _ => panic!("expected incoming payload in response"),
+    };
+    let result: u32 = decode_binette_payload(ret_bytes);
+    assert_eq!(result, 42);
+
+    drop(caller);
+    drop(server_caller_guard);
+}
+
 // r[verify rpc.channel.binding.caller-args.tx]
 #[tokio::test]
 async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists() {

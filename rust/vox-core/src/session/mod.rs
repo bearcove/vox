@@ -2832,26 +2832,41 @@ impl SessionCore {
         }
 
         let key = (vox_types::BindingDirection::Args, method_id);
-        let prepared = match &call.args {
-            vox_types::Payload::Value { shape, .. } => {
-                Self::get_or_plan_binding_for_shape(conn_state, key, request_id, "args", shape)?
-            }
-            vox_types::Payload::BinetteBytes(_) | vox_types::Payload::BinetteOwned(_) => {
-                let Some(source) = forwarded_schemas else {
-                    tracing::error!(
-                        "schema attachment failed: missing forwarded args schemas for method {:?}",
-                        method_id
-                    );
-                    return None;
-                };
-                let Some(root) = source.get_remote_args_root(method_id) else {
-                    tracing::error!(
-                        "schema attachment failed: missing forwarded args root for method {:?}",
-                        method_id
-                    );
-                    return None;
-                };
-                Self::get_or_plan_binding_from_source(conn_state, key, &root, source)
+        let prepared = if !call.schemas.is_empty() {
+            conn_state
+                .planned_bindings
+                .get(&key)
+                .cloned()
+                .unwrap_or_else(|| {
+                    let prepared_payload = vox_types::SchemaPayload::from_binette(&call.schemas.0)
+                        .expect("prepared schema payloads must be valid binette schema payloads");
+                    vox_types::PreparedSchemaPlan {
+                        schemas: prepared_payload.schemas,
+                        root: prepared_payload.root,
+                    }
+                })
+        } else {
+            match &call.args {
+                vox_types::Payload::Value { shape, .. } => {
+                    Self::get_or_plan_binding_for_shape(conn_state, key, request_id, "args", shape)?
+                }
+                vox_types::Payload::BinetteBytes(_) | vox_types::Payload::BinetteOwned(_) => {
+                    let Some(source) = forwarded_schemas else {
+                        tracing::error!(
+                            "schema attachment failed: missing forwarded args schemas for method {:?}",
+                            method_id
+                        );
+                        return None;
+                    };
+                    let Some(root) = source.get_remote_args_root(method_id) else {
+                        tracing::error!(
+                            "schema attachment failed: missing forwarded args root for method {:?}",
+                            method_id
+                        );
+                        return None;
+                    };
+                    Self::get_or_plan_binding_from_source(conn_state, key, &root, source)
+                }
             }
         };
 
