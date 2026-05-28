@@ -371,25 +371,38 @@ impl<'a> SwiftGenerator<'a> {
         shape: &'static Shape,
         inner: &'static Shape,
     ) -> Result<(), SwiftCodegenError> {
-        if !matches!(classify_shape(inner), ShapeKind::Scalar(ScalarType::U16)) {
-            return Err(unsupported(
-                shape,
-                "only Optional<UInt16> has a Swift C ABI representation helper today",
-            ));
-        }
         self.emit_shape_descriptor(inner)?;
         self.line(&format!(
             "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
         ));
-        self.line("    let some = descriptorForUInt16(in: arena)");
+        self.line(&format!(
+            "    let some = {}(in: arena)",
+            descriptor_fn_name(inner)?
+        ));
+        let (swift_type, representation) = match classify_shape(inner) {
+            ShapeKind::Scalar(ScalarType::U16) => {
+                ("UInt16", "binetteDirectOptionalU16Representation()")
+            }
+            ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
+                ("String", "binetteThunkOptionalStringRepresentation()")
+            }
+            _ => {
+                return Err(unsupported(
+                    shape,
+                    "no Swift C ABI optional representation helper for this payload yet",
+                ));
+            }
+        };
         self.line("    return arena.option(");
         self.line(&format!(
             "        typeID: {},",
             synthetic_type_id(shape, 0x0F10_0000_0000_0000)?
         ));
-        self.line("        layout: binetteLayout(of: UInt16?.self),");
+        self.line(&format!(
+            "        layout: binetteLayout(of: {swift_type}?.self),"
+        ));
         self.line("        some: some,");
-        self.line("        representation: binetteDirectOptionalU16Representation()");
+        self.line(&format!("        representation: {representation}"));
         self.line("    )");
         self.line("}");
         self.line("");
@@ -1063,6 +1076,7 @@ mod tests {
         nonce: u64,
         ratio: f64,
         title: String,
+        note: Option<String>,
         payload: Vec<u8>,
         retry: Option<u16>,
         outcome: SwiftOutcome,
@@ -1099,6 +1113,7 @@ mod tests {
         assert!(generated.contains("public init(method: UInt32, nonce: UInt64, ratio: Double"));
         assert!(generated.contains("binette_primitive_u64_type_id()"));
         assert!(generated.contains("binette_primitive_f64_type_id()"));
+        assert!(generated.contains("binetteThunkOptionalStringRepresentation()"));
         assert!(generated.contains("public enum SwiftOutcome"));
         assert!(generated.contains("public struct SwiftCanarySubmitArgs"));
         assert!(generated.contains("public init(call: SwiftCall)"));
@@ -1122,7 +1137,7 @@ mod tests {
     fn generated_swift_rejects_unsupported_optional_before_runtime() {
         #[derive(Facet)]
         struct BadCall {
-            maybe: Option<String>,
+            maybe: Option<bool>,
         }
 
         let submit = method_descriptor::<(BadCall,), ()>("BadSwift", "submit", &["call"], None);
@@ -1133,11 +1148,11 @@ mod tests {
             doc: None,
         };
 
-        let error = generate_service(&service).expect_err("Option<String> is not supported yet");
+        let error = generate_service(&service).expect_err("Option<Bool> is not supported yet");
         assert!(
             error
                 .to_string()
-                .contains("only Optional<UInt16> has a Swift C ABI representation helper today")
+                .contains("no Swift C ABI optional representation helper for this payload yet")
         );
     }
 }

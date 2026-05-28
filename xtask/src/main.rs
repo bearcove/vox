@@ -249,6 +249,7 @@ mod swift_codegen_canary {
         nonce: u64,
         ratio: f64,
         title: String,
+        note: Option<String>,
         payload: Vec<u8>,
         retry: Option<u16>,
         outcome: SwiftOutcome,

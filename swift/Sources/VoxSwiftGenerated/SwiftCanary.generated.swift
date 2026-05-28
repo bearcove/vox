@@ -16,15 +16,17 @@ public struct SwiftCall {
     public var nonce: UInt64
     public var ratio: Double
     public var title: String
+    public var note: String?
     public var payload: [UInt8]
     public var retry: UInt16?
     public var outcome: SwiftOutcome
     public var output: VoxSwiftChannel
-    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, payload: [UInt8], retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
+    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, note: String?, payload: [UInt8], retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
         self.method = method
         self.nonce = nonce
         self.ratio = ratio
         self.title = title
+        self.note = note
         self.payload = payload
         self.retry = retry
         self.outcome = outcome
@@ -180,6 +182,16 @@ private func descriptorForDouble(in arena: BinetteCAbiDescriptorArena) -> Unsafe
     arena.plain(typeID: binette_primitive_f64_type_id(), Double.self)
 }
 
+private func descriptorForOptionalString(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    let some = descriptorForString(in: arena)
+    return arena.option(
+        typeID: 0x3A97A1A4F2558EC2,
+        layout: binetteLayout(of: String?.self),
+        some: some,
+        representation: binetteThunkOptionalStringRepresentation()
+    )
+}
+
 private func descriptorForBytes(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     arena.bytes()
 }
@@ -218,7 +230,7 @@ private func descriptorForTxUInt32(in arena: BinetteCAbiDescriptorArena) -> Unsa
 
 private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.structure(
-        typeID: 0x71DEEEBE3F6007F5,
+        typeID: 0x9A8D3C7C41E52736,
         layout: binetteLayout(of: SwiftCall.self),
         fields: [
             BinetteLocalFieldAbi(
@@ -240,6 +252,11 @@ private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> Uns
                 name: binetteLocalStr("title"),
                 offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.title)!,
                 descriptor: descriptorForString(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("note"),
+                offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.note)!,
+                descriptor: descriptorForOptionalString(in: arena)
             ),
             BinetteLocalFieldAbi(
                 name: binetteLocalStr("payload"),

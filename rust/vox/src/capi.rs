@@ -331,6 +331,7 @@ struct GeneratedSwiftCall {
     nonce: u64,
     ratio: f64,
     title: String,
+    note: Option<String>,
     payload: Vec<u8>,
     retry: Option<u16>,
     outcome: GeneratedSwiftOutcome,
@@ -498,11 +499,12 @@ fn reply_for_generated_swift_call(call: GeneratedSwiftCall) -> SwiftCanaryReply 
     };
     SwiftCanaryReply {
         message: format!(
-            "{}:{}:{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}:{}:{}",
             call.method,
             call.nonce,
             call.ratio,
             call.title,
+            call.note.as_deref().unwrap_or(""),
             call.payload.len(),
             outcome
         ),

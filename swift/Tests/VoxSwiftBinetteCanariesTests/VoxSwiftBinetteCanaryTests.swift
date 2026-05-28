@@ -369,6 +369,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
                 nonce: 0x0123_4567_89AB_CDEF,
                 ratio: 1.5,
                 title: "hello from generated swift",
+                note: "optional generated note",
                 payload: [2, 3, 5, 7],
                 retry: 377,
                 outcome: .accepted("generated descriptor"),
@@ -415,7 +416,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
 
         XCTAssertEqual(
             reply.message,
-            "3405691582:81985529216486895:1.5:hello from generated swift:4:accepted:generated descriptor"
+            "3405691582:81985529216486895:1.5:hello from generated swift:optional generated note:4:accepted:generated descriptor"
         )
         XCTAssertEqual(reply.retry, 377)
     }
