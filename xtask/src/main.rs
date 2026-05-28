@@ -246,6 +246,8 @@ mod swift_codegen_canary {
     #[derive(Facet)]
     struct SwiftCall {
         method: u32,
+        nonce: u64,
+        ratio: f64,
         title: String,
         payload: Vec<u8>,
         retry: Option<u16>,

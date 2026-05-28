@@ -328,6 +328,8 @@ enum SwiftCanaryOutcome {
 #[derive(Debug, Clone, PartialEq, Facet)]
 struct GeneratedSwiftCall {
     method: u32,
+    nonce: u64,
+    ratio: f64,
     title: String,
     payload: Vec<u8>,
     retry: Option<u16>,
@@ -496,8 +498,10 @@ fn reply_for_generated_swift_call(call: GeneratedSwiftCall) -> SwiftCanaryReply 
     };
     SwiftCanaryReply {
         message: format!(
-            "{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}:{}",
             call.method,
+            call.nonce,
+            call.ratio,
             call.title,
             call.payload.len(),
             outcome

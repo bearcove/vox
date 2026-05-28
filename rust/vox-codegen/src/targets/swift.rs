@@ -323,8 +323,10 @@ impl<'a> SwiftGenerator<'a> {
             ScalarType::U8 => ("binette_primitive_u8_type_id()", "UInt8"),
             ScalarType::U16 => ("binette_primitive_u16_type_id()", "UInt16"),
             ScalarType::U32 => ("binette_primitive_u32_type_id()", "UInt32"),
+            ScalarType::U64 => ("binette_primitive_u64_type_id()", "UInt64"),
             ScalarType::I32 => ("binette_primitive_i32_type_id()", "Int32"),
             ScalarType::I64 => ("binette_primitive_i64_type_id()", "Int64"),
+            ScalarType::F64 => ("binette_primitive_f64_type_id()", "Double"),
             ScalarType::Str | ScalarType::String | ScalarType::CowStr => {
                 self.line(&format!(
                     "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
@@ -906,8 +908,10 @@ fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
         ShapeKind::Scalar(ScalarType::U8) => Ok("UInt8".to_owned()),
         ShapeKind::Scalar(ScalarType::U16) => Ok("UInt16".to_owned()),
         ShapeKind::Scalar(ScalarType::U32) => Ok("UInt32".to_owned()),
+        ShapeKind::Scalar(ScalarType::U64) => Ok("UInt64".to_owned()),
         ShapeKind::Scalar(ScalarType::I32) => Ok("Int32".to_owned()),
         ShapeKind::Scalar(ScalarType::I64) => Ok("Int64".to_owned()),
+        ShapeKind::Scalar(ScalarType::F64) => Ok("Double".to_owned()),
         ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
             Ok("String".to_owned())
         }
@@ -947,8 +951,10 @@ fn descriptor_fn_name(shape: &'static Shape) -> Result<String, SwiftCodegenError
         ShapeKind::Scalar(ScalarType::U8) => Ok("descriptorForUInt8".to_owned()),
         ShapeKind::Scalar(ScalarType::U16) => Ok("descriptorForUInt16".to_owned()),
         ShapeKind::Scalar(ScalarType::U32) => Ok("descriptorForUInt32".to_owned()),
+        ShapeKind::Scalar(ScalarType::U64) => Ok("descriptorForUInt64".to_owned()),
         ShapeKind::Scalar(ScalarType::I32) => Ok("descriptorForInt32".to_owned()),
         ShapeKind::Scalar(ScalarType::I64) => Ok("descriptorForInt64".to_owned()),
+        ShapeKind::Scalar(ScalarType::F64) => Ok("descriptorForDouble".to_owned()),
         ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
             Ok("descriptorForString".to_owned())
         }
@@ -1054,6 +1060,8 @@ mod tests {
     #[derive(Facet)]
     struct SwiftCall {
         method: u32,
+        nonce: u64,
+        ratio: f64,
         title: String,
         payload: Vec<u8>,
         retry: Option<u16>,
@@ -1088,7 +1096,9 @@ mod tests {
         let generated = generate_service(&service).expect("swift generation should support canary");
         assert!(generated.contains("import VoxSwift"));
         assert!(generated.contains("public struct SwiftCall"));
-        assert!(generated.contains("public init(method: UInt32, title: String"));
+        assert!(generated.contains("public init(method: UInt32, nonce: UInt64, ratio: Double"));
+        assert!(generated.contains("binette_primitive_u64_type_id()"));
+        assert!(generated.contains("binette_primitive_f64_type_id()"));
         assert!(generated.contains("public enum SwiftOutcome"));
         assert!(generated.contains("public struct SwiftCanarySubmitArgs"));
         assert!(generated.contains("public init(call: SwiftCall)"));

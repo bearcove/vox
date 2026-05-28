@@ -366,6 +366,8 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         var args = SwiftCanarySubmitArgs(
             call: SwiftCall(
                 method: 0xCAFE_BABE,
+                nonce: 0x0123_4567_89AB_CDEF,
+                ratio: 1.5,
                 title: "hello from generated swift",
                 payload: [2, 3, 5, 7],
                 retry: 377,
@@ -411,7 +413,10 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             as: SwiftReply.self
         )
 
-        XCTAssertEqual(reply.message, "3405691582:hello from generated swift:4:accepted:generated descriptor")
+        XCTAssertEqual(
+            reply.message,
+            "3405691582:81985529216486895:1.5:hello from generated swift:4:accepted:generated descriptor"
+        )
         XCTAssertEqual(reply.retry, 377)
     }
 }

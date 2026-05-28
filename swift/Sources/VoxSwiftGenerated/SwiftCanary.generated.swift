@@ -13,13 +13,17 @@ public enum SwiftOutcome {
 
 public struct SwiftCall {
     public var method: UInt32
+    public var nonce: UInt64
+    public var ratio: Double
     public var title: String
     public var payload: [UInt8]
     public var retry: UInt16?
     public var outcome: SwiftOutcome
     public var output: VoxSwiftChannel
-    public init(method: UInt32, title: String, payload: [UInt8], retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
+    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, payload: [UInt8], retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
         self.method = method
+        self.nonce = nonce
+        self.ratio = ratio
         self.title = title
         self.payload = payload
         self.retry = retry
@@ -168,6 +172,14 @@ private func swiftOutcomeConstructRejected(_ value: UnsafeMutablePointer<UInt8>?
     return true
 }
 
+private func descriptorForUInt64(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_u64_type_id(), UInt64.self)
+}
+
+private func descriptorForDouble(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_f64_type_id(), Double.self)
+}
+
 private func descriptorForBytes(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     arena.bytes()
 }
@@ -206,13 +218,23 @@ private func descriptorForTxUInt32(in arena: BinetteCAbiDescriptorArena) -> Unsa
 
 private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.structure(
-        typeID: 0x5AC7F3AC656D153C,
+        typeID: 0x71DEEEBE3F6007F5,
         layout: binetteLayout(of: SwiftCall.self),
         fields: [
             BinetteLocalFieldAbi(
                 name: binetteLocalStr("method"),
                 offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.method)!,
                 descriptor: descriptorForUInt32(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("nonce"),
+                offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.nonce)!,
+                descriptor: descriptorForUInt64(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("ratio"),
+                offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.ratio)!,
+                descriptor: descriptorForDouble(in: arena)
             ),
             BinetteLocalFieldAbi(
                 name: binetteLocalStr("title"),
