@@ -35,6 +35,160 @@ public enum VoxResultPersonLookupError {
     case err(LookupError)
 }
 
+// Vox response wire carrier types
+public enum TestbedVoxErrorNever {
+    case user(Void)
+    case unknownMethod
+    case invalidPayload(String)
+    case cancelled
+    case connectionClosed
+    case sessionShutdown
+    case sendFailed
+    case indeterminate
+}
+
+public enum TestbedVoxErrorMathError {
+    case user(MathError)
+    case unknownMethod
+    case invalidPayload(String)
+    case cancelled
+    case connectionClosed
+    case sessionShutdown
+    case sendFailed
+    case indeterminate
+}
+
+public enum TestbedVoxErrorLookupError {
+    case user(LookupError)
+    case unknownMethod
+    case invalidPayload(String)
+    case cancelled
+    case connectionClosed
+    case sessionShutdown
+    case sendFailed
+    case indeterminate
+}
+
+public enum TestbedVoxResultStringTestbedVoxErrorNever {
+    case ok(String)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultInt64TestbedVoxErrorMathError {
+    case ok(Int64)
+    case err(TestbedVoxErrorMathError)
+}
+
+public enum TestbedVoxResultPersonTestbedVoxErrorLookupError {
+    case ok(Person)
+    case err(TestbedVoxErrorLookupError)
+}
+
+public enum TestbedVoxResultInt64TestbedVoxErrorNever {
+    case ok(Int64)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultVoidTestbedVoxErrorNever {
+    case ok(Void)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultPointTestbedVoxErrorNever {
+    case ok(Point)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultPersonTestbedVoxErrorNever {
+    case ok(Person)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultDoubleTestbedVoxErrorNever {
+    case ok(Double)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultColorTestbedVoxErrorNever {
+    case ok(Color?)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultCanvasTestbedVoxErrorNever {
+    case ok(Canvas)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever {
+    case ok(GnarlyPayload)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultMessageTestbedVoxErrorNever {
+    case ok(Message)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever {
+    case ok(VoxTuple2StringInt32)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultUInt8TestbedVoxErrorNever {
+    case ok([UInt8])
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultBoolTestbedVoxErrorNever {
+    case ok(Bool)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultUInt64TestbedVoxErrorNever {
+    case ok(UInt64)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultTaggedPointTestbedVoxErrorNever {
+    case ok(TaggedPoint)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultShapeTestbedVoxErrorNever {
+    case ok(Shape)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultStatusTestbedVoxErrorNever {
+    case ok(Status)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultTagTestbedVoxErrorNever {
+    case ok(Tag)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultProfileTestbedVoxErrorNever {
+    case ok(Profile)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultRecordTestbedVoxErrorNever {
+    case ok(Record)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultMeasurementTestbedVoxErrorNever {
+    case ok(Measurement)
+    case err(TestbedVoxErrorNever)
+}
+
+public enum TestbedVoxResultConfigTestbedVoxErrorNever {
+    case ok(Config)
+    case err(TestbedVoxErrorNever)
+}
+
 // Named value types
 public enum MathError {
     case divisionByZero
@@ -571,6 +725,7 @@ private func descriptorForMathError(in arena: BinetteCAbiDescriptorArena) -> Uns
                     call: mathErrorConstructDivisionByZero,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
             BinetteLocalVariantAbi(
@@ -593,6 +748,7 @@ private func descriptorForMathError(in arena: BinetteCAbiDescriptorArena) -> Uns
                     call: mathErrorConstructOverflow,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -710,6 +866,7 @@ private func descriptorForLookupError(in arena: BinetteCAbiDescriptorArena) -> U
                     call: lookupErrorConstructNotFound,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
             BinetteLocalVariantAbi(
@@ -732,6 +889,7 @@ private func descriptorForLookupError(in arena: BinetteCAbiDescriptorArena) -> U
                     call: lookupErrorConstructAccessDenied,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -854,6 +1012,7 @@ private func descriptorForColor(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: colorConstructRed,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
             BinetteLocalVariantAbi(
@@ -876,6 +1035,7 @@ private func descriptorForColor(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: colorConstructGreen,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
             BinetteLocalVariantAbi(
@@ -898,6 +1058,7 @@ private func descriptorForColor(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: colorConstructBlue,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -1027,6 +1188,7 @@ private func descriptorForShape(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: shapeConstructCircle,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForShapeCirclePayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1049,6 +1211,7 @@ private func descriptorForShape(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: shapeConstructRectangle,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForShapeRectanglePayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1071,6 +1234,7 @@ private func descriptorForShape(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
                     call: shapeConstructPoint,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -1419,6 +1583,7 @@ private func descriptorForGnarlyKind(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: gnarlyKindConstructFile,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForGnarlyKindFilePayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1441,6 +1606,7 @@ private func descriptorForGnarlyKind(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: gnarlyKindConstructDirectory,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForGnarlyKindDirectoryPayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1463,6 +1629,7 @@ private func descriptorForGnarlyKind(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: gnarlyKindConstructSymlink,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForGnarlyKindSymlinkPayload(in: arena)
             ),
         ]
@@ -1814,6 +1981,7 @@ private func descriptorForMessage(in arena: BinetteCAbiDescriptorArena) -> Unsaf
                     call: messageConstructText,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForString(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1836,6 +2004,7 @@ private func descriptorForMessage(in arena: BinetteCAbiDescriptorArena) -> Unsaf
                     call: messageConstructNumber,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForInt64(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -1858,6 +2027,7 @@ private func descriptorForMessage(in arena: BinetteCAbiDescriptorArena) -> Unsaf
                     call: messageConstructData,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForBytes(in: arena)
             ),
         ]
@@ -2007,6 +2177,7 @@ private func descriptorForStatus(in arena: BinetteCAbiDescriptorArena) -> Unsafe
                     call: statusConstructActive,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
             BinetteLocalVariantAbi(
@@ -2029,6 +2200,7 @@ private func descriptorForStatus(in arena: BinetteCAbiDescriptorArena) -> Unsafe
                     call: statusConstructInactive,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -2193,6 +2365,458 @@ private func descriptorForTestbedEchoArgs(in arena: BinetteCAbiDescriptorArena) 
     )
 }
 
+private func descriptorForVoid(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_unit_type_id(), Void.self)
+}
+
+private func descriptorForTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x4CF4B2AEB98A1939,
+        layout: binetteLayout(of: TestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("User"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectUserBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectUserInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropUserProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructUser,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForVoid(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("UnknownMethod"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectUnknownMethodBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectUnknownMethodInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropUnknownMethodProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructUnknownMethod,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("InvalidPayload"),
+                index: 2,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectInvalidPayloadBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectInvalidPayloadInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropInvalidPayloadProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructInvalidPayload,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForString(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Cancelled"),
+                index: 3,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectCancelledBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectCancelledInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropCancelledProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructCancelled,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("ConnectionClosed"),
+                index: 4,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectConnectionClosedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectConnectionClosedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropConnectionClosedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructConnectionClosed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SessionShutdown"),
+                index: 5,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectSessionShutdownBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectSessionShutdownInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropSessionShutdownProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructSessionShutdown,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SendFailed"),
+                index: 6,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectSendFailedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectSendFailedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropSendFailedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructSendFailed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Indeterminate"),
+                index: 7,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorNeverProjectIndeterminateBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorNeverProjectIndeterminateInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorNeverDropIndeterminateProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorNeverConstructIndeterminate,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+        ]
+    )
+}
+
+private func testbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).pointee {
+    case .user: return 0
+    case .unknownMethod: return 1
+    case .invalidPayload: return 2
+    case .cancelled: return 3
+    case .connectionClosed: return 4
+    case .sessionShutdown: return 5
+    case .sendFailed: return 6
+    case .indeterminate: return 7
+    }
+}
+
+private func testbedVoxErrorNeverProjectUserBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectUnknownMethodBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectInvalidPayloadBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectCancelledBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectConnectionClosedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectSessionShutdownBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectSendFailedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectIndeterminateBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorNeverProjectUserInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Void>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).pointee
+    guard case let .user(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Void.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorNeverDropUserProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Void.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorNeverConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Void>.size else { return false }
+    let payloadValue: Void = ()
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .user(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorNeverProjectUnknownMethodInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropUnknownMethodProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructUnknownMethod(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .unknownMethod)
+    return true
+}
+
+private func testbedVoxErrorNeverProjectInvalidPayloadInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<String>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).pointee
+    guard case let .invalidPayload(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorNeverDropInvalidPayloadProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorNeverConstructInvalidPayload(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .invalidPayload(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorNeverProjectCancelledInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropCancelledProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructCancelled(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .cancelled)
+    return true
+}
+
+private func testbedVoxErrorNeverProjectConnectionClosedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropConnectionClosedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructConnectionClosed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .connectionClosed)
+    return true
+}
+
+private func testbedVoxErrorNeverProjectSessionShutdownInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropSessionShutdownProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructSessionShutdown(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .sessionShutdown)
+    return true
+}
+
+private func testbedVoxErrorNeverProjectSendFailedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropSendFailedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructSendFailed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .sendFailed)
+    return true
+}
+
+private func testbedVoxErrorNeverProjectIndeterminateInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorNeverDropIndeterminateProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorNeverConstructIndeterminate(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: .indeterminate)
+    return true
+}
+
+private func descriptorForTestbedVoxResultStringTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultStringTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultStringTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultStringTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForString(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultStringTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultStringTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultStringTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultStringTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<String>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultStringTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedReverseArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xBD3EDF30E180392A,
@@ -2256,6 +2880,7 @@ private func descriptorForVoxResultInt64MathError(in arena: BinetteCAbiDescripto
                     call: voxResultInt64MathErrorConstructOk,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForInt64(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -2278,6 +2903,7 @@ private func descriptorForVoxResultInt64MathError(in arena: BinetteCAbiDescripto
                     call: voxResultInt64MathErrorConstructErr,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForMathError(in: arena)
             ),
         ]
@@ -2286,8 +2912,8 @@ private func descriptorForVoxResultInt64MathError(in arena: BinetteCAbiDescripto
 
 private func voxResultInt64MathErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
     switch UnsafeRawPointer(value!).assumingMemoryBound(to: VoxResultInt64MathError.self).pointee {
-    case .ok(_): return 0
-    case .err(_): return 1
+    case .ok: return 0
+    case .err: return 1
     }
 }
 
@@ -2331,8 +2957,463 @@ private func voxResultInt64MathErrorDropErrProjected(_ value: UnsafeMutablePoint
 
 private func voxResultInt64MathErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<MathError>.size else { return false }
-    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self).move()
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultInt64MathError.self).initialize(to: .err(payloadValue))
+    return true
+}
+
+private func descriptorForTestbedVoxErrorMathError(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x4CF4B2AEB98A1939,
+        layout: binetteLayout(of: TestbedVoxErrorMathError.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxErrorMathErrorTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("User"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectUserBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectUserInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropUserProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructUser,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForMathError(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("UnknownMethod"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectUnknownMethodBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectUnknownMethodInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropUnknownMethodProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructUnknownMethod,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("InvalidPayload"),
+                index: 2,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectInvalidPayloadBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectInvalidPayloadInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropInvalidPayloadProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructInvalidPayload,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForString(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Cancelled"),
+                index: 3,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectCancelledBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectCancelledInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropCancelledProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructCancelled,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("ConnectionClosed"),
+                index: 4,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectConnectionClosedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectConnectionClosedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropConnectionClosedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructConnectionClosed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SessionShutdown"),
+                index: 5,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectSessionShutdownBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectSessionShutdownInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropSessionShutdownProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructSessionShutdown,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SendFailed"),
+                index: 6,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectSendFailedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectSendFailedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropSendFailedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructSendFailed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Indeterminate"),
+                index: 7,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorMathErrorProjectIndeterminateBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorMathErrorProjectIndeterminateInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorMathErrorDropIndeterminateProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorMathErrorConstructIndeterminate,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+        ]
+    )
+}
+
+private func testbedVoxErrorMathErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).pointee {
+    case .user: return 0
+    case .unknownMethod: return 1
+    case .invalidPayload: return 2
+    case .cancelled: return 3
+    case .connectionClosed: return 4
+    case .sessionShutdown: return 5
+    case .sendFailed: return 6
+    case .indeterminate: return 7
+    }
+}
+
+private func testbedVoxErrorMathErrorProjectUserBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectUnknownMethodBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectInvalidPayloadBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectCancelledBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectConnectionClosedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectSessionShutdownBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectSendFailedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectIndeterminateBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorMathErrorProjectUserInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<MathError>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).pointee
+    guard case let .user(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: MathError.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorMathErrorDropUserProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: MathError.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorMathErrorConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<MathError>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .user(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectUnknownMethodInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropUnknownMethodProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructUnknownMethod(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .unknownMethod)
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectInvalidPayloadInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<String>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).pointee
+    guard case let .invalidPayload(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorMathErrorDropInvalidPayloadProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorMathErrorConstructInvalidPayload(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .invalidPayload(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectCancelledInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropCancelledProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructCancelled(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .cancelled)
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectConnectionClosedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropConnectionClosedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructConnectionClosed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .connectionClosed)
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectSessionShutdownInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropSessionShutdownProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructSessionShutdown(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .sessionShutdown)
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectSendFailedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropSendFailedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructSendFailed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .sendFailed)
+    return true
+}
+
+private func testbedVoxErrorMathErrorProjectIndeterminateInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorMathErrorDropIndeterminateProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorMathErrorConstructIndeterminate(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .indeterminate)
+    return true
+}
+
+private func descriptorForTestbedVoxResultInt64TestbedVoxErrorMathError(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultInt64TestbedVoxErrorMathError.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorMathErrorTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorMathErrorProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForInt64(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorMathErrorProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorMathErrorConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorMathError(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Int64>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Int64.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Int64.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Int64>.size else { return false }
+    var payloadValue: Int64 = 0
+    withUnsafeMutableBytes(of: &payloadValue) { out in
+        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorMathError>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorMathErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorMathError>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorMathError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).initialize(to: .err(payloadValue))
     return true
 }
 
@@ -2380,6 +3461,7 @@ private func descriptorForVoxResultPersonLookupError(in arena: BinetteCAbiDescri
                     call: voxResultPersonLookupErrorConstructOk,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForPerson(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -2402,6 +3484,7 @@ private func descriptorForVoxResultPersonLookupError(in arena: BinetteCAbiDescri
                     call: voxResultPersonLookupErrorConstructErr,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForLookupError(in: arena)
             ),
         ]
@@ -2410,8 +3493,8 @@ private func descriptorForVoxResultPersonLookupError(in arena: BinetteCAbiDescri
 
 private func voxResultPersonLookupErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
     switch UnsafeRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).pointee {
-    case .ok(_): return 0
-    case .err(_): return 1
+    case .ok: return 0
+    case .err: return 1
     }
 }
 
@@ -2433,7 +3516,9 @@ private func voxResultPersonLookupErrorDropOkProjected(_ value: UnsafeMutablePoi
 
 private func voxResultPersonLookupErrorConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Person>.size else { return false }
-    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self).move()
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -2452,8 +3537,462 @@ private func voxResultPersonLookupErrorDropErrProjected(_ value: UnsafeMutablePo
 
 private func voxResultPersonLookupErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<LookupError>.size else { return false }
-    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self).move()
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).initialize(to: .err(payloadValue))
+    return true
+}
+
+private func descriptorForTestbedVoxErrorLookupError(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x4CF4B2AEB98A1939,
+        layout: binetteLayout(of: TestbedVoxErrorLookupError.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxErrorLookupErrorTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("User"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectUserBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectUserInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropUserProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructUser,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForLookupError(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("UnknownMethod"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectUnknownMethodBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectUnknownMethodInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropUnknownMethodProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructUnknownMethod,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("InvalidPayload"),
+                index: 2,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectInvalidPayloadBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectInvalidPayloadInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropInvalidPayloadProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructInvalidPayload,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForString(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Cancelled"),
+                index: 3,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectCancelledBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectCancelledInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropCancelledProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructCancelled,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("ConnectionClosed"),
+                index: 4,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectConnectionClosedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectConnectionClosedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropConnectionClosedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructConnectionClosed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SessionShutdown"),
+                index: 5,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectSessionShutdownBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectSessionShutdownInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropSessionShutdownProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructSessionShutdown,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SendFailed"),
+                index: 6,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectSendFailedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectSendFailedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropSendFailedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructSendFailed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Indeterminate"),
+                index: 7,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxErrorLookupErrorProjectIndeterminateBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxErrorLookupErrorProjectIndeterminateInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxErrorLookupErrorDropIndeterminateProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxErrorLookupErrorConstructIndeterminate,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+        ]
+    )
+}
+
+private func testbedVoxErrorLookupErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).pointee {
+    case .user: return 0
+    case .unknownMethod: return 1
+    case .invalidPayload: return 2
+    case .cancelled: return 3
+    case .connectionClosed: return 4
+    case .sessionShutdown: return 5
+    case .sendFailed: return 6
+    case .indeterminate: return 7
+    }
+}
+
+private func testbedVoxErrorLookupErrorProjectUserBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectUnknownMethodBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectInvalidPayloadBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectCancelledBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectConnectionClosedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectSessionShutdownBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectSendFailedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectIndeterminateBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxErrorLookupErrorProjectUserInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<LookupError>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).pointee
+    guard case let .user(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: LookupError.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorDropUserProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: LookupError.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorLookupErrorConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<LookupError>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .user(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectUnknownMethodInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropUnknownMethodProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructUnknownMethod(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .unknownMethod)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectInvalidPayloadInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<String>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).pointee
+    guard case let .invalidPayload(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorDropInvalidPayloadProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+}
+
+private func testbedVoxErrorLookupErrorConstructInvalidPayload(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .invalidPayload(payloadValue))
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectCancelledInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropCancelledProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructCancelled(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .cancelled)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectConnectionClosedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropConnectionClosedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructConnectionClosed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .connectionClosed)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectSessionShutdownInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropSessionShutdownProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructSessionShutdown(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .sessionShutdown)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectSendFailedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropSendFailedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructSendFailed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .sendFailed)
+    return true
+}
+
+private func testbedVoxErrorLookupErrorProjectIndeterminateInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func testbedVoxErrorLookupErrorDropIndeterminateProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func testbedVoxErrorLookupErrorConstructIndeterminate(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .indeterminate)
+    return true
+}
+
+private func descriptorForTestbedVoxResultPersonTestbedVoxErrorLookupError(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultPersonTestbedVoxErrorLookupError.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorLookupErrorTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForPerson(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorLookupError(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Person>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Person.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Person.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Person>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorLookupError>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorLookupError>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).initialize(to: .err(payloadValue))
     return true
 }
 
@@ -2487,6 +4026,120 @@ private func descriptorForTestbedSumArgs(in arena: BinetteCAbiDescriptorArena) -
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultInt64TestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultInt64TestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForInt64(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultInt64TestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultInt64TestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Int64>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Int64.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Int64.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Int64>.size else { return false }
+    var payloadValue: Int64 = 0
+    withUnsafeMutableBytes(of: &payloadValue) { out in
+        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultInt64TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTxInt32(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2526,8 +4179,115 @@ private func descriptorForTestbedGenerateArgs(in arena: BinetteCAbiDescriptorAre
     )
 }
 
-private func descriptorForVoid(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
-    arena.plain(typeID: binette_primitive_unit_type_id(), Void.self)
+private func descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultVoidTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultVoidTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultVoidTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForVoid(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultVoidTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultVoidTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Void>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Void.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Void.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    let payloadValue: Void = ()
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultVoidTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedGenerateRetryNonIdemArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2688,6 +4448,119 @@ private func descriptorForTestbedEchoPointArgs(in arena: BinetteCAbiDescriptorAr
     )
 }
 
+private func descriptorForTestbedVoxResultPointTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultPointTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultPointTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPointTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForPoint(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPointTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPointTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPointTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPointTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Point>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Point.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Point.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Point>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Point.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPointTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedCreatePersonArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xC9E3490B7728BDE7,
@@ -2712,6 +4585,119 @@ private func descriptorForTestbedCreatePersonArgs(in arena: BinetteCAbiDescripto
     )
 }
 
+private func descriptorForTestbedVoxResultPersonTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultPersonTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForPerson(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultPersonTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultPersonTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Person>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Person.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Person.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Person>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultPersonTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedRectangleAreaArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0x832300282D263107,
@@ -2724,6 +4710,120 @@ private func descriptorForTestbedRectangleAreaArgs(in arena: BinetteCAbiDescript
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultDoubleTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultDoubleTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultDoubleTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultDoubleTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForDouble(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultDoubleTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultDoubleTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Double>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Double.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Double.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Double>.size else { return false }
+    var payloadValue: Double = 0
+    withUnsafeMutableBytes(of: &payloadValue) { out in
+        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultDoubleTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedParseColorArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2748,6 +4848,119 @@ private func descriptorForOptionalColor(in arena: BinetteCAbiDescriptorArena) ->
         some: some,
         representation: binetteDirectOptionalRepresentation(Color.self, sampleA: .red, sampleB: .green)
     )
+}
+
+private func descriptorForTestbedVoxResultColorTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultColorTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultColorTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultColorTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForOptionalColor(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultColorTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultColorTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultColorTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultColorTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Color?>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Color?.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Color?.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Color?>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Color?.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultColorTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedShapeAreaArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2788,6 +5001,119 @@ private func descriptorForTestbedCreateCanvasArgs(in arena: BinetteCAbiDescripto
     )
 }
 
+private func descriptorForTestbedVoxResultCanvasTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultCanvasTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultCanvasTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultCanvasTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForCanvas(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultCanvasTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultCanvasTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Canvas>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Canvas.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Canvas.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Canvas>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Canvas.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultCanvasTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoGnarlyArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0x17E62AE6A7A86E99,
@@ -2802,6 +5128,119 @@ private func descriptorForTestbedEchoGnarlyArgs(in arena: BinetteCAbiDescriptorA
     )
 }
 
+private func descriptorForTestbedVoxResultGnarlyPayloadTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForGnarlyPayload(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<GnarlyPayload>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: GnarlyPayload.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: GnarlyPayload.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<GnarlyPayload>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: GnarlyPayload.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedProcessMessageArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0x4193EF5254E7A997,
@@ -2814,6 +5253,119 @@ private func descriptorForTestbedProcessMessageArgs(in arena: BinetteCAbiDescrip
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultMessageTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultMessageTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultMessageTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultMessageTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForMessage(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultMessageTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultMessageTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Message>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Message.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Message.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Message>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Message.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultMessageTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedGetPointsArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2928,6 +5480,119 @@ private func descriptorForVoxTuple2StringInt32(in arena: BinetteCAbiDescriptorAr
     )
 }
 
+private func descriptorForTestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForVoxTuple2StringInt32(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<VoxTuple2StringInt32>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: VoxTuple2StringInt32.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxTuple2StringInt32.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<VoxTuple2StringInt32>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: VoxTuple2StringInt32.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoBytesArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xE5198C7842FA336C,
@@ -2940,6 +5605,117 @@ private func descriptorForTestbedEchoBytesArgs(in arena: BinetteCAbiDescriptorAr
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultUInt8TestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultUInt8TestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultUInt8TestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultUInt8TestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForBytes(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultUInt8TestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultUInt8TestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<[UInt8]>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: [UInt8].self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: [UInt8].self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    let payloadValue = Array(bytes)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultUInt8TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedEchoBoolArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -2956,6 +5732,120 @@ private func descriptorForTestbedEchoBoolArgs(in arena: BinetteCAbiDescriptorAre
     )
 }
 
+private func descriptorForTestbedVoxResultBoolTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultBoolTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultBoolTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultBoolTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForBool(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultBoolTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultBoolTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Bool>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Bool.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Bool.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Bool>.size else { return false }
+    var payloadValue: Bool = false
+    withUnsafeMutableBytes(of: &payloadValue) { out in
+        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultBoolTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoU64Args(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0x24FED80DBF7FFE65,
@@ -2968,6 +5858,120 @@ private func descriptorForTestbedEchoU64Args(in arena: BinetteCAbiDescriptorAren
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultUInt64TestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultUInt64TestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultUInt64TestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultUInt64TestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForUInt64(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultUInt64TestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultUInt64TestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<UInt64>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: UInt64.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: UInt64.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<UInt64>.size else { return false }
+    var payloadValue: UInt64 = 0
+    withUnsafeMutableBytes(of: &payloadValue) { out in
+        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultUInt64TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedEchoOptionStringArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -3101,6 +6105,119 @@ private func descriptorForTestbedDescribePointArgs(in arena: BinetteCAbiDescript
     )
 }
 
+private func descriptorForTestbedVoxResultTaggedPointTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultTaggedPointTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTaggedPoint(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TaggedPoint>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TaggedPoint.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TaggedPoint.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TaggedPoint>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TaggedPoint.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoShapeArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xE03955E678B7B4A5,
@@ -3113,6 +6230,119 @@ private func descriptorForTestbedEchoShapeArgs(in arena: BinetteCAbiDescriptorAr
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultShapeTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultShapeTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultShapeTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultShapeTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForShape(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultShapeTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultShapeTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Shape>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Shape.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Shape.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Shape>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Shape.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultShapeTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedEchoStatusV1Args(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -3129,6 +6359,119 @@ private func descriptorForTestbedEchoStatusV1Args(in arena: BinetteCAbiDescripto
     )
 }
 
+private func descriptorForTestbedVoxResultStatusTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultStatusTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultStatusTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultStatusTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForStatus(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultStatusTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultStatusTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Status>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Status.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Status.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Status>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Status.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultStatusTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoTagV1Args(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xC705E71BE5D5C259,
@@ -3141,6 +6484,119 @@ private func descriptorForTestbedEchoTagV1Args(in arena: BinetteCAbiDescriptorAr
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultTagTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultTagTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultTagTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultTagTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTag(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultTagTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultTagTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultTagTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultTagTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Tag>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Tag.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Tag.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Tag>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Tag.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultTagTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedEchoProfileArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -3157,6 +6613,119 @@ private func descriptorForTestbedEchoProfileArgs(in arena: BinetteCAbiDescriptor
     )
 }
 
+private func descriptorForTestbedVoxResultProfileTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultProfileTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultProfileTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultProfileTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForProfile(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultProfileTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultProfileTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Profile>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Profile.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Profile.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Profile>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Profile.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultProfileTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoRecordArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0xB117EE08DA4B8F1A,
@@ -3169,6 +6738,119 @@ private func descriptorForTestbedEchoRecordArgs(in arena: BinetteCAbiDescriptorA
             ),
         ]
     )
+}
+
+private func descriptorForTestbedVoxResultRecordTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultRecordTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultRecordTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultRecordTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForRecord(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultRecordTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultRecordTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Record>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Record.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Record.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Record>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Record.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultRecordTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
 }
 
 private func descriptorForTestbedEchoStatusArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
@@ -3213,6 +6895,119 @@ private func descriptorForTestbedEchoMeasurementArgs(in arena: BinetteCAbiDescri
     )
 }
 
+private func descriptorForTestbedVoxResultMeasurementTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultMeasurementTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultMeasurementTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultMeasurementTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForMeasurement(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultMeasurementTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultMeasurementTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Measurement>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Measurement.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Measurement.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Measurement>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Measurement.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultMeasurementTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 private func descriptorForTestbedEchoConfigArgs(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.tuple(
         typeID: 0x4026A77FB964CE28,
@@ -3227,6 +7022,119 @@ private func descriptorForTestbedEchoConfigArgs(in arena: BinetteCAbiDescriptorA
     )
 }
 
+private func descriptorForTestbedVoxResultConfigTestbedVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: TestbedVoxResultConfigTestbedVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: testbedVoxResultConfigTestbedVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultConfigTestbedVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForConfig(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: testbedVoxResultConfigTestbedVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: testbedVoxResultConfigTestbedVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForTestbedVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Config>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Config.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Config.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Config>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Config.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: TestbedVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func testbedVoxResultConfigTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 // Method codecs
 public final class TestbedMethodCodecs {
     private let arena = BinetteCAbiDescriptorArena()
@@ -3237,7 +7145,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x880BC4EEE23574BE,
             argsDescriptor: descriptorForTestbedEchoArgs(in: arena),
-            responseDescriptor: descriptorForString(in: arena)
+            responseDescriptor: descriptorForString(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultStringTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3245,7 +7154,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x1C223F30E180392A,
             argsDescriptor: descriptorForTestbedReverseArgs(in: arena),
-            responseDescriptor: descriptorForString(in: arena)
+            responseDescriptor: descriptorForString(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultStringTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3253,7 +7163,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xFB68D9318F830875,
             argsDescriptor: descriptorForTestbedDivideArgs(in: arena),
-            responseDescriptor: descriptorForVoxResultInt64MathError(in: arena)
+            responseDescriptor: descriptorForVoxResultInt64MathError(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultInt64TestbedVoxErrorMathError(in: arena)
         )
     }
 
@@ -3261,7 +7172,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xA15FF52094712A3B,
             argsDescriptor: descriptorForTestbedLookupArgs(in: arena),
-            responseDescriptor: descriptorForVoxResultPersonLookupError(in: arena)
+            responseDescriptor: descriptorForVoxResultPersonLookupError(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultPersonTestbedVoxErrorLookupError(in: arena)
         )
     }
 
@@ -3269,7 +7181,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x51F9CFD8E86577C9,
             argsDescriptor: descriptorForTestbedSumArgs(in: arena),
-            responseDescriptor: descriptorForInt64(in: arena)
+            responseDescriptor: descriptorForInt64(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultInt64TestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3277,7 +7190,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x239E5B99B1F8207A,
             argsDescriptor: descriptorForTestbedGenerateArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3285,7 +7199,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x34419529478CC7B8,
             argsDescriptor: descriptorForTestbedGenerateRetryNonIdemArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3293,7 +7208,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xE2D27FD9098C6EA2,
             argsDescriptor: descriptorForTestbedGenerateRetryIdemArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3301,7 +7217,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xCB469CFF8D798FEB,
             argsDescriptor: descriptorForTestbedTransformArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3309,7 +7226,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xEC36E84751A897BE,
             argsDescriptor: descriptorForTestbedPostReplyGenerateArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3317,7 +7235,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xC1CE3C397E4CA6E7,
             argsDescriptor: descriptorForTestbedPostReplySumArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3325,7 +7244,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x81F5386D589DFBE4,
             argsDescriptor: descriptorForTestbedEchoPointArgs(in: arena),
-            responseDescriptor: descriptorForPoint(in: arena)
+            responseDescriptor: descriptorForPoint(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultPointTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3333,7 +7253,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x68FFA90B7728BDE7,
             argsDescriptor: descriptorForTestbedCreatePersonArgs(in: arena),
-            responseDescriptor: descriptorForPerson(in: arena)
+            responseDescriptor: descriptorForPerson(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultPersonTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3341,7 +7262,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x223FE0282D263107,
             argsDescriptor: descriptorForTestbedRectangleAreaArgs(in: arena),
-            responseDescriptor: descriptorForDouble(in: arena)
+            responseDescriptor: descriptorForDouble(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultDoubleTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3349,7 +7271,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xD4F16EA9ECA132E6,
             argsDescriptor: descriptorForTestbedParseColorArgs(in: arena),
-            responseDescriptor: descriptorForOptionalColor(in: arena)
+            responseDescriptor: descriptorForOptionalColor(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultColorTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3357,7 +7280,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x04385A4BE2A882F5,
             argsDescriptor: descriptorForTestbedShapeAreaArgs(in: arena),
-            responseDescriptor: descriptorForDouble(in: arena)
+            responseDescriptor: descriptorForDouble(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultDoubleTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3365,7 +7289,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xEF421EB5B08C973A,
             argsDescriptor: descriptorForTestbedCreateCanvasArgs(in: arena),
-            responseDescriptor: descriptorForCanvas(in: arena)
+            responseDescriptor: descriptorForCanvas(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultCanvasTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3373,7 +7298,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xB6FACAE6A7A86E99,
             argsDescriptor: descriptorForTestbedEchoGnarlyArgs(in: arena),
-            responseDescriptor: descriptorForGnarlyPayload(in: arena)
+            responseDescriptor: descriptorForGnarlyPayload(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultGnarlyPayloadTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3381,7 +7307,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xE08F0F5254E7A997,
             argsDescriptor: descriptorForTestbedProcessMessageArgs(in: arena),
-            responseDescriptor: descriptorForMessage(in: arena)
+            responseDescriptor: descriptorForMessage(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultMessageTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3389,7 +7316,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x598518523A6266BF,
             argsDescriptor: descriptorForTestbedGetPointsArgs(in: arena),
-            responseDescriptor: descriptorForArrayOfPoint(in: arena)
+            responseDescriptor: descriptorForArrayOfPoint(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultPointTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3397,7 +7325,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x7D55A713AD612BF2,
             argsDescriptor: descriptorForTestbedSwapPairArgs(in: arena),
-            responseDescriptor: descriptorForVoxTuple2StringInt32(in: arena)
+            responseDescriptor: descriptorForVoxTuple2StringInt32(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3405,7 +7334,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x44056C7842FA336C,
             argsDescriptor: descriptorForTestbedEchoBytesArgs(in: arena),
-            responseDescriptor: descriptorForBytes(in: arena)
+            responseDescriptor: descriptorForBytes(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultUInt8TestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3413,7 +7343,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x5136D8F01A5F496C,
             argsDescriptor: descriptorForTestbedEchoBoolArgs(in: arena),
-            responseDescriptor: descriptorForBool(in: arena)
+            responseDescriptor: descriptorForBool(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultBoolTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3421,7 +7352,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x85E2380DBF7FFE65,
             argsDescriptor: descriptorForTestbedEchoU64Args(in: arena),
-            responseDescriptor: descriptorForUInt64(in: arena)
+            responseDescriptor: descriptorForUInt64(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultUInt64TestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3429,7 +7361,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xB1A5BFD205B3FBFC,
             argsDescriptor: descriptorForTestbedEchoOptionStringArgs(in: arena),
-            responseDescriptor: descriptorForOptionalString(in: arena)
+            responseDescriptor: descriptorForOptionalString(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultStringTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3437,7 +7370,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x9A7BED545E088054,
             argsDescriptor: descriptorForTestbedSumLargeArgs(in: arena),
-            responseDescriptor: descriptorForInt64(in: arena)
+            responseDescriptor: descriptorForInt64(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultInt64TestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3445,7 +7379,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x8EDFBD65D162F685,
             argsDescriptor: descriptorForTestbedGenerateLargeArgs(in: arena),
-            responseDescriptor: descriptorForVoid(in: arena)
+            responseDescriptor: descriptorForVoid(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultVoidTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3453,7 +7388,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xFBFB05BBCAADE4A0,
             argsDescriptor: descriptorForTestbedAllColorsArgs(in: arena),
-            responseDescriptor: descriptorForArrayOfColor(in: arena)
+            responseDescriptor: descriptorForArrayOfColor(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultColorTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3461,7 +7397,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x62FEB14A8FCF9B6D,
             argsDescriptor: descriptorForTestbedDescribePointArgs(in: arena),
-            responseDescriptor: descriptorForTaggedPoint(in: arena)
+            responseDescriptor: descriptorForTaggedPoint(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultTaggedPointTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3469,7 +7406,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x4125B5E678B7B4A5,
             argsDescriptor: descriptorForTestbedEchoShapeArgs(in: arena),
-            responseDescriptor: descriptorForShape(in: arena)
+            responseDescriptor: descriptorForShape(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultShapeTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3477,7 +7415,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xC7C5AA845CFB8BF6,
             argsDescriptor: descriptorForTestbedEchoStatusV1Args(in: arena),
-            responseDescriptor: descriptorForStatus(in: arena)
+            responseDescriptor: descriptorForStatus(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultStatusTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3485,7 +7424,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x6619071BE5D5C259,
             argsDescriptor: descriptorForTestbedEchoTagV1Args(in: arena),
-            responseDescriptor: descriptorForTag(in: arena)
+            responseDescriptor: descriptorForTag(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultTagTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3493,7 +7433,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xBD9BCABDDEEBEB04,
             argsDescriptor: descriptorForTestbedEchoProfileArgs(in: arena),
-            responseDescriptor: descriptorForProfile(in: arena)
+            responseDescriptor: descriptorForProfile(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultProfileTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3501,7 +7442,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x100B0E08DA4B8F1A,
             argsDescriptor: descriptorForTestbedEchoRecordArgs(in: arena),
-            responseDescriptor: descriptorForRecord(in: arena)
+            responseDescriptor: descriptorForRecord(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultRecordTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3509,7 +7451,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x697590D3FFC36703,
             argsDescriptor: descriptorForTestbedEchoStatusArgs(in: arena),
-            responseDescriptor: descriptorForStatus(in: arena)
+            responseDescriptor: descriptorForStatus(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultStatusTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3517,7 +7460,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x2BD1B3149D73CE97,
             argsDescriptor: descriptorForTestbedEchoTagArgs(in: arena),
-            responseDescriptor: descriptorForTag(in: arena)
+            responseDescriptor: descriptorForTag(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultTagTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3525,7 +7469,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x3B3D22B015FA1A3F,
             argsDescriptor: descriptorForTestbedEchoMeasurementArgs(in: arena),
-            responseDescriptor: descriptorForMeasurement(in: arena)
+            responseDescriptor: descriptorForMeasurement(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultMeasurementTestbedVoxErrorNever(in: arena)
         )
     }
 
@@ -3533,7 +7478,8 @@ public final class TestbedMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0xE13A477FB964CE28,
             argsDescriptor: descriptorForTestbedEchoConfigArgs(in: arena),
-            responseDescriptor: descriptorForConfig(in: arena)
+            responseDescriptor: descriptorForConfig(in: arena),
+            responseWireDescriptor: descriptorForTestbedVoxResultConfigTestbedVoxErrorNever(in: arena)
         )
     }
 

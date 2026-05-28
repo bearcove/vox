@@ -5,6 +5,23 @@ import BinetteSwiftProbes
 import CBinette
 import VoxSwift
 
+// Vox response wire carrier types
+public enum SwiftCanaryVoxErrorNever {
+    case user(Void)
+    case unknownMethod
+    case invalidPayload(String)
+    case cancelled
+    case connectionClosed
+    case sessionShutdown
+    case sendFailed
+    case indeterminate
+}
+
+public enum SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever {
+    case ok(SwiftReply)
+    case err(SwiftCanaryVoxErrorNever)
+}
+
 // Named value types
 public struct SwiftPoint {
     public var x: Int32
@@ -172,6 +189,7 @@ private func descriptorForSwiftShape(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: swiftShapeConstructCircle,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForSwiftShapeCirclePayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -194,6 +212,7 @@ private func descriptorForSwiftShape(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: swiftShapeConstructRectangle,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_STRUCT),
                 payload: descriptorForSwiftShapeRectanglePayload(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -216,6 +235,7 @@ private func descriptorForSwiftShape(in arena: BinetteCAbiDescriptorArena) -> Un
                     call: swiftShapeConstructPoint,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
                 payload: nil
             ),
         ]
@@ -330,6 +350,7 @@ private func descriptorForSwiftOutcome(in arena: BinetteCAbiDescriptorArena) -> 
                     call: swiftOutcomeConstructAccepted,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForString(in: arena)
             ),
             BinetteLocalVariantAbi(
@@ -352,6 +373,7 @@ private func descriptorForSwiftOutcome(in arena: BinetteCAbiDescriptorArena) -> 
                     call: swiftOutcomeConstructRejected,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: descriptorForUInt32(in: arena)
             ),
         ]
@@ -607,6 +629,460 @@ private func descriptorForSwiftCanarySubmitArgs(in arena: BinetteCAbiDescriptorA
     )
 }
 
+private func descriptorForVoid(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_unit_type_id(), Void.self)
+}
+
+private func descriptorForSwiftCanaryVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x4CF4B2AEB98A1939,
+        layout: binetteLayout(of: SwiftCanaryVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: swiftCanaryVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("User"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectUserBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectUserInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropUserProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructUser,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForVoid(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("UnknownMethod"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectUnknownMethodBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectUnknownMethodInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropUnknownMethodProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructUnknownMethod,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("InvalidPayload"),
+                index: 2,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectInvalidPayloadBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectInvalidPayloadInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropInvalidPayloadProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructInvalidPayload,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForString(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Cancelled"),
+                index: 3,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectCancelledBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectCancelledInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropCancelledProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructCancelled,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("ConnectionClosed"),
+                index: 4,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectConnectionClosedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectConnectionClosedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropConnectionClosedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructConnectionClosed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SessionShutdown"),
+                index: 5,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectSessionShutdownBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectSessionShutdownInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropSessionShutdownProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructSessionShutdown,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("SendFailed"),
+                index: 6,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectSendFailedBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectSendFailedInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropSendFailedProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructSendFailed,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Indeterminate"),
+                index: 7,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxErrorNeverProjectIndeterminateBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxErrorNeverProjectIndeterminateInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxErrorNeverDropIndeterminateProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxErrorNeverConstructIndeterminate,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),
+                payload: nil
+            ),
+        ]
+    )
+}
+
+private func swiftCanaryVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).pointee {
+    case .user: return 0
+    case .unknownMethod: return 1
+    case .invalidPayload: return 2
+    case .cancelled: return 3
+    case .connectionClosed: return 4
+    case .sessionShutdown: return 5
+    case .sendFailed: return 6
+    case .indeterminate: return 7
+    }
+}
+
+private func swiftCanaryVoxErrorNeverProjectUserBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectUnknownMethodBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectInvalidPayloadBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectCancelledBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectConnectionClosedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectSessionShutdownBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectSendFailedBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectIndeterminateBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxErrorNeverProjectUserInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<Void>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).pointee
+    guard case let .user(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: Void.self).initialize(to: payload)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverDropUserProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Void.self).deinitialize(count: 1)
+}
+
+private func swiftCanaryVoxErrorNeverConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<Void>.size else { return false }
+    let payloadValue: Void = ()
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .user(payloadValue))
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectUnknownMethodInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropUnknownMethodProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructUnknownMethod(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .unknownMethod)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectInvalidPayloadInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<String>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).pointee
+    guard case let .invalidPayload(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverDropInvalidPayloadProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+}
+
+private func swiftCanaryVoxErrorNeverConstructInvalidPayload(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)
+    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .invalidPayload(payloadValue))
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectCancelledInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropCancelledProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructCancelled(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .cancelled)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectConnectionClosedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropConnectionClosedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructConnectionClosed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .connectionClosed)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectSessionShutdownInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropSessionShutdownProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructSessionShutdown(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .sessionShutdown)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectSendFailedInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropSendFailedProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructSendFailed(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .sendFailed)
+    return true
+}
+
+private func swiftCanaryVoxErrorNeverProjectIndeterminateInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    outLen == 0
+}
+
+private func swiftCanaryVoxErrorNeverDropIndeterminateProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {}
+
+private func swiftCanaryVoxErrorNeverConstructIndeterminate(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == 0 else { return false }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: .indeterminate)
+    return true
+}
+
+private func descriptorForSwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.enumeration(
+        typeID: 0x42046DE663BEEEF0,
+        layout: binetteLayout(of: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self),
+        tag: BinetteLocalEnumTagAccessAbi(
+            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+            direct_offset: 0,
+            thunk: BinetteLocalEnumTagThunkAbi(call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverTag, context: nil)
+        ),
+        variants: [
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Ok"),
+                index: 0,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectOkBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectOkInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropOkProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructOk,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForSwiftReply(in: arena)
+            ),
+            BinetteLocalVariantAbi(
+                name: binetteLocalStr("Err"),
+                index: 1,
+                project: BinetteLocalVariantProjectAccessAbi(
+                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),
+                    direct_offset: 0,
+                    thunk: BinetteLocalVariantProjectThunkAbi(call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectErrBorrowed, context: nil)
+                ),
+                project_into: BinetteLocalVariantProjectIntoAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectErrInto,
+                    context: nil
+                ),
+                drop_projected: BinetteLocalVariantDropAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropErrProjected,
+                    context: nil
+                ),
+                construct: BinetteLocalVariantConstructAbi(
+                    call: swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructErr,
+                    context: nil
+                ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
+                payload: descriptorForSwiftCanaryVoxErrorNever(in: arena)
+            ),
+        ]
+    )
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverTag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {
+    switch UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).pointee {
+    case .ok: return 0
+    case .err: return 1
+    }
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? { nil }
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectOkInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<SwiftReply>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).pointee
+    guard case let .ok(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: SwiftReply.self).initialize(to: payload)
+    return true
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropOkProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftReply.self).deinitialize(count: 1)
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<SwiftReply>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftReply.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).initialize(to: .ok(payloadValue))
+    return true
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverProjectErrInto(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard outLen == MemoryLayout<SwiftCanaryVoxErrorNever>.size else { return false }
+    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).pointee
+    guard case let .err(payload) = value else { return false }
+    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).initialize(to: payload)
+    return true
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropErrProjected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self).deinitialize(count: 1)
+}
+
+private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard payloadLen == MemoryLayout<SwiftCanaryVoxErrorNever>.size else { return false }
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self)
+    let payloadValue = payloadPointer.pointee
+    payloadPointer.deinitialize(count: 1)
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).initialize(to: .err(payloadValue))
+    return true
+}
+
 // Method codecs
 public final class SwiftCanaryMethodCodecs {
     private let arena = BinetteCAbiDescriptorArena()
@@ -617,7 +1093,8 @@ public final class SwiftCanaryMethodCodecs {
         try VoxSwiftMethodCodec(
             methodId: 0x61FA9915325F479C,
             argsDescriptor: descriptorForSwiftCanarySubmitArgs(in: arena),
-            responseDescriptor: descriptorForSwiftReply(in: arena)
+            responseDescriptor: descriptorForSwiftReply(in: arena),
+            responseWireDescriptor: descriptorForSwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever(in: arena)
         )
     }
 

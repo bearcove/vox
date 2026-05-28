@@ -497,10 +497,12 @@ impl crate::Handler<crate::DriverReplySink> for GeneratedSwiftSubmitCanaryDriver
                 retry: None,
             },
         };
+        let wire: Result<SwiftCanaryReply, vox_types::VoxError<core::convert::Infallible>> =
+            Ok(reply_value);
 
         reply
             .send_reply(crate::RequestResponse {
-                ret: crate::Payload::outgoing(&reply_value),
+                ret: crate::Payload::outgoing(&wire),
                 schemas: Default::default(),
                 metadata: Default::default(),
             })

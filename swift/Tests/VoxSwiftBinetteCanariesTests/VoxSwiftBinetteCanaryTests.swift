@@ -522,10 +522,18 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
             UnsafeBufferPointer(start: responsePayload.ptr, count: responsePayload.len)
         )
 
-        let reply = try methodCodec.decodeResponse(
+        let wireReply = try methodCodec.decodeResponse(
             methodCodec.wrapResponse(schemaPayload: responseSchemaBytes, payload: responseBytes),
-            as: SwiftReply.self
+            as: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self
         )
+        let reply: SwiftReply
+        switch wireReply {
+        case .ok(let value):
+            reply = value
+        case .err(let error):
+            XCTFail("expected generated Swift canary success, got \(error)")
+            return
+        }
 
         XCTAssertEqual(
             reply.message,
@@ -768,6 +776,7 @@ private func commonDescriptors(in arena: BinetteCAbiDescriptorArena) -> CommonDe
                     call: outcomeConstructAccepted,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: stringDescriptor
             ),
             BinetteLocalVariantAbi(
@@ -786,6 +795,7 @@ private func commonDescriptors(in arena: BinetteCAbiDescriptorArena) -> CommonDe
                     call: outcomeConstructRejected,
                     context: nil
                 ),
+                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),
                 payload: u32Descriptor
             ),
         ]

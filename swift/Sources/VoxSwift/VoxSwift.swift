@@ -35,11 +35,12 @@ public final class VoxSwiftMethodCodec {
     public init(
         methodId: UInt64,
         argsDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>,
-        responseDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>
+        responseDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>,
+        responseWireDescriptor: UnsafePointer<BinetteLocalDescriptorAbi>? = nil
     ) throws {
         self.methodId = methodId
         argsCodec = try VoxSwiftLocalCodec(descriptor: argsDescriptor)
-        responseCodec = try VoxSwiftLocalCodec(descriptor: responseDescriptor)
+        responseCodec = try VoxSwiftLocalCodec(descriptor: responseWireDescriptor ?? responseDescriptor)
     }
 
     public func encodeArgs<T>(_ value: inout T) throws -> VoxSwiftWirePayload {

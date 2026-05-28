@@ -5,10 +5,10 @@
 
 use std::collections::BTreeSet;
 
-use facet_core::{ScalarType, Shape};
+use facet_core::{Facet, ScalarType, Shape};
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use vox_types::{
-    EnumInfo, SchemaHash, ServiceDescriptor, ShapeKind, StructInfo, TypeRef, VariantKind,
+    EnumInfo, SchemaHash, ServiceDescriptor, ShapeKind, StructInfo, TypeRef, VariantKind, VoxError,
     classify_shape, classify_variant, extract_schemas, is_bytes,
 };
 
@@ -35,6 +35,12 @@ impl std::error::Error for SwiftCodegenError {}
 struct NamedShape {
     name: String,
     shape: &'static Shape,
+}
+
+#[derive(Clone, Copy)]
+struct ResponseWireShape {
+    ok: &'static Shape,
+    user_error: Option<&'static Shape>,
 }
 
 struct SwiftGenerator<'a> {
@@ -66,6 +72,7 @@ impl<'a> SwiftGenerator<'a> {
 
         self.emit_tuple_carrier_types()?;
         self.emit_result_carrier_types()?;
+        self.emit_response_wire_carrier_types()?;
         self.emit_named_types()?;
         self.emit_variant_payload_types()?;
         self.emit_method_arg_types()?;
@@ -174,6 +181,49 @@ impl<'a> SwiftGenerator<'a> {
             self.line(&format!("public enum {type_name} {{"));
             self.line(&format!("    case ok({})", swift_type(ok)?));
             self.line(&format!("    case err({})", swift_type(err)?));
+            self.line("}");
+            self.line("");
+        }
+        Ok(())
+    }
+
+    fn emit_response_wire_carrier_types(&mut self) -> Result<(), SwiftCodegenError> {
+        let wires = collect_response_wire_shapes(self.service)?;
+        if wires.is_empty() {
+            return Ok(());
+        }
+
+        let mut emitted_errors = BTreeSet::new();
+        self.line("// Vox response wire carrier types");
+        for wire in &wires {
+            let error_type = vox_error_type_name(self.service, wire.user_error)?;
+            if emitted_errors.insert(error_type.clone()) {
+                let user_payload = match wire.user_error {
+                    Some(shape) => swift_type(shape)?,
+                    None => "Void".to_owned(),
+                };
+                self.line(&format!("public enum {error_type} {{"));
+                self.line(&format!("    case user({user_payload})"));
+                self.line("    case unknownMethod");
+                self.line("    case invalidPayload(String)");
+                self.line("    case cancelled");
+                self.line("    case connectionClosed");
+                self.line("    case sessionShutdown");
+                self.line("    case sendFailed");
+                self.line("    case indeterminate");
+                self.line("}");
+                self.line("");
+            }
+        }
+
+        for wire in wires {
+            let type_name = response_wire_result_type_name(self.service, wire)?;
+            self.line(&format!("public enum {type_name} {{"));
+            self.line(&format!("    case ok({})", swift_type(wire.ok)?));
+            self.line(&format!(
+                "    case err({})",
+                vox_error_type_name(self.service, wire.user_error)?
+            ));
             self.line("}");
             self.line("");
         }
@@ -290,6 +340,7 @@ impl<'a> SwiftGenerator<'a> {
         for method in self.service.methods {
             self.emit_method_args_descriptor(method)?;
             self.emit_shape_descriptor(method.return_shape)?;
+            self.emit_response_wire_descriptor(response_wire_shape(method.return_shape)?)?;
         }
         Ok(())
     }
@@ -308,6 +359,10 @@ impl<'a> SwiftGenerator<'a> {
             let method_name = swift_ident(&method.method_name.to_lower_camel_case());
             let args_descriptor = method_args_descriptor_name(self.service, method.method_name);
             let response_descriptor = descriptor_fn_name(method.return_shape)?;
+            let response_wire_descriptor = response_wire_descriptor_fn_name(
+                self.service,
+                response_wire_shape(method.return_shape)?,
+            )?;
             self.line(&format!(
                 "    public func {method_name}() throws -> VoxSwiftMethodCodec {{"
             ));
@@ -317,7 +372,10 @@ impl<'a> SwiftGenerator<'a> {
                 "            argsDescriptor: {args_descriptor}(in: arena),"
             ));
             self.line(&format!(
-                "            responseDescriptor: {response_descriptor}(in: arena)"
+                "            responseDescriptor: {response_descriptor}(in: arena),"
+            ));
+            self.line(&format!(
+                "            responseWireDescriptor: {response_wire_descriptor}(in: arena)"
             ));
             self.line("        )");
             self.line("    }");
@@ -928,6 +986,126 @@ impl<'a> SwiftGenerator<'a> {
         Ok(())
     }
 
+    fn emit_response_wire_descriptor(
+        &mut self,
+        wire: ResponseWireShape,
+    ) -> Result<(), SwiftCodegenError> {
+        let error_fn = vox_error_descriptor_fn_name(self.service, wire.user_error)?;
+        if self.generated_descriptors.insert(error_fn.clone()) {
+            self.emit_vox_error_descriptor(wire.user_error)?;
+        }
+
+        let fn_name = response_wire_descriptor_fn_name(self.service, wire)?;
+        if !self.generated_descriptors.insert(fn_name.clone()) {
+            return Ok(());
+        }
+
+        self.emit_shape_descriptor(wire.ok)?;
+        let type_name = response_wire_result_type_name(self.service, wire)?;
+        let error_type = vox_error_type_name(self.service, wire.user_error)?;
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
+        ));
+        self.line("    return arena.enumeration(");
+        self.line(&format!("        typeID: {},", result_template_type_id()?));
+        self.line(&format!(
+            "        layout: binetteLayout(of: {type_name}.self),"
+        ));
+        self.line("        tag: BinetteLocalEnumTagAccessAbi(");
+        self.line("            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("            direct_offset: 0,");
+        self.line(&format!(
+            "            thunk: BinetteLocalEnumTagThunkAbi(call: {prefix}Tag, context: nil)"
+        ));
+        self.line("        ),");
+        self.line("        variants: [");
+        self.emit_synthetic_newtype_variant_descriptor(&type_name, "Ok", 0, wire.ok)?;
+        self.emit_manual_newtype_variant_descriptor(&type_name, "Err", 1, &error_fn, &error_type);
+        self.line("        ]");
+        self.line("    )");
+        self.line("}");
+        self.line("");
+        self.emit_response_wire_result_thunks(&type_name, wire.ok, &error_type)?;
+        Ok(())
+    }
+
+    fn emit_vox_error_descriptor(
+        &mut self,
+        user_error: Option<&'static Shape>,
+    ) -> Result<(), SwiftCodegenError> {
+        if self
+            .generated_descriptors
+            .insert("descriptorForVoid".to_owned())
+        {
+            self.emit_scalar_descriptor("descriptorForVoid", ScalarType::Unit)?;
+        }
+        if self
+            .generated_descriptors
+            .insert("descriptorForString".to_owned())
+        {
+            self.emit_scalar_descriptor("descriptorForString", ScalarType::String)?;
+        }
+        if let Some(shape) = user_error {
+            self.emit_shape_descriptor(shape)?;
+        }
+        let fn_name = vox_error_descriptor_fn_name(self.service, user_error)?;
+        let type_name = vox_error_type_name(self.service, user_error)?;
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
+        ));
+        self.line("    return arena.enumeration(");
+        self.line(&format!(
+            "        typeID: {},",
+            vox_error_template_type_id()?
+        ));
+        self.line(&format!(
+            "        layout: binetteLayout(of: {type_name}.self),"
+        ));
+        self.line("        tag: BinetteLocalEnumTagAccessAbi(");
+        self.line("            tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("            direct_offset: 0,");
+        self.line(&format!(
+            "            thunk: BinetteLocalEnumTagThunkAbi(call: {prefix}Tag, context: nil)"
+        ));
+        self.line("        ),");
+        self.line("        variants: [");
+        match user_error {
+            Some(shape) => {
+                self.emit_synthetic_newtype_variant_descriptor(&type_name, "User", 0, shape)?;
+            }
+            None => {
+                self.emit_manual_newtype_variant_descriptor(
+                    &type_name,
+                    "User",
+                    0,
+                    "descriptorForVoid",
+                    "Void",
+                );
+            }
+        }
+        self.emit_unit_variant_descriptor(&type_name, "UnknownMethod", 1);
+        self.emit_manual_newtype_variant_descriptor(
+            &type_name,
+            "InvalidPayload",
+            2,
+            "descriptorForString",
+            "String",
+        );
+        self.emit_unit_variant_descriptor(&type_name, "Cancelled", 3);
+        self.emit_unit_variant_descriptor(&type_name, "ConnectionClosed", 4);
+        self.emit_unit_variant_descriptor(&type_name, "SessionShutdown", 5);
+        self.emit_unit_variant_descriptor(&type_name, "SendFailed", 6);
+        self.emit_unit_variant_descriptor(&type_name, "Indeterminate", 7);
+        self.line("        ]");
+        self.line("    )");
+        self.line("}");
+        self.line("");
+        self.emit_vox_error_thunks(user_error)?;
+        Ok(())
+    }
+
     fn emit_synthetic_newtype_variant_descriptor(
         &mut self,
         type_name: &str,
@@ -967,12 +1145,98 @@ impl<'a> SwiftGenerator<'a> {
         ));
         self.line("                    context: nil");
         self.line("                ),");
+        self.line("                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),");
         self.line(&format!(
             "                payload: {}(in: arena)",
             descriptor_fn_name(payload)?
         ));
         self.line("            ),");
         Ok(())
+    }
+
+    fn emit_manual_newtype_variant_descriptor(
+        &mut self,
+        type_name: &str,
+        variant_name: &str,
+        index: usize,
+        descriptor_fn: &str,
+        _payload_type: &str,
+    ) {
+        let prefix = type_name.to_lower_camel_case();
+        let variant_camel = variant_name.to_upper_camel_case();
+        self.line("            BinetteLocalVariantAbi(");
+        self.line(&format!(
+            "                name: binetteLocalStr(\"{variant_name}\"),"
+        ));
+        self.line(&format!("                index: {index},"));
+        self.line("                project: BinetteLocalVariantProjectAccessAbi(");
+        self.line("                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("                    direct_offset: 0,");
+        self.line(&format!(
+            "                    thunk: BinetteLocalVariantProjectThunkAbi(call: {prefix}Project{variant_camel}Borrowed, context: nil)"
+        ));
+        self.line("                ),");
+        self.line("                project_into: BinetteLocalVariantProjectIntoAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Project{variant_camel}Into,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                drop_projected: BinetteLocalVariantDropAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Drop{variant_camel}Projected,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                construct: BinetteLocalVariantConstructAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Construct{variant_camel},"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_NEWTYPE),");
+        self.line(&format!(
+            "                payload: {descriptor_fn}(in: arena)"
+        ));
+        self.line("            ),");
+    }
+
+    fn emit_unit_variant_descriptor(&mut self, type_name: &str, variant_name: &str, index: usize) {
+        let prefix = type_name.to_lower_camel_case();
+        let variant_camel = variant_name.to_upper_camel_case();
+        self.line("            BinetteLocalVariantAbi(");
+        self.line(&format!(
+            "                name: binetteLocalStr(\"{variant_name}\"),"
+        ));
+        self.line(&format!("                index: {index},"));
+        self.line("                project: BinetteLocalVariantProjectAccessAbi(");
+        self.line("                    tag: UInt32(BINETTE_LOCAL_ACCESS_THUNK),");
+        self.line("                    direct_offset: 0,");
+        self.line(&format!(
+            "                    thunk: BinetteLocalVariantProjectThunkAbi(call: {prefix}Project{variant_camel}Borrowed, context: nil)"
+        ));
+        self.line("                ),");
+        self.line("                project_into: BinetteLocalVariantProjectIntoAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Project{variant_camel}Into,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                drop_projected: BinetteLocalVariantDropAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Drop{variant_camel}Projected,"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                construct: BinetteLocalVariantConstructAbi(");
+        self.line(&format!(
+            "                    call: {prefix}Construct{variant_camel},"
+        ));
+        self.line("                    context: nil");
+        self.line("                ),");
+        self.line("                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_UNIT),");
+        self.line("                payload: nil");
+        self.line("            ),");
     }
 
     fn emit_variant_descriptor(
@@ -1020,16 +1284,30 @@ impl<'a> SwiftGenerator<'a> {
         ));
         self.line("                    context: nil");
         self.line("                ),");
-        let payload = match classify_variant(variant) {
-            VariantKind::Unit => "nil".to_owned(),
-            VariantKind::Newtype { inner } => format!("{}(in: arena)", descriptor_fn_name(inner)?),
-            VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
+        let (payload_kind, payload) = match classify_variant(variant) {
+            VariantKind::Unit => ("UNIT", "nil".to_owned()),
+            VariantKind::Newtype { inner } => (
+                "NEWTYPE",
+                format!("{}(in: arena)", descriptor_fn_name(inner)?),
+            ),
+            VariantKind::Tuple { .. } => (
+                "TUPLE",
                 format!(
                     "{}(in: arena)",
                     variant_payload_descriptor_name(type_name, variant.name)
-                )
-            }
+                ),
+            ),
+            VariantKind::Struct { .. } => (
+                "STRUCT",
+                format!(
+                    "{}(in: arena)",
+                    variant_payload_descriptor_name(type_name, variant.name)
+                ),
+            ),
         };
+        self.line(&format!(
+            "                payload_kind: UInt32(BINETTE_LOCAL_VARIANT_PAYLOAD_{payload_kind}),"
+        ));
         self.line(&format!("                payload: {payload}"));
         self.line("            ),");
         Ok(())
@@ -1259,8 +1537,8 @@ impl<'a> SwiftGenerator<'a> {
         self.line(&format!(
             "    switch UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee {{"
         ));
-        self.line("    case .ok(_): return 0");
-        self.line("    case .err(_): return 1");
+        self.line("    case .ok: return 0");
+        self.line("    case .err: return 1");
         self.line("    }");
         self.line("}");
         self.line("");
@@ -1274,6 +1552,97 @@ impl<'a> SwiftGenerator<'a> {
         self.line("");
         self.emit_newtype_case_thunks(type_name, &prefix, "ok", "Ok", ok)?;
         self.emit_newtype_case_thunks(type_name, &prefix, "err", "Err", err)
+    }
+
+    fn emit_response_wire_result_thunks(
+        &mut self,
+        type_name: &str,
+        ok: &'static Shape,
+        error_type: &str,
+    ) -> Result<(), SwiftCodegenError> {
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {prefix}Tag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {{"
+        ));
+        self.line(&format!(
+            "    switch UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee {{"
+        ));
+        self.line("    case .ok: return 0");
+        self.line("    case .err: return 1");
+        self.line("    }");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}ProjectOkBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {{ nil }}"
+        ));
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}ProjectErrBorrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {{ nil }}"
+        ));
+        self.line("");
+        self.emit_newtype_case_thunks(type_name, &prefix, "ok", "Ok", ok)?;
+        self.emit_manual_payload_case_thunks(type_name, &prefix, "err", "Err", error_type)
+    }
+
+    fn emit_vox_error_thunks(
+        &mut self,
+        user_error: Option<&'static Shape>,
+    ) -> Result<(), SwiftCodegenError> {
+        let type_name = vox_error_type_name(self.service, user_error)?;
+        let prefix = type_name.to_lower_camel_case();
+        self.line(&format!(
+            "private func {prefix}Tag(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UInt32 {{"
+        ));
+        self.line(&format!(
+            "    switch UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee {{"
+        ));
+        self.line("    case .user: return 0");
+        self.line("    case .unknownMethod: return 1");
+        self.line("    case .invalidPayload: return 2");
+        self.line("    case .cancelled: return 3");
+        self.line("    case .connectionClosed: return 4");
+        self.line("    case .sessionShutdown: return 5");
+        self.line("    case .sendFailed: return 6");
+        self.line("    case .indeterminate: return 7");
+        self.line("    }");
+        self.line("}");
+        self.line("");
+        for variant in [
+            "User",
+            "UnknownMethod",
+            "InvalidPayload",
+            "Cancelled",
+            "ConnectionClosed",
+            "SessionShutdown",
+            "SendFailed",
+            "Indeterminate",
+        ] {
+            self.line(&format!(
+                "private func {prefix}Project{variant}Borrowed(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> UnsafePointer<UInt8>? {{ nil }}"
+            ));
+            self.line("");
+        }
+        match user_error {
+            Some(shape) => {
+                self.emit_newtype_case_thunks(&type_name, &prefix, "user", "User", shape)?
+            }
+            None => {
+                self.emit_manual_payload_case_thunks(&type_name, &prefix, "user", "User", "Void")?
+            }
+        }
+        self.emit_unit_case_thunks(&type_name, &prefix, "unknownMethod", "UnknownMethod");
+        self.emit_manual_string_case_thunks(
+            &type_name,
+            &prefix,
+            "invalidPayload",
+            "InvalidPayload",
+        );
+        self.emit_unit_case_thunks(&type_name, &prefix, "cancelled", "Cancelled");
+        self.emit_unit_case_thunks(&type_name, &prefix, "connectionClosed", "ConnectionClosed");
+        self.emit_unit_case_thunks(&type_name, &prefix, "sessionShutdown", "SessionShutdown");
+        self.emit_unit_case_thunks(&type_name, &prefix, "sendFailed", "SendFailed");
+        self.emit_unit_case_thunks(&type_name, &prefix, "indeterminate", "Indeterminate");
+        Ok(())
     }
 
     fn emit_newtype_case_thunks(
@@ -1362,13 +1731,16 @@ impl<'a> SwiftGenerator<'a> {
             ShapeKind::Struct(_)
             | ShapeKind::Tuple { .. }
             | ShapeKind::TupleStruct { .. }
-            | ShapeKind::Enum(_) => {
+            | ShapeKind::Enum(_)
+            | ShapeKind::Option { .. } => {
                 self.line(&format!(
                     "    guard payloadLen == MemoryLayout<{inner_type}>.size else {{ return false }}"
                 ));
                 self.line(&format!(
-                    "    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {inner_type}.self).move()"
+                    "    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {inner_type}.self)"
                 ));
+                self.line("    let payloadValue = payloadPointer.pointee");
+                self.line("    payloadPointer.deinitialize(count: 1)");
             }
             _ => {
                 return Err(unsupported(
@@ -1384,6 +1756,133 @@ impl<'a> SwiftGenerator<'a> {
         self.line("}");
         self.line("");
         Ok(())
+    }
+
+    fn emit_manual_payload_case_thunks(
+        &mut self,
+        type_name: &str,
+        prefix: &str,
+        variant_ident: &str,
+        variant_camel: &str,
+        payload_type: &str,
+    ) -> Result<(), SwiftCodegenError> {
+        self.line(&format!(
+            "private func {prefix}Project{variant_camel}Into(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    guard outLen == MemoryLayout<{payload_type}>.size else {{ return false }}"
+        ));
+        self.line(&format!(
+            "    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee"
+        ));
+        self.line(&format!(
+            "    guard case let .{variant_ident}(payload) = value else {{ return false }}"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: {payload_type}.self).initialize(to: payload)"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Drop{variant_camel}Projected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {{"
+        ));
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {payload_type}.self).deinitialize(count: 1)"
+        ));
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    guard payloadLen == MemoryLayout<{payload_type}>.size else {{ return false }}"
+        ));
+        if payload_type == "Void" {
+            self.line("    let payloadValue: Void = ()");
+        } else {
+            self.line(&format!(
+                "    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {payload_type}.self)"
+            ));
+            self.line("    let payloadValue = payloadPointer.pointee");
+            self.line("    payloadPointer.deinitialize(count: 1)");
+        }
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident}(payloadValue))"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+        Ok(())
+    }
+
+    fn emit_manual_string_case_thunks(
+        &mut self,
+        type_name: &str,
+        prefix: &str,
+        variant_ident: &str,
+        variant_camel: &str,
+    ) {
+        self.line(&format!(
+            "private func {prefix}Project{variant_camel}Into(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line("    guard outLen == MemoryLayout<String>.size else { return false }");
+        self.line(&format!(
+            "    let value = UnsafeRawPointer(value!).assumingMemoryBound(to: {type_name}.self).pointee"
+        ));
+        self.line(&format!(
+            "    guard case let .{variant_ident}(payload) = value else {{ return false }}"
+        ));
+        self.line("    UnsafeMutableRawPointer(out!).assumingMemoryBound(to: String.self).initialize(to: payload)");
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Drop{variant_camel}Projected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {{"
+        ));
+        self.line("    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: String.self).deinitialize(count: 1)");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line("    let bytes = UnsafeBufferPointer(start: payloadBytes, count: payloadLen)");
+        self.line("    guard let payloadValue = String(bytes: bytes, encoding: .utf8) else { return false }");
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident}(payloadValue))"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+    }
+
+    fn emit_unit_case_thunks(
+        &mut self,
+        type_name: &str,
+        prefix: &str,
+        variant_ident: &str,
+        variant_camel: &str,
+    ) {
+        self.line(&format!(
+            "private func {prefix}Project{variant_camel}Into(_ value: UnsafePointer<UInt8>?, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line("    outLen == 0");
+        self.line("}");
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Drop{variant_camel}Projected(_ value: UnsafeMutablePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) {{}}"
+        ));
+        self.line("");
+        self.line(&format!(
+            "private func {prefix}Construct{variant_camel}(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line("    guard payloadLen == 0 else { return false }");
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident})"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
     }
 
     fn emit_public_init(
@@ -1697,6 +2196,36 @@ fn collect_result_shapes(
     Ok(out)
 }
 
+fn collect_response_wire_shapes(
+    service: &ServiceDescriptor,
+) -> Result<Vec<ResponseWireShape>, SwiftCodegenError> {
+    let mut seen = BTreeSet::new();
+    let mut out = Vec::new();
+    for method in service.methods {
+        let wire = response_wire_shape(method.return_shape)?;
+        let key = response_wire_result_type_name(service, wire)?;
+        if seen.insert(key) {
+            out.push(wire);
+        }
+    }
+    Ok(out)
+}
+
+fn response_wire_shape(
+    return_shape: &'static Shape,
+) -> Result<ResponseWireShape, SwiftCodegenError> {
+    Ok(match classify_shape(return_shape) {
+        ShapeKind::Result { ok, err } => ResponseWireShape {
+            ok,
+            user_error: Some(err),
+        },
+        _ => ResponseWireShape {
+            ok: return_shape,
+            user_error: None,
+        },
+    })
+}
+
 fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
     if is_bytes(shape) {
         return Ok("[UInt8]".to_owned());
@@ -1879,6 +2408,76 @@ fn result_carrier_type_name(shape: &'static Shape) -> Result<String, SwiftCodege
         swift_type_name_fragment(ok)?,
         swift_type_name_fragment(err)?
     ))
+}
+
+fn response_wire_result_type_name(
+    service: &ServiceDescriptor,
+    wire: ResponseWireShape,
+) -> Result<String, SwiftCodegenError> {
+    Ok(format!(
+        "{}VoxResult{}{}",
+        service.service_name.to_upper_camel_case(),
+        swift_type_name_fragment(wire.ok)?,
+        vox_error_type_name(service, wire.user_error)?
+    ))
+}
+
+fn response_wire_descriptor_fn_name(
+    service: &ServiceDescriptor,
+    wire: ResponseWireShape,
+) -> Result<String, SwiftCodegenError> {
+    Ok(format!(
+        "descriptorFor{}",
+        response_wire_result_type_name(service, wire)?
+    ))
+}
+
+fn vox_error_type_name(
+    service: &ServiceDescriptor,
+    user_error: Option<&'static Shape>,
+) -> Result<String, SwiftCodegenError> {
+    Ok(match user_error {
+        Some(shape) => format!(
+            "{}VoxError{}",
+            service.service_name.to_upper_camel_case(),
+            swift_type_name_fragment(shape)?
+        ),
+        None => format!(
+            "{}VoxErrorNever",
+            service.service_name.to_upper_camel_case()
+        ),
+    })
+}
+
+fn vox_error_descriptor_fn_name(
+    service: &ServiceDescriptor,
+    user_error: Option<&'static Shape>,
+) -> Result<String, SwiftCodegenError> {
+    Ok(format!(
+        "descriptorFor{}",
+        vox_error_type_name(service, user_error)?
+    ))
+}
+
+fn result_template_type_id() -> Result<String, SwiftCodegenError> {
+    let extracted = extract_schemas(<Result<bool, u32> as Facet<'static>>::SHAPE)
+        .map_err(|error| SwiftCodegenError::Schema(error.to_string()))?;
+    Ok(hex_u64(type_id_of(&extracted.root)?))
+}
+
+fn vox_error_template_type_id() -> Result<String, SwiftCodegenError> {
+    let extracted = extract_schemas(<VoxError<core::convert::Infallible> as Facet<'static>>::SHAPE)
+        .map_err(|error| SwiftCodegenError::Schema(error.to_string()))?;
+    Ok(hex_u64(type_id_of(&extracted.root)?))
+}
+
+fn type_id_of(type_ref: &TypeRef<SchemaHash>) -> Result<u64, SwiftCodegenError> {
+    match type_ref {
+        TypeRef::Concrete { type_id, .. } => Ok(type_id.0),
+        TypeRef::Var { .. } => Err(SwiftCodegenError::Schema(
+            "schema root cannot be a type variable".to_owned(),
+        )),
+    }
 }
 
 fn tuple_field_likes(shape: &'static Shape) -> Result<Vec<FieldLike>, SwiftCodegenError> {
