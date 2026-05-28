@@ -17,7 +17,7 @@ depends on the local binette checkout's Swift probes and verifies that
 Vox-shaped Swift values cross the descriptor import surface, generate binette
 schema bundles, convert those bundles into Vox schema payload bytes, encode and
 decode through binette, and translate between distinct writer/reader schema
-bundles. The Rust receive path accepts those schema payload bytes through
-`SchemaRecvTracker`, so the Swift bridge is now connected to the normal Vox
-schema-exchange path. Full Swift RPC client/server support will build on this
-path rather than reintroducing a separate Swift-native codec.
+bundles. The Rust receive path accepts Swift-derived schema payload bytes
+through `SchemaRecvTracker` and consumes Swift-encoded argument bytes through
+the normal Vox argument deserializer. Full Swift RPC client/server support will
+build on this path rather than reintroducing a separate Swift-native codec.

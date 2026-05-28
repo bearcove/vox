@@ -34,7 +34,8 @@ migration. Swift is coming back through binette's C ABI local-access surface:
 Swift describes its local values with descriptors and thunks, while binette
 remains the shared wire/schema/value layer. The Swift canaries now also convert
 descriptor-derived binette schema bundles into Vox schema payload bytes through
-the Vox C ABI.
+the Vox C ABI, then feed Swift-encoded argument bytes through the normal Rust
+Vox receive path.
 
 ## Implementing a Service
 
@@ -138,7 +139,7 @@ let client = DownstreamClient::new(caller);
 - **Channels** — `Tx<T>`/`Rx<T>` with credit-based flow control
 - **Virtual connections** — Multiple independent contexts on a single link
 - **Transport-agnostic** — TCP and WebSocket, with QUIC/WebTransport planned
-- **Type-safe** — [Facet](https://facet.rs)-based serialization
+- **Type-safe** — [Facet](https://facet.rs)-described values on binette payloads
 
 ## Language Support
 
@@ -146,7 +147,7 @@ let client = DownstreamClient::new(caller);
 |----------|--------|
 | Rust | Reference implementation |
 | TypeScript | Generated client/server |
-| Swift | Binette C ABI local-access and schema-payload bridge canaries |
+| Swift | Binette C ABI local-access and Vox receive-path canaries |
 
 ## Transport Bindings
 
@@ -163,7 +164,7 @@ let client = DownstreamClient::new(caller);
 ```
 rust/           # Rust implementation
 typescript/     # TypeScript packages
-swift/          # Swift/binette local-access and schema-payload bridge canaries
+swift/          # Swift/binette local-access and Vox receive-path canaries
 spec/           # Compliance test suite
 docs/           # Specifications
 ```

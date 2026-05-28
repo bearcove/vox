@@ -63,6 +63,52 @@ pub extern "C" fn vox_schema_payload_from_binette_schema_bundle(
     }
 }
 
+// r[impl schema.exchange.required]
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_canary_accept_swift_args(
+    schema_payload_ptr: *const u8,
+    schema_payload_len: usize,
+    payload_ptr: *const u8,
+    payload_len: usize,
+) -> i32 {
+    let Some(schema_payload_ptr) = (unsafe { schema_payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let Some(payload_ptr) = (unsafe { payload_ptr.as_ref() }) else {
+        return VOX_STATUS_NULL_POINTER;
+    };
+    let schema_payload =
+        unsafe { std::slice::from_raw_parts(schema_payload_ptr, schema_payload_len) };
+    let payload = unsafe { std::slice::from_raw_parts(payload_ptr, payload_len) };
+
+    match accept_swift_args(schema_payload, payload) {
+        Ok(()) => VOX_STATUS_OK,
+        Err(_) => VOX_STATUS_SCHEMA,
+    }
+}
+
+fn accept_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(), String> {
+    type Args = (String, Option<u16>, ());
+
+    let schema_payload = vox_types::SchemaPayload::from_binette(schema_payload)
+        .map_err(|error| error.to_string())?;
+    let method_id = vox_types::MethodId(0xB1_0000_0000_5000);
+    let tracker = vox_types::SchemaRecvTracker::new();
+    tracker
+        .record_received(method_id, vox_types::BindingDirection::Args, schema_payload)
+        .map_err(|error| error.to_string())?;
+
+    let decoded: Args =
+        crate::schema_deser::schema_deserialize_args_borrowed(payload, method_id, &tracker)
+            .map_err(|error| error.to_string())?;
+
+    if decoded == ("swift rpc args".to_owned(), Some(144), ()) {
+        Ok(())
+    } else {
+        Err(format!("unexpected Swift args payload: {decoded:?}"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

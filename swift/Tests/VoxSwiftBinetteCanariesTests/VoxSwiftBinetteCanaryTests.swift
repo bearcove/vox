@@ -1,5 +1,6 @@
 import BinetteSwiftProbes
 import CBinette
+import CVox
 import VoxSwift
 import XCTest
 
@@ -147,6 +148,33 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         let payload = try codec.voxSchemaPayload()
 
         XCTAssertFalse(payload.isEmpty)
+    }
+
+    func testSwiftArgsPayloadFeedsRustVoxReceivePath() throws {
+        let arena = BinetteCAbiDescriptorArena()
+        let descriptor = voxSwiftArgsDescriptor(in: arena)
+        let codec = try VoxSwiftLocalCodec(descriptor: descriptor)
+
+        let schemaPayload = try codec.voxSchemaPayload()
+        var args = VoxSwiftArgs(
+            title: "swift rpc args",
+            retry: 144,
+            output: VoxSwiftChannel()
+        )
+        let payload = try codec.encode(&args)
+
+        let status = schemaPayload.withUnsafeBufferPointer { schemaBuffer in
+            payload.withUnsafeBufferPointer { payloadBuffer in
+                vox_canary_accept_swift_args(
+                    schemaBuffer.baseAddress,
+                    schemaBuffer.count,
+                    payloadBuffer.baseAddress,
+                    payloadBuffer.count
+                )
+            }
+        }
+
+        XCTAssertEqual(status, VOX_STATUS_OK)
     }
 }
 
