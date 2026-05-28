@@ -131,6 +131,18 @@ cargo xtask fmt
 cargo xtask doc
 ```
 
+### Benchmarks
+
+Codec and RPC benchmarks live in `rust/vox-bench`. The current binette tree can
+be compared against an old Vox worktree with:
+
+```bash
+python3 tools/bench_vox_codec_compare.py --filter codec::response --sample-count 10
+```
+
+See `rust/vox-bench/README.md` for the available filters, baseline override
+flags, and report output paths.
+
 ### Fuzzing
 
 ```bash
