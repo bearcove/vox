@@ -111,10 +111,48 @@ pub fn encode_binette_schema_bundle_from_vox_schema_payload_bytes(
 ) -> Result<Vec<u8>, SchemaDeserializeError> {
     let payload = vox_schema::SchemaPayload::from_binette(bytes)
         .map_err(|error| SchemaDeserializeError::Decode(error.to_string()))?;
-    let registry = vox_schema::build_registry(&payload.schemas);
-    let bundle = binette_schema_bundle_from_vox_schemas(payload.root, registry)?;
+    let bundle = binette_schema_bundle_from_vox_payload(payload)?;
     binette::encode_schema_bundle_to_vec(&bundle)
         .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
+}
+
+fn binette_schema_bundle_from_vox_payload(
+    payload: vox_schema::SchemaPayload,
+) -> Result<binette::SchemaBundle, SchemaDeserializeError> {
+    let channel_schema_ids = channel_schema_ids(payload.schemas.iter());
+    let argless_schema_ids = payload
+        .schemas
+        .iter()
+        .filter_map(|schema| {
+            matches!(
+                schema.kind,
+                vox_schema::SchemaKind::Primitive { .. } | vox_schema::SchemaKind::Channel { .. }
+            )
+            .then_some(schema.id)
+        })
+        .collect::<HashSet<_>>();
+
+    Ok(binette::SchemaBundle {
+        schemas: payload
+            .schemas
+            .into_iter()
+            .map(|schema| {
+                binette_schema_from_vox_schema(
+                    schema,
+                    &argless_schema_ids,
+                    &channel_schema_ids,
+                    ChannelProjection::External,
+                )
+            })
+            .collect::<Result<_, _>>()?,
+        root: binette_type_ref_from_vox_type_ref(
+            payload.root,
+            &argless_schema_ids,
+            &channel_schema_ids,
+            ChannelProjection::External,
+        ),
+        attachments: Vec::new(),
+    })
 }
 
 // r[impl schema.exchange.required]
@@ -227,6 +265,7 @@ fn binette_schema_bundle_from_vox_schemas(
     root: vox_schema::TypeRef,
     registry: vox_schema::SchemaRegistry,
 ) -> Result<binette::SchemaBundle, SchemaDeserializeError> {
+    let channel_schema_ids = channel_schema_ids(registry.values());
     let argless_schema_ids = registry
         .values()
         .filter_map(|schema| {
@@ -241,18 +280,51 @@ fn binette_schema_bundle_from_vox_schemas(
     let bundle = binette::SchemaBundle {
         schemas: registry
             .into_values()
-            .map(|schema| binette_schema_from_vox_schema(schema, &argless_schema_ids))
-            .collect::<Result<_, _>>()?,
-        root: binette_type_ref_from_vox_type_ref(root, &argless_schema_ids),
+            .try_fold(Vec::new(), |mut out, schema| {
+                if !channel_schema_ids.contains(&schema.id) {
+                    out.push(binette_schema_from_vox_schema(
+                        schema,
+                        &argless_schema_ids,
+                        &channel_schema_ids,
+                        ChannelProjection::Unit,
+                    )?);
+                }
+                Ok::<_, SchemaDeserializeError>(out)
+            })?,
+        root: binette_type_ref_from_vox_type_ref(
+            root,
+            &argless_schema_ids,
+            &channel_schema_ids,
+            ChannelProjection::Unit,
+        ),
         attachments: Vec::new(),
     };
     binette::canonicalize_schema_bundle(bundle)
         .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))
 }
 
+#[derive(Clone, Copy)]
+enum ChannelProjection {
+    External,
+    Unit,
+}
+
+fn channel_schema_ids<'a>(
+    schemas: impl IntoIterator<Item = &'a vox_schema::Schema>,
+) -> HashSet<vox_schema::SchemaHash> {
+    schemas
+        .into_iter()
+        .filter_map(|schema| {
+            matches!(schema.kind, vox_schema::SchemaKind::Channel { .. }).then_some(schema.id)
+        })
+        .collect()
+}
+
 fn binette_schema_from_vox_schema(
     schema: vox_schema::Schema,
     argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_projection: ChannelProjection,
 ) -> Result<binette::Schema, SchemaDeserializeError> {
     let type_params = if matches!(schema.kind, vox_schema::SchemaKind::Channel { .. }) {
         Vec::new()
@@ -267,13 +339,20 @@ fn binette_schema_from_vox_schema(
     Ok(binette::Schema {
         id: binette::TypeId(schema.id.0),
         type_params,
-        kind: binette_schema_kind_from_vox_schema_kind(schema.kind, argless_schema_ids)?,
+        kind: binette_schema_kind_from_vox_schema_kind(
+            schema.kind,
+            argless_schema_ids,
+            channel_schema_ids,
+            channel_projection,
+        )?,
     })
 }
 
 fn binette_schema_kind_from_vox_schema_kind(
     kind: vox_schema::SchemaKind,
     argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_projection: ChannelProjection,
 ) -> Result<binette::SchemaKind, SchemaDeserializeError> {
     Ok(match kind {
         vox_schema::SchemaKind::Struct { name, fields } => binette::SchemaKind::Struct {
@@ -285,6 +364,8 @@ fn binette_schema_kind_from_vox_schema_kind(
                     type_ref: binette_type_ref_from_vox_type_ref(
                         field.type_ref,
                         argless_schema_ids,
+                        channel_schema_ids,
+                        channel_projection,
                     ),
                     required: field.required,
                 })
@@ -300,6 +381,8 @@ fn binette_schema_kind_from_vox_schema_kind(
                     payload: binette_variant_payload_from_vox_variant_payload(
                         variant.payload,
                         argless_schema_ids,
+                        channel_schema_ids,
+                        channel_projection,
                     ),
                 })
                 .collect(),
@@ -307,45 +390,132 @@ fn binette_schema_kind_from_vox_schema_kind(
         vox_schema::SchemaKind::Tuple { elements } => binette::SchemaKind::Tuple {
             elements: elements
                 .into_iter()
-                .map(|type_ref| binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids))
+                .map(|type_ref| {
+                    binette_type_ref_from_vox_type_ref(
+                        type_ref,
+                        argless_schema_ids,
+                        channel_schema_ids,
+                        channel_projection,
+                    )
+                })
                 .collect(),
         },
         vox_schema::SchemaKind::List { element } => binette::SchemaKind::List {
-            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+            element: binette_type_ref_from_vox_type_ref(
+                element,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
         },
         vox_schema::SchemaKind::Map { key, value } => binette::SchemaKind::Map {
-            key: binette_type_ref_from_vox_type_ref(key, argless_schema_ids),
-            value: binette_type_ref_from_vox_type_ref(value, argless_schema_ids),
+            key: binette_type_ref_from_vox_type_ref(
+                key,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
+            value: binette_type_ref_from_vox_type_ref(
+                value,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
         },
         vox_schema::SchemaKind::Array { element, length } => binette::SchemaKind::Array {
-            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+            element: binette_type_ref_from_vox_type_ref(
+                element,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
             dimensions: vec![length],
         },
         vox_schema::SchemaKind::Option { element } => binette::SchemaKind::Option {
-            element: binette_type_ref_from_vox_type_ref(element, argless_schema_ids),
+            element: binette_type_ref_from_vox_type_ref(
+                element,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
         },
-        vox_schema::SchemaKind::Channel { .. } => {
-            binette::SchemaKind::Primitive(binette::Primitive::Unit)
-        }
+        vox_schema::SchemaKind::Channel { direction, element } => match channel_projection {
+            ChannelProjection::External => binette::SchemaKind::External {
+                kind: "vox.channel".to_owned(),
+                metadata: binette_channel_metadata(
+                    direction,
+                    element,
+                    argless_schema_ids,
+                    channel_schema_ids,
+                    channel_projection,
+                )?,
+            },
+            ChannelProjection::Unit => binette::SchemaKind::Primitive(binette::Primitive::Unit),
+        },
         vox_schema::SchemaKind::Primitive { primitive_type } => {
             binette::SchemaKind::Primitive(binette_primitive_from_vox_primitive(primitive_type))
         }
     })
 }
 
+fn binette_channel_metadata(
+    direction: vox_schema::ChannelDirection,
+    element: vox_schema::TypeRef,
+    argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_projection: ChannelProjection,
+) -> Result<binette::Value, SchemaDeserializeError> {
+    let direction = match direction {
+        vox_schema::ChannelDirection::Tx => "tx",
+        vox_schema::ChannelDirection::Rx => "rx",
+    };
+    let element = binette_type_ref_from_vox_type_ref(
+        element,
+        argless_schema_ids,
+        channel_schema_ids,
+        channel_projection,
+    );
+    let element = binette::type_ref_to_value(&element)
+        .map_err(|error| SchemaDeserializeError::Plan(error.to_string()))?;
+    Ok(binette::Value::Struct(vec![
+        binette::FieldValue {
+            name: "direction".to_owned(),
+            value: binette::Value::String(direction.to_owned()),
+        },
+        binette::FieldValue {
+            name: "element".to_owned(),
+            value: element,
+        },
+    ]))
+}
+
 fn binette_variant_payload_from_vox_variant_payload(
     payload: vox_schema::VariantPayload,
     argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_projection: ChannelProjection,
 ) -> binette::VariantPayload {
     match payload {
         vox_schema::VariantPayload::Unit => binette::VariantPayload::Unit,
         vox_schema::VariantPayload::Newtype { type_ref } => binette::VariantPayload::Newtype {
-            type_ref: binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids),
+            type_ref: binette_type_ref_from_vox_type_ref(
+                type_ref,
+                argless_schema_ids,
+                channel_schema_ids,
+                channel_projection,
+            ),
         },
         vox_schema::VariantPayload::Tuple { types } => binette::VariantPayload::Tuple {
             elements: types
                 .into_iter()
-                .map(|type_ref| binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids))
+                .map(|type_ref| {
+                    binette_type_ref_from_vox_type_ref(
+                        type_ref,
+                        argless_schema_ids,
+                        channel_schema_ids,
+                        channel_projection,
+                    )
+                })
                 .collect(),
         },
         vox_schema::VariantPayload::Struct { fields } => binette::VariantPayload::Struct {
@@ -356,6 +526,8 @@ fn binette_variant_payload_from_vox_variant_payload(
                     type_ref: binette_type_ref_from_vox_type_ref(
                         field.type_ref,
                         argless_schema_ids,
+                        channel_schema_ids,
+                        channel_projection,
                     ),
                     required: field.required,
                 })
@@ -367,16 +539,29 @@ fn binette_variant_payload_from_vox_variant_payload(
 fn binette_type_ref_from_vox_type_ref(
     type_ref: vox_schema::TypeRef,
     argless_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_schema_ids: &HashSet<vox_schema::SchemaHash>,
+    channel_projection: ChannelProjection,
 ) -> binette::TypeRef {
     match type_ref {
         vox_schema::TypeRef::Concrete { type_id, args } => binette::TypeRef::Concrete {
-            type_id: binette::TypeId(type_id.0),
+            type_id: if matches!(channel_projection, ChannelProjection::Unit)
+                && channel_schema_ids.contains(&type_id)
+            {
+                binette::primitive_type_id(binette::Primitive::Unit)
+            } else {
+                binette::TypeId(type_id.0)
+            },
             args: if argless_schema_ids.contains(&type_id) {
                 Vec::new()
             } else {
                 args.into_iter()
                     .map(|type_ref| {
-                        binette_type_ref_from_vox_type_ref(type_ref, argless_schema_ids)
+                        binette_type_ref_from_vox_type_ref(
+                            type_ref,
+                            argless_schema_ids,
+                            channel_schema_ids,
+                            channel_projection,
+                        )
                     })
                     .collect()
             },
@@ -877,6 +1062,78 @@ mod tests {
     }
 
     #[test]
+    fn binette_external_channel_schema_projects_to_unit_for_rust_decode() {
+        let channel_id = binette::TypeId(0xB1_0000_0000_3001);
+        let tuple_id = binette::TypeId(0xB1_0000_0000_3002);
+        let element =
+            binette::TypeRef::concrete(binette::primitive_type_id(binette::Primitive::U32));
+        let bundle = binette::canonicalize_schema_bundle(binette::SchemaBundle {
+            schemas: vec![
+                binette::Schema {
+                    id: channel_id,
+                    type_params: Vec::new(),
+                    kind: binette::SchemaKind::External {
+                        kind: "vox.channel".to_string(),
+                        metadata: binette::Value::Struct(vec![
+                            binette::FieldValue {
+                                name: "direction".to_owned(),
+                                value: binette::Value::String("tx".to_owned()),
+                            },
+                            binette::FieldValue {
+                                name: "element".to_owned(),
+                                value: binette::type_ref_to_value(&element)
+                                    .expect("type ref metadata should encode"),
+                            },
+                        ]),
+                    },
+                },
+                binette::Schema {
+                    id: tuple_id,
+                    type_params: Vec::new(),
+                    kind: binette::SchemaKind::Tuple {
+                        elements: vec![
+                            binette::TypeRef::concrete(binette::primitive_type_id(
+                                binette::Primitive::String,
+                            )),
+                            binette::TypeRef::concrete(binette::primitive_type_id(
+                                binette::Primitive::U16,
+                            )),
+                            binette::TypeRef::concrete(channel_id),
+                        ],
+                    },
+                },
+            ],
+            root: binette::TypeRef::concrete(tuple_id),
+            attachments: Vec::new(),
+        })
+        .expect("remote channel bundle should canonicalize");
+        let payload = vox_schema_payload_from_binette_schema_bundle(bundle)
+            .expect("remote channel bundle should convert to a Vox schema payload");
+        let registry = vox_schema::build_registry(&payload.schemas);
+        let projected = binette_schema_bundle_from_vox_schemas(payload.root, registry)
+            .expect("Vox channel schemas should project to unit for Rust decode");
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(&projected)
+            .expect("projected bundle should install");
+        let binette::TypeRef::Concrete { type_id, args } = &projected.root else {
+            panic!("expected concrete projected root, got {:?}", projected.root);
+        };
+        assert!(args.is_empty());
+        let root = registry
+            .get(*type_id)
+            .expect("projected root should resolve");
+        let binette::SchemaKind::Tuple { elements } = &root.kind else {
+            panic!("expected tuple root, got {root:?}");
+        };
+
+        assert_eq!(
+            elements[2],
+            binette::TypeRef::concrete(binette::primitive_type_id(binette::Primitive::Unit))
+        );
+    }
+
+    #[test]
     fn vox_channel_schema_lowers_to_unit_for_binette_payloads() {
         let extracted = extract_schemas(<Tx<u32> as Facet>::SHAPE).expect("schema extraction");
         let registry = extracted
@@ -891,15 +1148,9 @@ mod tests {
             panic!("expected concrete channel root, got {:#?}", bundle.root);
         };
         assert!(args.is_empty());
-        let channel = bundle
-            .schemas
-            .iter()
-            .find(|schema| schema.id == *type_id)
-            .expect("channel schema should be present");
-
         assert_eq!(
-            channel.kind,
-            binette::SchemaKind::Primitive(binette::Primitive::Unit)
+            *type_id,
+            binette::primitive_type_id(binette::Primitive::Unit)
         );
     }
 }

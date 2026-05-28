@@ -744,4 +744,100 @@ mod tests {
 
         assert_eq!(decoded, ("swift-ish args".to_owned(), 0xCAFE_BABE));
     }
+
+    // r[verify schema.exchange.required]
+    #[test]
+    fn c_api_converted_schema_payload_preserves_optional_struct_fields_for_binette_decode() {
+        #[derive(Debug, PartialEq, facet::Facet)]
+        struct Person {
+            name: String,
+            age: u8,
+            email: Option<String>,
+        }
+
+        let mut descriptor = binette::local_access::rust_facet_descriptor_for::<Person>()
+            .expect("test descriptor should extract");
+        let bundle =
+            binette::local_access::synthetic_schema_bundle_for_local_descriptor(&mut descriptor)
+                .expect("test descriptor schema should synthesize");
+        let bundle_bytes =
+            binette::encode_schema_bundle_to_vec(&bundle).expect("schema bundle should encode");
+
+        let mut schema_payload = VoxByteBuffer::empty();
+        let status = vox_schema_payload_from_binette_schema_bundle(
+            bundle_bytes.as_ptr(),
+            bundle_bytes.len(),
+            &mut schema_payload,
+        );
+        assert_eq!(status, VOX_STATUS_OK);
+        let payload_bytes =
+            unsafe { std::slice::from_raw_parts(schema_payload.ptr, schema_payload.len).to_vec() };
+        vox_byte_buffer_free(schema_payload);
+
+        let mut converted_bundle = VoxByteBuffer::empty();
+        let status = vox_binette_schema_bundle_from_schema_payload(
+            payload_bytes.as_ptr(),
+            payload_bytes.len(),
+            &mut converted_bundle,
+        );
+        assert_eq!(status, VOX_STATUS_OK);
+        let converted_bundle_bytes = unsafe {
+            std::slice::from_raw_parts(converted_bundle.ptr, converted_bundle.len).to_vec()
+        };
+        vox_byte_buffer_free(converted_bundle);
+
+        let value = Person {
+            name: "Alice".to_owned(),
+            age: 30,
+            email: Some("alice@example.com".to_owned()),
+        };
+        let converted_bundle = binette::decode_schema_bundle_from_slice(&converted_bundle_bytes)
+            .expect("converted bundle should decode");
+        let writer_plan = binette::writer_plan_for_bundle(&converted_bundle)
+            .expect("converted bundle should produce writer plan");
+        let encoder = binette::hybrid_local_stencil_encoder_from_plan(
+            &writer_plan,
+            &descriptor,
+            &binette::local_access::LocalThunkBindings::new(),
+        )
+        .expect("converted bundle should compile local encoder");
+        let encoded = unsafe { encoder.encode_raw_to_vec((&value as *const Person).cast()) }
+            .expect("local value should encode");
+
+        let mut writer_registry = binette::SchemaRegistry::new();
+        writer_registry
+            .install_bundle(&converted_bundle)
+            .expect("converted bundle should install");
+        let reader_plan = binette::reader_plan_for_bundles(&converted_bundle, &converted_bundle)
+            .expect("converted bundle should produce reader plan");
+        let decoder = binette::hybrid_local_stencil_decoder_from_plan(
+            &reader_plan,
+            &writer_registry,
+            &descriptor,
+            &binette::local_access::LocalThunkBindings::new(),
+        )
+        .expect("converted bundle should compile local decoder");
+        let mut decoded = std::mem::MaybeUninit::<Person>::uninit();
+        unsafe { decoder.decode_raw_into(&encoded, decoded.as_mut_ptr().cast()) }
+            .expect("local value should decode");
+        let decoded = unsafe { decoded.assume_init() };
+        assert_eq!(decoded, value);
+    }
+
+    // r[verify schema.exchange.required]
+    #[test]
+    fn c_api_response_schema_payload_converts_to_installable_binette_bundle() {
+        let payload = vox_types::SchemaSendTracker::plan_for_shape(SwiftCanaryReply::SHAPE)
+            .expect("reply schema should plan")
+            .to_binette();
+
+        let bundle_bytes = encode_binette_schema_bundle_from_vox_schema_payload_bytes(&payload.0)
+            .expect("vox schema payload should convert back to binette bundle");
+        let bundle = binette::decode_schema_bundle_from_slice(&bundle_bytes)
+            .expect("converted binette bundle should decode");
+        let mut registry = binette::SchemaRegistry::new();
+        registry
+            .install_bundle(&bundle)
+            .expect("converted binette bundle should install");
+    }
 }

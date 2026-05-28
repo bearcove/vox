@@ -63,6 +63,22 @@ private func assertBuilds(
     XCTAssertNoThrow(try build(), name, file: file, line: line)
 }
 
+private func decodeResponse<T>(
+    _ label: String,
+    codec: VoxSwiftMethodCodec,
+    wire: VoxSwiftWirePayload,
+    as type: T.Type,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws -> T {
+    do {
+        return try codec.decodeResponse(wire, as: type)
+    } catch {
+        XCTFail("\(label): \(error)", file: file, line: line)
+        throw error
+    }
+}
+
 final class VoxSwiftBinetteCanaryTests: XCTestCase {
     func testGeneratedTestbedMethodCodecsBuildDescriptors() throws {
         let codecs = TestbedMethodCodecs()
@@ -104,6 +120,56 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
         assertBuilds("echoTag") { try codecs.echoTag() }
         assertBuilds("echoMeasurement") { try codecs.echoMeasurement() }
         assertBuilds("echoConfig") { try codecs.echoConfig() }
+    }
+
+    func testGeneratedTestbedLookupRoundTripsResultPayloads() throws {
+        let codecs = TestbedMethodCodecs()
+        let echoCodec = try codecs.echo()
+        var echo = "hello"
+        let echoWire = try echoCodec.encodeResponse(&echo)
+        XCTAssertEqual(try decodeResponse("echo", codec: echoCodec, wire: echoWire, as: String.self), echo)
+
+        let personCodec = try codecs.createPerson()
+        var person = Person(name: "Alice", age: 30, email: "alice@example.com")
+        let personWire = try personCodec.encodeResponse(&person)
+        let decodedPerson = try decodeResponse("person", codec: personCodec, wire: personWire, as: Person.self)
+        XCTAssertEqual(decodedPerson.name, person.name)
+        XCTAssertEqual(decodedPerson.age, person.age)
+        XCTAssertEqual(decodedPerson.email, person.email)
+
+        let codec = try codecs.lookup()
+
+        var args = TestbedLookupArgs(id: 1)
+        let request = try codec.encodeArgs(&args)
+        XCTAssertFalse(request.schemaPayload.isEmpty)
+        XCTAssertFalse(request.payload.isEmpty)
+
+        var ok = VoxResultPersonLookupError.ok(
+            Person(name: "Alice", age: 30, email: "alice@example.com")
+        )
+        let okWire = try codec.encodeResponse(&ok)
+        let decodedOk = try decodeResponse("lookup ok", codec: codec, wire: okWire, as: VoxResultPersonLookupError.self)
+        switch decodedOk {
+        case .ok(let person):
+            XCTAssertEqual(person.name, "Alice")
+            XCTAssertEqual(person.age, 30)
+            XCTAssertEqual(person.email, "alice@example.com")
+        case .err:
+            XCTFail("expected lookup success")
+        }
+
+        var err = VoxResultPersonLookupError.err(.notFound)
+        let errWire = try codec.encodeResponse(&err)
+        let decodedErr = try decodeResponse("lookup err", codec: codec, wire: errWire, as: VoxResultPersonLookupError.self)
+        switch decodedErr {
+        case .ok:
+            XCTFail("expected lookup error")
+        case .err(let error):
+            guard case .notFound = error else {
+                XCTFail("expected notFound")
+                return
+            }
+        }
     }
 
     func testVoxShapedSwiftValueEncodesAndDecodesThroughBinetteLocalAccess() throws {

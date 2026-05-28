@@ -34,6 +34,9 @@ pub enum SchemaExtractError {
 
     /// A DeclId was expected in the assigned map but wasn't found.
     MissingAssignment { context: String },
+
+    /// A schema extracted for Vox could not be represented as a binette schema.
+    BinetteSchema { context: String },
 }
 
 impl std::fmt::Display for SchemaExtractError {
@@ -56,6 +59,9 @@ impl std::fmt::Display for SchemaExtractError {
             }
             Self::MissingAssignment { context } => {
                 write!(f, "schema extraction: missing DeclId assignment: {context}")
+            }
+            Self::BinetteSchema { context } => {
+                write!(f, "schema extraction: binette schema error: {context}")
             }
         }
     }
@@ -148,7 +154,7 @@ impl SchemaSendTracker {
     /// any per-connection send tracking.
     pub fn plan_for_shape(shape: &'static Shape) -> Result<PreparedSchemaPlan, SchemaExtractError> {
         let extracted = extract_schemas(shape)?;
-        Ok(PreparedSchemaPlan {
+        canonicalize_prepared_plan_for_binette(PreparedSchemaPlan {
             schemas: extracted.schemas.to_vec(),
             root: extracted.root.clone(),
         })
@@ -320,6 +326,411 @@ impl SchemaSendTracker {
         shape: &'static Shape,
     ) -> Result<Arc<ExtractedSchemas>, SchemaExtractError> {
         self::extract_schemas(shape)
+    }
+}
+
+fn canonicalize_prepared_plan_for_binette(
+    prepared: PreparedSchemaPlan,
+) -> Result<PreparedSchemaPlan, SchemaExtractError> {
+    let bundle = binette::SchemaBundle {
+        schemas: prepared
+            .schemas
+            .into_iter()
+            .map(binette_schema_from_vox_schema)
+            .collect::<Result<_, _>>()?,
+        root: binette_type_ref_from_vox_type_ref(prepared.root),
+        attachments: Vec::new(),
+    };
+    let bundle = binette::canonicalize_schema_bundle(bundle).map_err(|error| {
+        SchemaExtractError::BinetteSchema {
+            context: error.to_string(),
+        }
+    })?;
+
+    Ok(PreparedSchemaPlan {
+        schemas: bundle
+            .schemas
+            .into_iter()
+            .map(vox_schema_from_binette_schema)
+            .collect::<Result<_, _>>()?,
+        root: vox_type_ref_from_binette_type_ref(bundle.root),
+    })
+}
+
+fn binette_schema_from_vox_schema(schema: Schema) -> Result<binette::Schema, SchemaExtractError> {
+    let type_params = if matches!(schema.kind, SchemaKind::Channel { .. }) {
+        Vec::new()
+    } else {
+        schema
+            .type_params
+            .iter()
+            .map(|param| param.0.clone())
+            .collect()
+    };
+
+    Ok(binette::Schema {
+        id: binette::TypeId(schema.id.0),
+        type_params,
+        kind: binette_schema_kind_from_vox_schema_kind(schema.kind)?,
+    })
+}
+
+fn binette_schema_kind_from_vox_schema_kind(
+    kind: SchemaKind,
+) -> Result<binette::SchemaKind, SchemaExtractError> {
+    Ok(match kind {
+        SchemaKind::Struct { name, fields } => binette::SchemaKind::Struct {
+            name,
+            fields: fields
+                .into_iter()
+                .map(|field| binette::Field {
+                    name: field.name,
+                    type_ref: binette_type_ref_from_vox_type_ref(field.type_ref),
+                    required: field.required,
+                })
+                .collect(),
+        },
+        SchemaKind::Enum { name, variants } => binette::SchemaKind::Enum {
+            name,
+            variants: variants
+                .into_iter()
+                .map(|variant| binette::Variant {
+                    name: variant.name,
+                    index: variant.index,
+                    payload: binette_variant_payload_from_vox_variant_payload(variant.payload),
+                })
+                .collect(),
+        },
+        SchemaKind::Tuple { elements } => binette::SchemaKind::Tuple {
+            elements: elements
+                .into_iter()
+                .map(binette_type_ref_from_vox_type_ref)
+                .collect(),
+        },
+        SchemaKind::List { element } => binette::SchemaKind::List {
+            element: binette_type_ref_from_vox_type_ref(element),
+        },
+        SchemaKind::Map { key, value } => binette::SchemaKind::Map {
+            key: binette_type_ref_from_vox_type_ref(key),
+            value: binette_type_ref_from_vox_type_ref(value),
+        },
+        SchemaKind::Array { element, length } => binette::SchemaKind::Array {
+            element: binette_type_ref_from_vox_type_ref(element),
+            dimensions: vec![length],
+        },
+        SchemaKind::Option { element } => binette::SchemaKind::Option {
+            element: binette_type_ref_from_vox_type_ref(element),
+        },
+        SchemaKind::Channel { direction, element } => binette::SchemaKind::External {
+            kind: "vox.channel".to_owned(),
+            metadata: binette_channel_metadata(direction, element)?,
+        },
+        SchemaKind::Primitive { primitive_type } => {
+            binette::SchemaKind::Primitive(binette_primitive_from_vox_primitive(primitive_type))
+        }
+    })
+}
+
+fn binette_channel_metadata(
+    direction: ChannelDirection,
+    element: TypeRef,
+) -> Result<binette::Value, SchemaExtractError> {
+    let direction = match direction {
+        ChannelDirection::Tx => "tx",
+        ChannelDirection::Rx => "rx",
+    };
+    let element = binette_type_ref_from_vox_type_ref(element);
+    let element = binette::type_ref_to_value(&element).map_err(|error| {
+        SchemaExtractError::BinetteSchema {
+            context: error.to_string(),
+        }
+    })?;
+    Ok(binette::Value::Struct(vec![
+        binette::FieldValue {
+            name: "direction".to_owned(),
+            value: binette::Value::String(direction.to_owned()),
+        },
+        binette::FieldValue {
+            name: "element".to_owned(),
+            value: element,
+        },
+    ]))
+}
+
+fn binette_variant_payload_from_vox_variant_payload(
+    payload: VariantPayload,
+) -> binette::VariantPayload {
+    match payload {
+        VariantPayload::Unit => binette::VariantPayload::Unit,
+        VariantPayload::Newtype { type_ref } => binette::VariantPayload::Newtype {
+            type_ref: binette_type_ref_from_vox_type_ref(type_ref),
+        },
+        VariantPayload::Tuple { types } => binette::VariantPayload::Tuple {
+            elements: types
+                .into_iter()
+                .map(binette_type_ref_from_vox_type_ref)
+                .collect(),
+        },
+        VariantPayload::Struct { fields } => binette::VariantPayload::Struct {
+            fields: fields
+                .into_iter()
+                .map(|field| binette::Field {
+                    name: field.name,
+                    type_ref: binette_type_ref_from_vox_type_ref(field.type_ref),
+                    required: field.required,
+                })
+                .collect(),
+        },
+    }
+}
+
+fn binette_type_ref_from_vox_type_ref(type_ref: TypeRef) -> binette::TypeRef {
+    match type_ref {
+        TypeRef::Concrete { type_id, args } => binette::TypeRef::Concrete {
+            type_id: binette::TypeId(type_id.0),
+            args: args
+                .into_iter()
+                .map(binette_type_ref_from_vox_type_ref)
+                .collect(),
+        },
+        TypeRef::Var { name } => binette::TypeRef::Var { name: name.0 },
+    }
+}
+
+fn binette_primitive_from_vox_primitive(primitive: PrimitiveType) -> binette::Primitive {
+    match primitive {
+        PrimitiveType::Bool => binette::Primitive::Bool,
+        PrimitiveType::U8 => binette::Primitive::U8,
+        PrimitiveType::U16 => binette::Primitive::U16,
+        PrimitiveType::U32 => binette::Primitive::U32,
+        PrimitiveType::U64 => binette::Primitive::U64,
+        PrimitiveType::U128 => binette::Primitive::U128,
+        PrimitiveType::I8 => binette::Primitive::I8,
+        PrimitiveType::I16 => binette::Primitive::I16,
+        PrimitiveType::I32 => binette::Primitive::I32,
+        PrimitiveType::I64 => binette::Primitive::I64,
+        PrimitiveType::I128 => binette::Primitive::I128,
+        PrimitiveType::F32 => binette::Primitive::F32,
+        PrimitiveType::F64 => binette::Primitive::F64,
+        PrimitiveType::Char => binette::Primitive::Char,
+        PrimitiveType::String => binette::Primitive::String,
+        PrimitiveType::Unit => binette::Primitive::Unit,
+        PrimitiveType::Never => binette::Primitive::Never,
+        PrimitiveType::Bytes => binette::Primitive::Bytes,
+        PrimitiveType::Payload => binette::Primitive::Payload,
+    }
+}
+
+fn vox_schema_from_binette_schema(schema: binette::Schema) -> Result<Schema, SchemaExtractError> {
+    Ok(Schema {
+        id: SchemaHash(schema.id.0),
+        type_params: schema.type_params.into_iter().map(TypeParamName).collect(),
+        kind: vox_schema_kind_from_binette_schema_kind(schema.kind)?,
+    })
+}
+
+fn vox_schema_kind_from_binette_schema_kind(
+    kind: binette::SchemaKind,
+) -> Result<SchemaKind, SchemaExtractError> {
+    Ok(match kind {
+        binette::SchemaKind::Primitive(primitive) => SchemaKind::Primitive {
+            primitive_type: vox_primitive_from_binette_primitive(primitive),
+        },
+        binette::SchemaKind::Struct { name, fields } => SchemaKind::Struct {
+            name,
+            fields: fields
+                .into_iter()
+                .map(|field| FieldSchema {
+                    name: field.name,
+                    type_ref: vox_type_ref_from_binette_type_ref(field.type_ref),
+                    required: field.required,
+                })
+                .collect(),
+        },
+        binette::SchemaKind::Enum { name, variants } => SchemaKind::Enum {
+            name,
+            variants: variants
+                .into_iter()
+                .map(|variant| VariantSchema {
+                    name: variant.name,
+                    index: variant.index,
+                    payload: vox_variant_payload_from_binette_variant_payload(variant.payload),
+                })
+                .collect(),
+        },
+        binette::SchemaKind::Tuple { elements } => SchemaKind::Tuple {
+            elements: elements
+                .into_iter()
+                .map(vox_type_ref_from_binette_type_ref)
+                .collect(),
+        },
+        binette::SchemaKind::List { element } => SchemaKind::List {
+            element: vox_type_ref_from_binette_type_ref(element),
+        },
+        binette::SchemaKind::Set { .. } => {
+            return Err(SchemaExtractError::BinetteSchema {
+                context: "Vox schema model does not have a set kind".to_owned(),
+            });
+        }
+        binette::SchemaKind::Map { key, value } => SchemaKind::Map {
+            key: vox_type_ref_from_binette_type_ref(key),
+            value: vox_type_ref_from_binette_type_ref(value),
+        },
+        binette::SchemaKind::Array {
+            element,
+            dimensions,
+        } => {
+            let [length] = dimensions.as_slice() else {
+                return Err(SchemaExtractError::BinetteSchema {
+                    context: "Vox schema model only supports one-dimensional arrays".to_owned(),
+                });
+            };
+            SchemaKind::Array {
+                element: vox_type_ref_from_binette_type_ref(element),
+                length: *length,
+            }
+        }
+        binette::SchemaKind::Option { element } => SchemaKind::Option {
+            element: vox_type_ref_from_binette_type_ref(element),
+        },
+        binette::SchemaKind::Dynamic => {
+            return Err(SchemaExtractError::BinetteSchema {
+                context: "Vox schema model does not have a dynamic value kind".to_owned(),
+            });
+        }
+        binette::SchemaKind::External { kind, metadata } => {
+            vox_channel_schema_from_binette_external(kind, metadata)?
+        }
+    })
+}
+
+fn vox_channel_schema_from_binette_external(
+    kind: String,
+    metadata: binette::Value,
+) -> Result<SchemaKind, SchemaExtractError> {
+    if kind != "vox.channel" {
+        return Err(SchemaExtractError::BinetteSchema {
+            context: format!("Vox schema model cannot send binette external {kind:?}"),
+        });
+    }
+
+    let binette::Value::Struct(fields) = metadata else {
+        return Err(SchemaExtractError::BinetteSchema {
+            context: "vox.channel external metadata must be a struct".to_owned(),
+        });
+    };
+    let direction = metadata_field(&fields, "direction")?;
+    let element = metadata_field(&fields, "element")?;
+
+    let direction = match direction {
+        binette::Value::String(direction) if direction == "tx" => ChannelDirection::Tx,
+        binette::Value::String(direction) if direction == "rx" => ChannelDirection::Rx,
+        binette::Value::String(direction) => {
+            return Err(SchemaExtractError::BinetteSchema {
+                context: format!(
+                    "vox.channel direction must be \"tx\" or \"rx\", got {direction:?}"
+                ),
+            });
+        }
+        other => {
+            return Err(SchemaExtractError::BinetteSchema {
+                context: format!("vox.channel direction must be a string, got {other:?}"),
+            });
+        }
+    };
+    let element = binette::type_ref_from_value(element)
+        .map(vox_type_ref_from_binette_type_ref)
+        .map_err(|error| SchemaExtractError::BinetteSchema {
+            context: error.to_string(),
+        })?;
+
+    Ok(SchemaKind::Channel { direction, element })
+}
+
+fn metadata_field<'a>(
+    fields: &'a [binette::FieldValue],
+    name: &str,
+) -> Result<&'a binette::Value, SchemaExtractError> {
+    let mut matches = fields
+        .iter()
+        .filter(|field| field.name == name)
+        .map(|field| &field.value);
+    let Some(value) = matches.next() else {
+        return Err(SchemaExtractError::BinetteSchema {
+            context: format!("vox.channel external metadata missing {name:?}"),
+        });
+    };
+    if matches.next().is_some() {
+        return Err(SchemaExtractError::BinetteSchema {
+            context: format!("vox.channel external metadata has duplicate {name:?}"),
+        });
+    }
+    Ok(value)
+}
+
+fn vox_variant_payload_from_binette_variant_payload(
+    payload: binette::VariantPayload,
+) -> VariantPayload {
+    match payload {
+        binette::VariantPayload::Unit => VariantPayload::Unit,
+        binette::VariantPayload::Newtype { type_ref } => VariantPayload::Newtype {
+            type_ref: vox_type_ref_from_binette_type_ref(type_ref),
+        },
+        binette::VariantPayload::Tuple { elements } => VariantPayload::Tuple {
+            types: elements
+                .into_iter()
+                .map(vox_type_ref_from_binette_type_ref)
+                .collect(),
+        },
+        binette::VariantPayload::Struct { fields } => VariantPayload::Struct {
+            fields: fields
+                .into_iter()
+                .map(|field| FieldSchema {
+                    name: field.name,
+                    type_ref: vox_type_ref_from_binette_type_ref(field.type_ref),
+                    required: field.required,
+                })
+                .collect(),
+        },
+    }
+}
+
+fn vox_type_ref_from_binette_type_ref(type_ref: binette::TypeRef) -> TypeRef {
+    match type_ref {
+        binette::TypeRef::Concrete { type_id, args } => TypeRef::Concrete {
+            type_id: SchemaHash(type_id.0),
+            args: args
+                .into_iter()
+                .map(vox_type_ref_from_binette_type_ref)
+                .collect(),
+        },
+        binette::TypeRef::Var { name } => TypeRef::Var {
+            name: TypeParamName(name),
+        },
+    }
+}
+
+fn vox_primitive_from_binette_primitive(primitive: binette::Primitive) -> PrimitiveType {
+    match primitive {
+        binette::Primitive::Bool => PrimitiveType::Bool,
+        binette::Primitive::U8 => PrimitiveType::U8,
+        binette::Primitive::U16 => PrimitiveType::U16,
+        binette::Primitive::U32 => PrimitiveType::U32,
+        binette::Primitive::U64 => PrimitiveType::U64,
+        binette::Primitive::U128 => PrimitiveType::U128,
+        binette::Primitive::I8 => PrimitiveType::I8,
+        binette::Primitive::I16 => PrimitiveType::I16,
+        binette::Primitive::I32 => PrimitiveType::I32,
+        binette::Primitive::I64 => PrimitiveType::I64,
+        binette::Primitive::I128 => PrimitiveType::I128,
+        binette::Primitive::F32 => PrimitiveType::F32,
+        binette::Primitive::F64 => PrimitiveType::F64,
+        binette::Primitive::Char => PrimitiveType::Char,
+        binette::Primitive::String => PrimitiveType::String,
+        binette::Primitive::Unit => PrimitiveType::Unit,
+        binette::Primitive::Never => PrimitiveType::Never,
+        binette::Primitive::Bytes => PrimitiveType::Bytes,
+        binette::Primitive::Payload => PrimitiveType::Payload,
     }
 }
 

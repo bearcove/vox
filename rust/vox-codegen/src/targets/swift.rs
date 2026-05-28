@@ -1358,29 +1358,6 @@ impl<'a> SwiftGenerator<'a> {
                 self.line("        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))");
                 self.line("    }");
             }
-            ShapeKind::Enum(EnumInfo { variants, .. })
-                if variants
-                    .iter()
-                    .all(|variant| matches!(classify_variant(variant), VariantKind::Unit)) =>
-            {
-                self.line(
-                    "    guard payloadLen == MemoryLayout<UInt32>.size else { return false }",
-                );
-                self.line("    var payloadIndex: UInt32 = 0");
-                self.line("    withUnsafeMutableBytes(of: &payloadIndex) { out in");
-                self.line("        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))");
-                self.line("    }");
-                self.line(&format!("    let payloadValue: {inner_type}"));
-                self.line("    switch payloadIndex {");
-                for (index, variant) in variants.iter().enumerate() {
-                    self.line(&format!(
-                        "    case {index}: payloadValue = .{}",
-                        swift_ident(variant.name)
-                    ));
-                }
-                self.line("    default: return false");
-                self.line("    }");
-            }
             ShapeKind::Struct(_)
             | ShapeKind::Tuple { .. }
             | ShapeKind::TupleStruct { .. }

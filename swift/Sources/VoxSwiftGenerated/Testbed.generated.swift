@@ -2330,17 +2330,8 @@ private func voxResultInt64MathErrorDropErrProjected(_ value: UnsafeMutablePoint
 }
 
 private func voxResultInt64MathErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
-    guard payloadLen == MemoryLayout<UInt32>.size else { return false }
-    var payloadIndex: UInt32 = 0
-    withUnsafeMutableBytes(of: &payloadIndex) { out in
-        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
-    }
-    let payloadValue: MathError
-    switch payloadIndex {
-    case 0: payloadValue = .divisionByZero
-    case 1: payloadValue = .overflow
-    default: return false
-    }
+    guard payloadLen == MemoryLayout<MathError>.size else { return false }
+    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self).move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultInt64MathError.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -2460,17 +2451,8 @@ private func voxResultPersonLookupErrorDropErrProjected(_ value: UnsafeMutablePo
 }
 
 private func voxResultPersonLookupErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
-    guard payloadLen == MemoryLayout<UInt32>.size else { return false }
-    var payloadIndex: UInt32 = 0
-    withUnsafeMutableBytes(of: &payloadIndex) { out in
-        out.copyMemory(from: UnsafeRawBufferPointer(start: payloadBytes, count: payloadLen))
-    }
-    let payloadValue: LookupError
-    switch payloadIndex {
-    case 0: payloadValue = .notFound
-    case 1: payloadValue = .accessDenied
-    default: return false
-    }
+    guard payloadLen == MemoryLayout<LookupError>.size else { return false }
+    let payloadValue = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self).move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).initialize(to: .err(payloadValue))
     return true
 }

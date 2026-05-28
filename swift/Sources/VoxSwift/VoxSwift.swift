@@ -43,6 +43,13 @@ public final class VoxSwiftMethodCodec {
         )
     }
 
+    public func encodeResponse<T>(_ value: inout T) throws -> VoxSwiftWirePayload {
+        VoxSwiftWirePayload(
+            schemaPayload: try responseCodec.voxSchemaPayload(),
+            payload: try responseCodec.encode(&value)
+        )
+    }
+
     public func decodeResponse<T>(
         _ response: VoxSwiftWirePayload,
         as _: T.Type
@@ -53,6 +60,7 @@ public final class VoxSwiftMethodCodec {
             as: T.self
         )
     }
+
 }
 
 public final class VoxSwiftLocalCodec {
@@ -101,7 +109,27 @@ public final class VoxSwiftLocalCodec {
     }
 
     public func decode<T>(_ bytes: [UInt8], as _: T.Type) throws -> T {
-        try decode(bytes, writer: self, as: T.self)
+        let bundle = schemaBundle
+        let decoded = UnsafeMutablePointer<T>.allocate(capacity: 1)
+        let status = bytes.withUnsafeBufferPointer { buffer in
+            binette_local_decode_with_schema_bundles(
+                handle,
+                UnsafePointer(bundle.ptr),
+                bundle.len,
+                UnsafePointer(bundle.ptr),
+                bundle.len,
+                buffer.baseAddress,
+                buffer.count,
+                UnsafeMutableRawPointer(decoded).assumingMemoryBound(to: UInt8.self)
+            )
+        }
+        guard status == BINETTE_STATUS_OK else {
+            decoded.deallocate()
+            throw VoxSwiftBinetteError.decode(status)
+        }
+        let value = decoded.move()
+        decoded.deallocate()
+        return value
     }
 
     public func decode<T>(_ bytes: [UInt8], writer: VoxSwiftLocalCodec, as _: T.Type) throws -> T {
@@ -115,14 +143,29 @@ public final class VoxSwiftLocalCodec {
         writerSchemaBundle: UnsafeBufferPointer<UInt8>,
         as _: T.Type
     ) throws -> T {
+        try decode(
+            bytes,
+            writerSchemaBundlePtr: writerSchemaBundle.baseAddress,
+            writerSchemaBundleLen: writerSchemaBundle.count,
+            as: T.self
+        )
+    }
+
+    private func decode<T>(
+        _ bytes: [UInt8],
+        writerSchemaBundlePtr: UnsafePointer<UInt8>?,
+        writerSchemaBundleLen: Int,
+        as _: T.Type
+    ) throws -> T {
+        let readerBundle = schemaBundle
         let decoded = UnsafeMutablePointer<T>.allocate(capacity: 1)
         let status = bytes.withUnsafeBufferPointer { buffer in
             binette_local_decode_with_schema_bundles(
                 handle,
-                writerSchemaBundle.baseAddress,
-                writerSchemaBundle.count,
-                UnsafePointer(schemaBundle.ptr),
-                schemaBundle.len,
+                writerSchemaBundlePtr,
+                writerSchemaBundleLen,
+                UnsafePointer(readerBundle.ptr),
+                readerBundle.len,
                 buffer.baseAddress,
                 buffer.count,
                 UnsafeMutableRawPointer(decoded).assumingMemoryBound(to: UInt8.self)
