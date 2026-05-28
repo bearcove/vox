@@ -1267,7 +1267,8 @@ private func shapeDropCircleProjected(_ value: UnsafeMutablePointer<UInt8>?, _ c
 
 private func shapeConstructCircle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<ShapeCirclePayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: ShapeCirclePayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: ShapeCirclePayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Shape.self).initialize(to: .circle(radius: payloadValue.radius))
     return true
 }
@@ -1290,7 +1291,8 @@ private func shapeDropRectangleProjected(_ value: UnsafeMutablePointer<UInt8>?, 
 
 private func shapeConstructRectangle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<ShapeRectanglePayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: ShapeRectanglePayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: ShapeRectanglePayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: Shape.self).initialize(to: .rectangle(width: payloadValue.width, height: payloadValue.height))
     return true
 }
@@ -1662,7 +1664,8 @@ private func gnarlyKindDropFileProjected(_ value: UnsafeMutablePointer<UInt8>?, 
 
 private func gnarlyKindConstructFile(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<GnarlyKindFilePayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: GnarlyKindFilePayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: GnarlyKindFilePayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: GnarlyKind.self).initialize(to: .file(mime: payloadValue.mime, tags: payloadValue.tags))
     return true
 }
@@ -1685,7 +1688,8 @@ private func gnarlyKindDropDirectoryProjected(_ value: UnsafeMutablePointer<UInt
 
 private func gnarlyKindConstructDirectory(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<GnarlyKindDirectoryPayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: GnarlyKindDirectoryPayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: GnarlyKindDirectoryPayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: GnarlyKind.self).initialize(to: .directory(childCount: payloadValue.childCount, children: payloadValue.children))
     return true
 }
@@ -1708,7 +1712,8 @@ private func gnarlyKindDropSymlinkProjected(_ value: UnsafeMutablePointer<UInt8>
 
 private func gnarlyKindConstructSymlink(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<GnarlyKindSymlinkPayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: GnarlyKindSymlinkPayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: GnarlyKindSymlinkPayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: GnarlyKind.self).initialize(to: .symlink(target: payloadValue.target, hops: payloadValue.hops))
     return true
 }
@@ -2811,8 +2816,7 @@ private func testbedVoxResultStringTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultStringTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStringTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -2958,8 +2962,7 @@ private func voxResultInt64MathErrorDropErrProjected(_ value: UnsafeMutablePoint
 private func voxResultInt64MathErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<MathError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultInt64MathError.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -3206,8 +3209,7 @@ private func testbedVoxErrorMathErrorDropUserProjected(_ value: UnsafeMutablePoi
 private func testbedVoxErrorMathErrorConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<MathError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: MathError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorMathError.self).initialize(to: .user(payloadValue))
     return true
 }
@@ -3411,8 +3413,7 @@ private func testbedVoxResultInt64TestbedVoxErrorMathErrorDropErrProjected(_ val
 private func testbedVoxResultInt64TestbedVoxErrorMathErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorMathError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorMathError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorMathError.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -3517,8 +3518,7 @@ private func voxResultPersonLookupErrorDropOkProjected(_ value: UnsafeMutablePoi
 private func voxResultPersonLookupErrorConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Person>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -3538,8 +3538,7 @@ private func voxResultPersonLookupErrorDropErrProjected(_ value: UnsafeMutablePo
 private func voxResultPersonLookupErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<LookupError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: VoxResultPersonLookupError.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -3786,8 +3785,7 @@ private func testbedVoxErrorLookupErrorDropUserProjected(_ value: UnsafeMutableP
 private func testbedVoxErrorLookupErrorConstructUser(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<LookupError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: LookupError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self).initialize(to: .user(payloadValue))
     return true
 }
@@ -3969,8 +3967,7 @@ private func testbedVoxResultPersonTestbedVoxErrorLookupErrorDropOkProjected(_ v
 private func testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Person>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -3990,8 +3987,7 @@ private func testbedVoxResultPersonTestbedVoxErrorLookupErrorDropErrProjected(_ 
 private func testbedVoxResultPersonTestbedVoxErrorLookupErrorConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorLookupError>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorLookupError.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorLookupError.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4136,8 +4132,7 @@ private func testbedVoxResultInt64TestbedVoxErrorNeverDropErrProjected(_ value: 
 private func testbedVoxResultInt64TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultInt64TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4284,8 +4279,7 @@ private func testbedVoxResultVoidTestbedVoxErrorNeverDropErrProjected(_ value: U
 private func testbedVoxResultVoidTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoidTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4534,8 +4528,7 @@ private func testbedVoxResultPointTestbedVoxErrorNeverDropOkProjected(_ value: U
 private func testbedVoxResultPointTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Point>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Point.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -4555,8 +4548,7 @@ private func testbedVoxResultPointTestbedVoxErrorNeverDropErrProjected(_ value: 
 private func testbedVoxResultPointTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPointTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4671,8 +4663,7 @@ private func testbedVoxResultPersonTestbedVoxErrorNeverDropOkProjected(_ value: 
 private func testbedVoxResultPersonTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Person>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Person.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -4692,8 +4683,7 @@ private func testbedVoxResultPersonTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultPersonTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultPersonTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4820,8 +4810,7 @@ private func testbedVoxResultDoubleTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultDoubleTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultDoubleTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -4936,8 +4925,7 @@ private func testbedVoxResultColorTestbedVoxErrorNeverDropOkProjected(_ value: U
 private func testbedVoxResultColorTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Color?>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Color?.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -4957,8 +4945,7 @@ private func testbedVoxResultColorTestbedVoxErrorNeverDropErrProjected(_ value: 
 private func testbedVoxResultColorTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultColorTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5087,8 +5074,7 @@ private func testbedVoxResultCanvasTestbedVoxErrorNeverDropOkProjected(_ value: 
 private func testbedVoxResultCanvasTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Canvas>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Canvas.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -5108,8 +5094,7 @@ private func testbedVoxResultCanvasTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultCanvasTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultCanvasTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5214,8 +5199,7 @@ private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropOkProjected(_ 
 private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<GnarlyPayload>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: GnarlyPayload.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -5235,8 +5219,7 @@ private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverDropErrProjected(_
 private func testbedVoxResultGnarlyPayloadTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultGnarlyPayloadTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5341,8 +5324,7 @@ private func testbedVoxResultMessageTestbedVoxErrorNeverDropOkProjected(_ value:
 private func testbedVoxResultMessageTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Message>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Message.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -5362,8 +5344,7 @@ private func testbedVoxResultMessageTestbedVoxErrorNeverDropErrProjected(_ value
 private func testbedVoxResultMessageTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMessageTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5566,8 +5547,7 @@ private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropOkProje
 private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<VoxTuple2StringInt32>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: VoxTuple2StringInt32.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -5587,8 +5567,7 @@ private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverDropErrProj
 private func testbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultVoxTuple2StringInt32TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5712,8 +5691,7 @@ private func testbedVoxResultUInt8TestbedVoxErrorNeverDropErrProjected(_ value: 
 private func testbedVoxResultUInt8TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt8TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5840,8 +5818,7 @@ private func testbedVoxResultBoolTestbedVoxErrorNeverDropErrProjected(_ value: U
 private func testbedVoxResultBoolTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultBoolTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -5968,8 +5945,7 @@ private func testbedVoxResultUInt64TestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultUInt64TestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultUInt64TestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6191,8 +6167,7 @@ private func testbedVoxResultTaggedPointTestbedVoxErrorNeverDropOkProjected(_ va
 private func testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TaggedPoint>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TaggedPoint.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6212,8 +6187,7 @@ private func testbedVoxResultTaggedPointTestbedVoxErrorNeverDropErrProjected(_ v
 private func testbedVoxResultTaggedPointTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTaggedPointTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6318,8 +6292,7 @@ private func testbedVoxResultShapeTestbedVoxErrorNeverDropOkProjected(_ value: U
 private func testbedVoxResultShapeTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Shape>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Shape.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6339,8 +6312,7 @@ private func testbedVoxResultShapeTestbedVoxErrorNeverDropErrProjected(_ value: 
 private func testbedVoxResultShapeTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultShapeTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6445,8 +6417,7 @@ private func testbedVoxResultStatusTestbedVoxErrorNeverDropOkProjected(_ value: 
 private func testbedVoxResultStatusTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Status>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Status.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6466,8 +6437,7 @@ private func testbedVoxResultStatusTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultStatusTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultStatusTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6572,8 +6542,7 @@ private func testbedVoxResultTagTestbedVoxErrorNeverDropOkProjected(_ value: Uns
 private func testbedVoxResultTagTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Tag>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Tag.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6593,8 +6562,7 @@ private func testbedVoxResultTagTestbedVoxErrorNeverDropErrProjected(_ value: Un
 private func testbedVoxResultTagTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultTagTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6699,8 +6667,7 @@ private func testbedVoxResultProfileTestbedVoxErrorNeverDropOkProjected(_ value:
 private func testbedVoxResultProfileTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Profile>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Profile.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6720,8 +6687,7 @@ private func testbedVoxResultProfileTestbedVoxErrorNeverDropErrProjected(_ value
 private func testbedVoxResultProfileTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultProfileTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6826,8 +6792,7 @@ private func testbedVoxResultRecordTestbedVoxErrorNeverDropOkProjected(_ value: 
 private func testbedVoxResultRecordTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Record>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Record.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -6847,8 +6812,7 @@ private func testbedVoxResultRecordTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultRecordTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultRecordTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -6981,8 +6945,7 @@ private func testbedVoxResultMeasurementTestbedVoxErrorNeverDropOkProjected(_ va
 private func testbedVoxResultMeasurementTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Measurement>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Measurement.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -7002,8 +6965,7 @@ private func testbedVoxResultMeasurementTestbedVoxErrorNeverDropErrProjected(_ v
 private func testbedVoxResultMeasurementTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultMeasurementTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
@@ -7108,8 +7070,7 @@ private func testbedVoxResultConfigTestbedVoxErrorNeverDropOkProjected(_ value: 
 private func testbedVoxResultConfigTestbedVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<Config>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: Config.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -7129,8 +7090,7 @@ private func testbedVoxResultConfigTestbedVoxErrorNeverDropErrProjected(_ value:
 private func testbedVoxResultConfigTestbedVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<TestbedVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: TestbedVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: TestbedVoxResultConfigTestbedVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }

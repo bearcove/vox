@@ -1496,8 +1496,9 @@ impl<'a> SwiftGenerator<'a> {
             "    guard payloadLen == MemoryLayout<{payload_type}>.size else {{ return false }}"
         ));
         self.line(&format!(
-            "    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: {payload_type}.self).pointee"
+            "    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {payload_type}.self)"
         ));
+        self.line("    let payloadValue = payloadPointer.move()");
         self.line(&format!(
             "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident}({construct_args}))"
         ));
@@ -1739,8 +1740,7 @@ impl<'a> SwiftGenerator<'a> {
                 self.line(&format!(
                     "    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {inner_type}.self)"
                 ));
-                self.line("    let payloadValue = payloadPointer.pointee");
-                self.line("    payloadPointer.deinitialize(count: 1)");
+                self.line("    let payloadValue = payloadPointer.move()");
             }
             _ => {
                 return Err(unsupported(
@@ -1804,8 +1804,7 @@ impl<'a> SwiftGenerator<'a> {
             self.line(&format!(
                 "    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: {payload_type}.self)"
             ));
-            self.line("    let payloadValue = payloadPointer.pointee");
-            self.line("    payloadPointer.deinitialize(count: 1)");
+            self.line("    let payloadValue = payloadPointer.move()");
         }
         self.line(&format!(
             "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {type_name}.self).initialize(to: .{variant_ident}(payloadValue))"

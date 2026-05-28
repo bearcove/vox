@@ -268,7 +268,8 @@ private func swiftShapeDropCircleProjected(_ value: UnsafeMutablePointer<UInt8>?
 
 private func swiftShapeConstructCircle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<SwiftShapeCirclePayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: SwiftShapeCirclePayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftShapeCirclePayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).initialize(to: .circle(radius: payloadValue.radius))
     return true
 }
@@ -291,7 +292,8 @@ private func swiftShapeDropRectangleProjected(_ value: UnsafeMutablePointer<UInt
 
 private func swiftShapeConstructRectangle(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<SwiftShapeRectanglePayload>.size else { return false }
-    let payloadValue = UnsafeRawPointer(payloadBytes!).assumingMemoryBound(to: SwiftShapeRectanglePayload.self).pointee
+    let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftShapeRectanglePayload.self)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftShape.self).initialize(to: .rectangle(width: payloadValue.width, height: payloadValue.height))
     return true
 }
@@ -1056,8 +1058,7 @@ private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropOkProject
 private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructOk(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<SwiftReply>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftReply.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).initialize(to: .ok(payloadValue))
     return true
 }
@@ -1077,8 +1078,7 @@ private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverDropErrProjec
 private func swiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNeverConstructErr(_ value: UnsafeMutablePointer<UInt8>?, _ payloadBytes: UnsafePointer<UInt8>?, _ payloadLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
     guard payloadLen == MemoryLayout<SwiftCanaryVoxErrorNever>.size else { return false }
     let payloadPointer = UnsafeMutableRawPointer(mutating: payloadBytes!).assumingMemoryBound(to: SwiftCanaryVoxErrorNever.self)
-    let payloadValue = payloadPointer.pointee
-    payloadPointer.deinitialize(count: 1)
+    let payloadValue = payloadPointer.move()
     UnsafeMutableRawPointer(value!).assumingMemoryBound(to: SwiftCanaryVoxResultSwiftReplySwiftCanaryVoxErrorNever.self).initialize(to: .err(payloadValue))
     return true
 }
