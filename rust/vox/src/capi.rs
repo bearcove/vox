@@ -91,4 +91,43 @@ mod tests {
         assert!(!payload.schemas.is_empty());
         vox_byte_buffer_free(out);
     }
+
+    // r[verify schema.exchange.required]
+    #[test]
+    fn c_api_schema_payload_drives_vox_receive_deserialization() {
+        type Args = (String, u32);
+
+        let mut descriptor = binette::local_access::rust_facet_descriptor_for::<Args>()
+            .expect("test descriptor should extract");
+        let bundle =
+            binette::local_access::synthetic_schema_bundle_for_local_descriptor(&mut descriptor)
+                .expect("test descriptor schema should synthesize");
+        let bundle_bytes =
+            binette::encode_schema_bundle_to_vec(&bundle).expect("schema bundle should encode");
+        let mut out = VoxByteBuffer::empty();
+        let status = vox_schema_payload_from_binette_schema_bundle(
+            bundle_bytes.as_ptr(),
+            bundle_bytes.len(),
+            &mut out,
+        );
+        assert_eq!(status, VOX_STATUS_OK);
+        let payload_bytes = unsafe { std::slice::from_raw_parts(out.ptr, out.len) };
+        let payload = vox_types::SchemaPayload::from_binette(payload_bytes)
+            .expect("converted schema payload should parse");
+        vox_byte_buffer_free(out);
+
+        let method_id = vox_types::MethodId(0xB1_0000_0000_4000);
+        let tracker = vox_types::SchemaRecvTracker::new();
+        tracker
+            .record_received(method_id, vox_types::BindingDirection::Args, payload)
+            .expect("converted payload should install as received args schemas");
+        let bytes = binette::encode_to_vec(&("swift-ish args".to_owned(), 0xCAFE_BABEu32))
+            .expect("args should encode");
+
+        let decoded: Args =
+            crate::schema_deser::schema_deserialize_args_borrowed(&bytes, method_id, &tracker)
+                .expect("received schema should drive normal Vox arg deserialization");
+
+        assert_eq!(decoded, ("swift-ish args".to_owned(), 0xCAFE_BABE));
+    }
 }
