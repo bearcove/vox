@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True
+
 from bench_compare import emit_html, parse_divan_log
 
 
