@@ -6,6 +6,15 @@ import CBinette
 import VoxSwift
 
 // Named value types
+public struct SwiftPoint {
+    public var x: Int32
+    public var y: Int32
+    public init(x: Int32, y: Int32) {
+        self.x = x
+        self.y = y
+    }
+}
+
 public enum SwiftShape {
     case circle(radius: Double)
     case rectangle(width: Double, height: Double)
@@ -24,17 +33,19 @@ public struct SwiftCall {
     public var title: String
     public var note: String?
     public var payload: [UInt8]
+    public var points: [SwiftPoint]
     public var shape: SwiftShape
     public var retry: UInt16?
     public var outcome: SwiftOutcome
     public var output: VoxSwiftChannel
-    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, note: String?, payload: [UInt8], shape: SwiftShape, retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
+    public init(method: UInt32, nonce: UInt64, ratio: Double, title: String, note: String?, payload: [UInt8], points: [SwiftPoint], shape: SwiftShape, retry: UInt16?, outcome: SwiftOutcome, output: VoxSwiftChannel) {
         self.method = method
         self.nonce = nonce
         self.ratio = ratio
         self.title = title
         self.note = note
         self.payload = payload
+        self.points = points
         self.shape = shape
         self.retry = retry
         self.outcome = outcome
@@ -71,6 +82,29 @@ public struct SwiftCanarySubmitArgs {
 }
 
 // Local binette descriptors
+private func descriptorForInt32(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    arena.plain(typeID: binette_primitive_i32_type_id(), Int32.self)
+}
+
+private func descriptorForSwiftPoint(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    return arena.structure(
+        typeID: 0xB8317D83A0D61B5B,
+        layout: binetteLayout(of: SwiftPoint.self),
+        fields: [
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("x"),
+                offset: MemoryLayout<SwiftPoint>.offset(of: \SwiftPoint.x)!,
+                descriptor: descriptorForInt32(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("y"),
+                offset: MemoryLayout<SwiftPoint>.offset(of: \SwiftPoint.y)!,
+                descriptor: descriptorForInt32(in: arena)
+            ),
+        ]
+    )
+}
+
 private func descriptorForDouble(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     arena.plain(typeID: binette_primitive_f64_type_id(), Double.self)
 }
@@ -398,6 +432,50 @@ private func descriptorForBytes(in arena: BinetteCAbiDescriptorArena) -> UnsafeP
     arena.bytes()
 }
 
+private func descriptorForArrayOfSwiftPoint(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
+    let element = descriptorForSwiftPoint(in: arena)
+    return arena.sequence(
+        typeID: 0x6F6B7FD9CB188054,
+        layout: binetteLayout(of: [SwiftPoint].self),
+        element: element,
+        storage: binetteThunkSequenceStorage(
+            elementStride: MemoryLayout<SwiftPoint>.stride,
+            len: arrayOfSwiftPointLen,
+            elementProjectInto: arrayOfSwiftPointProjectElementInto,
+            writeFixedElements: arrayOfSwiftPointWriteFixedElements
+        )
+    )
+}
+
+private func arrayOfSwiftPointLen(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> Int {
+    UnsafeRawPointer(value!).assumingMemoryBound(to: [SwiftPoint].self).pointee.count
+}
+
+private func arrayOfSwiftPointProjectElementInto(_ value: UnsafePointer<UInt8>?, _ index: Int, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    let values = UnsafeRawPointer(value!).assumingMemoryBound(to: [SwiftPoint].self).pointee
+    guard index >= 0, index < values.count, outLen == MemoryLayout<SwiftPoint>.size else { return false }
+    var element = values[index]
+    withUnsafeBytes(of: &element) { bytes in
+        UnsafeMutableRawPointer(out!).copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
+    }
+    return true
+}
+
+private func arrayOfSwiftPointWriteFixedElements(_ value: UnsafeMutablePointer<UInt8>?, _ ptr: UnsafePointer<UInt8>?, _ count: Int, _ elementStride: Int, _ context: UnsafeMutableRawPointer?) -> Bool {
+    guard elementStride == MemoryLayout<SwiftPoint>.stride else { return false }
+    var values: [SwiftPoint] = []
+    values.reserveCapacity(count)
+    for index in 0..<count {
+        let elementPointer = UnsafeMutablePointer<SwiftPoint>.allocate(capacity: 1)
+        let source = UnsafeRawPointer(ptr!).advanced(by: index * elementStride)
+        UnsafeMutableRawPointer(elementPointer).copyMemory(from: source, byteCount: MemoryLayout<SwiftPoint>.size)
+        values.append(elementPointer.move())
+        elementPointer.deallocate()
+    }
+    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: [SwiftPoint].self).initialize(to: values)
+    return true
+}
+
 private func descriptorForUInt16(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     arena.plain(typeID: binette_primitive_u16_type_id(), UInt16.self)
 }
@@ -432,7 +510,7 @@ private func descriptorForTxUInt32(in arena: BinetteCAbiDescriptorArena) -> Unsa
 
 private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {
     return arena.structure(
-        typeID: 0x1318A71A1F6EBC15,
+        typeID: 0xAA5BA057E517113A,
         layout: binetteLayout(of: SwiftCall.self),
         fields: [
             BinetteLocalFieldAbi(
@@ -464,6 +542,11 @@ private func descriptorForSwiftCall(in arena: BinetteCAbiDescriptorArena) -> Uns
                 name: binetteLocalStr("payload"),
                 offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.payload)!,
                 descriptor: descriptorForBytes(in: arena)
+            ),
+            BinetteLocalFieldAbi(
+                name: binetteLocalStr("points"),
+                offset: MemoryLayout<SwiftCall>.offset(of: \SwiftCall.points)!,
+                descriptor: descriptorForArrayOfSwiftPoint(in: arena)
             ),
             BinetteLocalFieldAbi(
                 name: binetteLocalStr("shape"),

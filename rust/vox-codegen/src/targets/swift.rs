@@ -339,6 +339,9 @@ impl<'a> SwiftGenerator<'a> {
             ShapeKind::List { .. } | ShapeKind::Slice { .. } if is_bytes(shape) => {
                 self.emit_bytes_descriptor(&fn_name)
             }
+            ShapeKind::List { element } | ShapeKind::Slice { element } => {
+                self.emit_list_descriptor(&fn_name, shape, element)
+            }
             ShapeKind::Option { inner } => self.emit_option_descriptor(&fn_name, shape, inner),
             ShapeKind::Tx { inner } | ShapeKind::Rx { inner } => {
                 self.emit_channel_descriptor(&fn_name, shape, inner)
@@ -438,6 +441,113 @@ impl<'a> SwiftGenerator<'a> {
         self.line("}");
         self.line("");
         Ok(())
+    }
+
+    fn emit_list_descriptor(
+        &mut self,
+        fn_name: &str,
+        shape: &'static Shape,
+        element: &'static Shape,
+    ) -> Result<(), SwiftCodegenError> {
+        if !swift_array_fixed_element_supported(element) {
+            return Err(unsupported(
+                shape,
+                "Swift Array descriptors currently require fixed-layout element values",
+            ));
+        }
+        self.emit_shape_descriptor(element)?;
+        let array_type = swift_type(shape)?;
+        let element_type = swift_type(element)?;
+        let prefix = descriptor_helper_prefix(fn_name);
+        self.line(&format!(
+            "private func {fn_name}(in arena: BinetteCAbiDescriptorArena) -> UnsafePointer<BinetteLocalDescriptorAbi> {{"
+        ));
+        self.line(&format!(
+            "    let element = {}(in: arena)",
+            descriptor_fn_name(element)?
+        ));
+        self.line("    return arena.sequence(");
+        self.line(&format!(
+            "        typeID: {},",
+            synthetic_type_id(shape, 0xA22A_7000_0000_0000)?
+        ));
+        self.line(&format!(
+            "        layout: binetteLayout(of: {array_type}.self),"
+        ));
+        self.line("        element: element,");
+        self.line("        storage: binetteThunkSequenceStorage(");
+        self.line(&format!(
+            "            elementStride: MemoryLayout<{element_type}>.stride,"
+        ));
+        self.line(&format!("            len: {prefix}Len,"));
+        self.line(&format!(
+            "            elementProjectInto: {prefix}ProjectElementInto,"
+        ));
+        self.line(&format!(
+            "            writeFixedElements: {prefix}WriteFixedElements"
+        ));
+        self.line("        )");
+        self.line("    )");
+        self.line("}");
+        self.line("");
+        self.emit_array_thunks(&prefix, &array_type, &element_type);
+        Ok(())
+    }
+
+    fn emit_array_thunks(&mut self, prefix: &str, array_type: &str, element_type: &str) {
+        self.line(&format!(
+            "private func {prefix}Len(_ value: UnsafePointer<UInt8>?, _ context: UnsafeMutableRawPointer?) -> Int {{"
+        ));
+        self.line(&format!(
+            "    UnsafeRawPointer(value!).assumingMemoryBound(to: {array_type}.self).pointee.count"
+        ));
+        self.line("}");
+        self.line("");
+
+        self.line(&format!(
+            "private func {prefix}ProjectElementInto(_ value: UnsafePointer<UInt8>?, _ index: Int, _ out: UnsafeMutablePointer<UInt8>?, _ outLen: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    let values = UnsafeRawPointer(value!).assumingMemoryBound(to: {array_type}.self).pointee"
+        ));
+        self.line(&format!(
+            "    guard index >= 0, index < values.count, outLen == MemoryLayout<{element_type}>.size else {{ return false }}"
+        ));
+        self.line("    var element = values[index]");
+        self.line("    withUnsafeBytes(of: &element) { bytes in");
+        self.line("        UnsafeMutableRawPointer(out!).copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)");
+        self.line("    }");
+        self.line("    return true");
+        self.line("}");
+        self.line("");
+
+        self.line(&format!(
+            "private func {prefix}WriteFixedElements(_ value: UnsafeMutablePointer<UInt8>?, _ ptr: UnsafePointer<UInt8>?, _ count: Int, _ elementStride: Int, _ context: UnsafeMutableRawPointer?) -> Bool {{"
+        ));
+        self.line(&format!(
+            "    guard elementStride == MemoryLayout<{element_type}>.stride else {{ return false }}"
+        ));
+        self.line(&format!("    var values: [{element_type}] = []"));
+        self.line("    values.reserveCapacity(count)");
+        self.line("    for index in 0..<count {");
+        self.line(&format!(
+            "        let elementPointer = UnsafeMutablePointer<{element_type}>.allocate(capacity: 1)"
+        ));
+        self.line(
+            "        let source = UnsafeRawPointer(ptr!).advanced(by: index * elementStride)",
+        );
+        self.line(&format!(
+            "        UnsafeMutableRawPointer(elementPointer).copyMemory(from: source, byteCount: MemoryLayout<{element_type}>.size)"
+        ));
+        self.line("        values.append(elementPointer.move())");
+        self.line("        elementPointer.deallocate()");
+        self.line("    }");
+        self.line(&format!(
+            "    UnsafeMutableRawPointer(value!).assumingMemoryBound(to: {array_type}.self).initialize(to: values)"
+        ));
+        self.line("    return true");
+        self.line("}");
+        self.line("");
     }
 
     fn emit_option_descriptor(
@@ -1168,6 +1278,9 @@ fn swift_type(shape: &'static Shape) -> Result<String, SwiftCodegenError> {
         ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
             Ok("String".to_owned())
         }
+        ShapeKind::List { element } | ShapeKind::Slice { element } => {
+            Ok(format!("[{}]", swift_type(element)?))
+        }
         ShapeKind::Option { inner } => Ok(format!("{}?", swift_type(inner)?)),
         ShapeKind::Struct(StructInfo {
             name: Some(name), ..
@@ -1211,6 +1324,12 @@ fn descriptor_fn_name(shape: &'static Shape) -> Result<String, SwiftCodegenError
         ShapeKind::Scalar(ScalarType::Str | ScalarType::String | ScalarType::CowStr) => {
             Ok("descriptorForString".to_owned())
         }
+        ShapeKind::List { element } | ShapeKind::Slice { element } => Ok(format!(
+            "descriptorForArrayOf{}",
+            swift_type(element)?
+                .replace(['[', ']', '?', ' '], "")
+                .to_upper_camel_case()
+        )),
         ShapeKind::Option { inner } => Ok(format!(
             "descriptorForOptional{}",
             swift_type(inner)?
@@ -1290,6 +1409,35 @@ fn unsupported(shape: &'static Shape, reason: &str) -> SwiftCodegenError {
     }
 }
 
+fn descriptor_helper_prefix(fn_name: &str) -> String {
+    fn_name
+        .strip_prefix("descriptorFor")
+        .unwrap_or(fn_name)
+        .to_lower_camel_case()
+}
+
+fn swift_array_fixed_element_supported(shape: &'static Shape) -> bool {
+    match classify_shape(shape) {
+        ShapeKind::Scalar(
+            ScalarType::Bool
+            | ScalarType::U8
+            | ScalarType::U16
+            | ScalarType::U32
+            | ScalarType::U64
+            | ScalarType::I32
+            | ScalarType::I64
+            | ScalarType::F64,
+        ) => true,
+        ShapeKind::Struct(StructInfo { fields, .. }) => fields
+            .iter()
+            .all(|field| swift_array_fixed_element_supported(field.shape())),
+        ShapeKind::Tuple { elements } => elements
+            .iter()
+            .all(|element| swift_array_fixed_element_supported(element.shape)),
+        _ => false,
+    }
+}
+
 fn swift_ident(name: &str) -> String {
     let ident = name.to_lower_camel_case();
     match ident.as_str() {
@@ -1318,6 +1466,7 @@ mod tests {
         title: String,
         note: Option<String>,
         payload: Vec<u8>,
+        points: Vec<SwiftPoint>,
         shape: SwiftShape,
         retry: Option<u16>,
         outcome: SwiftOutcome,
@@ -1328,6 +1477,12 @@ mod tests {
     struct SwiftReply {
         message: String,
         retry: Option<u16>,
+    }
+
+    #[derive(Facet)]
+    struct SwiftPoint {
+        x: i32,
+        y: i32,
     }
 
     #[derive(Facet)]
@@ -1374,6 +1529,11 @@ mod tests {
         assert!(generated.contains("arena.structure("));
         assert!(generated.contains("arena.enumeration("));
         assert!(generated.contains("arena.bytes()"));
+        assert!(generated.contains("public var points: [SwiftPoint]"));
+        assert!(generated.contains("arena.sequence("));
+        assert!(generated.contains("binetteThunkSequenceStorage("));
+        assert!(generated.contains("ProjectElementInto"));
+        assert!(generated.contains("WriteFixedElements"));
         assert!(generated.contains("binetteDirectOptionalU16Representation()"));
         assert!(generated.contains("kind: \"vox.channel\""));
         assert!(generated.contains("arena.externalMetadataString(\"tx\")"));

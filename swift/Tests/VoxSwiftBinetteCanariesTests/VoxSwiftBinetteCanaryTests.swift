@@ -371,6 +371,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
                 title: "hello from generated swift",
                 note: "optional generated note",
                 payload: [2, 3, 5, 7],
+                points: [SwiftPoint(x: 1, y: 2), SwiftPoint(x: 3, y: 5)],
                 shape: .rectangle(width: 3.0, height: 4.5),
                 retry: 377,
                 outcome: .accepted("generated descriptor"),
@@ -417,7 +418,7 @@ final class VoxSwiftBinetteCanaryTests: XCTestCase {
 
         XCTAssertEqual(
             reply.message,
-            "3405691582:81985529216486895:1.5:hello from generated swift:optional generated note:4:rectangle:3x4.5:accepted:generated descriptor"
+            "3405691582:81985529216486895:1.5:hello from generated swift:optional generated note:4:1x2,3x5:rectangle:3x4.5:accepted:generated descriptor"
         )
         XCTAssertEqual(reply.retry, 377)
     }

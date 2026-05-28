@@ -333,6 +333,7 @@ struct GeneratedSwiftCall {
     title: String,
     note: Option<String>,
     payload: Vec<u8>,
+    points: Vec<GeneratedSwiftPoint>,
     shape: GeneratedSwiftShape,
     retry: Option<u16>,
     outcome: GeneratedSwiftOutcome,
@@ -352,6 +353,12 @@ enum GeneratedSwiftShape {
     Circle { radius: f64 },
     Rectangle { width: f64, height: f64 },
     Point,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+struct GeneratedSwiftPoint {
+    x: i32,
+    y: i32,
 }
 
 fn call_swift_args(schema_payload: &[u8], payload: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
@@ -515,13 +522,18 @@ fn reply_for_generated_swift_call(call: GeneratedSwiftCall) -> SwiftCanaryReply 
     };
     SwiftCanaryReply {
         message: format!(
-            "{}:{}:{}:{}:{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}:{}:{}:{}:{}",
             call.method,
             call.nonce,
             call.ratio,
             call.title,
             call.note.as_deref().unwrap_or(""),
             call.payload.len(),
+            call.points
+                .iter()
+                .map(|point| format!("{}x{}", point.x, point.y))
+                .collect::<Vec<_>>()
+                .join(","),
             shape,
             outcome
         ),

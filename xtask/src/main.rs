@@ -251,6 +251,7 @@ mod swift_codegen_canary {
         title: String,
         note: Option<String>,
         payload: Vec<u8>,
+        points: Vec<SwiftPoint>,
         shape: SwiftShape,
         retry: Option<u16>,
         outcome: SwiftOutcome,
@@ -261,6 +262,12 @@ mod swift_codegen_canary {
     struct SwiftReply {
         message: String,
         retry: Option<u16>,
+    }
+
+    #[derive(Facet)]
+    struct SwiftPoint {
+        x: i32,
+        y: i32,
     }
 
     #[derive(Facet)]
