@@ -645,15 +645,19 @@ metadata.push((
 
 > r[rpc.channel.payload-encoding]
 >
-> `Tx<T>` and `Rx<T>` values in the serialized payload MUST be encoded as
-> unit placeholders. The actual channel IDs are carried out-of-band in the
-> `channels` field of the `Request` message.
+> `Tx<T>` and `Rx<T>` values in the serialized payload MUST be encoded as a
+> `u32` *index* into the `channels` list of the `Request` message (in encode
+> walk-order). The actual channel IDs are carried out-of-band in that
+> `channels` field. Carrying an explicit index — rather than relying on
+> position — keeps re-association correct under the same field reordering and
+> skipping the compatibility path already allows for the rest of the payload.
 
 > r[rpc.channel.binding]
 >
-> On the callee side, implementations MUST use the channel IDs from
-> `Request.channels` as authoritative, patching them into deserialized
-> argument values before binding streams.
+> On the callee side, implementations MUST resolve each decoded `Tx<T>`/`Rx<T>`
+> handle's channel ID by looking up its encoded index in `Request.channels`,
+> and use that ID as authoritative when binding the stream. The channel IDs in
+> `Request.channels` are authoritative over any value implied by payload position.
 
 ## Channel pairs and shared state
 
