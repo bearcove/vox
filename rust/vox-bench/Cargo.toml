@@ -33,6 +33,10 @@ vox-core.workspace = true
 vox-types.workspace = true
 vox-postcard.workspace = true
 vox-jit.workspace = true
+phon = { path = "../../../phon/rust/phon", features = ["jit"] }
+phon-engine = { path = "../../../phon/rust/phon-engine" }
+phon-ir = { path = "../../../phon/rust/phon-ir" }
+phon-jit = { path = "../../../phon/rust/phon-jit" }
 spec-proto.workspace = true
 subject-rust.workspace = true
 facet.workspace = true

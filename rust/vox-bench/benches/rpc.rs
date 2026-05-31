@@ -450,6 +450,132 @@ mod codec {
                 black_box(postcard::from_bytes::<BorrowedArgs<'_>>(black_box(&bytes)).unwrap())
             });
         }
+
+        // ---- phon: copy-and-patch JIT --------------------------------------
+        // phon derives its schema/program from the Facet shape, lowers it to a
+        // `MemProgram`, then compiles a native (copy-and-patch) encoder/decoder
+        // — all OUTSIDE the timed loop, mirroring how the vox-jit (Cranelift)
+        // arms pre-compile their fn pointers.
+        //
+        // WIRE INTEROP: phon's wire is NOT byte-compatible with vox-postcard
+        // for this payload. postcard uses LEB128 varints for integers and
+        // length prefixes; phon uses fixed-width little-endian (e.g. `u64 = 0`
+        // is 1 byte in postcard, 8 bytes in phon; a 29-byte string's length is
+        // 1 byte in postcard, 4 bytes in phon). For `GnarlyPayload` n=1 phon
+        // emits 572 bytes vs postcard's 486. They are different formats, so we
+        // do NOT force one onto the other: each codec round-trips its OWN wire
+        // (exactly what a real RPC using that codec would do). phon's decode
+        // arms therefore decode phon-encoded bytes; the encode arm produces
+        // phon's wire. The logical payload (`make_gnarly_payload`) and the
+        // pre-compile-outside-the-loop methodology are identical across all
+        // codecs — that is what keeps the comparison fair.
+        //
+        // The borrowed arm decodes into `vox_bench::borrowed::GnarlyPayload`,
+        // the same `&str`/`&[u8]`-leaf, owned-`Vec`/`Option`-container mirror
+        // the vox-jit borrowed arm targets. The decoded value borrows the wire
+        // buffer, so `bytes` is held alive across `bench_local`.
+
+        /// Build phon's lowered `MemProgram` for a Facet type `T`.
+        fn phon_program<T: Facet<'static>>() -> phon_ir::MemProgram {
+            let derived = phon::derive::of::<T>().expect("phon derive");
+            let reg = phon_engine::Registry::new(derived.schemas.clone());
+            phon_engine::typed::lower(&derived.descriptor, &reg).expect("phon lower")
+        }
+
+        /// Encode `payload` to phon's wire via a freshly compiled JIT encoder.
+        fn phon_wire(program: &phon_ir::MemProgram, payload: &GnarlyPayload) -> Vec<u8> {
+            use phon_jit::native::NativeEncode;
+            let encoder = NativeEncode::compile(program);
+            let base = core::ptr::from_ref(payload).cast::<u8>();
+            unsafe { encoder.run(base) }
+        }
+
+        #[divan::bench(args = [1, 4, 16])]
+        fn phon_encode(bencher: Bencher, n: usize) {
+            use phon_jit::native::NativeEncode;
+            let payload = make_gnarly_payload(n, 0);
+            let program = phon_program::<GnarlyPayload>();
+            let encoder = NativeEncode::compile(&program);
+            // Correctness: phon's wire round-trips through phon's own decoder.
+            {
+                use phon_jit::native::NativeDecode;
+                let base = core::ptr::from_ref(&payload).cast::<u8>();
+                let wire = unsafe { encoder.run(base) };
+                let decoder = NativeDecode::compile(&program);
+                let mut slot = std::mem::MaybeUninit::<GnarlyPayload>::uninit();
+                unsafe { decoder.run(&wire, slot.as_mut_ptr().cast::<u8>()) }
+                    .expect("phon encode round-trip decode");
+                let back = unsafe { slot.assume_init() };
+                assert_eq!(back, payload, "phon encode round-trip mismatch (n={n})");
+            }
+            bencher.bench_local(|| {
+                let base = core::ptr::from_ref(black_box(&payload)).cast::<u8>();
+                black_box(unsafe { encoder.run(base) })
+            });
+        }
+
+        #[divan::bench(args = [1, 4, 16])]
+        fn phon_decode(bencher: Bencher, n: usize) {
+            use phon_jit::native::NativeDecode;
+            let payload = make_gnarly_payload(n, 0);
+            let program = phon_program::<GnarlyPayload>();
+            // phon decodes phon's OWN wire (not postcard's — different format).
+            let bytes = phon_wire(&program, &payload);
+            let decoder = NativeDecode::compile(&program);
+            // Correctness: phon's owned decode round-trips to the fixture.
+            {
+                let mut slot = std::mem::MaybeUninit::<GnarlyPayload>::uninit();
+                unsafe { decoder.run(&bytes, slot.as_mut_ptr().cast::<u8>()) }
+                    .expect("phon owned decode");
+                let back = unsafe { slot.assume_init() };
+                assert_eq!(back, payload, "phon owned decode mismatch (n={n})");
+            }
+            bencher.bench_local(|| {
+                let mut slot = std::mem::MaybeUninit::<GnarlyPayload>::uninit();
+                unsafe { decoder.run(black_box(&bytes), slot.as_mut_ptr().cast::<u8>()) }
+                    .expect("phon owned decode");
+                black_box(unsafe { slot.assume_init() });
+            });
+        }
+
+        #[divan::bench(args = [1, 4, 16])]
+        fn phon_decode_borrowed(bencher: Bencher, n: usize) {
+            use phon_jit::native::NativeDecode;
+            type Borrowed<'a> = vox_bench::borrowed::GnarlyPayload<'a>;
+            let payload = make_gnarly_payload(n, 0);
+            // phon decodes phon's OWN wire. The owned and borrowed mirrors share
+            // an identical phon wire (same schema primitives), so the
+            // owned-encoded bytes feed the borrowed decoder. `bytes` outlives
+            // every decoded borrowed value (held across the loop).
+            let owned_program = phon_program::<GnarlyPayload>();
+            let bytes = phon_wire(&owned_program, &payload);
+            let program = phon_program::<Borrowed<'static>>();
+            let decoder = NativeDecode::compile(&program);
+            // Correctness: borrowed decode of the same wire matches the fixture.
+            {
+                let mut slot = std::mem::MaybeUninit::<Borrowed<'_>>::uninit();
+                unsafe { decoder.run(&bytes, slot.as_mut_ptr().cast::<u8>()) }
+                    .expect("phon borrowed decode");
+                let back = unsafe { slot.assume_init() };
+                assert_eq!(back.mount, payload.mount, "phon borrowed mount (n={n})");
+                assert_eq!(
+                    back.digest,
+                    payload.digest.as_slice(),
+                    "phon borrowed digest (n={n})"
+                );
+                assert_eq!(
+                    back.entries.len(),
+                    payload.entries.len(),
+                    "phon borrowed entry count (n={n})"
+                );
+            }
+            bencher.bench_local(|| {
+                let mut slot = std::mem::MaybeUninit::<Borrowed<'_>>::uninit();
+                unsafe { decoder.run(black_box(&bytes), slot.as_mut_ptr().cast::<u8>()) }
+                    .expect("phon borrowed decode");
+                black_box(unsafe { slot.assume_init() });
+            });
+        }
     }
 
     mod response {
