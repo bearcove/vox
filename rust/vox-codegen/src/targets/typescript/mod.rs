@@ -10,10 +10,13 @@
 
 pub mod client;
 pub mod http_client;
+pub mod phon;
 pub mod schema;
 pub mod server;
 pub mod types;
 pub mod wire;
+
+pub use phon::generate_phon_service;
 
 use crate::code_writer::CodeWriter;
 use vox_types::{MethodDescriptor, ServiceDescriptor};
