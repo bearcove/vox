@@ -12,6 +12,7 @@ pub fn streamer_service_descriptor() -> &'static ::vox::session::ServiceDescript
                 "Streamer",
                 "count_up",
                 &["start", "output"],
+                &[None, Some(<i32 as ::vox::facet::Facet<'static>>::SHAPE)],
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

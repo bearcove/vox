@@ -388,8 +388,13 @@ mod tests {
 
     #[test]
     fn server_request_exposes_context_and_decoded_args() {
-        let method =
-            method_descriptor::<(u32, u32), ()>("demo-service", "sum", &["left", "right"], None);
+        let method = method_descriptor::<(u32, u32), ()>(
+            "demo-service",
+            "sum",
+            &["left", "right"],
+            &[None, None],
+            None,
+        );
         let metadata = crate::Metadata::default();
         let extensions = Extensions::new();
         let context = RequestContext::with_extensions(method, &metadata, &extensions);

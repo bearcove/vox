@@ -12,6 +12,7 @@ pub fn notifier_service_descriptor() -> &'static ::vox::session::ServiceDescript
                 "Notifier",
                 "notify",
                 &["msg"],
+                &[None],
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

@@ -11,7 +11,9 @@ pub fn calc_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
             vec![::vox::hash::method_descriptor::<
                 (f64, f64),
                 Result<f64, DivError>,
-            >("Calc", "div", &["a", "b"], None)];
+            >(
+                "Calc", "div", &["a", "b"], &[None, None], None
+            )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Calc",
             methods: Box::leak(methods.into_boxed_slice()),

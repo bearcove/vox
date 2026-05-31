@@ -121,6 +121,28 @@ fn type_is_tx(ty: &Type) -> bool {
     }
 }
 
+/// For a `Tx<X>`/`Rx<X>` argument type, the element type `X`. `None` otherwise.
+///
+/// `Tx`/`Rx` are `#[facet(opaque)]`, so their `Shape` carries no `type_params`
+/// and the element is invisible to reflection. The macro sees the channel type
+/// syntactically, so it captures `X` here for codegen (`ArgDescriptor::channel_element`).
+fn channel_element_type(ty: &Type) -> Option<&Type> {
+    match ty {
+        Type::Reference(TypeRef { inner, .. }) => channel_element_type(inner),
+        Type::PathWithGenerics(PathWithGenerics { path, args, .. }) => {
+            let seg = path.last_segment();
+            if seg != "Tx" && seg != "Rx" {
+                return None;
+            }
+            args.iter().find_map(|entry| match &entry.value {
+                GenericArgument::Type(inner) => Some(inner),
+                GenericArgument::Lifetime(_) => None,
+            })
+        }
+        _ => None,
+    }
+}
+
 // r[service-macro.is-source-of-truth]
 // r[impl rpc]
 // r[impl rpc.service]
@@ -319,6 +341,19 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
             let args_tuple_ty = quote! { (#(#arg_types,)*) };
             let arg_name_strs: Vec<String> = m.args().map(|arg| arg.name().to_string()).collect();
 
+            // Per-arg channel element shape: `Some(<X>::SHAPE)` for a `Tx<X>`/`Rx<X>`
+            // argument (whose opaque `Shape` hides `X`), `None` otherwise.
+            let channel_elements: Vec<TokenStream2> = m
+                .args()
+                .map(|arg| match channel_element_type(&arg.ty) {
+                    Some(elem) => {
+                        let elem = to_static_type_tokens(elem);
+                        quote! { Some(<#elem as #vox::facet::Facet<'static>>::SHAPE) }
+                    }
+                    None => quote! { None },
+                })
+                .collect();
+
             let return_type = m.return_type();
             let return_ty_tokens = to_static_type_tokens(&return_type);
 
@@ -332,6 +367,7 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
                     #service_name,
                     #method_name_str,
                     &[#(#arg_name_strs),*],
+                    &[#(#channel_elements),*],
                     #method_doc_expr,
                 )
             }

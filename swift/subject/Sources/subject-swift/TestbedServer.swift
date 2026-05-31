@@ -2443,15 +2443,15 @@ nonisolated private func testbed_swift_value_desc_49_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: (Rx<Int32>).self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: (Data).self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_49_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: (Rx<Int32>).self).initialize(
-    to: src.assumingMemoryBound(to: (Rx<Int32>).self).pointee)
+  dst.assumingMemoryBound(to: (Data).self).initialize(
+    to: src.assumingMemoryBound(to: (Data).self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2459,8 +2459,8 @@ nonisolated private func testbed_swift_value_desc_49_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: (Rx<Int32>).self)
-  dst.assumingMemoryBound(to: (Rx<Int32>).self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: (Data).self)
+  dst.assumingMemoryBound(to: (Data).self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2469,15 +2469,15 @@ nonisolated private func testbed_swift_value_desc_50_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: Rx<Int32>.self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_50_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: Rx<Int32>.self).initialize(
-    to: src.assumingMemoryBound(to: Rx<Int32>.self).pointee)
+  dst.assumingMemoryBound(to: Data.self).initialize(
+    to: src.assumingMemoryBound(to: Data.self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2485,8 +2485,8 @@ nonisolated private func testbed_swift_value_desc_50_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: Rx<Int32>.self)
-  dst.assumingMemoryBound(to: Rx<Int32>.self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: Data.self)
+  dst.assumingMemoryBound(to: Data.self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2495,15 +2495,15 @@ nonisolated private func testbed_swift_value_desc_51_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: (UInt32, Tx<Int32>).self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: (UInt32, Data).self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_51_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: (UInt32, Tx<Int32>).self).initialize(
-    to: src.assumingMemoryBound(to: (UInt32, Tx<Int32>).self).pointee)
+  dst.assumingMemoryBound(to: (UInt32, Data).self).initialize(
+    to: src.assumingMemoryBound(to: (UInt32, Data).self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2511,8 +2511,8 @@ nonisolated private func testbed_swift_value_desc_51_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: (UInt32, Tx<Int32>).self)
-  dst.assumingMemoryBound(to: (UInt32, Tx<Int32>).self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: (UInt32, Data).self)
+  dst.assumingMemoryBound(to: (UInt32, Data).self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2521,15 +2521,15 @@ nonisolated private func testbed_swift_value_desc_52_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: Tx<Int32>.self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_52_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: Tx<Int32>.self).initialize(
-    to: src.assumingMemoryBound(to: Tx<Int32>.self).pointee)
+  dst.assumingMemoryBound(to: Data.self).initialize(
+    to: src.assumingMemoryBound(to: Data.self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2537,8 +2537,8 @@ nonisolated private func testbed_swift_value_desc_52_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: Tx<Int32>.self)
-  dst.assumingMemoryBound(to: Tx<Int32>.self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: Data.self)
+  dst.assumingMemoryBound(to: Data.self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2573,15 +2573,15 @@ nonisolated private func testbed_swift_value_desc_54_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: (Rx<String>, Tx<String>).self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: (Data, Data).self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_54_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: (Rx<String>, Tx<String>).self).initialize(
-    to: src.assumingMemoryBound(to: (Rx<String>, Tx<String>).self).pointee)
+  dst.assumingMemoryBound(to: (Data, Data).self).initialize(
+    to: src.assumingMemoryBound(to: (Data, Data).self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2589,8 +2589,8 @@ nonisolated private func testbed_swift_value_desc_54_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: (Rx<String>, Tx<String>).self)
-  dst.assumingMemoryBound(to: (Rx<String>, Tx<String>).self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: (Data, Data).self)
+  dst.assumingMemoryBound(to: (Data, Data).self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2599,15 +2599,15 @@ nonisolated private func testbed_swift_value_desc_55_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: Rx<String>.self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_55_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: Rx<String>.self).initialize(
-    to: src.assumingMemoryBound(to: Rx<String>.self).pointee)
+  dst.assumingMemoryBound(to: Data.self).initialize(
+    to: src.assumingMemoryBound(to: Data.self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2615,8 +2615,8 @@ nonisolated private func testbed_swift_value_desc_55_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: Rx<String>.self)
-  dst.assumingMemoryBound(to: Rx<String>.self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: Data.self)
+  dst.assumingMemoryBound(to: Data.self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2625,15 +2625,15 @@ nonisolated private func testbed_swift_value_desc_56_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: Tx<String>.self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_56_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: Tx<String>.self).initialize(
-    to: src.assumingMemoryBound(to: Tx<String>.self).pointee)
+  dst.assumingMemoryBound(to: Data.self).initialize(
+    to: src.assumingMemoryBound(to: Data.self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2641,8 +2641,8 @@ nonisolated private func testbed_swift_value_desc_56_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: Tx<String>.self)
-  dst.assumingMemoryBound(to: Tx<String>.self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: Data.self)
+  dst.assumingMemoryBound(to: Data.self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2651,15 +2651,15 @@ nonisolated private func testbed_swift_value_desc_57_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: (Tx<Int32>).self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: (Data).self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_57_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: (Tx<Int32>).self).initialize(
-    to: src.assumingMemoryBound(to: (Tx<Int32>).self).pointee)
+  dst.assumingMemoryBound(to: (Data).self).initialize(
+    to: src.assumingMemoryBound(to: (Data).self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2667,8 +2667,8 @@ nonisolated private func testbed_swift_value_desc_57_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: (Tx<Int32>).self)
-  dst.assumingMemoryBound(to: (Tx<Int32>).self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: (Data).self)
+  dst.assumingMemoryBound(to: (Data).self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2677,15 +2677,15 @@ nonisolated private func testbed_swift_value_desc_58_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: (Rx<Int32>, Tx<Int64>).self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: (Data, Data).self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_58_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: (Rx<Int32>, Tx<Int64>).self).initialize(
-    to: src.assumingMemoryBound(to: (Rx<Int32>, Tx<Int64>).self).pointee)
+  dst.assumingMemoryBound(to: (Data, Data).self).initialize(
+    to: src.assumingMemoryBound(to: (Data, Data).self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2693,8 +2693,8 @@ nonisolated private func testbed_swift_value_desc_58_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: (Rx<Int32>, Tx<Int64>).self)
-  dst.assumingMemoryBound(to: (Rx<Int32>, Tx<Int64>).self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: (Data, Data).self)
+  dst.assumingMemoryBound(to: (Data, Data).self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -2703,15 +2703,15 @@ nonisolated private func testbed_swift_value_desc_59_destroy(
   _ value: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) {
   guard let value else { return }
-  value.assumingMemoryBound(to: Tx<Int64>.self).deinitialize(count: 1)
+  value.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
 }
 
 nonisolated private func testbed_swift_value_desc_59_copyInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  dst.assumingMemoryBound(to: Tx<Int64>.self).initialize(
-    to: src.assumingMemoryBound(to: Tx<Int64>.self).pointee)
+  dst.assumingMemoryBound(to: Data.self).initialize(
+    to: src.assumingMemoryBound(to: Data.self).pointee)
   return VoxSwiftStatusOK
 }
 
@@ -2719,8 +2719,8 @@ nonisolated private func testbed_swift_value_desc_59_takeInit(
   _ dst: UnsafeMutableRawPointer?, _ src: UnsafeMutableRawPointer?, _ context: UnsafeRawPointer?
 ) -> VoxSwiftStatus {
   guard let dst, let src else { return VoxSwiftStatusBadABI }
-  let srcTyped = src.assumingMemoryBound(to: Tx<Int64>.self)
-  dst.assumingMemoryBound(to: Tx<Int64>.self).initialize(to: srcTyped.pointee)
+  let srcTyped = src.assumingMemoryBound(to: Data.self)
+  dst.assumingMemoryBound(to: Data.self).initialize(to: srcTyped.pointee)
   srcTyped.deinitialize(count: 1)
   return VoxSwiftStatusOK
 }
@@ -5409,13 +5409,13 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
 
   let d49Fields = registry.allocateFields([
     VoxSwiftFieldDescriptor(
-      name: .staticString("0"), schemaId: 0x967a_48ac_345e_2f5e, type: UnsafePointer(d50), offset: 0
+      name: .staticString("0"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d50), offset: 0
     )
   ])
   _ = registry.defineDescriptor(
     d49,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: (Rx<Int32>).self,
+      of: (Data).self,
       kind: VoxSwiftTypeKindStruct,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: VoxSwiftTypeFlagFixedLayout,
@@ -5434,17 +5434,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
     )
   )
 
-  let d50TypeArgs = registry.allocateTypeArgs([UnsafePointer(d8)])
   _ = registry.defineDescriptor(
     d50,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: Rx<Int32>.self,
-      kind: VoxSwiftTypeKindChannel,
+      of: Data.self,
+      kind: VoxSwiftTypeKindOpaque,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: 0,
-      schemaId: 0x967a_48ac_345e_2f5e,
-      typeArgs: d50TypeArgs,
-      typeArgCount: 1,
+      schemaId: 0x897e_e609_6f7b_b726,
+      typeArgs: nil,
+      typeArgCount: 0,
       fields: nil,
       fieldCount: 0,
       variants: nil,
@@ -5462,13 +5461,13 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
       name: .staticString("0"), schemaId: 0x281c_5be4_f2ee_63b4, type: UnsafePointer(d19), offset: 0
     ),
     VoxSwiftFieldDescriptor(
-      name: .staticString("1"), schemaId: 0xc886_545a_493d_06eb, type: UnsafePointer(d52), offset: 0
+      name: .staticString("1"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d52), offset: 0
     ),
   ])
   _ = registry.defineDescriptor(
     d51,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: (UInt32, Tx<Int32>).self,
+      of: (UInt32, Data).self,
       kind: VoxSwiftTypeKindStruct,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: VoxSwiftTypeFlagFixedLayout,
@@ -5487,17 +5486,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
     )
   )
 
-  let d52TypeArgs = registry.allocateTypeArgs([UnsafePointer(d8)])
   _ = registry.defineDescriptor(
     d52,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: Tx<Int32>.self,
-      kind: VoxSwiftTypeKindChannel,
+      of: Data.self,
+      kind: VoxSwiftTypeKindOpaque,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: 0,
-      schemaId: 0xc886_545a_493d_06eb,
-      typeArgs: d52TypeArgs,
-      typeArgCount: 1,
+      schemaId: 0x897e_e609_6f7b_b726,
+      typeArgs: nil,
+      typeArgCount: 0,
       fields: nil,
       fieldCount: 0,
       variants: nil,
@@ -5534,16 +5532,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
 
   let d54Fields = registry.allocateFields([
     VoxSwiftFieldDescriptor(
-      name: .staticString("0"), schemaId: 0x967a_48ac_345e_2f5e, type: UnsafePointer(d55), offset: 0
+      name: .staticString("0"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d55), offset: 0
     ),
     VoxSwiftFieldDescriptor(
-      name: .staticString("1"), schemaId: 0xc886_545a_493d_06eb, type: UnsafePointer(d56), offset: 0
+      name: .staticString("1"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d56), offset: 0
     ),
   ])
   _ = registry.defineDescriptor(
     d54,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: (Rx<String>, Tx<String>).self,
+      of: (Data, Data).self,
       kind: VoxSwiftTypeKindStruct,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: VoxSwiftTypeFlagFixedLayout,
@@ -5562,17 +5560,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
     )
   )
 
-  let d55TypeArgs = registry.allocateTypeArgs([UnsafePointer(d5)])
   _ = registry.defineDescriptor(
     d55,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: Rx<String>.self,
-      kind: VoxSwiftTypeKindChannel,
+      of: Data.self,
+      kind: VoxSwiftTypeKindOpaque,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: 0,
-      schemaId: 0x967a_48ac_345e_2f5e,
-      typeArgs: d55TypeArgs,
-      typeArgCount: 1,
+      schemaId: 0x897e_e609_6f7b_b726,
+      typeArgs: nil,
+      typeArgCount: 0,
       fields: nil,
       fieldCount: 0,
       variants: nil,
@@ -5585,17 +5582,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
     )
   )
 
-  let d56TypeArgs = registry.allocateTypeArgs([UnsafePointer(d5)])
   _ = registry.defineDescriptor(
     d56,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: Tx<String>.self,
-      kind: VoxSwiftTypeKindChannel,
+      of: Data.self,
+      kind: VoxSwiftTypeKindOpaque,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: 0,
-      schemaId: 0xc886_545a_493d_06eb,
-      typeArgs: d56TypeArgs,
-      typeArgCount: 1,
+      schemaId: 0x897e_e609_6f7b_b726,
+      typeArgs: nil,
+      typeArgCount: 0,
       fields: nil,
       fieldCount: 0,
       variants: nil,
@@ -5610,13 +5606,13 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
 
   let d57Fields = registry.allocateFields([
     VoxSwiftFieldDescriptor(
-      name: .staticString("0"), schemaId: 0xc886_545a_493d_06eb, type: UnsafePointer(d52), offset: 0
+      name: .staticString("0"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d52), offset: 0
     )
   ])
   _ = registry.defineDescriptor(
     d57,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: (Tx<Int32>).self,
+      of: (Data).self,
       kind: VoxSwiftTypeKindStruct,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: VoxSwiftTypeFlagFixedLayout,
@@ -5637,16 +5633,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
 
   let d58Fields = registry.allocateFields([
     VoxSwiftFieldDescriptor(
-      name: .staticString("0"), schemaId: 0x967a_48ac_345e_2f5e, type: UnsafePointer(d50), offset: 0
+      name: .staticString("0"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d50), offset: 0
     ),
     VoxSwiftFieldDescriptor(
-      name: .staticString("1"), schemaId: 0xc886_545a_493d_06eb, type: UnsafePointer(d59), offset: 0
+      name: .staticString("1"), schemaId: 0x897e_e609_6f7b_b726, type: UnsafePointer(d59), offset: 0
     ),
   ])
   _ = registry.defineDescriptor(
     d58,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: (Rx<Int32>, Tx<Int64>).self,
+      of: (Data, Data).self,
       kind: VoxSwiftTypeKindStruct,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: VoxSwiftTypeFlagFixedLayout,
@@ -5665,17 +5661,16 @@ nonisolated(unsafe) public let testbed_swift_value_descriptors: VoxSwiftDescript
     )
   )
 
-  let d59TypeArgs = registry.allocateTypeArgs([UnsafePointer(d33)])
   _ = registry.defineDescriptor(
     d59,
     as: VoxSwiftTypeDescriptor.concrete(
-      of: Tx<Int64>.self,
-      kind: VoxSwiftTypeKindChannel,
+      of: Data.self,
+      kind: VoxSwiftTypeKindOpaque,
       primitiveKind: VoxSwiftPrimitiveUnit,
       flags: 0,
-      schemaId: 0xc886_545a_493d_06eb,
-      typeArgs: d59TypeArgs,
-      typeArgCount: 1,
+      schemaId: 0x897e_e609_6f7b_b726,
+      typeArgs: nil,
+      typeArgCount: 0,
       fields: nil,
       fieldCount: 0,
       variants: nil,
@@ -6901,31 +6896,31 @@ public protocol TestbedHandler: Sendable {
   ///  Client sends numbers, server returns their sum.
   ///
   ///  Tests: client→server streaming. Server receives via `Rx<T>`, returns scalar.
-  func sum(numbers: Rx<Int32>) async throws -> Int64
+  func sum(numbers: Data) async throws -> Int64
   ///  Server streams numbers back to client.
   ///
   ///  Tests: server→client streaming. Server sends via `Tx<T>`.
-  func generate(count: UInt32, output: Tx<Int32>) async throws
+  func generate(count: UInt32, output: Data) async throws
   ///  Server streams numbers back to client on a non-idempotent retry probe.
   ///
   ///  Tests: channel retry fails closed when the session breaks mid-stream.
-  func generateRetryNonIdem(count: UInt32, output: Tx<Int32>) async throws
+  func generateRetryNonIdem(count: UInt32, output: Data) async throws
   ///  Server streams numbers back to client on an idempotent retry probe.
   ///
   ///  Tests: channel retry reruns the method with fresh channel bindings.
-  func generateRetryIdem(count: UInt32, output: Tx<Int32>) async throws
+  func generateRetryIdem(count: UInt32, output: Data) async throws
   ///  Bidirectional: client sends strings, server echoes each back.
   ///
   ///  Tests: bidirectional streaming. Server receives via `Rx<T>`, sends via `Tx<T>`.
-  func transform(input: Rx<String>, output: Tx<String>) async throws
+  func transform(input: Data, output: Data) async throws
   ///  Server returns before streaming numbers back to the client.
   ///
   ///  Tests: callee-held `Tx<T>` outlives the unary method response.
-  func postReplyGenerate(output: Tx<Int32>) async throws
+  func postReplyGenerate(output: Data) async throws
   ///  Server returns before receiving numbers from the client, then reports their sum.
   ///
   ///  Tests: callee-held `Rx<T>` outlives the unary method response.
-  func postReplySum(input: Rx<Int32>, result: Tx<Int64>) async throws
+  func postReplySum(input: Data, result: Data) async throws
   ///  Echo a point back.
   func echoPoint(point: Point) async throws -> Point
   ///  Create a person and return it.
@@ -6957,11 +6952,11 @@ public protocol TestbedHandler: Sendable {
   ///  Sum a large stream (tests channel credit/backpressure for > initial credit).
   ///
   ///  Tests: channel flow control when sender must wait for credit grants.
-  func sumLarge(numbers: Rx<Int32>) async throws -> Int64
+  func sumLarge(numbers: Data) async throws -> Int64
   ///  Generate a large stream (tests Tx backpressure with > initial credit items).
   ///
   ///  Tests: server must wait for client to grant credit mid-stream.
-  func generateLarge(count: UInt32, output: Tx<Int32>) async throws
+  func generateLarge(count: UInt32, output: Data) async throws
   ///  Return all three Color variants in a Vec, testing enum + vec round-trip.
   func allColors() async throws -> [Color]
   ///  Accept multiple args of different types; return a summary struct.
@@ -7163,89 +7158,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         taskSender: taskSender)
     default:
       taskSender(.response(requestId: requestId, payload: encodeUnknownMethodError()))
-    }
-  }
-
-  public func retryPolicy(methodId: UInt64) -> RetryPolicy {
-    switch methodId {
-    case 0x880b_c4ee_e235_74be:
-      return .volatile
-    case 0x1c22_3f30_e180_392a:
-      return .volatile
-    case 0xfb68_d931_8f83_0875:
-      return .volatile
-    case 0xa15f_f520_9471_2a3b:
-      return .volatile
-    case 0x51f9_cfd8_e865_77c9:
-      return .volatile
-    case 0x239e_5b99_b1f8_207a:
-      return .volatile
-    case 0x3441_9529_478c_c7b8:
-      return .volatile
-    case 0xe2d2_7fd9_098c_6ea2:
-      return .idem
-    case 0xcb46_9cff_8d79_8feb:
-      return .volatile
-    case 0xec36_e847_51a8_97be:
-      return .volatile
-    case 0xc1ce_3c39_7e4c_a6e7:
-      return .volatile
-    case 0x81f5_386d_589d_fbe4:
-      return .volatile
-    case 0x68ff_a90b_7728_bde7:
-      return .volatile
-    case 0x223f_e028_2d26_3107:
-      return .volatile
-    case 0xd4f1_6ea9_eca1_32e6:
-      return .volatile
-    case 0x0438_5a4b_e2a8_82f5:
-      return .volatile
-    case 0xef42_1eb5_b08c_973a:
-      return .volatile
-    case 0xb6fa_cae6_a7a8_6e99:
-      return .volatile
-    case 0xe08f_0f52_54e7_a997:
-      return .volatile
-    case 0x5985_1852_3a62_66bf:
-      return .volatile
-    case 0x7d55_a713_ad61_2bf2:
-      return .volatile
-    case 0x4405_6c78_42fa_336c:
-      return .volatile
-    case 0x5136_d8f0_1a5f_496c:
-      return .volatile
-    case 0x85e2_380d_bf7f_fe65:
-      return .volatile
-    case 0xb1a5_bfd2_05b3_fbfc:
-      return .volatile
-    case 0x9a7b_ed54_5e08_8054:
-      return .volatile
-    case 0x8edf_bd65_d162_f685:
-      return .volatile
-    case 0xfbfb_05bb_caad_e4a0:
-      return .volatile
-    case 0x62fe_b14a_8fcf_9b6d:
-      return .volatile
-    case 0x4125_b5e6_78b7_b4a5:
-      return .volatile
-    case 0xc7c5_aa84_5cfb_8bf6:
-      return .volatile
-    case 0x6619_071b_e5d5_c259:
-      return .volatile
-    case 0xbd9b_cabd_deeb_eb04:
-      return .volatile
-    case 0x100b_0e08_da4b_8f1a:
-      return .volatile
-    case 0x6975_90d3_ffc3_6703:
-      return .volatile
-    case 0x2bd1_b314_9d73_ce97:
-      return .volatile
-    case 0x3b3d_22b0_15fa_1a3f:
-      return .volatile
-    case 0xe13a_477f_b964_ce28:
-      return .volatile
-    default:
-      return .volatile
     }
   }
 
@@ -7503,15 +7415,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     let responseSchemaPayload = methodInfo.buildPayload(
       direction: .response, registry: schemaRegistry)
     do {
-      let numbersChannelId = try decodeVarint(from: &buffer)
-      let numbersReceiver = await registry.register(
-        numbersChannelId, initialCredit: 16,
-        onConsumed: { [taskSender] additional in
-          taskSender(.grantCredit(channelId: numbersChannelId, bytes: additional))
-        })
-      let numbers = createServerRx(
-        channelId: numbersChannelId, receiver: numbersReceiver,
-        deserialize: { buf in try decodeI32(from: &buf) })
+      let numbers: Any = ()  // unsupported type
       do {
         let result = try await handler.sum(numbers: numbers)
         let _encoded = encodeResultOk(result, encoder: { val, buf in encodeI64(val, into: &buf) })
@@ -7547,10 +7451,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
       direction: .response, registry: schemaRegistry)
     do {
       let count = try decodeU32(from: &buffer)
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI32(val, into: &buf) })
+      let output: Any = ()  // unsupported type
       do {
         try await handler.generate(count: count, output: output)
         taskSender(
@@ -7585,10 +7486,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
       direction: .response, registry: schemaRegistry)
     do {
       let count = try decodeU32(from: &buffer)
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI32(val, into: &buf) })
+      let output: Any = ()  // unsupported type
       do {
         try await handler.generateRetryNonIdem(count: count, output: output)
         taskSender(
@@ -7623,10 +7521,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
       direction: .response, registry: schemaRegistry)
     do {
       let count = try decodeU32(from: &buffer)
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI32(val, into: &buf) })
+      let output: Any = ()  // unsupported type
       do {
         try await handler.generateRetryIdem(count: count, output: output)
         taskSender(
@@ -7660,19 +7555,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     let responseSchemaPayload = methodInfo.buildPayload(
       direction: .response, registry: schemaRegistry)
     do {
-      let inputChannelId = try decodeVarint(from: &buffer)
-      let inputReceiver = await registry.register(
-        inputChannelId, initialCredit: 16,
-        onConsumed: { [taskSender] additional in
-          taskSender(.grantCredit(channelId: inputChannelId, bytes: additional))
-        })
-      let input = createServerRx(
-        channelId: inputChannelId, receiver: inputReceiver,
-        deserialize: { buf in try decodeString(from: &buf) })
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeString(val, into: &buf) })
+      let input: Any = ()  // unsupported type
+      let output: Any = ()  // unsupported type
       do {
         try await handler.transform(input: input, output: output)
         taskSender(
@@ -7706,10 +7590,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     let responseSchemaPayload = methodInfo.buildPayload(
       direction: .response, registry: schemaRegistry)
     do {
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI32(val, into: &buf) })
+      let output: Any = ()  // unsupported type
       do {
         try await handler.postReplyGenerate(output: output)
         taskSender(
@@ -7743,19 +7624,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     let responseSchemaPayload = methodInfo.buildPayload(
       direction: .response, registry: schemaRegistry)
     do {
-      let inputChannelId = try decodeVarint(from: &buffer)
-      let inputReceiver = await registry.register(
-        inputChannelId, initialCredit: 16,
-        onConsumed: { [taskSender] additional in
-          taskSender(.grantCredit(channelId: inputChannelId, bytes: additional))
-        })
-      let input = createServerRx(
-        channelId: inputChannelId, receiver: inputReceiver,
-        deserialize: { buf in try decodeI32(from: &buf) })
-      let resultChannelId = try decodeVarint(from: &buffer)
-      let result = await createServerTx(
-        channelId: resultChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI64(val, into: &buf) })
+      let input: Any = ()  // unsupported type
+      let result: Any = ()  // unsupported type
       do {
         try await handler.postReplySum(input: input, result: result)
         taskSender(
@@ -8372,15 +8242,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     let responseSchemaPayload = methodInfo.buildPayload(
       direction: .response, registry: schemaRegistry)
     do {
-      let numbersChannelId = try decodeVarint(from: &buffer)
-      let numbersReceiver = await registry.register(
-        numbersChannelId, initialCredit: 16,
-        onConsumed: { [taskSender] additional in
-          taskSender(.grantCredit(channelId: numbersChannelId, bytes: additional))
-        })
-      let numbers = createServerRx(
-        channelId: numbersChannelId, receiver: numbersReceiver,
-        deserialize: { buf in try decodeI32(from: &buf) })
+      let numbers: Any = ()  // unsupported type
       do {
         let result = try await handler.sumLarge(numbers: numbers)
         let _encoded = encodeResultOk(result, encoder: { val, buf in encodeI64(val, into: &buf) })
@@ -8416,10 +8278,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
       direction: .response, registry: schemaRegistry)
     do {
       let count = try decodeU32(from: &buffer)
-      let outputChannelId = try decodeVarint(from: &buffer)
-      let output = await createServerTx(
-        channelId: outputChannelId, taskSender: taskSender, registry: registry, initialCredit: 16,
-        serialize: { val, buf in encodeI32(val, into: &buf) })
+      let output: Any = ()  // unsupported type
       do {
         try await handler.generateLarge(count: count, output: output)
         taskSender(
@@ -9058,6 +8917,8 @@ nonisolated(unsafe) public let testbed_schema_registry: [UInt64: Schema] = [
         FieldSchema(name: "y", typeRef: .concrete(0x361f_4536_eee9_f991), required: true),
         FieldSchema(name: "active", typeRef: .concrete(0x1783_67a8_7f66_fb46), required: true),
       ])),
+  0x897e_e609_6f7b_b726: Schema(
+    id: 0x897e_e609_6f7b_b726, typeParams: [], kind: .primitive(.payload)),
   0x903c_92be_6fd7_e0e7: Schema(
     id: 0x903c_92be_6fd7_e0e7, typeParams: [],
     kind: .struct(
@@ -9086,9 +8947,6 @@ nonisolated(unsafe) public let testbed_schema_registry: [UInt64: Schema] = [
     id: 0x915c_6fb5_b64f_270b, typeParams: ["T0", "T1", "T2", "T3"],
     kind: .tuple(elements: [.var(name: "T0"), .var(name: "T1"), .var(name: "T2"), .var(name: "T3")])
   ),
-  0x967a_48ac_345e_2f5e: Schema(
-    id: 0x967a_48ac_345e_2f5e, typeParams: ["T"],
-    kind: .channel(direction: .rx, element: .var(name: "T"))),
   0xaa51_0ab0_7d34_f141: Schema(
     id: 0xaa51_0ab0_7d34_f141, typeParams: ["T0", "T1", "T2"],
     kind: .tuple(elements: [.var(name: "T0"), .var(name: "T1"), .var(name: "T2")])),
@@ -9139,9 +8997,6 @@ nonisolated(unsafe) public let testbed_schema_registry: [UInt64: Schema] = [
           typeRef: .generic(0xdcaf_d4de_6b79_69bb, args: [.concrete(0x6d7d_ce91_4ee1_50e8)]),
           required: true),
       ])),
-  0xc886_545a_493d_06eb: Schema(
-    id: 0xc886_545a_493d_06eb, typeParams: ["T"],
-    kind: .channel(direction: .tx, element: .var(name: "T"))),
   0xd935_6298_b816_39ac: Schema(id: 0xd935_6298_b816_39ac, typeParams: [], kind: .primitive(.u64)),
   0xd9d7_8670_738e_6064: Schema(
     id: 0xd9d7_8670_738e_6064, typeParams: [],
@@ -9262,10 +9117,8 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0x51f9_cfd8_e865_77c9: MethodSchemaInfo(
-    argsSchemaIds: [0x361f_4536_eee9_f991, 0x967a_48ac_345e_2f5e, 0x6847_ab90_feda_71c1],
-    argsRoot: .generic(
-      0x6847_ab90_feda_71c1,
-      args: [.generic(0x967a_48ac_345e_2f5e, args: [.concrete(0x361f_4536_eee9_f991)])]),
+    argsSchemaIds: [0x897e_e609_6f7b_b726, 0x6847_ab90_feda_71c1],
+    argsRoot: .generic(0x6847_ab90_feda_71c1, args: [.concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xc6eb_8c46_f1e1_7fba,
@@ -9278,15 +9131,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0x239e_5b99_b1f8_207a: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x281c_5be4_f2ee_63b4, 0x361f_4536_eee9_f991, 0xc886_545a_493d_06eb, 0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x281c_5be4_f2ee_63b4, 0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .concrete(0x281c_5be4_f2ee_63b4),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0x361f_4536_eee9_f991)]),
-      ]),
+      args: [.concrete(0x281c_5be4_f2ee_63b4), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9299,15 +9147,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0x3441_9529_478c_c7b8: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x281c_5be4_f2ee_63b4, 0x361f_4536_eee9_f991, 0xc886_545a_493d_06eb, 0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x281c_5be4_f2ee_63b4, 0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .concrete(0x281c_5be4_f2ee_63b4),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0x361f_4536_eee9_f991)]),
-      ]),
+      args: [.concrete(0x281c_5be4_f2ee_63b4), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9320,15 +9163,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0xe2d2_7fd9_098c_6ea2: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x281c_5be4_f2ee_63b4, 0x361f_4536_eee9_f991, 0xc886_545a_493d_06eb, 0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x281c_5be4_f2ee_63b4, 0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .concrete(0x281c_5be4_f2ee_63b4),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0x361f_4536_eee9_f991)]),
-      ]),
+      args: [.concrete(0x281c_5be4_f2ee_63b4), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9341,15 +9179,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0xcb46_9cff_8d79_8feb: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x6d7d_ce91_4ee1_50e8, 0x967a_48ac_345e_2f5e, 0xc886_545a_493d_06eb, 0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .generic(0x967a_48ac_345e_2f5e, args: [.concrete(0x6d7d_ce91_4ee1_50e8)]),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0x6d7d_ce91_4ee1_50e8)]),
-      ]),
+      args: [.concrete(0x897e_e609_6f7b_b726), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9362,10 +9195,8 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0xec36_e847_51a8_97be: MethodSchemaInfo(
-    argsSchemaIds: [0x361f_4536_eee9_f991, 0xc886_545a_493d_06eb, 0x6847_ab90_feda_71c1],
-    argsRoot: .generic(
-      0x6847_ab90_feda_71c1,
-      args: [.generic(0xc886_545a_493d_06eb, args: [.concrete(0x361f_4536_eee9_f991)])]),
+    argsSchemaIds: [0x897e_e609_6f7b_b726, 0x6847_ab90_feda_71c1],
+    argsRoot: .generic(0x6847_ab90_feda_71c1, args: [.concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9378,16 +9209,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0xc1ce_3c39_7e4c_a6e7: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x361f_4536_eee9_f991, 0x967a_48ac_345e_2f5e, 0xc6eb_8c46_f1e1_7fba, 0xc886_545a_493d_06eb,
-      0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .generic(0x967a_48ac_345e_2f5e, args: [.concrete(0x361f_4536_eee9_f991)]),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0xc6eb_8c46_f1e1_7fba)]),
-      ]),
+      args: [.concrete(0x897e_e609_6f7b_b726), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,
@@ -9640,10 +9465,8 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0x9a7b_ed54_5e08_8054: MethodSchemaInfo(
-    argsSchemaIds: [0x361f_4536_eee9_f991, 0x967a_48ac_345e_2f5e, 0x6847_ab90_feda_71c1],
-    argsRoot: .generic(
-      0x6847_ab90_feda_71c1,
-      args: [.generic(0x967a_48ac_345e_2f5e, args: [.concrete(0x361f_4536_eee9_f991)])]),
+    argsSchemaIds: [0x897e_e609_6f7b_b726, 0x6847_ab90_feda_71c1],
+    argsRoot: .generic(0x6847_ab90_feda_71c1, args: [.concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xc6eb_8c46_f1e1_7fba,
@@ -9656,15 +9479,10 @@ nonisolated(unsafe) public let testbed_method_schemas: [UInt64: MethodSchemaInfo
       ])
   ),
   0x8edf_bd65_d162_f685: MethodSchemaInfo(
-    argsSchemaIds: [
-      0x281c_5be4_f2ee_63b4, 0x361f_4536_eee9_f991, 0xc886_545a_493d_06eb, 0xba04_96aa_8cee_7a4c,
-    ],
+    argsSchemaIds: [0x281c_5be4_f2ee_63b4, 0x897e_e609_6f7b_b726, 0xba04_96aa_8cee_7a4c],
     argsRoot: .generic(
       0xba04_96aa_8cee_7a4c,
-      args: [
-        .concrete(0x281c_5be4_f2ee_63b4),
-        .generic(0xc886_545a_493d_06eb, args: [.concrete(0x361f_4536_eee9_f991)]),
-      ]),
+      args: [.concrete(0x281c_5be4_f2ee_63b4), .concrete(0x897e_e609_6f7b_b726)]),
     responseSchemaIds: [
       0x1783_67a8_7f66_fb46, 0x281c_5be4_f2ee_63b4, 0x4204_6de6_63be_eef0, 0x5db7_0a39_4660_f3e6,
       0x6d7d_ce91_4ee1_50e8, 0x4cf4_b2ae_b98a_1939, 0xbc5c_3324_9a2d_c720,

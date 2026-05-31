@@ -341,11 +341,13 @@ mod tests {
 
     #[test]
     fn generated_typescript_contains_no_postcard_primitive_usage() {
-        let echo = method_descriptor::<(String,), String>("TestSvc", "echo", &["message"], None);
+        let echo =
+            method_descriptor::<(String,), String>("TestSvc", "echo", &["message"], &[None], None);
         let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
             "TestSvc",
             "divide",
             &["lhs", "rhs"],
+            &[None, None],
             None,
         );
         let methods = Box::leak(vec![echo, divide].into_boxed_slice());
@@ -372,6 +374,7 @@ mod tests {
             "RecursiveSvc",
             "recurse",
             &["node"],
+            &[None],
             None,
         );
         let methods = Box::leak(vec![recurse].into_boxed_slice());
@@ -398,6 +401,7 @@ mod tests {
             "SessionSvc",
             "summarize",
             &["id"],
+            &[None],
             None,
         );
         let methods = Box::leak(vec![summarize].into_boxed_slice());
@@ -424,6 +428,10 @@ mod tests {
             "StreamSvc",
             "subscribe",
             &["output", "input"],
+            &[
+                Some(<u32 as facet::Facet>::SHAPE),
+                Some(<u32 as facet::Facet>::SHAPE),
+            ],
             None,
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
@@ -447,7 +455,7 @@ mod tests {
     #[test]
     fn generated_typescript_keeps_struct_variants_with_kind_fields_named() {
         let subscribe =
-            method_descriptor::<(), SubscribeMessage>("ShipSvc", "subscribe", &[], None);
+            method_descriptor::<(), SubscribeMessage>("ShipSvc", "subscribe", &[], &[], None);
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
         let service = ServiceDescriptor {
             service_name: "ShipSvc",
@@ -486,6 +494,7 @@ mod tests {
             "StrictSvc",
             "divide",
             &["lhs", "rhs"],
+            &[None, None],
             None,
         );
         let methods = Box::leak(vec![divide].into_boxed_slice());

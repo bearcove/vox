@@ -80,6 +80,14 @@ pub struct ArgDescriptor {
 
     /// Argument type shape.
     pub shape: &'static Shape,
+
+    /// For a `Tx<T>`/`Rx<T>` argument, the element type's shape (`T::SHAPE`).
+    ///
+    /// `Tx`/`Rx` are `#[facet(opaque)]`, so their `Shape` carries no
+    /// `type_params` — the element type is invisible to reflection. The service
+    /// macro, which sees the channel type syntactically, captures it here so
+    /// codegen can emit the per-channel element schema.
+    pub channel_element: Option<&'static Shape>,
 }
 
 impl ServiceDescriptor {

@@ -209,6 +209,10 @@ mod tests {
             "StreamSvc",
             "subscribe",
             &["output", "input"],
+            &[
+                Some(<u32 as facet::Facet>::SHAPE),
+                Some(<u32 as facet::Facet>::SHAPE),
+            ],
             None,
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
@@ -252,6 +256,7 @@ mod tests {
             "DescriptorSvc",
             "describe",
             &["point", "choice"],
+            &[None, None],
             None,
         );
         let methods = Box::leak(vec![describe].into_boxed_slice());

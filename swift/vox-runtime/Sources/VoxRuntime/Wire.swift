@@ -144,69 +144,6 @@ public struct ConnectionSettings: Sendable, Equatable {
   }
 }
 
-public enum MetadataValue: Sendable, Equatable {
-  case string(String)
-  case bytes([UInt8])
-  case u64(UInt64)
-
-  func encode(into buffer: inout ByteBuffer) {
-    switch self {
-    case .string(let val):
-      encodeVarint(UInt64(0), into: &buffer)
-      encodeString(val, into: &buffer)
-    case .bytes(let val):
-      encodeVarint(UInt64(1), into: &buffer)
-      encodeByteSeq(val, into: &buffer)
-    case .u64(let val):
-      encodeVarint(UInt64(2), into: &buffer)
-      encodeVarint(val, into: &buffer)
-    }
-  }
-
-  static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let disc = try decodeVarint(from: &buffer)
-    switch disc {
-    case 0:
-      let _newtype_val = try decodeWireString(from: &buffer)
-      return .string(_newtype_val)
-    case 1:
-      var __newtype_valBuf = try decodeWireBytes(from: &buffer)
-      let _newtype_val = __newtype_valBuf.readBytes(length: __newtype_valBuf.readableBytes) ?? []
-      return .bytes(_newtype_val)
-    case 2:
-      let _newtype_val = try decodeVarint(from: &buffer)
-      return .u64(_newtype_val)
-    default:
-      throw WireError.unknownVariant(disc)
-    }
-  }
-}
-
-public struct MetadataEntry: Sendable, Equatable {
-  public var key: String
-  public var value: MetadataValue
-  public var flags: UInt64
-
-  public init(key: String, value: MetadataValue, flags: UInt64) {
-    self.key = key
-    self.value = value
-    self.flags = flags
-  }
-
-  func encode(into buffer: inout ByteBuffer) {
-    encodeString(key, into: &buffer)
-    value.encode(into: &buffer)
-    encodeVarint(flags, into: &buffer)
-  }
-
-  static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let key = try decodeWireString(from: &buffer)
-    let value = try MetadataValue.decode(from: &buffer)
-    let flags = try decodeVarint(from: &buffer)
-    return .init(key: key, value: value, flags: flags)
-  }
-}
-
 public struct ProtocolError: Sendable, Equatable {
   public var description: String
 
@@ -260,92 +197,93 @@ public struct Pong: Sendable, Equatable {
 
 public struct ConnectionOpen: Sendable, Equatable {
   public var connectionSettings: ConnectionSettings
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(connectionSettings: ConnectionSettings, metadata: [MetadataEntry]) {
+  public init(connectionSettings: ConnectionSettings, metadata: OpaquePayload) {
     self.connectionSettings = connectionSettings
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
     connectionSettings.encode(into: &buffer)
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
     let connectionSettings = try ConnectionSettings.decode(from: &buffer)
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(connectionSettings: connectionSettings, metadata: metadata)
   }
 }
 
 public struct ConnectionAccept: Sendable, Equatable {
   public var connectionSettings: ConnectionSettings
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(connectionSettings: ConnectionSettings, metadata: [MetadataEntry]) {
+  public init(connectionSettings: ConnectionSettings, metadata: OpaquePayload) {
     self.connectionSettings = connectionSettings
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
     connectionSettings.encode(into: &buffer)
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
     let connectionSettings = try ConnectionSettings.decode(from: &buffer)
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(connectionSettings: connectionSettings, metadata: metadata)
   }
 }
 
 public struct ConnectionReject: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(metadata: [MetadataEntry]) {
+  public init(metadata: OpaquePayload) {
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(metadata: metadata)
   }
 }
 
 public struct ConnectionClose: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(metadata: [MetadataEntry]) {
+  public init(metadata: OpaquePayload) {
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(metadata: metadata)
   }
 }
 
 public struct RequestCall: Sendable, Equatable {
   public var methodId: UInt64
-  public var metadata: [MetadataEntry]
+  public var channels: [UInt64]
+  public var metadata: OpaquePayload
   public var args: OpaquePayload
   public var schemas: [UInt8]
 
-  public init(methodId: UInt64, metadata: [MetadataEntry], args: OpaquePayload, schemas: [UInt8]) {
+  public init(
+    methodId: UInt64, channels: [UInt64], metadata: OpaquePayload, args: OpaquePayload,
+    schemas: [UInt8]
+  ) {
     self.methodId = methodId
+    self.channels = channels
     self.metadata = metadata
     self.args = args
     self.schemas = schemas
@@ -353,42 +291,43 @@ public struct RequestCall: Sendable, Equatable {
 
   func encode(into buffer: inout ByteBuffer) {
     encodeVarint(methodId, into: &buffer)
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    encodeVec(channels, into: &buffer, encoder: { val, buf in encodeVarint(val, into: &buf) })
+    metadata.encode(into: &buffer)
     args.encode(into: &buffer)
     encodeByteSeq(schemas, into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
     let methodId = try decodeVarint(from: &buffer)
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let channels = try decodeVec(from: &buffer, decoder: { buf in try decodeVarint(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     let args = try OpaquePayload.decode(from: &buffer)
     var _schemasBuf = try decodeWireBytes(from: &buffer)
     let schemas = _schemasBuf.readBytes(length: _schemasBuf.readableBytes) ?? []
-    return .init(methodId: methodId, metadata: metadata, args: args, schemas: schemas)
+    return .init(
+      methodId: methodId, channels: channels, metadata: metadata, args: args, schemas: schemas)
   }
 }
 
 public struct RequestResponse: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
   public var ret: OpaquePayload
   public var schemas: [UInt8]
 
-  public init(metadata: [MetadataEntry], ret: OpaquePayload, schemas: [UInt8]) {
+  public init(metadata: OpaquePayload, ret: OpaquePayload, schemas: [UInt8]) {
     self.metadata = metadata
     self.ret = ret
     self.schemas = schemas
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
     ret.encode(into: &buffer)
     encodeByteSeq(schemas, into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     let ret = try OpaquePayload.decode(from: &buffer)
     var _schemasBuf = try decodeWireBytes(from: &buffer)
     let schemas = _schemasBuf.readBytes(length: _schemasBuf.readableBytes) ?? []
@@ -397,19 +336,18 @@ public struct RequestResponse: Sendable, Equatable {
 }
 
 public struct RequestCancel: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(metadata: [MetadataEntry]) {
+  public init(metadata: OpaquePayload) {
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(metadata: metadata)
   }
 }
@@ -516,37 +454,35 @@ public struct ChannelItem: Sendable, Equatable {
 }
 
 public struct ChannelClose: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(metadata: [MetadataEntry]) {
+  public init(metadata: OpaquePayload) {
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(metadata: metadata)
   }
 }
 
 public struct ChannelReset: Sendable, Equatable {
-  public var metadata: [MetadataEntry]
+  public var metadata: OpaquePayload
 
-  public init(metadata: [MetadataEntry]) {
+  public init(metadata: OpaquePayload) {
     self.metadata = metadata
   }
 
   func encode(into buffer: inout ByteBuffer) {
-    encodeVec(metadata, into: &buffer, encoder: { val, buf in val.encode(into: &buf) })
+    metadata.encode(into: &buffer)
   }
 
   static func decode(from buffer: inout ByteBuffer) throws -> Self {
-    let metadata = try decodeVec(
-      from: &buffer, decoder: { buf in try MetadataEntry.decode(from: &buf) })
+    let metadata = try OpaquePayload.decode(from: &buffer)
     return .init(metadata: metadata)
   }
 }

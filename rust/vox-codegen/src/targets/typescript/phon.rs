@@ -6,7 +6,7 @@
 //! metadata (which arg is a `Tx`/`Rx`, its direction, and its element root) —
 //! since channels are opaque on the wire (`r[rpc.channel.payload-encoding]`).
 
-use facet_core::{Facet, Shape};
+use facet_core::Shape;
 use vox_types::{ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
 use crate::render::hex_u64;
@@ -90,12 +90,11 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
                 None
             };
             if let Some(dir) = dir {
+                // `Tx`/`Rx` are opaque — their `Shape` hides the element type, so the
+                // service macro captures it in `ArgDescriptor::channel_element`.
                 let element = arg
-                    .shape
-                    .type_params
-                    .first()
-                    .map(|tp| tp.shape())
-                    .unwrap_or(<() as Facet>::SHAPE);
+                    .channel_element
+                    .expect("Tx/Rx arg must carry its channel element shape");
                 if !first {
                     out.push_str(", ");
                 }

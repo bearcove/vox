@@ -12,18 +12,25 @@ pub fn word_lab_service_descriptor() -> &'static ::vox::session::ServiceDescript
                 "WordLab",
                 "is_short",
                 &["word"],
+                &[None],
                 None,
             ),
             ::vox::hash::method_descriptor::<(String,), &'static str>(
                 "WordLab",
                 "classify",
                 &["word"],
+                &[None],
                 None,
             ),
             ::vox::hash::method_descriptor::<(&'static str, Rx<String>, Tx<String>), u32>(
                 "WordLab",
                 "transform",
                 &["prefix", "input", "output"],
+                &[
+                    None,
+                    Some(<String as ::vox::facet::Facet<'static>>::SHAPE),
+                    Some(<String as ::vox::facet::Facet<'static>>::SHAPE),
+                ],
                 None,
             ),
         ];

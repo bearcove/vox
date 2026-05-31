@@ -12,6 +12,7 @@ pub fn hasher_service_descriptor() -> &'static ::vox::session::ServiceDescriptor
                 "Hasher",
                 "hash",
                 &["payload"],
+                &[None],
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

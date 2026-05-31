@@ -12,6 +12,7 @@ pub fn ping_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
                 "Ping",
                 "ping",
                 &[],
+                &[],
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

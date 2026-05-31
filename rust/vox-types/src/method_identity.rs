@@ -27,6 +27,7 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     service_name: &'static str,
     method_name: &'static str,
     arg_names: &[&'static str],
+    channel_elements: &[Option<&'static Shape>],
     doc: Option<&'static str>,
 ) -> &'static MethodDescriptor {
     assert!(
@@ -50,12 +51,22 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         arg_shapes.len(),
         "arg_names length mismatch for {service_name}.{method_name}"
     );
+    assert_eq!(
+        arg_names.len(),
+        channel_elements.len(),
+        "channel_elements length mismatch for {service_name}.{method_name}"
+    );
 
     let args: &'static [ArgDescriptor] = Box::leak(
         arg_names
             .iter()
             .zip(arg_shapes.iter())
-            .map(|(&name, &shape)| ArgDescriptor { name, shape })
+            .zip(channel_elements.iter())
+            .map(|((&name, &shape), &channel_element)| ArgDescriptor {
+                name,
+                shape,
+                channel_element,
+            })
             .collect::<Vec<_>>()
             .into_boxed_slice(),
     );

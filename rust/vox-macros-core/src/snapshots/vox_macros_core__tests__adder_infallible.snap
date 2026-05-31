@@ -12,6 +12,7 @@ pub fn adder_service_descriptor() -> &'static ::vox::session::ServiceDescriptor 
                 "Adder",
                 "add",
                 &["a", "b"],
+                &[None, None],
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

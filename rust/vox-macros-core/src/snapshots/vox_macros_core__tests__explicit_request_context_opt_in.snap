@@ -12,9 +12,10 @@ pub fn audit_service_descriptor() -> &'static ::vox::session::ServiceDescriptor 
                 "Audit",
                 "record",
                 &["payload"],
+                &[None],
                 None,
             ),
-            ::vox::hash::method_descriptor::<(), u64>("Audit", "ping", &[], None),
+            ::vox::hash::method_descriptor::<(), u64>("Audit", "ping", &[], &[], None),
         ];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Audit",

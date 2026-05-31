@@ -11,7 +11,9 @@ pub fn text_svc_service_descriptor() -> &'static ::vox::session::ServiceDescript
             vec![::vox::hash::method_descriptor::<
                 (String,),
                 ::std::borrow::Cow<'static, str>,
-            >("TextSvc", "normalize", &["input"], None)];
+            >(
+                "TextSvc", "normalize", &["input"], &[None], None
+            )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "TextSvc",
             methods: Box::leak(methods.into_boxed_slice()),
