@@ -47,6 +47,35 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
         .map_err(|e| Error(format!("encode {}: {e:?}", T::SHAPE.type_identifier)))
 }
 
+/// Decode `T` from phon-compact bytes, BORROWING from `bytes` (zero-copy): `&str`,
+/// `&[u8]`, `Cow`, and opaque payloads point INTO `bytes`, so the decoded value may
+/// not outlive it. The lifetime tie (`bytes: &'a [u8]`, `T: Facet<'a>`) enforces it.
+///
+/// This is the recv-path decode for the `Message` envelope: the payload field
+/// decodes to a borrowed span and metadata strings borrow the backing.
+///
+/// # Errors
+/// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
+pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error> {
+    let derived =
+        of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
+    let reg = Registry::new(derived.schemas);
+    let mut slot = MaybeUninit::<T>::uninit();
+    // Safety: `derived.descriptor` describes `T`; on `Ok`, `decode` has fully
+    // initialized the slot. Borrowed fields point into `bytes`, which outlives the
+    // returned `T` by the `'a` tie.
+    unsafe {
+        typed::decode(
+            bytes,
+            &derived.descriptor,
+            &reg,
+            slot.as_mut_ptr().cast::<u8>(),
+        )
+        .map_err(|e| Error(format!("decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+        Ok(slot.assume_init())
+    }
+}
+
 /// Decode an owned `T` from phon-compact bytes via its facet-derived schema,
 /// rejecting trailing bytes.
 ///
