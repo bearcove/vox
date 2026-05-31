@@ -39,7 +39,7 @@ fn message_with_value_payload_roundtrips() {
                     .u64("n", 99)
                     .build(),
                 args: Payload::outgoing(&args),
-                schemas: CborPayload::default(),
+                schemas: SchemaBytes::default(),
             }),
         }),
     };
@@ -66,7 +66,7 @@ fn message_with_value_payload_roundtrips() {
     assert_eq!(call.metadata.meta_u64("n"), Some(99));
 
     // The opaque payload decoded to a borrowed span pointing INTO the wire.
-    let Payload::PostcardBytes(span) = &call.args else {
+    let Payload::Encoded(span) = &call.args else {
         panic!("expected a borrowed payload span");
     };
     let wire_start = bytes.as_ptr() as usize;

@@ -68,7 +68,7 @@ impl std::fmt::Display for SchemaExtractError {
 /// A value for which a schema can be attached
 pub trait Schematic {
     fn direction(&self) -> BindingDirection;
-    fn attach_schemas(&mut self, schemas: CborPayload);
+    fn attach_schemas(&mut self, schemas: SchemaBytes);
 }
 
 impl<'payload> Schematic for RequestCall<'payload> {
@@ -76,7 +76,7 @@ impl<'payload> Schematic for RequestCall<'payload> {
         BindingDirection::Args
     }
 
-    fn attach_schemas(&mut self, schemas: CborPayload) {
+    fn attach_schemas(&mut self, schemas: SchemaBytes) {
         self.schemas = schemas;
     }
 }
@@ -86,7 +86,7 @@ impl<'payload> Schematic for RequestResponse<'payload> {
         BindingDirection::Response
     }
 
-    fn attach_schemas(&mut self, schemas: CborPayload) {
+    fn attach_schemas(&mut self, schemas: SchemaBytes) {
         self.schemas = schemas;
     }
 }
@@ -121,8 +121,8 @@ pub struct PreparedSchemaPlan {
 
 impl PreparedSchemaPlan {
     /// Wrap the bytes in the wire schema-payload carrier (now phon, not CBOR).
-    pub fn to_payload(&self) -> CborPayload {
-        CborPayload(self.bytes.clone())
+    pub fn to_payload(&self) -> SchemaBytes {
+        SchemaBytes(self.bytes.clone())
     }
 }
 
@@ -158,9 +158,9 @@ impl SchemaSendTracker {
         method_id: MethodId,
         direction: BindingDirection,
         prepared: &PreparedSchemaPlan,
-    ) -> CborPayload {
+    ) -> SchemaBytes {
         if self.sent_bindings.contains(&(method_id, direction)) {
-            CborPayload::default()
+            SchemaBytes::default()
         } else {
             prepared.to_payload()
         }
@@ -184,9 +184,9 @@ impl SchemaSendTracker {
         method_id: MethodId,
         direction: BindingDirection,
         prepared: PreparedSchemaPlan,
-    ) -> CborPayload {
+    ) -> SchemaBytes {
         if self.sent_bindings.contains(&(method_id, direction)) {
-            return CborPayload::default();
+            return SchemaBytes::default();
         }
         dlog!(
             "[schema] commit binding: method={:?} direction={:?} ({} bytes)",
@@ -210,10 +210,10 @@ impl SchemaSendTracker {
         method_id: MethodId,
         shape: &'static Shape,
         schematic: &mut impl Schematic,
-    ) -> Result<CborPayload, SchemaExtractError> {
+    ) -> Result<SchemaBytes, SchemaExtractError> {
         let direction = schematic.direction();
         if self.sent_bindings.contains(&(method_id, direction)) {
-            let empty = CborPayload::default();
+            let empty = SchemaBytes::default();
             schematic.attach_schemas(empty.clone());
             return Ok(empty);
         }
@@ -230,10 +230,10 @@ impl SchemaSendTracker {
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
-        prepared: &CborPayload,
-    ) -> CborPayload {
+        prepared: &SchemaBytes,
+    ) -> SchemaBytes {
         if self.sent_bindings.contains(&(method_id, direction)) {
-            return CborPayload::default();
+            return SchemaBytes::default();
         }
         self.sent_bindings.insert((method_id, direction));
         prepared.clone()
@@ -1151,7 +1151,7 @@ mod tests {
     struct TestSchematic {
         direction: BindingDirection,
         shape: &'static Shape,
-        attached: CborPayload,
+        attached: SchemaBytes,
     }
 
     impl TestSchematic {
@@ -1159,7 +1159,7 @@ mod tests {
             Self {
                 direction,
                 shape,
-                attached: CborPayload::default(),
+                attached: SchemaBytes::default(),
             }
         }
     }
@@ -1169,7 +1169,7 @@ mod tests {
             self.direction
         }
 
-        fn attach_schemas(&mut self, schemas: CborPayload) {
+        fn attach_schemas(&mut self, schemas: SchemaBytes) {
             self.attached = schemas;
         }
     }
@@ -1423,7 +1423,7 @@ mod tests {
 
     #[test]
     fn cbor_payload_is_bytes() {
-        let schemas = extract_schemas(CborPayload::SHAPE).unwrap().schemas.clone();
+        let schemas = extract_schemas(SchemaBytes::SHAPE).unwrap().schemas.clone();
         assert_eq!(schemas.len(), 1);
         assert!(matches!(
             schemas[0].kind,

@@ -5,7 +5,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    BindingDirection, CborPayload, ChannelId, ConnectionId, Metadata, MethodId, RequestId,
+    BindingDirection, ChannelId, ConnectionId, Metadata, MethodId, RequestId, SchemaBytes,
 };
 use facet::{Facet, FacetOpaqueAdapter, OpaqueDeserialize, OpaqueSerialize, PtrConst, Shape};
 use vox_phon::raw_opaque_bytes;
@@ -166,9 +166,9 @@ structstruck::strike! {
                                     /// Argument tuple
                                     pub args: Payload<'payload>,
 
-                                    /// CBOR-encoded schemas for this call's args tuple
+                                    /// phon schema-closure bytes for this call's args tuple.
                                     /// Non-empty on the first call for each method on a connection.
-                                    pub schemas: CborPayload,
+                                    pub schemas: SchemaBytes,
                                 }),
 
                                 /// Respond to a request
@@ -179,9 +179,9 @@ structstruck::strike! {
                                     /// Return value (`Result<T, VoxError<E>>`, where E could be Infallible depending on signature)
                                     pub ret: Payload<'payload>,
 
-                                    /// CBOR-encoded schemas for this response's return type.
+                                    /// phon schema-closure bytes for this response's return type.
                                     /// Non-empty on the first response for each method on a connection.
-                                    pub schemas: CborPayload,
+                                    pub schemas: SchemaBytes,
                                 }),
 
                                 /// Cancel processing of a request.
@@ -204,8 +204,8 @@ structstruck::strike! {
                     /// Whether the binding applies to request args or responses.
                     pub direction: BindingDirection,
 
-                    /// CBOR-encoded schema payload for this binding.
-                    pub schemas: CborPayload,
+                    /// phon schema-closure bytes for this binding.
+                    pub schemas: SchemaBytes,
                 }),
 
                 // ========================================================================
@@ -275,17 +275,19 @@ structstruck::strike! {
 
 /// A payload — arguments for a request, or return type for a response.
 ///
-/// Uses `#[facet(opaque = PayloadAdapter)]` so that format crates handle
+/// Uses `#[facet(opaque = PayloadAdapter)]` so the codec handles
 /// serialization/deserialization through the adapter contract:
-/// - **Send path:** `serialize_map` extracts `(ptr, shape)` from `Borrowed` or `Owned`.
-/// - **Recv path:** `deserialize_build` produces `RawBorrowed` or `RawOwned`.
+/// - **Send path:** `serialize_map` either encodes a [`Value`](Payload::Value)'s
+///   `(ptr, shape)` or passes an [`Encoded`](Payload::Encoded) span through verbatim.
+/// - **Recv path:** `deserialize_build` produces an [`Encoded`](Payload::Encoded)
+///   span borrowed from the wire.
 // r[impl zerocopy.payload]
 #[derive(Debug, Facet)]
 #[repr(u8)]
 #[facet(opaque = PayloadAdapter, traits(Debug))]
 pub enum Payload<'payload> {
     // r[impl zerocopy.payload.borrowed]
-    /// Type-erased pointer to caller-owned memory + its Shape.
+    /// Type-erased pointer to caller-owned memory + its Shape, encoded in place.
     Value {
         ptr: PtrConst,
         shape: &'static Shape,
@@ -293,8 +295,8 @@ pub enum Payload<'payload> {
     },
 
     // r[impl zerocopy.payload.bytes]
-    /// Raw bytes borrowed from the backing (zero-copy).
-    PostcardBytes(&'payload [u8]),
+    /// Already-encoded payload bytes, borrowed from the backing (zero-copy).
+    Encoded(&'payload [u8]),
 }
 
 impl<'payload> Payload<'payload> {
@@ -329,7 +331,7 @@ impl<'payload> Payload<'payload> {
                 shape,
                 _lt: PhantomData,
             },
-            Payload::PostcardBytes(bytes) => Payload::PostcardBytes(bytes),
+            Payload::Encoded(bytes) => Payload::Encoded(bytes),
         }
     }
 }
@@ -350,7 +352,7 @@ impl FacetOpaqueAdapter for PayloadAdapter {
     fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
         match value {
             Payload::Value { ptr, shape, .. } => OpaqueSerialize { ptr: *ptr, shape },
-            Payload::PostcardBytes(bytes) => raw_opaque_bytes(bytes),
+            Payload::Encoded(bytes) => raw_opaque_bytes(bytes),
         }
     }
 
@@ -358,7 +360,7 @@ impl FacetOpaqueAdapter for PayloadAdapter {
         input: OpaqueDeserialize<'de>,
     ) -> Result<Self::RecvValue<'de>, Self::Error> {
         match input {
-            OpaqueDeserialize::Borrowed(bytes) => Ok(Payload::PostcardBytes(bytes)),
+            OpaqueDeserialize::Borrowed(bytes) => Ok(Payload::Encoded(bytes)),
             OpaqueDeserialize::Owned(_) => {
                 Err("payload bytes must be borrowed from backing, not owned".into())
             }

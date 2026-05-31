@@ -12,7 +12,7 @@
 //!
 //! Not yet here (follow-ups): per-type descriptor/program caching, the native
 //! (copy-and-patch) JIT fast path, borrowed/zero-copy decode, and the
-//! `Message`-envelope handling for its opaque `Payload`/`CborPayload` fields.
+//! `Message`-envelope handling for its opaque `Payload`/`SchemaBytes` fields.
 
 use std::mem::MaybeUninit;
 

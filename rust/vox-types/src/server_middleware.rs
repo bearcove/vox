@@ -218,7 +218,7 @@ impl ServerResponseContext {
 #[derive(Clone, Copy, Debug)]
 pub enum ServerResponsePayload<'a> {
     Value(Peek<'a, 'static>),
-    PostcardBytes(&'a [u8]),
+    Encoded(&'a [u8]),
 }
 
 /// Middleware-facing view of one outbound server response.
@@ -235,7 +235,7 @@ impl<'a> ServerResponse<'a> {
                 let peek = unsafe { Peek::unchecked_new(*ptr, shape) };
                 ServerResponsePayload::Value(peek)
             }
-            Payload::PostcardBytes(bytes) => ServerResponsePayload::PostcardBytes(bytes),
+            Payload::Encoded(bytes) => ServerResponsePayload::Encoded(bytes),
         };
         Self {
             metadata: &response.metadata,
@@ -254,7 +254,7 @@ impl<'a> ServerResponse<'a> {
     pub const fn payload_peek(&self) -> Option<Peek<'a, 'static>> {
         match self.payload {
             ServerResponsePayload::Value(peek) => Some(peek),
-            ServerResponsePayload::PostcardBytes(_) => None,
+            ServerResponsePayload::Encoded(_) => None,
         }
     }
 }

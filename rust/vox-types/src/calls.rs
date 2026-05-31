@@ -473,7 +473,7 @@ mod tests {
                 method_id: crate::MethodId(1),
                 channels: Vec::new(),
                 metadata: Metadata::default(),
-                args: Payload::PostcardBytes(&[]),
+                args: Payload::Encoded(&[]),
                 schemas: Default::default(),
             },
         );

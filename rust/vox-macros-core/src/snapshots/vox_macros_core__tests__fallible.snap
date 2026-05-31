@@ -95,12 +95,12 @@ where
         let request_call = call.get();
         let method_id = request_call.method_id;
         let args_bytes = match &request_call.args {
-            ::vox::Payload::PostcardBytes(bytes) => bytes,
+            ::vox::Payload::Encoded(bytes) => bytes,
             _ => {
                 reply
                     .send_error(
                         ::vox::VoxError::<::core::convert::Infallible>::InvalidPayload(
-                            "args not PostcardBytes".into(),
+                            "args not Encoded".into(),
                         ),
                     )
                     .await;
@@ -235,10 +235,10 @@ impl CalcClient {
         ::vox::provide_fds(__vox_frame_fds, move || {
             let response = response.get();
             let ret_bytes = match &response.ret {
-                ::vox::Payload::PostcardBytes(bytes) => bytes,
+                ::vox::Payload::Encoded(bytes) => bytes,
                 _ => {
                     return Err(::vox::VoxError::<DivError>::InvalidPayload(
-                        "response not PostcardBytes".into(),
+                        "response not Encoded".into(),
                     ));
                 }
             };

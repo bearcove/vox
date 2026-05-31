@@ -326,7 +326,7 @@ async fn rx_recv_decodes_channel_items() {
     let backing = Backing::Boxed(payload_bytes.into_boxed_slice());
     let item_ref = SelfRef::try_new(backing, |bytes| {
         Ok::<_, std::convert::Infallible>(ChannelItem {
-            item: Payload::PostcardBytes(bytes),
+            item: Payload::Encoded(bytes),
         })
     })
     .unwrap();

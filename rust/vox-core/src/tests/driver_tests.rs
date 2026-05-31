@@ -73,7 +73,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .expect("call should still succeed while one root caller remains");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -264,7 +264,7 @@ async fn cancel_aborts_in_flight_handler() {
     let response = result.expect("call should receive a response");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError> =
@@ -379,7 +379,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let value: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -438,7 +438,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError<std::convert::Infallible>> =
@@ -679,7 +679,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .expect("root call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize root response");
@@ -718,7 +718,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         .expect("virtual connection call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize vconn response");
@@ -964,7 +964,7 @@ async fn echo_call_across_memory_link() {
     // The echo handler sends back the same bytes. Deserialize the response.
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -1022,7 +1022,7 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
     };
     let item = item.get();
     let bytes = match item.item {
-        Payload::PostcardBytes(bytes) => bytes,
+        Payload::Encoded(bytes) => bytes,
         _ => panic!("expected incoming payload"),
     };
     let decoded: u32 = vox_phon::from_slice(bytes).expect("deserialize buffered item");
@@ -1396,7 +1396,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -1516,7 +1516,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         .expect("proxied call should succeed");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize proxied response");

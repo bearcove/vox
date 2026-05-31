@@ -243,7 +243,7 @@ mod tests {
                 method_id: MethodId(7),
                 channels: Vec::new(),
                 metadata: request_metadata,
-                args: crate::Payload::PostcardBytes(&[]),
+                args: crate::Payload::Encoded(&[]),
                 schemas: Default::default(),
             })
             .await;

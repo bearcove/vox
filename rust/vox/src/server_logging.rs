@@ -127,7 +127,7 @@ impl ServerMiddleware for ServerLogging {
                     "rpc response payload"
                 );
             }
-            ServerResponsePayload::PostcardBytes(bytes) => {
+            ServerResponsePayload::Encoded(bytes) => {
                 trace!(
                     target: "vox::server",
                     service = method.service_name,

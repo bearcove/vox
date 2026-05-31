@@ -129,7 +129,7 @@ mod tests {
             method_id: MethodId(1),
             channels: Vec::new(),
             metadata: Default::default(),
-            args: Payload::PostcardBytes(&[]),
+            args: Payload::Encoded(&[]),
             schemas: Default::default(),
         };
         let mut request = ClientRequest::new(&mut call);

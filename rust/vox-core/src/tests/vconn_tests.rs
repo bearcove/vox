@@ -71,7 +71,7 @@ async fn open_virtual_connection_and_call() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -269,7 +269,7 @@ async fn close_virtual_connection() {
 
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize");
@@ -342,7 +342,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
         .expect("call should succeed before dropping virtual caller");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
@@ -496,7 +496,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         .expect("virtual connection should still be usable after root caller drop");
     let response = response.get();
     let ret_bytes = match &response.ret {
-        Payload::PostcardBytes(bytes) => *bytes,
+        Payload::Encoded(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
     let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");

@@ -687,16 +687,17 @@ pub fn schema_child_ids(kind: &SchemaKind) -> Vec<SchemaHash> {
     refs
 }
 
-/// CBOR-encoded schema payload (schemas + method bindings).
+/// A phon schema-closure carrier: the self-describing schema bytes a peer sends
+/// for a method binding (the `schemas:` field on calls/responses/schema messages).
 ///
-/// Newtype over `Vec<u8>` so the type system distinguishes raw bytes from
-/// CBOR-encoded schema data. Empty when no new schemas need to be sent.
+/// Newtype over `Vec<u8>` so the type system distinguishes encoded schema bytes
+/// from arbitrary bytes. Empty when no new schema needs to be sent.
 #[derive(Facet, Clone, Debug, Default)]
 #[repr(transparent)]
 #[facet(transparent)]
-pub struct CborPayload(pub Vec<u8>);
+pub struct SchemaBytes(pub Vec<u8>);
 
-impl CborPayload {
+impl SchemaBytes {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -755,8 +756,8 @@ pub struct SchemaPayload {
 
 impl SchemaPayload {
     /// CBOR-encode this prepared message for embedding in RequestCall/RequestResponse.
-    pub fn to_cbor(&self) -> CborPayload {
-        CborPayload(facet_cbor::to_vec(self).expect("schema CBOR serialization should not fail"))
+    pub fn to_cbor(&self) -> SchemaBytes {
+        SchemaBytes(facet_cbor::to_vec(self).expect("schema CBOR serialization should not fail"))
     }
 
     /// Parse a CBOR-encoded schema message from bytes.

@@ -749,7 +749,7 @@ where
     T: Facet<'static>,
 {
     msg.try_repack(|item, _backing_bytes| {
-        let Payload::PostcardBytes(bytes) = item.item else {
+        let Payload::Encoded(bytes) = item.item else {
             return Err(RxError::Protocol(
                 "incoming channel item payload was not Incoming".into(),
             ));
@@ -2130,7 +2130,7 @@ mod tests {
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
-                item: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                item: Payload::Encoded(Box::leak(encoded.into_boxed_slice())),
             },
         );
         tx.send(IncomingChannelMessage::Item(item))
@@ -2217,7 +2217,7 @@ mod tests {
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
-                item: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                item: Payload::Encoded(Box::leak(encoded.into_boxed_slice())),
             },
         );
         tx.send(IncomingChannelMessage::Item(item))

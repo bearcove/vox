@@ -141,7 +141,7 @@ impl Handler<DriverReplySink> for EchoHandler {
     ) {
         let call = call.get();
         let args_bytes = match &call.args {
-            Payload::PostcardBytes(bytes) => *bytes,
+            Payload::Encoded(bytes) => *bytes,
             _ => panic!("expected incoming payload"),
         };
 
