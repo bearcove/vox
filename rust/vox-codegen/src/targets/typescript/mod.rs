@@ -28,6 +28,29 @@ pub use schema::generate_send_schema_table;
 pub use server::generate_server;
 pub use types::{collect_named_types, generate_named_types};
 
+/// Generate the phon `HandshakeMessage` module for vox-core: the handshake message
+/// types + registry + `schemaId`, plus `handshakeSchemaClosure` (the self-describing
+/// schema-closure bytes to prepend when sending a handshake message). The handshake
+/// is phon self-describing — each message carries its own schema closure.
+pub fn generate_phon_handshake() -> String {
+    let module =
+        phon_codegen::Module::from_shapes(&[<vox_types::HandshakeMessage as facet_core::Facet<
+            'static,
+        >>::SHAPE])
+        .expect("derive phon schema for HandshakeMessage");
+    let mut out = phon_codegen::typescript::render(&module);
+    let closure =
+        vox_phon::schema_bytes::<vox_types::HandshakeMessage>().expect("handshake schema bytes");
+    let mut hex = String::with_capacity(closure.len() * 2);
+    for b in closure {
+        hex.push_str(&format!("{b:02x}"));
+    }
+    out.push_str(&format!(
+        "\n/// The local HandshakeMessage schema closure (hex), prepended when sending\n/// a self-describing handshake message.\nexport const handshakeSchemaClosure = \"{hex}\";\n"
+    ));
+    out
+}
+
 /// Generate the phon `Message` wire module for `@bearcove/vox-wire`: the envelope
 /// type declarations, the self-describing schema-bytes, a ready `registry`, and the
 /// `schemaId` constants — produced by delegating to `phon-codegen`. vox-wire's codec
@@ -38,7 +61,19 @@ pub fn generate_phon_wire() -> String {
             'static,
         >>::SHAPE])
         .expect("derive phon schema for the Message envelope");
-    phon_codegen::typescript::render(&module)
+    let mut out = phon_codegen::typescript::render(&module);
+    // The Message schema closure (hex) — peers exchange this in the handshake's
+    // `message_payload_schema` so each can build an envelope compat decoder.
+    let closure =
+        vox_phon::schema_bytes::<vox_types::Message<'static>>().expect("Message schema bytes");
+    let mut hex = String::with_capacity(closure.len() * 2);
+    for b in closure {
+        hex.push_str(&format!("{b:02x}"));
+    }
+    out.push_str(&format!(
+        "\n/// The local Message envelope schema closure (hex), advertised in the\n/// handshake's `message_payload_schema`.\nexport const messageSchemaClosure = \"{hex}\";\n"
+    ));
+    out
 }
 
 /// Generate method IDs as a TypeScript constant record.

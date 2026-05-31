@@ -70,4 +70,8 @@ export {
 } from "./codec.ts";
 
 // The phon registry + schema ids for the Message envelope (generated).
-export { registry as messageRegistry, schemaId as messageSchemaId } from "./wire.phon.generated.ts";
+export {
+  registry as messageRegistry,
+  schemaId as messageSchemaId,
+  messageSchemaClosure,
+} from "./wire.phon.generated.ts";
