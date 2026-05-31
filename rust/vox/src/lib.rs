@@ -329,8 +329,11 @@ pub mod transport {
     }
 }
 
-// Channel binding via thread-local binder during deserialization
-pub use vox_types::channel::{set_channel_binder, with_channel_binder};
+// Channel binding via thread-local binder during deserialization, and the
+// out-of-band channel-id table (RequestCall.channels) installed around args decode.
+pub use vox_types::channel::{
+    collect_channels, provide_channels, set_channel_binder, with_channel_binder,
+};
 
 // Re-export the session module (generated code uses `vox::session::ServiceDescriptor`)
 pub mod session {

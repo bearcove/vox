@@ -726,11 +726,16 @@ fn generate_dispatch_arm(
     quote! {
         if method_id == #descriptor_fn_name().methods[#idx].id {
             // Channel binding: set guard so Tx<T>/Rx<T> deser binds through the binder.
+            // r[impl rpc.channel.binding] each handle's inline index selects its
+            // ChannelId from the out-of-band `request_call.channels` list.
             let _binder_guard = reply.channel_binder().map(#vox::set_channel_binder);
-            let deser_result: ::core::result::Result<#args_tuple_type, _> = #vox::schema_deser::schema_deserialize_args_borrowed(
-                args_bytes,
-                method_id,
-                &schemas,
+            let deser_result: ::core::result::Result<#args_tuple_type, _> = #vox::provide_channels(
+                request_call.channels.clone(),
+                || #vox::schema_deser::schema_deserialize_args_borrowed(
+                    args_bytes,
+                    method_id,
+                    &schemas,
+                ),
             );
             drop(_binder_guard);
             #args_let = match deser_result {

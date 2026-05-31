@@ -593,6 +593,19 @@ fn forwarded_request_body<'a>(body: &'a RequestBody<'a>) -> RequestBody<'a> {
     }
 }
 
+/// Swap a `Call`'s args to already-encoded `bytes`, narrowing the message
+/// lifetime to that of `bytes` (`Message` is covariant in its lifetime). Used by
+/// the out-of-band channel send path, where the args were pre-encoded into a
+/// local buffer that outlives the synchronous `prepare_msg`.
+fn swap_call_args_to_bytes<'s>(mut msg: Message<'s>, bytes: &'s [u8]) -> Message<'s> {
+    if let MessagePayload::RequestMessage(req) = &mut msg.payload
+        && let RequestBody::Call(call) = &mut req.body
+    {
+        call.args = vox_types::Payload::PostcardBytes(bytes);
+    }
+    msg
+}
+
 fn forwarded_channel_body<'a>(body: &'a vox_types::ChannelBody<'a>) -> vox_types::ChannelBody<'a> {
     match body {
         vox_types::ChannelBody::Item(item) => {
@@ -2378,7 +2391,46 @@ impl SessionCore {
             schema_count = schema_sends.len(),
             "session preparing outbound payload"
         );
-        let payload_send = tx.clone().prepare_msg(msg, binder).map_err(|_| ())?;
+
+        // Out-of-band channel allocation. If this Call's args carry `Tx`/`Rx`
+        // handles, pre-encode the args now under a channel collector (with the
+        // binder installed) so the allocated `ChannelId`s ride in `call.channels`
+        // and each handle goes on the wire as a small index. The args then travel
+        // as already-encoded bytes — the schema for them was already attached
+        // above from the `Value` shape. r[impl rpc.request] r[impl rpc.channel.allocation]
+        let channel_storage: Option<Vec<u8>> = if let MessagePayload::RequestMessage(req) =
+            &msg.payload
+            && let RequestBody::Call(call) = &req.body
+            && let vox_types::Payload::Value { ptr, shape, .. } = &call.args
+            && vox_types::shape_contains_channel(shape)
+        {
+            let (ptr, shape) = (*ptr, *shape);
+            let (encoded, channels) = vox_types::collect_channels(|| match binder {
+                Some(b) => {
+                    vox_types::with_channel_binder(b, || vox_phon::to_vec_for_shape(ptr, shape))
+                }
+                None => vox_phon::to_vec_for_shape(ptr, shape),
+            });
+            let encoded = encoded.map_err(|_| ())?;
+            if let MessagePayload::RequestMessage(req) = &mut msg.payload
+                && let RequestBody::Call(call) = &mut req.body
+            {
+                call.channels = channels;
+            }
+            Some(encoded)
+        } else {
+            None
+        };
+
+        let payload_send = if let Some(bytes) = &channel_storage {
+            // Narrow `msg`'s lifetime to the pre-encoded `bytes` (covariance) and
+            // swap the args to the encoded payload, then encode the envelope. The
+            // `bytes` outlive `prepare_msg`, which consumes the message synchronously.
+            let msg = swap_call_args_to_bytes(msg, bytes);
+            tx.clone().prepare_msg(msg, binder).map_err(|_| ())?
+        } else {
+            tx.clone().prepare_msg(msg, binder).map_err(|_| ())?
+        };
         trace!(
             conn_id = %conn_id,
             ?request_id,

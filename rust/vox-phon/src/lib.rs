@@ -16,8 +16,8 @@
 
 use std::mem::MaybeUninit;
 
-use facet::Facet;
-use phon::derive::of;
+use facet::{Facet, PtrConst, Shape};
+use phon::derive::{of, of_shape};
 use phon_engine::{Registry, typed};
 
 pub mod schema;
@@ -52,6 +52,27 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
     // Safety: `value` is a live `T`; `derived.descriptor` describes `T`'s layout.
     unsafe { typed::encode((value as *const T).cast::<u8>(), &derived.descriptor, &reg) }
         .map_err(|e| Error(format!("encode {}: {e:?}", T::SHAPE.type_identifier)))
+}
+
+/// Encode a type-erased value `(ptr, shape)` to phon-compact bytes via its
+/// facet-derived schema — the shape-driven analog of [`to_vec`], used where the
+/// concrete type isn't a generic param (e.g. the `Payload::Value` send path that
+/// must pre-encode channel-bearing args out-of-band).
+///
+/// # Safety
+/// `ptr` must point to an initialized value whose layout matches `shape`.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema or the value does not
+/// match it.
+pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>, Error> {
+    let derived =
+        of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    let reg = Registry::new(derived.schemas);
+    // Safety: `ptr` points to a live value of `shape`; `derived.descriptor`
+    // describes `shape`'s layout.
+    unsafe { typed::encode(ptr.as_byte_ptr(), &derived.descriptor, &reg) }
+        .map_err(|e| Error(format!("encode {}: {e:?}", shape.type_identifier)))
 }
 
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes` (zero-copy): `&str`,
