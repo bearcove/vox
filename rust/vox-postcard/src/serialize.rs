@@ -486,7 +486,10 @@ fn serialize_dynamic_value(value: &Value, out: &mut impl Writer) -> Result<(), S
                 serialize_dynamic_value(v, out)?;
             }
         }
-        ValueType::DateTime | ValueType::QName | ValueType::Uuid => {
+        // DateTime/QName/Uuid — and any newer `ValueType` (the type is now
+        // `#[non_exhaustive]`; e.g. native Char / i128) — aren't in the tagged
+        // dynamic scheme yet. A proper error, not a panic.
+        _ => {
             return Err(SerializeError::UnsupportedType(format!(
                 "facet_value::Value variant {:?} not yet implemented in vox-postcard \
                  (Null/Bool/Number/String/Bytes/Array/Object work)",

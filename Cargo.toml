@@ -154,17 +154,47 @@ tower = "0.5"
 tokio-stream = "0.1"
 eyre = "0.6"
 
-# [patch."https://github.com/facet-rs/facet"]
-# facet = { path = "../facet/facet" }
-# facet-core = { path = "../facet/facet-core" }
-# facet-postcard = { path = "../facet/facet-postcard" }
-# facet-path = { path = "../facet/facet-path" }
-# facet-reflect = { path = "../facet/facet-reflect" }
-# facet-format = { path = "../facet/facet-format" }
-# facet-pretty = { path = "../facet/facet-pretty" }
-# facet-json = { path = "../facet/facet-json" }
-# facet-value = { path = "../facet/facet-value" }
-# facet-testhelpers = { path = "../facet/facet-testhelpers" }
+# Local facet checkout (same one phon uses) — for the phon codec migration on the
+# `phon-codec` branch. The facet ecosystem spans three sibling repos: the core in
+# ../facet, the formats (incl. facet-value) in ../facet-format, and facet-cargo-toml
+# standalone. Releases land later; until then phon + vox build against these.
+[patch.crates-io]
+facet = { path = "../facet/facet" }
+facet-core = { path = "../facet/facet-core" }
+facet-macros = { path = "../facet/facet-macros" }
+facet-macros-impl = { path = "../facet/facet-macros-impl" }
+facet-macro-parse = { path = "../facet/facet-macro-parse" }
+facet-macro-types = { path = "../facet/facet-macro-types" }
+facet-reflect = { path = "../facet/facet-reflect" }
+facet-solver = { path = "../facet/facet-solver" }
+facet-path = { path = "../facet/facet-path" }
+facet-error = { path = "../facet/facet-error" }
+facet-default = { path = "../facet/facet-default" }
+facet-pretty = { path = "../facet/facet-pretty" }
+facet-testhelpers = { path = "../facet/facet-testhelpers" }
+facet-testhelpers-macros = { path = "../facet/facet-testhelpers-macros" }
+facet-validate = { path = "../facet/facet-validate" }
+facet-urlencoded = { path = "../facet/facet-urlencoded" }
+facet-testattrs = { path = "../facet/facet-testattrs" }
+# ../facet-format — every format crate, so any transitively-pulled one builds
+# against the same (sealed) facet-format event types rather than a crates.io copy.
+facet-value = { path = "../facet-format/facet-value" }
+facet-format = { path = "../facet-format/facet-format" }
+facet-dessert = { path = "../facet-format/facet-dessert" }
+facet-json = { path = "../facet-format/facet-json" }
+facet-json-classics = { path = "../facet-format/facet-json-classics" }
+facet-postcard = { path = "../facet-format/facet-postcard" }
+facet-msgpack = { path = "../facet-format/facet-msgpack" }
+facet-toml = { path = "../facet-format/facet-toml" }
+facet-yaml = { path = "../facet-format/facet-yaml" }
+facet-asn1 = { path = "../facet-format/facet-asn1" }
+facet-csv = { path = "../facet-format/facet-csv" }
+facet-xdr = { path = "../facet-format/facet-xdr" }
+facet-json-schema = { path = "../facet-format/facet-json-schema" }
+facet-typescript = { path = "../facet-format/facet-typescript" }
+facet-python = { path = "../facet-format/facet-python" }
+facet-zod = { path = "../facet-format/facet-zod" }
+facet-cargo-toml = { path = "../facet-cargo-toml" }
 
 # # Uncomment to develop moire
 # [patch."https://github.com/bearcove/moire"]
