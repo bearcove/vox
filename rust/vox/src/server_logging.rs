@@ -279,11 +279,7 @@ mod tests {
         let request = ServerRequest::new(context, crate::Peek::new(&()));
         let response_wire: Result<i32, crate::VoxError<std::convert::Infallible>> = Ok(42);
         let response = crate::RequestResponse {
-            metadata: vec![MetadataEntry {
-                key: "etag".into(),
-                value: MetadataValue::String("v1".into()),
-                flags: MetadataFlags::NONE,
-            }],
+            metadata: metadata().str("etag", "v1").build(),
             ret: crate::Payload::outgoing(&response_wire),
             schemas: Default::default(),
         };
@@ -350,7 +346,8 @@ mod tests {
             "abcdefghijklmnopqrstuvwxyz".to_string(),
         );
         let extensions = Extensions::new();
-        let context = RequestContext::with_extensions(&METHOD, &[], &extensions);
+        let empty = crate::Metadata::default();
+        let context = RequestContext::with_extensions(&METHOD, &empty, &extensions);
         let request = ServerRequest::new(context, crate::Peek::new(&args));
         let response_wire: Result<Vec<u32>, crate::VoxError<std::convert::Infallible>> =
             Ok(vec![10, 20, 30, 40, 50]);

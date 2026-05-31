@@ -15,8 +15,6 @@ fn probe<T: Facet<'static>>(name: &str) {
 #[test]
 fn probe_vox_wire_types() {
     probe::<ConnectionId>("ConnectionId");
-    probe::<MetadataValue>("MetadataValue");
-    probe::<MetadataEntry>("MetadataEntry");
     probe::<RequestCall>("RequestCall");
     probe::<MessagePayload>("MessagePayload");
     probe::<Message>("Message");
@@ -35,10 +33,10 @@ fn message_with_value_payload_roundtrips() {
             id: RequestId(7),
             body: RequestBody::Call(RequestCall {
                 method_id: MethodId(0xABCD),
-                metadata: vec![
-                    MetadataEntry::str("trace", "abc"),
-                    MetadataEntry::u64("n", 99),
-                ],
+                metadata: vox_types::metadata()
+                    .str("trace", "abc")
+                    .u64("n", 99)
+                    .build(),
                 args: Payload::outgoing(&args),
                 schemas: CborPayload::default(),
             }),
@@ -60,17 +58,11 @@ fn message_with_value_payload_roundtrips() {
     };
     assert_eq!(call.method_id, MethodId(0xABCD));
 
-    // Metadata: Cow keys/values borrow the wire (zero-copy).
-    assert_eq!(call.metadata.len(), 2);
-    assert_eq!(call.metadata[0].key.as_ref(), "trace");
-    match &call.metadata[0].value {
-        MetadataValue::String(s) => assert_eq!(s.as_ref(), "abc"),
-        other => panic!("expected String metadata, got {other:?}"),
-    }
-    match &call.metadata[1].value {
-        MetadataValue::U64(n) => assert_eq!(*n, 99),
-        other => panic!("expected U64 metadata, got {other:?}"),
-    }
+    // Metadata: a self-describing Value map decoded from the wire.
+    use vox_types::MetadataExt;
+    assert_eq!(call.metadata.meta_len(), 2);
+    assert_eq!(call.metadata.meta_str("trace"), Some("abc"));
+    assert_eq!(call.metadata.meta_u64("n"), Some(99));
 
     // The opaque payload decoded to a borrowed span pointing INTO the wire.
     let Payload::PostcardBytes(span) = &call.args else {

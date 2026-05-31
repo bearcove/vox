@@ -7,8 +7,8 @@ use moire::task::FutureExt;
 use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
     ChannelItem, ChannelMessage, ChannelSink, ConnectionSettings, HandshakeResult,
-    IncomingChannelMessage, Message, MessagePayload, Metadata, MetadataEntry, MethodId, Parity,
-    Payload, RequestBody, RequestCall, RequestCancel, RequestMessage, RequestResponse, Rx, SelfRef,
+    IncomingChannelMessage, Message, MessagePayload, Metadata, MethodId, Parity, Payload,
+    RequestBody, RequestCall, RequestCancel, RequestMessage, RequestResponse, Rx, SelfRef,
     SessionRole, Tx, VoxError, channel,
 };
 
@@ -311,7 +311,7 @@ fn message_plan_from_identical_schemas_round_trips() {
         peer_resume_key: None,
         our_schema: schemas.clone(),
         peer_schema: schemas,
-        peer_metadata: vec![MetadataEntry::str("vox-service", "Noop")],
+        peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
     };
     let plan = crate::MessagePlan::from_handshake(&handshake_result)
         .expect("should build message plan from identical schemas");
@@ -686,7 +686,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -738,7 +738,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
                     peer_resume_key: None,
                     our_schema: vec![],
                     peer_schema: vec![],
-                    peer_metadata: vec![MetadataEntry::str("vox-service", "Noop")],
+                    peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
                 },
             )
             .on_connection(EchoAcceptor)
@@ -767,7 +767,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
             peer_resume_key: None,
             our_schema: vec![],
             peer_schema: vec![],
-            peer_metadata: vec![MetadataEntry::str("vox-service", "Noop")],
+            peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
         },
     )
     .establish::<NoopClient>()
@@ -784,7 +784,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -820,7 +820,7 @@ async fn acceptor_builder_customization_supports_opening_connections() {
                     peer_resume_key: None,
                     our_schema: vec![],
                     peer_schema: vec![],
-                    peer_metadata: vec![MetadataEntry::str("vox-service", "Noop")],
+                    peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
                 },
             )
             .on_connection(EchoAcceptor)
@@ -849,7 +849,7 @@ async fn acceptor_builder_customization_supports_opening_connections() {
             peer_resume_key: None,
             our_schema: vec![],
             peer_schema: vec![],
-            peer_metadata: vec![MetadataEntry::str("vox-service", "Noop")],
+            peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
         },
     )
     .establish::<NoopClient>()
@@ -866,7 +866,7 @@ async fn acceptor_builder_customization_supports_opening_connections() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("acceptor opens virtual connection");
@@ -903,7 +903,7 @@ async fn close_root_connection_is_rejected() {
     let _server_caller_guard = server_task.await.expect("server setup failed");
 
     let result = session_handle
-        .close_connection(vox_types::ConnectionId::ROOT, vec![])
+        .close_connection(vox_types::ConnectionId::ROOT, Default::default())
         .await;
     assert!(
         matches!(result, Err(SessionError::Protocol(ref msg)) if msg == "cannot close root connection"),
@@ -1420,7 +1420,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
                                 max_concurrent_requests: 64,
                                 initial_channel_credit: 16,
                             },
-                            vec![MetadataEntry::str("vox-service", "Echo")],
+                            vox_types::metadata().str("vox-service", "Echo").build(),
                         )
                         .await
                         .expect("host->guest-b open_connection");
@@ -1479,7 +1479,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("guest-a open proxy connection");
@@ -1509,7 +1509,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
     assert_eq!(result, args_value);
 
     guest_a_session
-        .close_connection(proxy_conn_id, vec![])
+        .close_connection(proxy_conn_id, Default::default())
         .await
         .expect("close proxy connection");
 

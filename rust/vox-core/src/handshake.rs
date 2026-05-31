@@ -286,8 +286,14 @@ mod tests {
         let (link, _peer) = crate::memory_link_pair(1);
         let (tx, mut rx) = link.split();
 
-        let result =
-            handshake_as_initiator(&tx, &mut rx, settings(Parity::Odd, 0), None, vec![]).await;
+        let result = handshake_as_initiator(
+            &tx,
+            &mut rx,
+            settings(Parity::Odd, 0),
+            None,
+            vox_types::Metadata::default(),
+        )
+        .await;
 
         assert!(
             matches!(
@@ -313,7 +319,7 @@ mod tests {
                 settings(Parity::Even, 16),
                 false,
                 None,
-                vec![],
+                vox_types::Metadata::default(),
             )
             .await
         });

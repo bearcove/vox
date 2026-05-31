@@ -104,7 +104,7 @@ async fn service_factory_routes_virtual_connections() {
                     connection.handle_with(());
                     Ok(())
                 }
-                _ => Err(vec![]),
+                _ => Err(Default::default()),
             }
         },
     );
@@ -169,7 +169,7 @@ async fn service_factory_rejects_unknown_service() {
                     connection.handle_with(());
                     Ok(())
                 }
-                _ => Err(vec![]),
+                _ => Err(Default::default()),
             }
         },
     );

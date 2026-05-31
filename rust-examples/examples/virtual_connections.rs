@@ -5,7 +5,7 @@ use std::sync::{
 
 use eyre::{Result, WrapErr, eyre};
 use vox::transport::tcp::StreamLink;
-use vox::{ConnectionSettings, Metadata, MetadataEntry, Parity};
+use vox::{ConnectionSettings, Metadata, Parity};
 
 #[vox::service]
 trait CounterLab {
@@ -53,7 +53,7 @@ impl StringLab for StringLabService {
 fn lab_acceptor(
     request: &vox::ConnectionRequest,
     connection: vox::PendingConnection,
-) -> Result<(), Metadata<'static>> {
+) -> Result<(), Metadata> {
     match request.service() {
         "Noop" => {
             connection.handle_with(());
@@ -67,7 +67,7 @@ fn lab_acceptor(
             connection.handle_with(StringLabDispatcher::new(StringLabService));
             Ok(())
         }
-        _ => Err(vec![MetadataEntry::str("error", "unknown service")]),
+        _ => Err(vox::metadata().str("error", "unknown service").build()),
     }
 }
 

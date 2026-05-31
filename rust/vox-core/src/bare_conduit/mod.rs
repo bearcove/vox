@@ -224,10 +224,9 @@ mod tests {
         let msg = Message {
             connection_id: ConnectionId(1),
             payload: MessagePayload::ConnectionReject(ConnectionReject {
-                metadata: vec![MetadataEntry::str(
-                    "error",
-                    "missing required vox-service metadata",
-                )],
+                metadata: metadata()
+                    .str("error", "missing required vox-service metadata")
+                    .build(),
             }),
         };
         let prepared = a_tx.prepare_send(msg).unwrap();
@@ -237,19 +236,11 @@ mod tests {
         let received = b_rx.recv().await.unwrap().unwrap();
         let msg = received.get();
         if let MessagePayload::ConnectionReject(reject) = &msg.payload {
-            assert_eq!(reject.metadata.len(), 1, "expected 1 metadata entry");
+            assert_eq!(reject.metadata.meta_len(), 1, "expected 1 metadata entry");
             assert_eq!(
-                reject.metadata[0].key.as_ref(),
-                "error",
-                "key mismatch: got {:?}",
-                reject.metadata[0].key
+                reject.metadata.meta_str("error"),
+                Some("missing required vox-service metadata"),
             );
-            match &reject.metadata[0].value {
-                MetadataValue::String(s) => {
-                    assert_eq!(s.as_ref(), "missing required vox-service metadata");
-                }
-                other => panic!("expected String, got {:?}", other),
-            }
         } else {
             panic!("expected ConnectionReject, got {:?}", msg.payload);
         }

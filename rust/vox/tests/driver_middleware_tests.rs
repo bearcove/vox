@@ -135,10 +135,7 @@ struct MetadataProbeService;
 
 impl MetadataProbe for MetadataProbeService {
     async fn check_metadata(&self, cx: &vox::RequestContext<'_>) -> bool {
-        cx.metadata().iter().any(|e| {
-            e.key == "x-test"
-                && matches!(&e.value, vox::MetadataValue::String(s) if s == "injected")
-        })
+        vox::MetadataExt::meta_str(cx.metadata(), "x-test") == Some("injected")
     }
 }
 

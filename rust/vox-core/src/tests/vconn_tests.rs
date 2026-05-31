@@ -1,7 +1,7 @@
 use moire::task::FutureExt;
 use vox_types::{
     ChannelBinder, ConnectionCloseReason, ConnectionSettings, IncomingChannelMessage, Metadata,
-    MetadataEntry, MethodId, Parity, Payload, RequestCall,
+    MethodId, Parity, Payload, RequestCall,
 };
 
 use super::utils::*;
@@ -46,7 +46,7 @@ async fn open_virtual_connection_and_call() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -93,7 +93,7 @@ async fn reject_virtual_connection() {
                             connection.handle_with(EchoHandler);
                             Ok(())
                         }
-                        _ => Err(vec![]),
+                        _ => Err(Default::default()),
                     },
                 ))
                 .establish::<NoopClient>()
@@ -119,7 +119,7 @@ async fn reject_virtual_connection() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Unknown")],
+            vox_types::metadata().str("vox-service", "Unknown").build(),
         )
         .await;
 
@@ -161,7 +161,7 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Noop")],
+            vox_types::metadata().str("vox-service", "Noop").build(),
         )
         .await;
 
@@ -197,7 +197,7 @@ async fn close_unknown_virtual_connection_is_rejected() {
 
     let missing_conn_id = vox_types::ConnectionId(1);
     let result = session_handle
-        .close_connection(missing_conn_id, vec![])
+        .close_connection(missing_conn_id, Default::default())
         .await;
     assert!(
         matches!(result, Err(SessionError::Protocol(ref msg)) if msg == "connection not found"),
@@ -239,7 +239,7 @@ async fn close_virtual_connection() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -275,7 +275,7 @@ async fn close_virtual_connection() {
 
     // Close the virtual connection.
     session_handle
-        .close_connection(conn_id, vec![])
+        .close_connection(conn_id, Default::default())
         .await
         .expect("close virtual connection");
 
@@ -319,7 +319,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -380,7 +380,7 @@ async fn close_virtual_connection_closes_registered_rx_channels() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");
@@ -394,7 +394,7 @@ async fn close_virtual_connection_closes_registered_rx_channels() {
     let mut rx_items = bound_rx.receiver;
 
     session_handle
-        .close_connection(conn_id, vec![])
+        .close_connection(conn_id, Default::default())
         .await
         .expect("close virtual connection");
 
@@ -465,7 +465,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Echo")],
+            vox_types::metadata().str("vox-service", "Echo").build(),
         )
         .await
         .expect("open virtual connection");

@@ -8,8 +8,7 @@
 
 use vox_core::{BareConduit, MemoryLink, acceptor_conduit, initiator_conduit, memory_link_pair};
 use vox_types::{
-    ConnectionSettings, HandshakeResult, MessageFamily, MetadataEntry, Parity, SessionRole,
-    VoxError,
+    ConnectionSettings, HandshakeResult, MessageFamily, Parity, SessionRole, VoxError,
 };
 
 type MessageConduit = BareConduit<MessageFamily, MemoryLink>;
@@ -36,7 +35,7 @@ fn test_acceptor_handshake(service: &'static str) -> HandshakeResult {
         peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
-        peer_metadata: vec![MetadataEntry::str("vox-service", service)],
+        peer_metadata: vox::metadata().str("vox-service", service).build(),
     }
 }
 
@@ -57,7 +56,7 @@ fn test_initiator_handshake(service: &'static str) -> HandshakeResult {
         peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
-        peer_metadata: vec![MetadataEntry::str("vox-service", service)],
+        peer_metadata: vox::metadata().str("vox-service", service).build(),
     }
 }
 

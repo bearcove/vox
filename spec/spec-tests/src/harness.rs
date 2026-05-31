@@ -1213,10 +1213,7 @@ pub async fn run_subject_client_scenario_resumable(
 
             match acceptor_on(session_link)
                 .session_registry(registry.clone())
-                .metadata(vec![vox_types::MetadataEntry::str(
-                    "vox-service",
-                    "Testbed",
-                )])
+                .metadata(vox_types::metadata().str("vox-service", "Testbed").build())
                 .on_connection(TestbedDispatcher::new(service.clone()))
                 .establish_or_resume::<TestbedClient>()
                 .await
@@ -1328,7 +1325,7 @@ where
             },
             false,
             None,
-            vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
+            vox_types::metadata().str("vox-service", "Noop").build(),
         )
         .await
         .map_err(|e| format!("server CBOR handshake: {e}"));
@@ -1372,7 +1369,7 @@ where
             initial_channel_credit: 16,
         },
         None,
-        vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
+        vox_types::metadata().str("vox-service", "Noop").build(),
     )
     .await
     .map_err(|e| format!("client CBOR handshake: {e}"))?;
@@ -1496,10 +1493,7 @@ async fn accept_subject_tcp_resumable(cmd: &str) -> Result<ResumableSubjectHarne
 
                 match acceptor_on(session_link)
                     .session_registry(registry.clone())
-                    .metadata(vec![vox_types::MetadataEntry::str(
-                        "vox-service",
-                        "Testbed",
-                    )])
+                    .metadata(vox_types::metadata().str("vox-service", "Testbed").build())
                     .on_connection(NoopHandler)
                     .establish_or_resume::<TestbedClient>()
                     .await

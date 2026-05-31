@@ -2,7 +2,7 @@ use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 
 use vox_core::{BareConduit, acceptor_conduit, initiator_conduit};
-use vox_types::{ConnectionSettings, HandshakeResult, Link, MetadataEntry, Parity, SessionRole};
+use vox_types::{ConnectionSettings, HandshakeResult, Link, Parity, SessionRole};
 
 fn test_acceptor_handshake(service: &'static str) -> HandshakeResult {
     HandshakeResult {
@@ -21,7 +21,7 @@ fn test_acceptor_handshake(service: &'static str) -> HandshakeResult {
         peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
-        peer_metadata: vec![MetadataEntry::str("vox-service", service)],
+        peer_metadata: vox::metadata().str("vox-service", service).build(),
     }
 }
 
@@ -42,7 +42,7 @@ fn test_initiator_handshake(service: &'static str) -> HandshakeResult {
         peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
-        peer_metadata: vec![MetadataEntry::str("vox-service", service)],
+        peer_metadata: vox::metadata().str("vox-service", service).build(),
     }
 }
 
@@ -75,7 +75,8 @@ struct ContextProbeService;
 
 impl ContextProbe for ContextProbeService {
     async fn describe(&self, cx: &vox::RequestContext<'_>) -> String {
-        format!("{}:{}", cx.method().method_name, cx.metadata().len(),)
+        use vox::MetadataExt;
+        format!("{}:{}", cx.method().method_name, cx.metadata().meta_len(),)
     }
 
     async fn plain(&self) -> String {
@@ -94,13 +95,8 @@ struct ClientMiddlewareProbeService;
 
 impl ClientMiddlewareProbe for ClientMiddlewareProbeService {
     async fn inspect(&self, cx: &vox::RequestContext<'_>) -> String {
-        cx.metadata()
-            .iter()
-            .find(|entry| entry.key == "x-client-value")
-            .and_then(|entry| match &entry.value {
-                vox::MetadataValue::String(value) => Some(value.to_string()),
-                _ => None,
-            })
+        vox::MetadataExt::meta_str(cx.metadata(), "x-client-value")
+            .map(str::to_string)
             .expect("client middleware should inject request metadata")
     }
 }

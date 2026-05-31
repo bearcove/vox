@@ -3,7 +3,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use vox::{ConnectionSettings, Driver, MetadataEntry, Parity, SessionHandle, memory_link_pair};
+use vox::{ConnectionSettings, Driver, Parity, SessionHandle, memory_link_pair};
 
 #[vox::service]
 trait Echo {
@@ -170,7 +170,7 @@ async fn reject_virtual_connection() {
                         conn.handle_with(());
                         Ok(())
                     }
-                    _ => Err(vec![]),
+                    _ => Err(Default::default()),
                 },
             ))
             .establish::<vox::NoopClient>()
@@ -194,7 +194,7 @@ async fn reject_virtual_connection() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Unknown")],
+            vox_types::metadata().str("vox-service", "Unknown").build(),
         )
         .await;
 
@@ -229,7 +229,7 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Noop")],
+            vox_types::metadata().str("vox-service", "Noop").build(),
         )
         .await;
 
@@ -266,7 +266,7 @@ async fn close_virtual_connection() {
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            vec![MetadataEntry::str("vox-service", "Counter")],
+            vox_types::metadata().str("vox-service", "Counter").build(),
         )
         .await
         .expect("open vconn");
@@ -281,7 +281,7 @@ async fn close_virtual_connection() {
     assert_eq!(r, 1);
 
     session_handle
-        .close_connection(conn_id, vec![])
+        .close_connection(conn_id, Default::default())
         .await
         .expect("close vconn");
 
@@ -313,7 +313,7 @@ async fn close_root_connection_is_rejected() {
 
     // Connection ID 0 is the root connection.
     let result = session_handle
-        .close_connection(vox::ConnectionId(0), vec![])
+        .close_connection(vox::ConnectionId(0), Default::default())
         .await;
     assert!(result.is_err(), "closing root connection should fail");
 }

@@ -168,6 +168,7 @@ pub use vox_types::{
     MaybeSync,
     MessageFamily,
     Metadata,
+    MetadataBuilder,
     MetadataExt,
     MetadataFlags,
     MethodDescriptor,
@@ -225,6 +226,7 @@ pub use vox_types::{
 #[cfg(unix)]
 pub use vox_types::{Fd, FdAdapter, SCM_MAX_FD};
 pub use vox_types::{FrameFds, collect_fds, frame_fds_len, provide_fds};
+pub use vox_types::{meta_set, metadata};
 
 // ── vox-core: curated public API ──────────────────────────────────────
 

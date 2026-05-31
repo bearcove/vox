@@ -5939,8 +5939,8 @@ mod tests {
         ir::{from_slice_ir, lower, lower_encode, lower_with_cal},
     };
     use vox_types::{
-        BindingDirection, CborPayload, ConnectionId, Message, MessagePayload, MetadataEntry,
-        MethodId, RequestBody, RequestCall, RequestId, VoxError,
+        BindingDirection, CborPayload, ConnectionId, Message, MessagePayload, MethodId,
+        RequestBody, RequestCall, RequestId, VoxError,
     };
 
     fn compile_shape<T: Facet<'static>>() -> Result<(), CodegenError> {
@@ -5989,7 +5989,6 @@ mod tests {
     fn metadata_calibration() -> CalibrationRegistry {
         let mut cal = CalibrationRegistry::new();
         cal.calibrate_vec_for_type::<u8>();
-        cal.get_or_calibrate_by_shape(<Vec<MetadataEntry<'static>> as Facet<'static>>::SHAPE);
         cal
     }
 
@@ -6047,7 +6046,9 @@ mod tests {
         Message {
             connection_id: ConnectionId(7),
             payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
-                metadata: vec![MetadataEntry::bytes("blob", &[0xde, 0xad, 0xbe, 0xef][..])],
+                metadata: vox_types::metadata()
+                    .bytes("blob", &[0xde, 0xad, 0xbe, 0xef][..])
+                    .build(),
             }),
         }
     }
@@ -6059,7 +6060,7 @@ mod tests {
                 id: RequestId(9),
                 body: RequestBody::Call(RequestCall {
                     method_id: MethodId(42),
-                    metadata: vec![MetadataEntry::str("kind", "bench")],
+                    metadata: vox_types::metadata().str("kind", "bench").build(),
                     args: vox_types::Payload::outgoing(args),
                     schemas: CborPayload::default(),
                 }),
@@ -6521,26 +6522,6 @@ mod tests {
             original, decoded,
             "borrowed fixed array of nested Vec structs round-trip mismatch"
         );
-    }
-
-    #[test]
-    fn metadata_entry_encode_decode_has_no_slow_path() {
-        let plan = build_identity_plan(MetadataEntry::SHAPE);
-        let registry = vox_schema::SchemaRegistry::new();
-        let cal = metadata_calibration();
-        let decode_program = lower_with_cal(
-            &plan,
-            MetadataEntry::SHAPE,
-            &registry,
-            Some(&cal),
-            BorrowMode::Owned,
-        )
-        .expect("decode lowering");
-        assert_no_decode_slow_path(&decode_program);
-
-        let encode_program =
-            lower_encode(MetadataEntry::SHAPE, Some(&cal)).expect("encode lowering");
-        assert_no_encode_slow_path(&encode_program);
     }
 
     #[test]
