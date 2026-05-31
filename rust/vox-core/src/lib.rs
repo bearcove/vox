@@ -16,9 +16,6 @@ pub use handshake::*;
 mod into_conduit;
 pub use into_conduit::*;
 
-mod operation_store;
-pub use operation_store::*;
-
 mod transport_prologue;
 pub use transport_prologue::*;
 
