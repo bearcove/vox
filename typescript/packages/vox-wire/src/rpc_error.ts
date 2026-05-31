@@ -2,9 +2,7 @@
 // r[impl core.error.vox-error] - VoxError wraps call results
 // r[impl call.error.protocol] - Protocol errors use discriminants 1-3
 
-import type { DecodeResult } from "@bearcove/vox-postcard";
-
-/** RAPACE error discriminants */
+/** RPC error discriminants */
 export const RpcErrorCode = {
   /** User-defined application error */
   USER: 0,
@@ -80,7 +78,7 @@ export class RpcError extends Error {
  */
 export function decodeUserError<E>(
   error: RpcError,
-  decoder?: (buf: Uint8Array, offset: number) => DecodeResult<E>,
+  decoder?: (buf: Uint8Array, offset: number) => { value: E },
 ): E {
   if (!error.isUserError()) {
     throw new Error("Cannot decode user error: not a user error");

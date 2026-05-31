@@ -1,27 +1,20 @@
-// Vox wire protocol types and utilities
+// Vox wire protocol: the Message envelope types, codec (on the phon engine), and
+// the phon registry/schema-ids for the envelope.
 
-export {
-  RpcError,
-  RpcErrorCode,
-  decodeUserError,
-} from "./rpc_error.ts";
+export { RpcError, RpcErrorCode, decodeUserError } from "./rpc_error.ts";
 
 export type {
   ConnectionId,
+  RequestId,
+  MethodId,
+  ChannelId,
   Parity,
   ConnectionSettings,
-  MetadataValue,
-  MetadataFlags,
-  MetadataEntry,
   ProtocolError,
   ConnectionOpen,
   ConnectionAccept,
   ConnectionReject,
   ConnectionClose,
-  RequestId,
-  MethodId,
-  ChannelId,
-  CborPayload,
   RequestCall,
   RequestResponse,
   RequestCancel,
@@ -43,22 +36,14 @@ export type {
 } from "./types.ts";
 
 export {
-  ParityDiscriminant,
-  MetadataValueDiscriminant,
-  RequestBodyDiscriminant,
-  ChannelBodyDiscriminant,
-  MessagePayloadDiscriminant,
-} from "./wire.generated.ts";
-
-export {
-  MetadataFlagValues,
+  MetadataKeys,
+  emptyMetadata,
+  metadataAddFlag,
+  metadataIsSensitive,
+  metadataIsNoPropagate,
   parityOdd,
   parityEven,
   connectionSettings,
-  metadataString,
-  metadataBytes,
-  metadataU64,
-  metadataEntry,
   messageProtocolError,
   messagePing,
   messagePong,
@@ -78,14 +63,11 @@ export {
 export {
   encodeMessage,
   decodeMessage,
-  decodeMessageWithPlan,
+  buildMessageDecoder,
+  decodeMessageWith,
+  parseSchemaClosure,
+  type MessageDecoder,
 } from "./codec.ts";
 
-export {
-  type Schema,
-  type SchemaRegistry,
-  type TypeRef,
-  messageSchemasCbor,
-  messageSchemaRegistry,
-  messageRootRef,
-} from "./schemas.ts";
+// The phon registry + schema ids for the Message envelope (generated).
+export { registry as messageRegistry, schemaId as messageSchemaId } from "./wire.phon.generated.ts";
