@@ -4,7 +4,7 @@ use facet::Facet;
 use facet_core::{Def, Shape, Type, UserType};
 use heck::ToKebabCase;
 
-use crate::{ArgDescriptor, MethodDescriptor, MethodId, RetryPolicy, is_rx, is_tx};
+use crate::{ArgDescriptor, MethodDescriptor, MethodId, is_rx, is_tx};
 
 /// Compute a method ID from service and method names.
 ///
@@ -22,39 +22,18 @@ pub fn method_id_name_only(service_name: &str, method_name: &str) -> MethodId {
     MethodId(u64::from_le_bytes(first8))
 }
 
-/// Build and leak a `MethodDescriptor` with default volatile retry policy.
+/// Build and leak a `MethodDescriptor`.
 pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     service_name: &'static str,
     method_name: &'static str,
     arg_names: &[&'static str],
     doc: Option<&'static str>,
 ) -> &'static MethodDescriptor {
-    method_descriptor_with_retry::<A, R>(
-        service_name,
-        method_name,
-        arg_names,
-        doc,
-        RetryPolicy::VOLATILE,
-    )
-}
-
-/// Build and leak a `MethodDescriptor` with an explicit retry policy.
-pub fn method_descriptor_with_retry<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
-    service_name: &'static str,
-    method_name: &'static str,
-    arg_names: &[&'static str],
-    doc: Option<&'static str>,
-    retry: RetryPolicy,
-) -> &'static MethodDescriptor {
     assert!(
         !shape_contains_channel(R::SHAPE),
         "channels are not allowed in return types: {service_name}.{method_name}"
     );
     let args_have_channels = shape_contains_channel(A::SHAPE);
-    assert!(
-        !(retry.persist && args_have_channels),
-        "persist methods cannot carry channels: {service_name}.{method_name}"
-    );
 
     let id = method_id_name_only(service_name, method_name);
 
@@ -89,7 +68,6 @@ pub fn method_descriptor_with_retry<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         args,
         return_shape: R::SHAPE,
         args_have_channels,
-        retry,
         doc,
     }))
 }

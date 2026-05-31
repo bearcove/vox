@@ -17,10 +17,9 @@ use vox_types::{
     BoxFut, CallResult, ChannelBinder, ChannelBody, ChannelClose, ChannelCreditReplenisher,
     ChannelCreditReplenisherHandle, ChannelEventContext, ChannelId, ChannelItem,
     ChannelLivenessHandle, ChannelMailboxReceiver, ChannelMailboxSender, ChannelMessage,
-    ChannelRetryMode, ChannelSink, ConnectionId, CreditSink, Handler, IdAllocator,
-    IncomingChannelMessage, MaybeSend, MaybeSendFuture, MaybeSync, Payload, ReplySink, RequestBody,
-    RequestCall, RequestId, RequestMessage, RequestResponse, SelfRef, TrySendError, TxError,
-    VoxError, channel_mailbox, metadata_channel_retry_mode,
+    ChannelSink, ConnectionId, CreditSink, Handler, IdAllocator, IncomingChannelMessage, MaybeSend,
+    MaybeSendFuture, MaybeSync, Payload, ReplySink, RequestBody, RequestCall, RequestId,
+    RequestMessage, RequestResponse, SelfRef, TrySendError, TxError, VoxError, channel_mailbox,
 };
 use vox_types::{
     ChannelCloseReason, ChannelDebugContext, ChannelDirection, ChannelEvent, ChannelResetReason,
@@ -1809,50 +1808,6 @@ impl DriverCaller {
                             return Err(VoxError::ConnectionClosed);
                         }
                     }
-                }
-                changed = resumed_rx.changed(), if self.peer_supports_retry => {
-                    vox_types::dlog!("[CALLER] resumed_rx fired");
-                    if changed.is_err() {
-                        self.shared.pending_responses.lock().remove(&req_id);
-                        finish_request(RpcOutcome::Closed);
-                        return Err(VoxError::SessionShutdown);
-                    }
-                    let generation = *resumed_rx.borrow();
-                    if generation == seen_resume_generation {
-                        continue;
-                    }
-                    seen_resume_generation = generation;
-                    while *resume_processed_rx.borrow() < generation {
-                        if resume_processed_rx.changed().await.is_err() {
-                            self.shared.pending_responses.lock().remove(&req_id);
-                            finish_request(RpcOutcome::Closed);
-                            return Err(VoxError::SessionShutdown);
-                        }
-                    }
-                    match metadata_channel_retry_mode(&call.metadata) {
-                        ChannelRetryMode::NonIdem => {
-                            self.shared.pending_responses.lock().remove(&req_id);
-                            finish_request(RpcOutcome::Indeterminate);
-                            return Err(VoxError::Indeterminate);
-                        }
-                        ChannelRetryMode::Idem | ChannelRetryMode::None => {}
-                    }
-                    // Re-send the request after resume.
-                    // Channel binding is embedded in the serialized payload,
-                    // so no separate re-binding step is needed.
-                    self.shared.mark_outbound_progress();
-                    let _ = self.sender.send_with_binder(
-                        ConnectionMessage::Request(RequestMessage {
-                            id: req_id,
-                            body: RequestBody::Call(RequestCall {
-                                method_id: call.method_id,
-                                args: call.args.reborrow(),
-                                metadata: call.metadata.clone(),
-                                schemas: Default::default(),
-                            }),
-                        }),
-                        Some(self),
-                    ).await;
                 }
                 changed = closed_rx.changed() => {
                     vox_types::dlog!("[CALLER] closed_rx fired, value={:?}", *closed_rx.borrow());

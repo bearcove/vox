@@ -50,9 +50,6 @@ pub struct MethodDescriptor {
     /// instead of re-walking the shape per request.
     pub args_have_channels: bool,
 
-    /// Static retry policy for this method.
-    pub retry: RetryPolicy,
-
     /// Documentation string, if any.
     pub doc: Option<&'static str>,
 }
@@ -63,41 +60,8 @@ impl std::fmt::Debug for MethodDescriptor {
             .field("id", &self.id)
             .field("service_name", &self.service_name)
             .field("method_name", &self.method_name)
-            .field("retry", &self.retry)
             .finish_non_exhaustive()
     }
-}
-
-/// Static retry policy for a method.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct RetryPolicy {
-    /// Whether an admitted operation must persist once started.
-    pub persist: bool,
-
-    /// Whether re-executing the same logical operation is semantically safe.
-    pub idem: bool,
-}
-
-impl RetryPolicy {
-    pub const VOLATILE: Self = Self {
-        persist: false,
-        idem: false,
-    };
-
-    pub const IDEM: Self = Self {
-        persist: false,
-        idem: true,
-    };
-
-    pub const PERSIST: Self = Self {
-        persist: true,
-        idem: false,
-    };
-
-    pub const PERSIST_IDEM: Self = Self {
-        persist: true,
-        idem: true,
-    };
 }
 
 declare_id!(

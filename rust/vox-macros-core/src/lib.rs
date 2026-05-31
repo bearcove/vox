@@ -255,16 +255,6 @@ pub fn generate_service(parsed: &ServiceTrait, vox: &TokenStream2) -> Result<Tok
             ));
         }
 
-        if method.is_persist() && method.args().any(|arg| arg.ty.contains_channel()) {
-            return Err(Error::new(
-                proc_macro2::Span::call_site(),
-                format!(
-                    "method `{}` declares `#[vox(persist)]` but has Channel (Tx/Rx) arguments - persist methods cannot carry channels",
-                    method.name()
-                ),
-            ));
-        }
-
         let (ok_ty, err_ty) = method_ok_and_err_types(&return_type);
         if ok_ty.has_elided_reference_lifetime() {
             return Err(Error::new(
@@ -331,8 +321,6 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
 
             let return_type = m.return_type();
             let return_ty_tokens = to_static_type_tokens(&return_type);
-            let retry_persist = m.is_persist();
-            let retry_idem = m.is_idem();
 
             let method_doc_expr = match m.doc() {
                 Some(d) => quote! { Some(#d) },
@@ -340,15 +328,11 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
             };
 
             quote! {
-                #vox::hash::method_descriptor_with_retry::<#args_tuple_ty, #return_ty_tokens>(
+                #vox::hash::method_descriptor::<#args_tuple_ty, #return_ty_tokens>(
                     #service_name,
                     #method_name_str,
                     &[#(#arg_name_strs),*],
                     #method_doc_expr,
-                    #vox::RetryPolicy {
-                        persist: #retry_persist,
-                        idem: #retry_idem,
-                    },
                 )
             }
         })
@@ -470,22 +454,6 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
         .enumerate()
         .map(|(i, m)| generate_dispatch_arm(m, i, vox, &descriptor_fn_name))
         .collect();
-    let retry_policy_arms: Vec<TokenStream2> = parsed
-        .methods()
-        .enumerate()
-        .map(|(i, m)| {
-            let persist = m.is_persist();
-            let idem = m.is_idem();
-            quote! {
-                if method_id == #descriptor_fn_name().methods[#i].id {
-                    return #vox::RetryPolicy {
-                        persist: #persist,
-                        idem: #idem,
-                    };
-                }
-            }
-        })
-        .collect();
     let args_have_channels_arms: Vec<TokenStream2> = parsed
         .methods()
         .enumerate()
@@ -585,11 +553,6 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
             H: #trait_name,
             R: #vox::ReplySink,
         {
-            fn retry_policy(&self, method_id: #vox::MethodId) -> #vox::RetryPolicy {
-                #(#retry_policy_arms)*
-                #vox::RetryPolicy::VOLATILE
-            }
-
             fn args_have_channels(&self, method_id: #vox::MethodId) -> bool {
                 #(#args_have_channels_arms)*
                 false
@@ -891,16 +854,6 @@ fn generate_client_method(
         .filter(|(_index, arg)| type_is_tx(&arg.ty))
         .map(|(index, _arg)| proc_macro2::Literal::usize_unsuffixed(index))
         .collect();
-    let channel_retry_mode = if method.args().any(|arg| arg.ty.contains_channel()) {
-        if method.is_idem() {
-            quote! { #vox::ChannelRetryMode::Idem }
-        } else {
-            quote! { #vox::ChannelRetryMode::NonIdem }
-        }
-    } else {
-        quote! { #vox::ChannelRetryMode::None }
-    };
-
     // Args tuple value (for serialization)
     let args_tuple = match arg_names.len() {
         0 => quote! { () },
@@ -965,7 +918,6 @@ fn generate_client_method(
                 let method_id = #descriptor_fn_name().methods[#idx].id;
                 #args_binding
                 let mut metadata = Default::default();
-                #vox::ensure_channel_retry_mode(&mut metadata, #channel_retry_mode);
                 let req = #vox::RequestCall {
                     method_id,
                     args: #vox::Payload::outgoing(&args),
@@ -1020,7 +972,6 @@ fn generate_client_method(
                 let method_id = #descriptor_fn_name().methods[#idx].id;
                 #args_binding
                 let mut metadata = Default::default();
-                #vox::ensure_channel_retry_mode(&mut metadata, #channel_retry_mode);
                 let req = #vox::RequestCall {
                     method_id,
                     args: #vox::Payload::outgoing(&args),
