@@ -79,6 +79,28 @@ export class SchemaTracker {
     this.decoders.set(cacheKey, decoder);
     return decoder;
   }
+
+  /**
+   * Decode against the writer's OWN advertised schema (writer == reader). Used for
+   * responses, whose wire type is `Result<T, VoxError<E>>` — the server advertises
+   * it and we decode the `{ tag: "Ok" | "Err", value }` structure directly. `local`
+   * supplies the primitive table; the writer closure supplies every composite.
+   */
+  buildWriterDecoder(
+    methodId: bigint,
+    direction: BindingDirection,
+    local: Registry,
+  ): CompiledDecoder | null {
+    const writer = this.received.get(bindingKey(methodId, direction));
+    if (!writer) return null;
+    const cacheKey = `${bindingKey(methodId, direction)}:writer`;
+    const cached = this.decoders.get(cacheKey);
+    if (cached) return cached;
+    const reg = local.with(writer.schemas);
+    const decoder = compile(writer.root, writer.root, reg);
+    this.decoders.set(cacheKey, decoder);
+    return decoder;
+  }
 }
 
 export class SchemaTranslationError extends Error {

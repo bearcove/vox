@@ -41,10 +41,16 @@ export interface CallerRequest {
   descriptor: MethodDescriptor;
 
   /**
-   * Canonical service schema table (from vox-codegen). Used for local
-   * encode/decode and for sending args schemas to the remote peer.
+   * Per-method phon schema data (from the generated `{service}Methods` table):
+   * args/ok root ids, the args schema-closure to advertise, and channel metadata.
    */
-  sendSchemas: import("./schema_tracker.ts").ServiceSendSchemas;
+  methodSchemas: import("./schema_tracker.ts").PhonMethodSchemas;
+
+  /**
+   * The service's phon `Registry` (from the generated `{service}Registry`),
+   * resolving every args/ok type for local encode and reader-side decode.
+   */
+  registry: import("@bearcove/phon-schema").Registry;
 
   /**
    * Channel IDs for streaming arguments.

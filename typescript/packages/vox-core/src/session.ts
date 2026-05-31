@@ -1207,28 +1207,17 @@ export class ConnectionHandle {
       throw SessionError.closed();
     }
 
-    const localArgsSchemaSet = localSchemaSetForMethod(request.descriptor.id, "args", request.sendSchemas);
-    const localResponseSchemaSet = localSchemaSetForMethod(
-      request.descriptor.id,
-      "response",
-      request.sendSchemas,
-    );
-    if (!localArgsSchemaSet || !localResponseSchemaSet) {
-      throw SessionError.protocol(`missing canonical schemas for method ${request.descriptor.id}`);
-    }
+    const { methodSchemas, registry } = request;
     const encodeCurrentArgs = (): Uint8Array => {
       const values = Object.values(request.args);
       return values.length === 0
         ? new Uint8Array(0)
-        : encodeWithKind(values, localArgsSchemaSet.root.kind, localArgsSchemaSet.registry);
+        : encodeTyped(values as never, methodSchemas.argsRoot, registry);
     };
     const prepareRetry = request.prepareRetry
       ? () => {
           const rebuilt = request.prepareRetry!();
-          return {
-            payload: localArgsSchemaSet ? encodeCurrentArgs() : rebuilt.payload,
-            channels: rebuilt.channels,
-          };
+          return { payload: encodeCurrentArgs(), channels: rebuilt.channels };
         }
       : undefined;
     const initial = request.channels !== undefined
@@ -1246,22 +1235,18 @@ export class ConnectionHandle {
     if (this.peerSupportsRetry) {
       ensureOperationId(metadataCarrier, this.nextOperationId++);
     }
-    const metadata = clientMetadataToEntries(metadataCarrier);
+    const metadata = metadataCarrier.toWire();
     const requestId = this.nextRequestId;
     this.nextRequestId += 2n;
     const responsePayload = await new Promise<Uint8Array>((resolve, reject) => {
-      // Build a lazy schema computer so each send attempt (including retries
-      // after session reconnect) can call into the tracker which may have
-      // been reset. On first call the tracker returns the full schema bytes;
-      // on subsequent calls within the same connection it returns empty bytes.
-      const computeSchemas: (() => Uint8Array) | undefined = request.sendSchemas
-        ? () =>
-            this.getSchemaSendTracker().prepareSchemas(
-              request.descriptor.id,
-              "args",
-              request.sendSchemas,
-            )
-        : undefined;
+      // The args schema closure is advertised once per (method, connection); on
+      // resend after a reconnect the tracker has been reset and re-advertises.
+      const computeSchemas: () => number[] = () =>
+        this.getSchemaSendTracker().prepareSchemas(
+          request.descriptor.id,
+          "args",
+          methodSchemas.argsSchemaClosure,
+        );
 
       const state: PendingResponse = {
         resolve,
@@ -1289,35 +1274,18 @@ export class ConnectionHandle {
       void this.sendPendingRequest(state, requestId, true);
     });
 
-    const responseTranslation = this.getSchemaTracker().buildTranslation(
+    // Decode the response against the server's advertised `Result<T, VoxError<E>>`
+    // schema (received in the response's `schemas:` field). Writer == reader for
+    // the `{ tag: "Ok" | "Err", value }` structure the client then unwraps.
+    const decoder = this.getSchemaTracker().buildWriterDecoder(
       request.descriptor.id,
       "response",
-      localResponseSchemaSet,
+      registry,
     );
-    const decodedResult = responseTranslation
-      ? decodeWithPlan(
-          responsePayload,
-          0,
-          responseTranslation.plan,
-          localResponseSchemaSet!.root.kind,
-          responseTranslation.remoteSchemaSet.root.kind,
-          new Map([
-            ...localResponseSchemaSet!.registry,
-            ...responseTranslation.remoteSchemaSet.registry,
-          ]),
-        )
-      : decodeWithKind(
-          responsePayload,
-          0,
-          localResponseSchemaSet.root.kind,
-          localResponseSchemaSet.registry,
-        );
-
-    if (decodedResult.next !== responsePayload.length) {
+    if (!decoder) {
       throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
     }
-
-    const decoded = decodedResult.value as { tag: string; value?: unknown };
+    const decoded = decoder(responsePayload) as { tag: string; value?: unknown };
 
     if (decoded.tag === "Ok") {
       return decoded.value;
