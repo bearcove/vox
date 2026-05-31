@@ -40,7 +40,7 @@ pub struct SessionKeepaliveConfig {
 ///
 /// Passed to [`ConnectionAcceptor::accept`] when a peer opens a connection.
 pub struct ConnectionRequest<'a> {
-    metadata: &'a [vox_types::MetadataEntry<'a>],
+    metadata: &'a vox_types::Metadata,
     service: &'a str,
 }
 
@@ -48,7 +48,7 @@ impl<'a> ConnectionRequest<'a> {
     /// Build a connection request from metadata.
     ///
     /// Returns an error if the required `vox-service` metadata key is missing.
-    pub fn new(metadata: &'a [vox_types::MetadataEntry<'a>]) -> Result<Self, SessionError> {
+    pub fn new(metadata: &'a vox_types::Metadata) -> Result<Self, SessionError> {
         let service = vox_types::metadata_get_str(metadata, "vox-service").ok_or_else(|| {
             SessionError::Protocol("missing required vox-service metadata".into())
         })?;
@@ -90,8 +90,8 @@ impl<'a> ConnectionRequest<'a> {
         vox_types::metadata_get_u64(self.metadata, key)
     }
 
-    /// Access the raw metadata entries.
-    pub fn metadata(&self) -> &[vox_types::MetadataEntry<'a>] {
+    /// Access the raw metadata map.
+    pub fn metadata(&self) -> &'a vox_types::Metadata {
         self.metadata
     }
 }
@@ -347,13 +347,13 @@ impl SessionHandle {
         settings: ConnectionSettings,
     ) -> Result<Client, SessionError> {
         use crate::{Caller, Driver};
-        use vox_types::{MetadataEntry, MetadataFlags, MetadataValue};
 
-        let metadata: Metadata = vec![MetadataEntry {
-            key: crate::session::builders::VOX_SERVICE_METADATA_KEY.into(),
-            value: MetadataValue::String(Client::SERVICE_NAME.into()),
-            flags: MetadataFlags::NONE,
-        }];
+        let metadata = vox_types::metadata()
+            .str(
+                crate::session::builders::VOX_SERVICE_METADATA_KEY,
+                Client::SERVICE_NAME,
+            )
+            .build();
         let handle = self.open_connection(settings, metadata).await?;
         let mut driver = Driver::new(handle, ());
         let caller = Caller::new(driver.caller());
@@ -1688,11 +1688,7 @@ impl Session {
         true
     }
 
-    async fn handle_inbound_open(
-        &mut self,
-        conn_id: ConnectionId,
-        open: SelfRef<ConnectionOpen<'static>>,
-    ) {
+    async fn handle_inbound_open(&mut self, conn_id: ConnectionId, open: SelfRef<ConnectionOpen>) {
         // Validate: connection ID must match peer's parity (opposite of ours).
         let peer_parity = self.parity.other();
         if !conn_id.has_parity(peer_parity) {
@@ -1703,7 +1699,7 @@ impl Session {
                     Message {
                         connection_id: conn_id,
                         payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
-                            metadata: vec![],
+                            metadata: vox_types::Metadata::default(),
                         }),
                     },
                     None,
@@ -1722,7 +1718,7 @@ impl Session {
                     Message {
                         connection_id: conn_id,
                         payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
-                            metadata: vec![],
+                            metadata: vox_types::Metadata::default(),
                         }),
                     },
                     None,
@@ -1741,7 +1737,7 @@ impl Session {
                     Message {
                         connection_id: conn_id,
                         payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
-                            metadata: vec![],
+                            metadata: vox_types::Metadata::default(),
                         }),
                     },
                     None,
@@ -1760,10 +1756,9 @@ impl Session {
                     Message {
                         connection_id: conn_id,
                         payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
-                            metadata: vec![vox_types::MetadataEntry::str(
-                                "error",
-                                "initial_channel_credit must be greater than zero",
-                            )],
+                            metadata: vox_types::metadata()
+                                .str("error", "initial_channel_credit must be greater than zero")
+                                .build(),
                         }),
                     },
                     None,
@@ -1787,11 +1782,13 @@ impl Session {
         );
 
         // Let the acceptor decide the connection's fate.
-        let mut metadata: Vec<vox_types::MetadataEntry<'_>> = open.metadata.to_vec();
-        metadata.push(vox_types::MetadataEntry::str(
+        let mut metadata = open.metadata.clone();
+        vox_types::meta_set(
+            &mut metadata,
             "vox-connection-kind",
             "virtual",
-        ));
+            vox_types::MetadataFlags::NONE,
+        );
         let request = match ConnectionRequest::new(&metadata) {
             Ok(r) => r,
             Err(e) => {
@@ -1804,10 +1801,9 @@ impl Session {
                             connection_id: conn_id,
                             payload: MessagePayload::ConnectionReject(
                                 vox_types::ConnectionReject {
-                                    metadata: vec![vox_types::MetadataEntry::str(
-                                        "error",
-                                        e.to_string(),
-                                    )],
+                                    metadata: vox_types::metadata()
+                                        .str("error", e.to_string())
+                                        .build(),
                                 },
                             ),
                         },
@@ -1832,7 +1828,7 @@ impl Session {
                             payload: MessagePayload::ConnectionAccept(
                                 vox_types::ConnectionAccept {
                                     connection_settings: our_settings,
-                                    metadata: vec![],
+                                    metadata: vox_types::Metadata::default(),
                                 },
                             ),
                         },
@@ -1864,11 +1860,7 @@ impl Session {
         }
     }
 
-    fn handle_inbound_accept(
-        &mut self,
-        conn_id: ConnectionId,
-        accept: SelfRef<ConnectionAccept<'static>>,
-    ) {
+    fn handle_inbound_accept(&mut self, conn_id: ConnectionId, accept: SelfRef<ConnectionAccept>) {
         let accept = accept.get();
         let slot = self.remove_connection(&conn_id);
         match slot {
@@ -1902,19 +1894,13 @@ impl Session {
         }
     }
 
-    fn handle_inbound_reject(
-        &mut self,
-        conn_id: ConnectionId,
-        reject: SelfRef<ConnectionReject<'static>>,
-    ) {
+    fn handle_inbound_reject(&mut self, conn_id: ConnectionId, reject: SelfRef<ConnectionReject>) {
         let reject = reject.get();
         let slot = self.remove_connection(&conn_id);
         match slot {
             Some(ConnectionSlot::PendingOutbound(mut pending)) => {
                 if let Some(tx) = pending.result_tx.take() {
-                    let _ = tx.send(Err(SessionError::Rejected(vox_types::metadata_into_owned(
-                        reject.metadata.to_vec(),
-                    ))));
+                    let _ = tx.send(Err(SessionError::Rejected(reject.metadata.clone())));
                 }
             }
             Some(other) => {
@@ -2042,7 +2028,7 @@ impl Session {
                             Message {
                                 connection_id: conn_id,
                                 payload: MessagePayload::ConnectionClose(ConnectionClose {
-                                    metadata: vec![],
+                                    metadata: vox_types::Metadata::default(),
                                 }),
                             },
                             None,
@@ -2869,11 +2855,11 @@ mod tests {
             peer_resume_key: None,
             our_schema: vec![],
             peer_schema: vec![],
-            peer_metadata: vec![],
+            peer_metadata: vox_types::Metadata::default(),
         }
     }
 
-    fn accept_ref() -> SelfRef<ConnectionAccept<'static>> {
+    fn accept_ref() -> SelfRef<ConnectionAccept> {
         SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ConnectionAccept {
@@ -2882,12 +2868,12 @@ mod tests {
                     max_concurrent_requests: 64,
                     initial_channel_credit: 16,
                 },
-                metadata: vec![],
+                metadata: vox_types::Metadata::default(),
             },
         )
     }
 
-    fn zero_credit_accept_ref() -> SelfRef<ConnectionAccept<'static>> {
+    fn zero_credit_accept_ref() -> SelfRef<ConnectionAccept> {
         SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ConnectionAccept {
@@ -2896,15 +2882,17 @@ mod tests {
                     max_concurrent_requests: 64,
                     initial_channel_credit: 0,
                 },
-                metadata: vec![],
+                metadata: vox_types::Metadata::default(),
             },
         )
     }
 
-    fn reject_ref() -> SelfRef<ConnectionReject<'static>> {
+    fn reject_ref() -> SelfRef<ConnectionReject> {
         SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
-            ConnectionReject { metadata: vec![] },
+            ConnectionReject {
+                metadata: vox_types::Metadata::default(),
+            },
         )
     }
 
@@ -3050,7 +3038,7 @@ mod tests {
         session
             .handle_close_request(CloseRequest {
                 conn_id: ConnectionId(1),
-                metadata: vec![],
+                metadata: vox_types::Metadata::default(),
                 result_tx: close_result_tx,
             })
             .await;

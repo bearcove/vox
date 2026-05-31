@@ -387,7 +387,7 @@ mod tests {
         let response_wire: Result<Vec<u32>, crate::VoxError<std::convert::Infallible>> =
             Ok(vec![10, 20, 30, 40, 50]);
         let response = crate::RequestResponse {
-            metadata: vec![],
+            metadata: vox_types::Metadata::default(),
             ret: crate::Payload::outgoing(&response_wire),
             schemas: Default::default(),
         };

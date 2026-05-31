@@ -1114,7 +1114,6 @@ impl<H: Handler<DriverReplySink>> ErasedHandler for H {
 }
 
 impl Handler<DriverReplySink> for Box<dyn ErasedHandler> {
-
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         (**self).args_have_channels(method_id)
     }
@@ -1183,9 +1182,7 @@ impl Caller {
     /// Start one outgoing request attempt and wait for its response,
     /// running any registered middleware around the call.
     pub async fn call(&self, mut call: RequestCall<'_>) -> CallResult {
-        use vox_types::{
-            ClientCallOutcome, ClientContext, ClientRequest, Extensions, OwnedMetadata,
-        };
+        use vox_types::{ClientCallOutcome, ClientContext, ClientRequest, Extensions};
 
         let Some(service) = self.service else {
             return self.inner.call_inner(call, None).await;
@@ -1194,11 +1191,10 @@ impl Caller {
         let extensions = Extensions::new();
         let method = service.by_id(call.method_id);
         let context = ClientContext::new(method, call.method_id, &extensions);
-        let mut owned_metadata = OwnedMetadata::default();
 
         if !self.middlewares.is_empty() {
             for middleware in &self.middlewares {
-                let mut request = ClientRequest::new(&mut call, &mut owned_metadata);
+                let mut request = ClientRequest::new(&mut call);
                 middleware.pre(&context, &mut request).await;
             }
         }

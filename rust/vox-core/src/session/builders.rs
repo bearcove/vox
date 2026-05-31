@@ -10,8 +10,8 @@ use moire::sync::mpsc;
 use moire::time;
 use vox_types::{
     Conduit, ConnectionSettings, DEFAULT_INITIAL_CHANNEL_CREDIT, HandshakeResult, Link, MaybeSend,
-    MaybeSync, MessageFamily, Metadata, Parity, SessionResumeKey, SplitLink, VoxObserver,
-    VoxObserverHandle, metadata_into_owned,
+    MaybeSync, MessageFamily, Metadata, MetadataExt, Parity, SessionResumeKey, SplitLink,
+    VoxObserver, VoxObserverHandle, metadata_into_owned,
 };
 
 use crate::LinkSource;
@@ -31,11 +31,12 @@ pub const VOX_SERVICE_METADATA_KEY: &str = "vox-service";
 
 /// Inject `vox-service` metadata from `Client::SERVICE_NAME`.
 fn inject_service_metadata<Client: FromVoxSession>(metadata: &mut Metadata) {
-    metadata.push(vox_types::MetadataEntry {
-        key: VOX_SERVICE_METADATA_KEY.into(),
-        value: vox_types::MetadataValue::String(Client::SERVICE_NAME.into()),
-        flags: vox_types::MetadataFlags::NONE,
-    });
+    vox_types::meta_set(
+        metadata,
+        VOX_SERVICE_METADATA_KEY,
+        Client::SERVICE_NAME,
+        vox_types::MetadataFlags::NONE,
+    );
 }
 
 /// A pinned, boxed session future. On non-WASM this is `Send + 'static`;
@@ -69,11 +70,11 @@ fn default_spawn_fn() -> SpawnFn {
 pub fn initiator_conduit<I: IntoConduit>(
     into_conduit: I,
     handshake_result: HandshakeResult,
-) -> SessionInitiatorBuilder<'static, I::Conduit> {
+) -> SessionInitiatorBuilder<I::Conduit> {
     SessionInitiatorBuilder::new(into_conduit.into_conduit(), handshake_result)
 }
 
-pub fn initiator<S>(source: S, mode: TransportMode) -> SessionSourceInitiatorBuilder<'static, S>
+pub fn initiator<S>(source: S, mode: TransportMode) -> SessionSourceInitiatorBuilder<S>
 where
     S: LinkSource,
 {
@@ -83,7 +84,7 @@ where
 pub fn acceptor_conduit<I: IntoConduit>(
     into_conduit: I,
     handshake_result: HandshakeResult,
-) -> SessionAcceptorBuilder<'static, I::Conduit> {
+) -> SessionAcceptorBuilder<I::Conduit> {
     SessionAcceptorBuilder::new(into_conduit.into_conduit(), handshake_result)
 }
 
@@ -93,7 +94,7 @@ pub async fn initiator_on_link<L: Link>(
     link: L,
     settings: ConnectionSettings,
 ) -> Result<
-    SessionInitiatorBuilder<'static, BareConduit<MessageFamily, SplitLink<L::Tx, L::Rx>>>,
+    SessionInitiatorBuilder<BareConduit<MessageFamily, SplitLink<L::Tx, L::Rx>>>,
     SessionError,
 >
 where
@@ -101,9 +102,10 @@ where
     L::Rx: MaybeSend + 'static,
 {
     let (tx, mut rx) = link.split();
-    let handshake_result = handshake_as_initiator(&tx, &mut rx, settings, None, vec![])
-        .await
-        .map_err(session_error_from_handshake)?;
+    let handshake_result =
+        handshake_as_initiator(&tx, &mut rx, settings, None, vox_types::Metadata::default())
+            .await
+            .map_err(session_error_from_handshake)?;
     let message_plan =
         crate::MessagePlan::from_handshake(&handshake_result).map_err(SessionError::Protocol)?;
     Ok(SessionInitiatorBuilder::new(
@@ -117,18 +119,22 @@ where
 pub async fn acceptor_on_link<L: Link>(
     link: L,
     settings: ConnectionSettings,
-) -> Result<
-    SessionAcceptorBuilder<'static, BareConduit<MessageFamily, SplitLink<L::Tx, L::Rx>>>,
-    SessionError,
->
+) -> Result<SessionAcceptorBuilder<BareConduit<MessageFamily, SplitLink<L::Tx, L::Rx>>>, SessionError>
 where
     L::Tx: MaybeSend + MaybeSync + 'static,
     L::Rx: MaybeSend + 'static,
 {
     let (tx, mut rx) = link.split();
-    let handshake_result = handshake_as_acceptor(&tx, &mut rx, settings, false, None, vec![])
-        .await
-        .map_err(session_error_from_handshake)?;
+    let handshake_result = handshake_as_acceptor(
+        &tx,
+        &mut rx,
+        settings,
+        false,
+        None,
+        vox_types::Metadata::default(),
+    )
+    .await
+    .map_err(session_error_from_handshake)?;
     let message_plan =
         crate::MessagePlan::from_handshake(&handshake_result).map_err(SessionError::Protocol)?;
     Ok(SessionAcceptorBuilder::new(
@@ -137,25 +143,22 @@ where
     ))
 }
 
-pub fn initiator_on<L: Link>(
-    link: L,
-    mode: TransportMode,
-) -> SessionTransportInitiatorBuilder<'static, L> {
+pub fn initiator_on<L: Link>(link: L, mode: TransportMode) -> SessionTransportInitiatorBuilder<L> {
     SessionTransportInitiatorBuilder::new(link, mode)
 }
 
 pub fn initiator_transport<L: Link>(
     link: L,
     mode: TransportMode,
-) -> SessionTransportInitiatorBuilder<'static, L> {
+) -> SessionTransportInitiatorBuilder<L> {
     initiator_on(link, mode)
 }
 
-pub fn acceptor_on<L: Link>(link: L) -> SessionTransportAcceptorBuilder<'static, L> {
+pub fn acceptor_on<L: Link>(link: L) -> SessionTransportAcceptorBuilder<L> {
     SessionTransportAcceptorBuilder::new(link)
 }
 
-pub fn acceptor_transport<L: Link>(link: L) -> SessionTransportAcceptorBuilder<'static, L> {
+pub fn acceptor_transport<L: Link>(link: L) -> SessionTransportAcceptorBuilder<L> {
     acceptor_on(link)
 }
 
@@ -194,7 +197,7 @@ pub enum SessionAcceptOutcome<Client> {
 }
 
 /// Shared configuration for all session builders.
-pub struct SessionConfig<'a> {
+pub struct SessionConfig {
     pub root_settings: ConnectionSettings,
     pub metadata: Metadata,
     pub on_connection: Option<Arc<dyn ConnectionAcceptor>>,
@@ -207,11 +210,11 @@ pub struct SessionConfig<'a> {
     pub observer: Option<VoxObserverHandle>,
 }
 
-impl SessionConfig<'_> {
+impl SessionConfig {
     fn with_settings(root_settings: ConnectionSettings) -> Self {
         Self {
             root_settings,
-            metadata: vec![],
+            metadata: vox_types::Metadata::default(),
             on_connection: None,
             keepalive: None,
             resumable: true,
@@ -224,7 +227,7 @@ impl SessionConfig<'_> {
     }
 }
 
-impl Default for SessionConfig<'_> {
+impl Default for SessionConfig {
     fn default() -> Self {
         Self::with_settings(ConnectionSettings {
             parity: Parity::Odd,
@@ -234,14 +237,14 @@ impl Default for SessionConfig<'_> {
     }
 }
 
-pub struct SessionInitiatorBuilder<'a, C> {
+pub struct SessionInitiatorBuilder<C> {
     conduit: C,
     handshake_result: HandshakeResult,
-    config: SessionConfig<'a>,
+    config: SessionConfig,
     recoverer: Option<Box<dyn ConduitRecoverer>>,
 }
 
-impl<'a, C> SessionInitiatorBuilder<'a, C> {
+impl<C> SessionInitiatorBuilder<C> {
     fn new(conduit: C, handshake_result: HandshakeResult) -> Self {
         let root_settings = handshake_result.our_settings.clone();
         let mut config = SessionConfig::with_settings(root_settings);
@@ -376,10 +379,12 @@ impl<'a, C> SessionInitiatorBuilder<'a, C> {
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
         let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        peer_metadata.push(vox_types::MetadataEntry::str(
+        vox_types::meta_set(
+            &mut peer_metadata,
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
-        ));
+            vox_types::MetadataFlags::NONE,
+        );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(
             service = Client::SERVICE_NAME,
@@ -393,7 +398,7 @@ impl<'a, C> SessionInitiatorBuilder<'a, C> {
             Err(metadata) => {
                 tracing::debug!(
                     service = Client::SERVICE_NAME,
-                    metadata_len = metadata.len(),
+                    metadata_len = metadata.meta_len(),
                     "vox root connection rejected"
                 );
                 return Err(SessionError::Rejected(metadata));
@@ -409,13 +414,13 @@ impl<'a, C> SessionInitiatorBuilder<'a, C> {
     }
 }
 
-pub struct SessionSourceInitiatorBuilder<'a, S> {
+pub struct SessionSourceInitiatorBuilder<S> {
     source: S,
     mode: TransportMode,
-    config: SessionConfig<'a>,
+    config: SessionConfig,
 }
 
-impl<'a, S> SessionSourceInitiatorBuilder<'a, S> {
+impl<S> SessionSourceInitiatorBuilder<S> {
     fn new(source: S, mode: TransportMode) -> Self {
         let config = SessionConfig {
             resumable: false,
@@ -584,13 +589,13 @@ impl<'a, S> SessionSourceInitiatorBuilder<'a, S> {
     }
 }
 
-pub struct SessionTransportInitiatorBuilder<'a, L> {
+pub struct SessionTransportInitiatorBuilder<L> {
     link: L,
     mode: TransportMode,
-    config: SessionConfig<'a>,
+    config: SessionConfig,
 }
 
-impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
+impl<L> SessionTransportInitiatorBuilder<L> {
     fn new(link: L, mode: TransportMode) -> Self {
         let config = SessionConfig {
             resumable: false,
@@ -746,7 +751,7 @@ impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
 
     async fn finish_with_bare_parts<Client: FromVoxSession>(
         mut link: SplitLink<L::Tx, L::Rx>,
-        config: SessionConfig<'a>,
+        config: SessionConfig,
     ) -> Result<Client, SessionError>
     where
         L: Link + 'static,
@@ -775,10 +780,10 @@ impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
 
     #[allow(clippy::too_many_arguments)]
     fn apply_common_parts<C>(
-        mut builder: SessionInitiatorBuilder<'a, C>,
-        config: SessionConfig<'a>,
+        mut builder: SessionInitiatorBuilder<C>,
+        config: SessionConfig,
         recoverer: Option<Box<dyn ConduitRecoverer>>,
-    ) -> SessionInitiatorBuilder<'a, C> {
+    ) -> SessionInitiatorBuilder<C> {
         builder.config = config;
         builder.recoverer = recoverer;
         builder
@@ -863,13 +868,13 @@ where
     }
 }
 
-pub struct SessionAcceptorBuilder<'a, C> {
+pub struct SessionAcceptorBuilder<C> {
     conduit: C,
     handshake_result: HandshakeResult,
-    config: SessionConfig<'a>,
+    config: SessionConfig,
 }
 
-impl<'a, C> SessionAcceptorBuilder<'a, C> {
+impl<C> SessionAcceptorBuilder<C> {
     fn new(conduit: C, handshake_result: HandshakeResult) -> Self {
         let root_settings = handshake_result.our_settings.clone();
         let mut config = SessionConfig::with_settings(root_settings);
@@ -1008,10 +1013,12 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
         let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        peer_metadata.push(vox_types::MetadataEntry::str(
+        vox_types::meta_set(
+            &mut peer_metadata,
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
-        ));
+            vox_types::MetadataFlags::NONE,
+        );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(
             service = Client::SERVICE_NAME,
@@ -1025,7 +1032,7 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
             Err(metadata) => {
                 tracing::debug!(
                     service = Client::SERVICE_NAME,
-                    metadata_len = metadata.len(),
+                    metadata_len = metadata.meta_len(),
                     "vox root connection rejected"
                 );
                 return Err(SessionError::Rejected(metadata));
@@ -1073,12 +1080,12 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
     }
 }
 
-pub struct SessionTransportAcceptorBuilder<'a, L: Link> {
+pub struct SessionTransportAcceptorBuilder<L: Link> {
     link: L,
-    config: SessionConfig<'a>,
+    config: SessionConfig,
 }
 
-impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
+impl<L: Link> SessionTransportAcceptorBuilder<L> {
     fn new(link: L) -> Self {
         Self {
             link,
@@ -1249,9 +1256,9 @@ impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
     }
 
     fn apply_common_parts<C>(
-        mut builder: SessionAcceptorBuilder<'a, C>,
-        config: SessionConfig<'a>,
-    ) -> SessionAcceptorBuilder<'a, C> {
+        mut builder: SessionAcceptorBuilder<C>,
+        config: SessionConfig,
+    ) -> SessionAcceptorBuilder<C> {
         builder.config = config;
         builder
     }

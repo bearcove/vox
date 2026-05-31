@@ -5,9 +5,9 @@ use std::{fs, path::PathBuf};
 use vox_types::{
     ChannelBody, ChannelClose, ChannelGrantCredit, ChannelId, ChannelItem, ChannelMessage,
     ChannelReset, ConnectionAccept, ConnectionClose, ConnectionId, ConnectionOpen,
-    ConnectionReject, ConnectionSettings, Message, MessagePayload, Metadata, MetadataEntry,
-    MetadataFlags, MetadataValue, MethodId, Parity, Payload, ProtocolError, RequestBody,
-    RequestCall, RequestCancel, RequestId, RequestMessage, RequestResponse, VoxError,
+    ConnectionReject, ConnectionSettings, Message, MessagePayload, Metadata, MetadataFlags,
+    MethodId, Parity, Payload, ProtocolError, RequestBody, RequestCall, RequestCancel, RequestId,
+    RequestMessage, RequestResponse, VoxError,
 };
 
 fn fixture_root() -> PathBuf {
@@ -32,23 +32,17 @@ fn encode_message(message: &Message<'_>) -> Vec<u8> {
 }
 
 fn sample_metadata() -> Metadata {
-    vec![
-        MetadataEntry {
-            key: "trace-id".into(),
-            value: MetadataValue::String("abc123".into()),
-            flags: MetadataFlags::NONE,
-        },
-        MetadataEntry {
-            key: "auth".into(),
-            value: MetadataValue::Bytes((&[0xDE, 0xAD, 0xBE, 0xEF][..]).into()),
-            flags: MetadataFlags::SENSITIVE | MetadataFlags::NO_PROPAGATE,
-        },
-        MetadataEntry {
-            key: "attempt".into(),
-            value: MetadataValue::U64(2),
-            flags: MetadataFlags::NONE,
-        },
-    ]
+    let mut m = vox_types::metadata()
+        .str("trace-id", "abc123")
+        .u64("attempt", 2)
+        .build();
+    vox_types::meta_set(
+        &mut m,
+        "auth",
+        &[0xDE, 0xAD, 0xBE, 0xEF][..],
+        MetadataFlags::SENSITIVE | MetadataFlags::NO_PROPAGATE,
+    );
+    m
 }
 
 fn main() {

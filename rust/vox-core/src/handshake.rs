@@ -325,7 +325,7 @@ mod tests {
                 connection_settings: settings(Parity::Odd, 0),
                 message_payload_schema: message_schema(),
                 resume_key: None,
-                metadata: vec![],
+                metadata: vox_types::Metadata::default(),
             }),
         )
         .await

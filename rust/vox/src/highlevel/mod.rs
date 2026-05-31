@@ -137,7 +137,7 @@ impl<'a, Client> ConnectBuilder<'a, Client> {
     fn new(addr: String) -> Self {
         Self {
             addr,
-            metadata: vec![],
+            metadata: vox_types::Metadata::default(),
             on_connection: None,
             connect_timeout: Some(Duration::from_secs(5)),
             channel_capacity: DEFAULT_INITIAL_CHANNEL_CREDIT,
