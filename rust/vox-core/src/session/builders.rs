@@ -16,8 +16,8 @@ use vox_types::{
 
 use crate::LinkSource;
 use crate::{
-    BareConduit, IntoConduit, OperationStore, TransportMode, accept_transport,
-    handshake_as_acceptor, handshake_as_initiator, initiate_transport,
+    BareConduit, IntoConduit, TransportMode, accept_transport, handshake_as_acceptor,
+    handshake_as_initiator, initiate_transport,
 };
 
 use super::{
@@ -201,7 +201,6 @@ pub struct SessionConfig<'a> {
     pub keepalive: Option<SessionKeepaliveConfig>,
     pub resumable: bool,
     pub session_registry: Option<SessionRegistry>,
-    pub operation_store: Option<Arc<dyn OperationStore>>,
     pub spawn_fn: SpawnFn,
     pub connect_timeout: Option<std::time::Duration>,
     pub recovery_timeout: Option<std::time::Duration>,
@@ -217,7 +216,6 @@ impl SessionConfig<'_> {
             keepalive: None,
             resumable: true,
             session_registry: None,
-            operation_store: None,
             spawn_fn: default_spawn_fn(),
             connect_timeout: None,
             recovery_timeout: None,
@@ -310,11 +308,6 @@ impl<'a, C> SessionInitiatorBuilder<'a, C> {
         self
     }
 
-    pub fn operation_store(mut self, operation_store: Arc<dyn OperationStore>) -> Self {
-        self.config.operation_store = Some(operation_store);
-        self
-    }
-
     /// Override the function used to spawn the session background task.
     /// Defaults to `tokio::spawn` on non-WASM and `wasm_bindgen_futures::spawn_local` on WASM.
     #[cfg(not(target_arch = "wasm32"))]
@@ -382,11 +375,7 @@ impl<'a, C> SessionInitiatorBuilder<'a, C> {
         };
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
-        let pending = super::PendingConnection::with_caller_slot(
-            handle,
-            caller_slot.clone(),
-            config.operation_store,
-        );
+        let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
         peer_metadata.push(vox_types::MetadataEntry::str(
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
@@ -509,11 +498,6 @@ impl<'a, S> SessionSourceInitiatorBuilder<'a, S> {
     /// that the client disconnected).
     pub fn non_resumable(mut self) -> Self {
         self.config.resumable = false;
-        self
-    }
-
-    pub fn operation_store(mut self, operation_store: Arc<dyn OperationStore>) -> Self {
-        self.config.operation_store = Some(operation_store);
         self
     }
 
@@ -686,11 +670,6 @@ impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
     /// that the client disconnected).
     pub fn non_resumable(mut self) -> Self {
         self.config.resumable = false;
-        self
-    }
-
-    pub fn operation_store(mut self, operation_store: Arc<dyn OperationStore>) -> Self {
-        self.config.operation_store = Some(operation_store);
         self
     }
 
@@ -964,11 +943,6 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
         self
     }
 
-    pub fn operation_store(mut self, operation_store: Arc<dyn OperationStore>) -> Self {
-        self.config.operation_store = Some(operation_store);
-        self
-    }
-
     /// Override the function used to spawn the session background task.
     /// Defaults to `tokio::spawn` on non-WASM and `wasm_bindgen_futures::spawn_local` on WASM.
     #[cfg(not(target_arch = "wasm32"))]
@@ -1036,11 +1010,7 @@ impl<'a, C> SessionAcceptorBuilder<'a, C> {
         }
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
-        let pending = super::PendingConnection::with_caller_slot(
-            handle,
-            caller_slot.clone(),
-            config.operation_store,
-        );
+        let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
         peer_metadata.push(vox_types::MetadataEntry::str(
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
@@ -1193,11 +1163,6 @@ impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
 
     pub fn session_registry(mut self, session_registry: SessionRegistry) -> Self {
         self.config.session_registry = Some(session_registry);
-        self
-    }
-
-    pub fn operation_store(mut self, operation_store: Arc<dyn OperationStore>) -> Self {
-        self.config.operation_store = Some(operation_store);
         self
     }
 

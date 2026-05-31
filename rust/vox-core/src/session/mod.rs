@@ -105,7 +105,6 @@ impl<'a> ConnectionRequest<'a> {
 pub struct PendingConnection {
     handle: Option<ConnectionHandle>,
     caller_slot: Option<Arc<std::sync::Mutex<Option<crate::Caller>>>>,
-    operation_store: Option<Arc<dyn crate::OperationStore>>,
 }
 
 impl PendingConnection {
@@ -113,7 +112,6 @@ impl PendingConnection {
         Self {
             handle: Some(handle),
             caller_slot: None,
-            operation_store: None,
         }
     }
 
@@ -121,12 +119,10 @@ impl PendingConnection {
     fn with_caller_slot(
         handle: ConnectionHandle,
         caller_slot: Arc<std::sync::Mutex<Option<crate::Caller>>>,
-        operation_store: Option<Arc<dyn crate::OperationStore>>,
     ) -> Self {
         Self {
             handle: Some(handle),
             caller_slot: Some(caller_slot),
-            operation_store,
         }
     }
 
@@ -138,10 +134,7 @@ impl PendingConnection {
             .expect("PendingConnection already consumed");
         let conn_id = handle.connection_id();
         trace!(%conn_id, "PendingConnection::handle_with: creating driver");
-        let mut driver = match self.operation_store.take() {
-            Some(store) => crate::Driver::with_operation_store(handle, handler, store),
-            None => crate::Driver::new(handle, handler),
-        };
+        let mut driver = crate::Driver::new(handle, handler);
         if let Some(slot) = &self.caller_slot {
             let caller = crate::Caller::new(driver.caller());
             *slot.lock().unwrap() = Some(caller);
@@ -167,10 +160,7 @@ impl PendingConnection {
             .expect("PendingConnection already consumed");
         let conn_id = handle.connection_id();
         trace!(%conn_id, "PendingConnection::handle_with_client: creating driver");
-        let mut driver = match self.operation_store.take() {
-            Some(store) => crate::Driver::with_operation_store(handle, handler, store),
-            None => crate::Driver::new(handle, handler),
-        };
+        let mut driver = crate::Driver::new(handle, handler);
         let caller = crate::Caller::new(driver.caller());
         if let Some(slot) = &self.caller_slot {
             *slot.lock().unwrap() = Some(caller.clone());
@@ -770,25 +760,6 @@ impl ConnectionSender {
     /// Called when a send error occurs or no reply was sent.
     pub fn mark_failure(&self, request_id: RequestId, disposition: FailureDisposition) {
         let _ = self.failures.send((request_id, disposition));
-    }
-
-    /// Prepare schemas for a replay response from the running code's
-    /// static response shape — same source of truth fresh responses
-    /// use, with the same connection-scoped dedup.
-    pub fn prepare_replay_schemas(
-        &self,
-        request_id: RequestId,
-        method_id: vox_types::MethodId,
-        response_shape: &'static Shape,
-        response: &mut RequestResponse<'_>,
-    ) {
-        self.sess_core.prepare_response_from_shape(
-            self.connection_id,
-            request_id,
-            method_id,
-            response_shape,
-            response,
-        );
     }
 }
 
@@ -2639,41 +2610,6 @@ impl SessionCore {
         }
         let prepared =
             Self::get_or_plan_binding_from_source(&mut conn_state, key, root_type, source);
-        response.schemas = prepared.to_cbor();
-    }
-
-    /// Prepare response schemas for a replay using the running code's
-    /// static `&'static Shape` for the response type. Same connection-
-    /// scoped dedup as fresh responses.
-    pub(crate) fn prepare_response_from_shape(
-        &self,
-        conn_id: ConnectionId,
-        request_id: RequestId,
-        method_id: vox_types::MethodId,
-        response_shape: &'static Shape,
-        response: &mut RequestResponse<'_>,
-    ) {
-        let mut inner = self.inner.lock().expect("session core mutex poisoned");
-        let conn_state = get_or_create_send_conn_state(&mut inner, conn_id);
-        let mut conn_state = conn_state.lock().expect("send conn state mutex poisoned");
-        let key = (vox_types::BindingDirection::Response, method_id);
-        if conn_state
-            .send_tracker
-            .has_sent_binding(method_id, vox_types::BindingDirection::Response)
-        {
-            response.schemas = Default::default();
-            return;
-        }
-        let prepared = match Self::get_or_plan_binding_for_shape(
-            &mut conn_state,
-            key,
-            request_id,
-            "response",
-            response_shape,
-        ) {
-            Some(prepared) => prepared,
-            None => return,
-        };
         response.schemas = prepared.to_cbor();
     }
 

@@ -298,10 +298,6 @@ pub use vox_core::{HandshakeError, handshake_as_acceptor, handshake_as_initiator
 #[cfg(feature = "runtime")]
 pub use vox_core::{accept_transport, initiate_transport};
 
-// Operation store (exactly-once delivery)
-#[cfg(feature = "runtime")]
-pub use vox_core::{InMemoryOperationStore, OperationState, OperationStore, SealedResponse};
-
 // Dynamic conduit traits (object-safe)
 #[cfg(feature = "runtime")]
 pub use vox_core::{DynConduitRx, DynConduitTx};
