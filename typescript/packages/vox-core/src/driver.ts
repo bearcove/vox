@@ -1,32 +1,20 @@
 import {
-  decodeWithKind,
-  decodeWithPlan,
-  encodeWithKind,
-  decodeWithTypeRef,
-  encodeWithTypeRef,
-  resolveTypeRef,
-} from "@bearcove/vox-postcard";
-import {
-  RpcError,
-  RpcErrorCode,
+  emptyMetadata,
 } from "@bearcove/vox-wire";
 import {
-  DEFAULT_INITIAL_CREDIT,
   type MethodDescriptor,
   type VoxCall,
   type ServiceDescriptor,
-  createServerRx,
-  createServerTx,
   type TaskMessage,
   type TaskSender,
 } from "./channeling/index.ts";
+import type { ServiceSendSchemas } from "./channeling/descriptor.ts";
 import { Extensions } from "./middleware.ts";
 import { RequestContext } from "./request_context.ts";
 import { metadataOperationId } from "./retry.ts";
 import { type ServerCallOutcome, type ServerMiddleware } from "./server_middleware.ts";
 import type { ConnectionHandle, IncomingCall } from "./session.ts";
 import { voxLogger } from "./logger.ts";
-import { localSchemaSetForMethod } from "./schema_tracker.ts";
 
 export interface Dispatcher {
   getDescriptor(): ServiceDescriptor;
@@ -258,7 +246,7 @@ class VoxCallImpl implements VoxCall {
   private readonly operations: OperationStore;
   private readonly operationId: bigint | undefined;
   private readonly schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker;
-  private readonly sendSchemas: import("./schema_tracker.ts").ServiceSendSchemas;
+  private readonly sendSchemas: ServiceSendSchemas;
 
   constructor(
     method: MethodDescriptor,
@@ -267,7 +255,7 @@ class VoxCallImpl implements VoxCall {
     operations: OperationStore,
     operationId: bigint | undefined,
     schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker,
-    sendSchemas: import("./schema_tracker.ts").ServiceSendSchemas,
+    sendSchemas: ServiceSendSchemas,
   ) {
     this.method = method;
     this.requestId = requestId;
@@ -287,15 +275,7 @@ class VoxCallImpl implements VoxCall {
       return;
     }
     this.replied = true;
-    const localSchemaSet = localSchemaSetForMethod(this.method.id, "response", this.sendSchemas);
-    if (!localSchemaSet) {
-      throw new Error(`missing canonical response schema for method ${this.method.id}`);
-    }
-    const payload = encodeWithKind(
-      { tag: "Ok", value },
-      localSchemaSet.root.kind,
-      localSchemaSet.registry,
-    );
+    const payload = this.encodeResponse({ tag: "Ok", value });
     this.sendPayload(payload);
   }
 
@@ -304,15 +284,7 @@ class VoxCallImpl implements VoxCall {
       return;
     }
     this.replied = true;
-    const localSchemaSet = localSchemaSetForMethod(this.method.id, "response", this.sendSchemas);
-    if (!localSchemaSet) {
-      throw new Error(`missing canonical response schema for method ${this.method.id}`);
-    }
-    const payload = encodeWithKind(
-      { tag: "Err", value: { tag: "User", value: error } },
-      localSchemaSet.root.kind,
-      localSchemaSet.registry,
-    );
+    const payload = this.encodeResponse({ tag: "Err", value: { tag: "User", value: error } });
     this.sendPayload(payload);
   }
 
@@ -321,36 +293,62 @@ class VoxCallImpl implements VoxCall {
       return;
     }
     this.replied = true;
-    const localSchemaSet = localSchemaSetForMethod(this.method.id, "response", this.sendSchemas);
-    if (!localSchemaSet) {
-      throw new Error(`missing canonical response schema for method ${this.method.id}`);
-    }
-    const payload = encodeWithKind(
-      { tag: "Err", value: { tag: "InvalidPayload", value: message } },
-      localSchemaSet.root.kind,
-      localSchemaSet.registry,
-    );
+    const payload = this.encodeResponse({
+      tag: "Err",
+      value: { tag: "InvalidPayload", value: message },
+    });
     this.sendPayload(payload);
+  }
+
+  /**
+   * Encode a `Result<T, VoxError<E>>` response payload as phon bytes.
+   *
+   * TODO(phon): server-side response encode. The response wire root for the
+   * `Result<T, VoxError<E>>` shape is not emitted by vox-codegen yet (deferred),
+   * so there is no `okRoot`-style reader/registry reachable here to drive
+   * `encodeTyped`. The TS-server path (Rust client -> TS server) is not exercised
+   * by the current client-side target; wire this up once codegen emits the
+   * response root + a service `Registry` on the server descriptor.
+   */
+  private encodeResponse(_result: {
+    tag: "Ok" | "Err";
+    value: unknown;
+  }): Uint8Array {
+    void this.sendSchemas;
+    throw new Error("TODO(phon): server-side response encode");
+  }
+
+  /**
+   * The phon schema-closure bytes to advertise for this method's response
+   * binding, or undefined when nothing is to be sent.
+   *
+   * TODO(phon): server-side response schema exchange. `PhonMethodSchemas` only
+   * carries the args schema-closure today; once codegen emits a response
+   * schema-closure, advertise it here via
+   * `this.schemaSendTracker.prepareSchemas(this.method.id, "response", closureHex)`.
+   */
+  private prepareResponseSchemas(): Uint8Array | undefined {
+    return undefined;
   }
 
   private sendPayload(payload: Uint8Array): void {
     if (this.operationId === undefined) {
-      const schemas = this.schemaSendTracker.prepareSchemas(
-        this.method.id,
-        "response",
-        this.sendSchemas,
-      );
-      this.taskSender({ kind: "response", requestId: this.requestId, payload, schemas });
+      this.taskSender({
+        kind: "response",
+        requestId: this.requestId,
+        payload,
+        schemas: this.prepareResponseSchemas(),
+      });
       return;
     }
     const waiters = this.operations.seal(this.operationId, this.requestId, payload);
     for (const waiter of waiters) {
-      const schemas = this.schemaSendTracker.prepareSchemas(
-        this.method.id,
-        "response",
-        this.sendSchemas,
-      );
-      this.taskSender({ kind: "response", requestId: waiter, payload: payload.slice(), schemas });
+      this.taskSender({
+        kind: "response",
+        requestId: waiter,
+        payload: payload.slice(),
+        schemas: this.prepareResponseSchemas(),
+      });
     }
   }
 }
@@ -477,7 +475,13 @@ export class Driver {
           break;
         case "response":
           await this.connection
-            .sendResponse(message.requestId, message.payload, [], [], message.schemas)
+            .sendResponse(
+              message.requestId,
+              message.payload,
+              emptyMetadata(),
+              [],
+              message.schemas ? Array.from(message.schemas) : [],
+            )
             .catch((error) => {
               voxLogger()?.error("[vox:driver] failed to send response", error);
             });
@@ -621,90 +625,39 @@ export class Driver {
     // r[impl rpc.channel.binding]
     // r[impl rpc.channel.binding.callee-args.rx]
     // r[impl rpc.channel.binding.callee-args.tx]
-
     // r[impl schema.translation.field-matching]
-    const localSchemaSet = localSchemaSetForMethod(method.id, "args", descriptor.send_schemas);
-    if (!localSchemaSet) {
-      throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-    }
-    const translation = localSchemaSet
-      ? this.connection.getSchemaTracker().buildTranslation(
-          method.id,
-          "args",
-          localSchemaSet,
-        )
-      : null;
 
-    const decoded = translation
-      ? decodeWithPlan(
-          incoming.args,
-          0,
-          translation.plan,
-          localSchemaSet!.root.kind,
-          translation.remoteSchemaSet.root.kind,
-          new Map([
-            ...localSchemaSet!.registry,
-            ...translation.remoteSchemaSet.registry,
-          ]),
-        )
-      : decodeWithKind(
-          incoming.args,
-          0,
-          localSchemaSet.root.kind,
-          localSchemaSet.registry,
-        );
-    if (decoded.next !== incoming.args.length) {
-      throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-    }
-
-    const argElements = localSchemaSet.root.kind.tag === "tuple"
-      ? localSchemaSet.root.kind.elements
-      : [];
-    const rawArgs =
-      argElements.length === 0
-        ? []
-        : decoded.value;
-    if (!Array.isArray(rawArgs)) {
-      throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-    }
-
-    return rawArgs.map((raw, argIndex) => {
-      const argRef = argElements[argIndex];
-      const argKind = resolveTypeRef(argRef, localSchemaSet.registry);
-      const channelId = typeof raw === "bigint"
-        ? raw
-        : typeof raw === "number" && Number.isInteger(raw) && raw >= 0
-        ? BigInt(raw)
-        : null;
-      if (argKind?.tag === "channel" && argKind.direction === "tx") {
-        if (channelId === null) {
-          throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-        }
-        return createServerTx(
-          channelId,
-          taskSender,
-          this.connection.getChannelRegistry(),
-          DEFAULT_INITIAL_CREDIT,
-          (value: unknown) => encodeWithTypeRef(value, argKind.element, localSchemaSet.registry),
-        );
-      }
-      if (argKind?.tag === "channel" && argKind.direction === "rx") {
-        if (channelId === null) {
-          throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-        }
-        const receiver = this.connection.getChannelRegistry().registerIncoming(
-          channelId,
-          DEFAULT_INITIAL_CREDIT,
-          (additional) => {
-            taskSender({ kind: "grantCredit", channelId, additional });
-          },
-        );
-        return createServerRx(channelId, receiver, (bytes: Uint8Array) =>
-          decodeWithTypeRef(bytes, 0, argKind.element, localSchemaSet.registry).value,
-        );
-      }
-      return raw;
-    });
+    // TODO(phon): server-side args decode + channel binding.
+    //
+    // The incoming call's writer schema-closure was recorded by the session via
+    // `SchemaTracker.recordReceived(methodId, "args", new Uint8Array(call.schemas))`.
+    // Decoding it cleanly requires reconciling that writer closure against the
+    // handler's args reader root through a phon `Registry`:
+    //
+    //   const ms = descriptor.send_schemas.get(method.id);   // PhonMethodSchemas
+    //   const decoder = this.connection.getSchemaTracker()
+    //     .buildDecoder(method.id, "args", ms.argsRoot, registry);
+    //   const tuple = decoder(incoming.args);                // reader-shaped Value
+    //
+    // and then, per channel binding in `ms.channels`, wiring the channel element
+    // codec on the phon engine:
+    //
+    //   createServerTx(channelId, taskSender, this.connection.getChannelRegistry(),
+    //     DEFAULT_INITIAL_CREDIT, (v) => encodeTyped(v, ch.elementRoot, registry));
+    //   createServerRx(channelId, receiver,
+    //     (bytes) => compile(ch.elementRoot, ch.elementRoot, registry)(bytes));
+    //
+    // The blocker is that the server `ServiceDescriptor` does not yet carry the
+    // service phon `Registry` (only `send_schemas: Map<bigint, PhonMethodSchemas>`),
+    // so `argsRoot`/`elementRoot` cannot be resolved here. The TS-server path
+    // (Rust client -> TS server) is not exercised by the current client-side
+    // target; wire this up once codegen threads the service `Registry` onto the
+    // descriptor. Until then, fail loudly rather than silently mis-decode.
+    void descriptor;
+    void method;
+    void incoming;
+    void taskSender;
+    throw new Error("TODO(phon): server-side args decode");
   }
 
   private async runPreHooks(context: RequestContext): Promise<void> {

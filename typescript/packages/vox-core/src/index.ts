@@ -110,7 +110,6 @@ export {
 
 export {
   type HandshakeResult,
-  type MetadataEntry,
   type Metadata,
   voxServiceMetadata,
 } from "./handshake.ts";
