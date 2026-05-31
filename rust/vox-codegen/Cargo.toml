@@ -21,6 +21,9 @@ facet-core.workspace = true
 facet-cbor.workspace = true
 heck.workspace = true
 vox-types.workspace = true
+vox-phon.workspace = true
+phon-codegen.workspace = true
+phon-schema.workspace = true
 
 [dev-dependencies]
 facet.workspace = true

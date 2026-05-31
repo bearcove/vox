@@ -70,6 +70,7 @@ phon-engine = { path = "../phon/rust/phon-engine" }
 phon-ir = { path = "../phon/rust/phon-ir" }
 phon-schema = { path = "../phon/rust/phon-schema" }
 phon-jit = { path = "../phon/rust/phon-jit" }
+phon-codegen = { path = "../phon/rust/phon-codegen" }
 facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
 

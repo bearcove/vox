@@ -1896,6 +1896,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "phon-codegen"
+version = "0.1.0"
+dependencies = [
+ "facet",
+ "phon",
+ "phon-schema",
+]
+
+[[package]]
 name = "phon-engine"
 version = "0.1.0"
 dependencies = [
@@ -3090,7 +3099,10 @@ dependencies = [
  "facet-cbor",
  "facet-core",
  "heck",
+ "phon-codegen",
+ "phon-schema",
  "vox",
+ "vox-phon",
  "vox-types",
 ]
 
