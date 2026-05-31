@@ -26,6 +26,8 @@
     "README.md"
   ],
   "dependencies": {
+    "@bearcove/phon-schema": "workspace:*",
+    "@bearcove/phon-engine": "workspace:*",
     "@bearcove/vox-postcard": "workspace:*",
     "@bearcove/vox-wire": "workspace:*"
   },

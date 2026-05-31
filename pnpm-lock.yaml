@@ -24,6 +24,57 @@ importers:
         specifier: ^6.0.0
         version: 6.0.3
 
+  ../phon/typescript/packages/phon:
+    dependencies:
+      '@bearcove/phon-engine':
+        specifier: workspace:*
+        version: link:../phon-engine
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../phon-schema
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
+
+  ../phon/typescript/packages/phon-engine:
+    dependencies:
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../phon-schema
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
+
+  ../phon/typescript/packages/phon-schema:
+    dependencies:
+      '@noble/hashes':
+        specifier: ^2.2.0
+        version: 2.2.0
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
+
   typescript/generated:
     dependencies:
       '@bearcove/vox-core':
@@ -38,6 +89,12 @@ importers:
 
   typescript/packages/vox-core:
     dependencies:
+      '@bearcove/phon-engine':
+        specifier: workspace:*
+        version: link:../../../../phon/typescript/packages/phon-engine
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../../../../phon/typescript/packages/phon-schema
       '@bearcove/vox-postcard':
         specifier: workspace:*
         version: link:../vox-postcard
@@ -47,7 +104,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.0
-        version: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
 
   typescript/packages/vox-inprocess:
     dependencies:
@@ -57,7 +114,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.0
-        version: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
 
   typescript/packages/vox-postcard:
     devDependencies:
@@ -83,6 +140,12 @@ importers:
 
   typescript/packages/vox-wire:
     dependencies:
+      '@bearcove/phon-engine':
+        specifier: workspace:*
+        version: link:../../../../phon/typescript/packages/phon-engine
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../../../../phon/typescript/packages/phon-schema
       '@bearcove/vox-postcard':
         specifier: workspace:*
         version: link:../vox-postcard
@@ -143,7 +206,7 @@ importers:
     devDependencies:
       vite:
         specifier: ^6.4.2
-        version: 6.4.2(@types/node@25.9.0)
+        version: 6.4.2(@types/node@25.9.1)
 
   typescript/tests/playwright:
     devDependencies:
@@ -177,19 +240,19 @@ importers:
     devDependencies:
       vite:
         specifier: ^6.4.2
-        version: 6.4.2(@types/node@25.9.0)
+        version: 6.4.2(@types/node@25.9.1)
       vite-plugin-wasm:
         specifier: ^3
-        version: 3.6.0(vite@6.4.2(@types/node@25.9.0))
+        version: 3.6.0(vite@6.4.2(@types/node@25.9.1))
 
   wasm/tests/browser-wasm:
     devDependencies:
       vite:
         specifier: ^6.4.2
-        version: 6.4.2(@types/node@25.9.0)
+        version: 6.4.2(@types/node@25.9.1)
       vite-plugin-wasm:
         specifier: ^3
-        version: 3.6.0(vite@6.4.2(@types/node@25.9.0))
+        version: 3.6.0(vite@6.4.2(@types/node@25.9.1))
 
   wasm/tests/playwright:
     devDependencies:
@@ -446,6 +509,10 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
+
+  '@noble/hashes@2.2.0':
+    resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
 
   '@oxc-project/types@0.130.0':
     resolution: {integrity: sha512-ibD2usx9JRu7f5pu2tMKMI4cpA4NgXJQoYRP4pQ7Pxmn1l6k/53qWtQWZayhYy3X4QZkt90Ot+mJEaeXouio6Q==}
@@ -836,6 +903,9 @@ packages:
 
   '@types/node@25.9.0':
     resolution: {integrity: sha512-AOQwYUNolgy3VosiRqXrACUXTN8nJUtPl7FJXMqZVyxiiCLhQuG3jXKvCS1ALr+Y2OmZhzzLVlYPEqJaiqkaJQ==}
+
+  '@types/node@25.9.1':
+    resolution: {integrity: sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg==}
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
@@ -1500,6 +1570,8 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
+  '@noble/hashes@2.2.0': {}
+
   '@oxc-project/types@0.130.0': {}
 
   '@oxlint/binding-android-arm-eabi@1.66.0':
@@ -1715,6 +1787,10 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
+  '@types/node@25.9.1':
+    dependencies:
+      undici-types: 7.24.6
+
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 25.9.0
@@ -1762,7 +1838,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0))
+      vitest: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1))
 
   '@vitest/expect@4.1.7':
     dependencies:
@@ -1780,6 +1856,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 6.4.2(@types/node@25.9.0)
+
+  '@vitest/mocker@4.1.7(vite@6.4.2(@types/node@25.9.1))':
+    dependencies:
+      '@vitest/spy': 4.1.7
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 6.4.2(@types/node@25.9.1)
 
   '@vitest/pretty-format@4.1.7':
     dependencies:
@@ -2119,9 +2203,9 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  vite-plugin-wasm@3.6.0(vite@6.4.2(@types/node@25.9.0)):
+  vite-plugin-wasm@3.6.0(vite@6.4.2(@types/node@25.9.1)):
     dependencies:
-      vite: 6.4.2(@types/node@25.9.0)
+      vite: 6.4.2(@types/node@25.9.1)
 
   vite@6.4.2(@types/node@25.9.0):
     dependencies:
@@ -2133,6 +2217,18 @@ snapshots:
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 25.9.0
+      fsevents: 2.3.3
+
+  vite@6.4.2(@types/node@25.9.1):
+    dependencies:
+      esbuild: 0.25.12
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+      postcss: 8.5.6
+      rollup: 4.55.1
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 25.9.1
       fsevents: 2.3.3
 
   vitest@4.1.7(@types/node@25.9.0)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.0)):
@@ -2159,6 +2255,34 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.9.0
+      '@vitest/coverage-v8': 4.1.7(vitest@4.1.7)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(vite@6.4.2(@types/node@25.9.1)):
+    dependencies:
+      '@vitest/expect': 4.1.7
+      '@vitest/mocker': 4.1.7(vite@6.4.2(@types/node@25.9.1))
+      '@vitest/pretty-format': 4.1.7
+      '@vitest/runner': 4.1.7
+      '@vitest/snapshot': 4.1.7
+      '@vitest/spy': 4.1.7
+      '@vitest/utils': 4.1.7
+      es-module-lexer: 2.1.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.1.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.2
+      tinyglobby: 0.2.16
+      tinyrainbow: 3.1.0
+      vite: 6.4.2(@types/node@25.9.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.9.1
       '@vitest/coverage-v8': 4.1.7(vitest@4.1.7)
     transitivePeerDependencies:
       - msw
