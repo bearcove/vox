@@ -20,6 +20,12 @@ use facet::Facet;
 use phon::derive::of;
 use phon_engine::{Registry, typed};
 
+pub mod schema;
+pub use schema::{
+    DecodeProgram, SchemaBundle, build_decode_program, decode_compat, decode_with_program,
+    parse_schema_bytes, schema_bytes,
+};
+
 /// A codec error: the type could not be lowered to a phon schema, or the
 /// value/bytes did not match it.
 #[derive(Debug)]

@@ -4365,6 +4365,8 @@ dependencies = [
  "facet",
  "phon",
  "phon-engine",
+ "phon-ir",
+ "phon-schema",
  "vox-types",
 ]
 

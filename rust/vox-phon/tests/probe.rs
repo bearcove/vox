@@ -86,3 +86,13 @@ fn message_with_value_payload_roundtrips() {
     let back: u32 = vox_phon::from_slice(span).expect("decode payload span");
     assert_eq!(back, 42);
 }
+
+#[test]
+fn probe_payload_wire_types() {
+    use vox_types::VoxError;
+    probe::<(u32,)>("(u32,)");
+    probe::<((i32, String),)>("((i32,String),)");
+    probe::<VoxError<String>>("VoxError<String>");
+    probe::<Result<u32, VoxError<String>>>("Result<u32, VoxError<String>>");
+    probe::<Result<String, VoxError<String>>>("Result<String, VoxError<String>>");
+}
