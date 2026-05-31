@@ -7,6 +7,8 @@
     "check": "tsgo --noEmit"
   },
   "dependencies": {
+    "@bearcove/phon-engine": "workspace:*",
+    "@bearcove/phon-schema": "workspace:*",
     "@bearcove/vox-core": "workspace:*",
     "@bearcove/vox-generated": "workspace:*",
     "@bearcove/vox-tcp": "workspace:*",

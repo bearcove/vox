@@ -1,5 +1,5 @@
-import { hexToBytes, type Registry } from "@bearcove/phon-schema";
-import { compile, encodeTyped } from "@bearcove/phon-engine";
+import { hexToBytes } from "@bearcove/phon-schema";
+import { decodeTyped, encodeTyped } from "@bearcove/phon-engine";
 import { parseSchemaClosure, messageSchemaClosure, type Metadata, emptyMetadata } from "@bearcove/vox-wire";
 import type { ConnectionSettings, Parity } from "@bearcove/vox-wire";
 import type { Link } from "./link.ts";
@@ -49,8 +49,12 @@ function decodeHandshake(bytes: Uint8Array): HandshakeMessage {
   const closure = bytes.subarray(4, 4 + len);
   const value = bytes.subarray(4 + len);
   const { root, schemas } = parseSchemaClosure(closure);
-  const decoder = compile(root, schemaId.HandshakeMessage, registry.with(schemas));
-  return decoder(value) as unknown as HandshakeMessage;
+  return decodeTyped(
+    value,
+    root,
+    schemaId.HandshakeMessage,
+    registry.with(schemas),
+  ) as unknown as HandshakeMessage;
 }
 
 async function recvHandshake(link: Link): Promise<HandshakeMessage> {

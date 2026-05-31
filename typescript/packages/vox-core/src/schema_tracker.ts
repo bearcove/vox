@@ -9,8 +9,11 @@
 // r[impl schema.translation.reorder] r[impl schema.errors.missing-required]
 
 import { type Registry, type Schema, hexToBytes } from "@bearcove/phon-schema";
-import { type CompiledDecoder, compile } from "@bearcove/phon-engine";
+import { type Typed, decodeTyped } from "@bearcove/phon-engine";
 import { parseSchemaClosure } from "@bearcove/vox-wire";
+
+/** A reusable compat decoder yielding the ergonomic `{ tag, value }` shape. */
+export type TypedDecoder = (bytes: Uint8Array) => Typed;
 
 export type BindingDirection = "args" | "response";
 
@@ -37,7 +40,7 @@ const bindingKey = (methodId: bigint, direction: BindingDirection): string =>
 export class SchemaTracker {
   private received = new Map<string, { root: bigint; schemas: Schema[] }>();
   // Cache of built decoders, keyed by (method, direction, readerRoot).
-  private decoders = new Map<string, CompiledDecoder>();
+  private decoders = new Map<string, TypedDecoder>();
 
   reset(): void {
     this.received.clear();
@@ -68,14 +71,14 @@ export class SchemaTracker {
     direction: BindingDirection,
     readerRoot: bigint,
     local: Registry,
-  ): CompiledDecoder | null {
+  ): TypedDecoder | null {
     const writer = this.received.get(bindingKey(methodId, direction));
     if (!writer) return null;
     const cacheKey = `${bindingKey(methodId, direction)}:${readerRoot}`;
     const cached = this.decoders.get(cacheKey);
     if (cached) return cached;
     const reg = local.with(writer.schemas);
-    const decoder = compile(writer.root, readerRoot, reg);
+    const decoder: TypedDecoder = (bytes) => decodeTyped(bytes, writer.root, readerRoot, reg);
     this.decoders.set(cacheKey, decoder);
     return decoder;
   }
@@ -90,14 +93,14 @@ export class SchemaTracker {
     methodId: bigint,
     direction: BindingDirection,
     local: Registry,
-  ): CompiledDecoder | null {
+  ): TypedDecoder | null {
     const writer = this.received.get(bindingKey(methodId, direction));
     if (!writer) return null;
     const cacheKey = `${bindingKey(methodId, direction)}:writer`;
     const cached = this.decoders.get(cacheKey);
     if (cached) return cached;
     const reg = local.with(writer.schemas);
-    const decoder = compile(writer.root, writer.root, reg);
+    const decoder: TypedDecoder = (bytes) => decodeTyped(bytes, writer.root, writer.root, reg);
     this.decoders.set(cacheKey, decoder);
     return decoder;
   }

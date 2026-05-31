@@ -11,7 +11,7 @@ import {
   schemaFromBytes,
   hexToBytes,
 } from "@bearcove/phon-schema";
-import { type CompiledDecoder, compile, encodeTyped } from "@bearcove/phon-engine";
+import { decodeTyped, encodeTyped } from "@bearcove/phon-engine";
 
 import type { Message } from "./types.ts";
 import { registry, schemaId } from "./wire.phon.generated.ts";
@@ -21,8 +21,9 @@ export function encodeMessage(message: Message): Uint8Array {
   return encodeTyped(message as unknown as never, schemaId.Message, registry);
 }
 
-/** A reusable compat decode program for the `Message` envelope. */
-export type MessageDecoder = CompiledDecoder;
+/** A reusable compat decode program for the `Message` envelope, yielding the
+ * ergonomic `{ tag, value }` shape (`decodeTyped`). */
+export type MessageDecoder = (bytes: Uint8Array) => Message;
 
 /**
  * Build a decoder for incoming `Message`s. `peerSchemaBytes` is the peer's
@@ -32,20 +33,21 @@ export type MessageDecoder = CompiledDecoder;
  */
 export function buildMessageDecoder(peerSchemaBytes?: Uint8Array): MessageDecoder {
   if (!peerSchemaBytes || peerSchemaBytes.length === 0) {
-    return compile(schemaId.Message, schemaId.Message, registry);
+    return (bytes) =>
+      decodeTyped(bytes, schemaId.Message, schemaId.Message, registry) as unknown as Message;
   }
   const { root, reg } = mergeWriterSchemas(peerSchemaBytes, registry);
-  return compile(root, schemaId.Message, reg);
+  return (bytes) => decodeTyped(bytes, root, schemaId.Message, reg) as unknown as Message;
 }
 
 /** Decode a `Message` with a prebuilt decoder. */
 export function decodeMessageWith(decoder: MessageDecoder, bytes: Uint8Array): Message {
-  return decoder(bytes) as unknown as Message;
+  return decoder(bytes);
 }
 
 /** Decode a `Message` against our own (same-version) envelope schema. */
 export function decodeMessage(bytes: Uint8Array): Message {
-  return compile(schemaId.Message, schemaId.Message, registry)(bytes) as unknown as Message;
+  return decodeTyped(bytes, schemaId.Message, schemaId.Message, registry) as unknown as Message;
 }
 
 /**
