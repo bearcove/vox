@@ -102,35 +102,35 @@ structstruck::strike! {
                 // r[impl connection.open]
                 // r[impl connection.virtual]
                 // r[impl session.connection-settings.open]
-                ConnectionOpen(pub struct ConnectionOpen<'payload> {
+                ConnectionOpen(pub struct ConnectionOpen {
                     /// Connection limits advertised by the opener.
                     /// Parity is included in ConnectionSettings.
                     pub connection_settings: ConnectionSettings,
 
                     /// Metadata associated with the connection.
-                    pub metadata: Metadata<'payload>,
+                    pub metadata: Metadata,
                 }),
 
                 /// Accept a virtual connection request — sent on the connection ID requested.
                 // r[impl session.connection-settings.open]
-                ConnectionAccept(pub struct ConnectionAccept<'payload> {
+                ConnectionAccept(pub struct ConnectionAccept {
                     /// Connection limits advertised by the accepter.
                     pub connection_settings: ConnectionSettings,
 
                     /// Metadata associated with the connection.
-                    pub metadata: Metadata<'payload>,
+                    pub metadata: Metadata,
                 }),
 
                 /// Reject a virtual connection request — sent on the connection ID requested.
-                ConnectionReject(pub struct ConnectionReject<'payload> {
+                ConnectionReject(pub struct ConnectionReject {
                     /// Metadata associated with the rejection.
-                    pub metadata: Metadata<'payload>,
+                    pub metadata: Metadata,
                 }),
 
                 /// Close a virtual connection. Trying to close conn 0 is a protocol error.
-                ConnectionClose(pub struct ConnectionClose<'payload> {
+                ConnectionClose(pub struct ConnectionClose {
                     /// Metadata associated with the close.
-                    pub metadata: Metadata<'payload>,
+                    pub metadata: Metadata,
                 }),
 
 
@@ -153,7 +153,7 @@ structstruck::strike! {
                                     pub method_id: MethodId,
 
                                     /// Metadata associated with this call
-                                    pub metadata: Metadata<'payload>,
+                                    pub metadata: Metadata,
 
                                     /// Argument tuple
                                     pub args: Payload<'payload>,
@@ -166,7 +166,7 @@ structstruck::strike! {
                                 /// Respond to a request
                                 Response(struct RequestResponse<'payload> {
                                     /// Arbitrary response metadata
-                                    pub metadata: Metadata<'payload>,
+                                    pub metadata: Metadata,
 
                                     /// Return value (`Result<T, VoxError<E>>`, where E could be Infallible depending on signature)
                                     pub ret: Payload<'payload>,
@@ -177,9 +177,9 @@ structstruck::strike! {
                                 }),
 
                                 /// Cancel processing of a request.
-                                Cancel(struct RequestCancel<'payload> {
+                                Cancel(struct RequestCancel {
                                     /// Arbitrary cancel metadata
-                                    pub metadata: Metadata<'payload>,
+                                    pub metadata: Metadata,
                                 }),
                             },
                     }
@@ -222,16 +222,16 @@ structstruck::strike! {
 
                                 /// Close a channel — sent by the sender of the channel when they're gracefully done
                                 /// with a channel.
-                                Close(pub struct ChannelClose<'payload> {
+                                Close(pub struct ChannelClose {
                                     /// Metadata associated with closing the channel.
-                                    pub metadata: Metadata<'payload>,
+                                    pub metadata: Metadata,
                                 }),
 
                                 /// Reset a channel — sent by the receiver of a channel when they would like the sender
                                 /// to please, stop sending items through.
-                                Reset(pub struct ChannelReset<'payload> {
+                                Reset(pub struct ChannelReset {
                                     /// Metadata associated with resetting the channel.
-                                    pub metadata: Metadata<'payload>,
+                                    pub metadata: Metadata,
                                 }),
 
                                 /// Grant additional send credit to a channel sender.
@@ -366,18 +366,35 @@ impl crate::MsgFamily for MessageFamily {
 }
 
 // SAFETY: all types below are covariant in their lifetime parameter
-// (they contain only Cow<'a, str>, Vec<MetadataEntry<'a>>, etc.).
+// (they contain only `&'a str`, `Payload<'a>`, etc.).
 crate::impl_reborrow!(
     Message,
     RequestMessage,
     RequestCall,
     RequestResponse,
+    ChannelMessage,
+    ChannelItem,
+);
+
+// These payloads carry only owned data now (metadata is a self-describing `Value`,
+// settings are `Copy`), so they have no lifetime parameter — their `Reborrow` is the
+// identity. They are still projected out of a `SelfRef` (the session pattern-matches
+// them), which requires the impl.
+// SAFETY: owned types with no lifetime parameter; `Ref<'a> = Self` is trivially sound.
+macro_rules! impl_reborrow_owned {
+    ($($ty:ident),* $(,)?) => {
+        $(
+            unsafe impl crate::Reborrow for $ty {
+                type Ref<'a> = $ty;
+            }
+        )*
+    };
+}
+impl_reborrow_owned!(
     ConnectionOpen,
     ConnectionAccept,
     ConnectionReject,
     ConnectionClose,
-    ChannelMessage,
-    ChannelItem,
     ChannelClose,
     ChannelReset,
 );

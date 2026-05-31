@@ -218,7 +218,7 @@ pub trait ConnectionAcceptor: MaybeSend + MaybeSync + 'static {
         &self,
         request: &ConnectionRequest,
         connection: PendingConnection,
-    ) -> Result<(), Metadata<'static>>;
+    ) -> Result<(), Metadata>;
 }
 
 /// Any `Handler<DriverReplySink>` is automatically a `ConnectionAcceptor`.
@@ -230,7 +230,7 @@ where
         &self,
         _request: &ConnectionRequest,
         connection: PendingConnection,
-    ) -> Result<(), Metadata<'static>> {
+    ) -> Result<(), Metadata> {
         connection.handle_with(self.clone());
         Ok(())
     }
@@ -241,7 +241,7 @@ pub struct AcceptorFn<F>(pub F);
 
 impl<F> ConnectionAcceptor for AcceptorFn<F>
 where
-    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata<'static>>
+    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata>
         + MaybeSend
         + MaybeSync
         + 'static,
@@ -250,7 +250,7 @@ where
         &self,
         request: &ConnectionRequest,
         connection: PendingConnection,
-    ) -> Result<(), Metadata<'static>> {
+    ) -> Result<(), Metadata> {
         (self.0)(request, connection)
     }
 }
@@ -258,7 +258,7 @@ where
 /// Create a `ConnectionAcceptor` from a closure.
 pub fn acceptor_fn<F>(f: F) -> AcceptorFn<F>
 where
-    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata<'static>>
+    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata>
         + MaybeSend
         + MaybeSync
         + 'static,
@@ -272,13 +272,13 @@ where
 
 struct OpenRequest {
     settings: ConnectionSettings,
-    metadata: Metadata<'static>,
+    metadata: Metadata,
     result_tx: moire::sync::oneshot::Sender<Result<ConnectionHandle, SessionError>>,
 }
 
 struct CloseRequest {
     conn_id: ConnectionId,
-    metadata: Metadata<'static>,
+    metadata: Metadata,
     result_tx: moire::sync::oneshot::Sender<Result<(), SessionError>>,
 }
 
@@ -349,7 +349,7 @@ impl SessionHandle {
         use crate::{Caller, Driver};
         use vox_types::{MetadataEntry, MetadataFlags, MetadataValue};
 
-        let metadata: Metadata<'static> = vec![MetadataEntry {
+        let metadata: Metadata = vec![MetadataEntry {
             key: crate::session::builders::VOX_SERVICE_METADATA_KEY.into(),
             value: MetadataValue::String(Client::SERVICE_NAME.into()),
             flags: MetadataFlags::NONE,
@@ -373,7 +373,7 @@ impl SessionHandle {
     pub async fn open_connection(
         &self,
         settings: ConnectionSettings,
-        metadata: Metadata<'static>,
+        metadata: Metadata,
     ) -> Result<ConnectionHandle, SessionError> {
         let (result_tx, result_rx) = moire::sync::oneshot::channel("session.open_result");
         self.open_tx
@@ -398,7 +398,7 @@ impl SessionHandle {
     pub async fn close_connection(
         &self,
         conn_id: ConnectionId,
-        metadata: Metadata<'static>,
+        metadata: Metadata,
     ) -> Result<(), SessionError> {
         let (result_tx, result_rx) = moire::sync::oneshot::channel("session.close_result");
         self.close_tx
@@ -830,7 +830,6 @@ impl ConnectionHandle {
         *self.closed_rx.borrow()
     }
 
-
     // r[impl rpc.debug.snapshot]
     pub fn debug_snapshot(&self) -> VoxDebugSnapshot {
         let (outbound_queue_depth, outbound_queue_capacity) =
@@ -945,7 +944,7 @@ pub async fn proxy_connections(
 pub enum SessionError {
     Io(std::io::Error),
     Protocol(String),
-    Rejected(Metadata<'static>),
+    Rejected(Metadata),
     NotResumable,
     ConnectTimeout,
 }

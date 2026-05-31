@@ -31,7 +31,7 @@ pub struct Hello {
     pub resume_key: Option<ResumeKeyBytes>,
     /// Metadata sent by the initiator (e.g. `vox-service` for service routing).
     #[facet(default)]
-    pub metadata: Metadata<'static>,
+    pub metadata: Metadata,
 }
 
 // r[impl session.handshake]
@@ -48,7 +48,7 @@ pub struct HelloYourself {
     pub resume_key: Option<ResumeKeyBytes>,
     /// Metadata sent by the acceptor.
     #[facet(default)]
-    pub metadata: Metadata<'static>,
+    pub metadata: Metadata,
 }
 
 // r[impl session.handshake]
@@ -103,5 +103,5 @@ pub struct HandshakeResult {
     pub our_schema: Vec<Schema>,
     pub peer_schema: Vec<Schema>,
     /// Metadata received from the peer during handshake.
-    pub peer_metadata: Metadata<'static>,
+    pub peer_metadata: Metadata,
 }

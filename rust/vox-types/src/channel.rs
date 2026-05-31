@@ -958,8 +958,8 @@ impl<S: ChannelSink> ChannelSink for CreditSink<S> {
 /// Message delivered to an `Rx` by the driver.
 pub enum IncomingChannelMessage {
     Item(SelfRef<ChannelItem<'static>>),
-    Close(SelfRef<ChannelClose<'static>>),
-    Reset(SelfRef<ChannelReset<'static>>),
+    Close(SelfRef<ChannelClose>),
+    Reset(SelfRef<ChannelReset>),
     // r[impl rpc.channel.connection-closure]
     ConnectionClosed(ConnectionCloseReason),
 }
@@ -1249,7 +1249,7 @@ impl<T> Tx<T> {
     }
 
     // r[impl rpc.channel.lifecycle]
-    pub async fn close<'value>(&self, metadata: Metadata<'value>) -> Result<(), TxError> {
+    pub async fn close<'value>(&self, metadata: Metadata) -> Result<(), TxError> {
         self.closed.store(true, Ordering::Release);
         let sink = if let Some(sink) = self.resolve_sink_now() {
             sink

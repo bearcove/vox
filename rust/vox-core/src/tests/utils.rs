@@ -195,7 +195,7 @@ impl ConnectionAcceptor for EchoAcceptor {
         &self,
         _request: &ConnectionRequest,
         connection: PendingConnection,
-    ) -> Result<(), vox_types::Metadata<'static>> {
+    ) -> Result<(), vox_types::Metadata> {
         connection.handle_with(EchoHandler);
         Ok(())
     }

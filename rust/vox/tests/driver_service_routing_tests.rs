@@ -42,7 +42,7 @@ async fn root_connect_sends_vox_service_and_factory_sees_it() {
         let seen_service = seen_service.clone();
         move |request: &vox::ConnectionRequest,
               connection: vox::PendingConnection|
-              -> Result<(), vox::Metadata<'static>> {
+              -> Result<(), vox::Metadata> {
             *seen_service.lock().unwrap() = Some(request.service().to_string());
             connection.handle_with(EchoDispatcher::new(EchoService));
             Ok(())
@@ -90,7 +90,7 @@ async fn service_factory_routes_virtual_connections() {
     let factory = vox::acceptor_fn(
         |request: &vox::ConnectionRequest,
          connection: vox::PendingConnection|
-         -> Result<(), vox::Metadata<'static>> {
+         -> Result<(), vox::Metadata> {
             match request.service() {
                 "Echo" => {
                     connection.handle_with(EchoDispatcher::new(EchoService));
@@ -159,7 +159,7 @@ async fn service_factory_rejects_unknown_service() {
     let factory = vox::acceptor_fn(
         |request: &vox::ConnectionRequest,
          connection: vox::PendingConnection|
-         -> Result<(), vox::Metadata<'static>> {
+         -> Result<(), vox::Metadata> {
             match request.service() {
                 "Echo" => {
                     connection.handle_with(EchoDispatcher::new(EchoService));

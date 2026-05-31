@@ -123,7 +123,7 @@ fn parse_connect_address(addr: String) -> Result<ConnectAddress, SessionError> {
 
 pub struct ConnectBuilder<'a, Client> {
     addr: String,
-    metadata: Metadata<'a>,
+    metadata: Metadata,
     on_connection: Option<Arc<dyn ConnectionAcceptor>>,
     connect_timeout: Option<Duration>,
     channel_capacity: u32,
@@ -154,7 +154,7 @@ impl<'a, Client> ConnectBuilder<'a, Client> {
         self
     }
 
-    pub fn metadata(mut self, metadata: Metadata<'a>) -> Self {
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
         self.metadata = metadata;
         self
     }
@@ -335,7 +335,7 @@ where
 
     async fn establish_once(
         parsed: &ConnectAddress,
-        metadata: vox_types::Metadata<'static>,
+        metadata: vox_types::Metadata,
         on_connection: Option<Arc<dyn ConnectionAcceptor>>,
         connect_timeout: Option<Duration>,
         channel_capacity: u32,
@@ -732,7 +732,7 @@ impl ConnectionAcceptor for AcceptorRef {
         &self,
         request: &ConnectionRequest,
         connection: PendingConnection,
-    ) -> Result<(), Metadata<'static>> {
+    ) -> Result<(), Metadata> {
         self.0.accept(request, connection)
     }
 }

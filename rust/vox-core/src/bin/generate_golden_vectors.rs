@@ -31,7 +31,7 @@ fn encode_message(message: &Message<'_>) -> Vec<u8> {
     vox_postcard::to_vec(message).expect("serialize message fixture")
 }
 
-fn sample_metadata() -> Metadata<'static> {
+fn sample_metadata() -> Metadata {
     vec![
         MetadataEntry {
             key: "trace-id".into(),

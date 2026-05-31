@@ -428,7 +428,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
             &self,
             _request: &ConnectionRequest,
             connection: PendingConnection,
-        ) -> Result<(), Metadata<'static>> {
+        ) -> Result<(), Metadata> {
             connection.handle_with(EchoHandler);
             Ok(())
         }

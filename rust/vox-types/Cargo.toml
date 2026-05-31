@@ -28,6 +28,7 @@ bytes.workspace = true
 facet.workspace = true
 facet-core.workspace = true
 facet-reflect.workspace = true
+facet-value.workspace = true
 facet-path.workspace = true
 heck.workspace = true
 indexmap.workspace = true

@@ -261,14 +261,14 @@ impl<R: ReplySink> Handler<R> for () {
 /// This helper is available for lower-level callers that need both the
 /// decoded value and metadata together. Generated Rust client methods do
 /// not expose response metadata in their return types.
-pub struct ResponseParts<'a, T> {
+pub struct ResponseParts<T> {
     /// The decoded return value.
     pub ret: T,
     /// Metadata attached to the response by the server.
-    pub metadata: Metadata<'a>,
+    pub metadata: Metadata,
 }
 
-impl<'a, T> std::ops::Deref for ResponseParts<'a, T> {
+impl<T> std::ops::Deref for ResponseParts<T> {
     type Target = T;
     fn deref(&self) -> &T {
         &self.ret

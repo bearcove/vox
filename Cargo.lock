@@ -4440,6 +4440,7 @@ dependencies = [
  "facet-core",
  "facet-path",
  "facet-reflect",
+ "facet-value",
  "futures-channel",
  "heck",
  "indexmap",

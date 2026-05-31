@@ -207,9 +207,7 @@ async fn cancel_aborts_in_flight_handler() {
     let server_task = moire::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .on_connection(BlockingHandler {
-                    was_cancelled,
-                })
+                .on_connection(BlockingHandler { was_cancelled })
                 .establish::<NoopClient>()
                 .await
                 .expect("server handshake failed")
@@ -459,9 +457,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
                     let handle = moire::task::spawn(fut);
                     let _ = session_tx.send(handle);
                 })
-                .on_connection(BlockingHandler {
-                    was_cancelled,
-                })
+                .on_connection(BlockingHandler { was_cancelled })
                 .establish::<NoopClient>()
                 .await
                 .expect("server handshake failed")
@@ -1407,7 +1403,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
             &self,
             request: &ConnectionRequest,
             connection: PendingConnection,
-        ) -> Result<(), Metadata<'static>> {
+        ) -> Result<(), Metadata> {
             if request.service() == "Noop" {
                 connection.handle_with(());
                 return Ok(());

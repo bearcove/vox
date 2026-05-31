@@ -100,7 +100,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
     rx: &mut Rx,
     settings: ConnectionSettings,
     resume_key: Option<&SessionResumeKey>,
-    metadata: vox_types::Metadata<'static>,
+    metadata: vox_types::Metadata,
 ) -> Result<HandshakeResult, HandshakeError> {
     validate_initial_channel_credit(&settings)?;
 
@@ -172,7 +172,7 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     settings: ConnectionSettings,
     resumable: bool,
     expected_resume_key: Option<&SessionResumeKey>,
-    metadata: vox_types::Metadata<'static>,
+    metadata: vox_types::Metadata,
 ) -> Result<HandshakeResult, HandshakeError> {
     validate_initial_channel_credit(&settings)?;
 

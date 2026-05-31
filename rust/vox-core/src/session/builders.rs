@@ -30,7 +30,7 @@ use crate::FromVoxSession;
 pub const VOX_SERVICE_METADATA_KEY: &str = "vox-service";
 
 /// Inject `vox-service` metadata from `Client::SERVICE_NAME`.
-fn inject_service_metadata<Client: FromVoxSession>(metadata: &mut Metadata<'_>) {
+fn inject_service_metadata<Client: FromVoxSession>(metadata: &mut Metadata) {
     metadata.push(vox_types::MetadataEntry {
         key: VOX_SERVICE_METADATA_KEY.into(),
         value: vox_types::MetadataValue::String(Client::SERVICE_NAME.into()),
@@ -196,7 +196,7 @@ pub enum SessionAcceptOutcome<Client> {
 /// Shared configuration for all session builders.
 pub struct SessionConfig<'a> {
     pub root_settings: ConnectionSettings,
-    pub metadata: Metadata<'a>,
+    pub metadata: Metadata,
     pub on_connection: Option<Arc<dyn ConnectionAcceptor>>,
     pub keepalive: Option<SessionKeepaliveConfig>,
     pub resumable: bool,
@@ -460,7 +460,7 @@ impl<'a, S> SessionSourceInitiatorBuilder<'a, S> {
         self
     }
 
-    pub fn metadata(mut self, metadata: Metadata<'a>) -> Self {
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
         self.config.metadata = metadata;
         self
     }
@@ -631,7 +631,7 @@ impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
         self
     }
 
-    pub fn metadata(mut self, metadata: Metadata<'a>) -> Self {
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
         self.config.metadata = metadata;
         self
     }
@@ -789,7 +789,7 @@ struct BareSourceRecoverer<S> {
     source: S,
     settings: ConnectionSettings,
     connect_timeout: Option<Duration>,
-    metadata: Metadata<'static>,
+    metadata: Metadata,
 }
 
 const SOURCE_RECOVERY_BACKOFF_MIN: Duration = Duration::from_millis(100);
@@ -1117,7 +1117,7 @@ impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
         self
     }
 
-    pub fn metadata(mut self, metadata: Metadata<'a>) -> Self {
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
         self.config.metadata = metadata;
         self
     }
