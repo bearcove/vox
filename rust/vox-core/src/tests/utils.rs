@@ -145,7 +145,7 @@ impl Handler<DriverReplySink> for EchoHandler {
             _ => panic!("expected incoming payload"),
         };
 
-        let result: u32 = vox_postcard::from_slice(args_bytes).expect("deserialize args");
+        let result: u32 = vox_phon::from_slice(args_bytes).expect("deserialize args");
         reply
             .send_reply(RequestResponse {
                 ret: Payload::outgoing(&result),

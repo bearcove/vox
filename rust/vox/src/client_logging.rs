@@ -241,6 +241,7 @@ mod tests {
         let _ = caller
             .call(crate::RequestCall {
                 method_id: MethodId(7),
+                channels: Vec::new(),
                 metadata: request_metadata,
                 args: crate::Payload::PostcardBytes(&[]),
                 schemas: Default::default(),

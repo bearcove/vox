@@ -113,9 +113,11 @@ where
         if method_id == text_svc_service_descriptor().methods[0usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(String,), _> =
-                ::vox::schema_deser::schema_deserialize_args_borrowed(
-                    args_bytes, method_id, &schemas,
-                );
+                ::vox::provide_channels(request_call.channels.clone(), || {
+                    ::vox::schema_deser::schema_deserialize_args_borrowed(
+                        args_bytes, method_id, &schemas,
+                    )
+                });
             drop(_binder_guard);
             let args: (String,) = match deser_result {
                 Ok(v) => v,
@@ -198,6 +200,7 @@ impl TextSvcClient {
         let mut metadata = Default::default();
         let req = ::vox::RequestCall {
             method_id,
+            channels: Default::default(),
             args: ::vox::Payload::outgoing(&args),
             metadata,
             schemas: Default::default(),

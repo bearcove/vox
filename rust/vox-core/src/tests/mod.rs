@@ -322,7 +322,7 @@ async fn rx_recv_decodes_channel_items() {
     let (tx_items, rx_items) = vox_types::channel_mailbox("vox_core.tests.rx_recv_items", 4);
     rx.bind(rx_items);
 
-    let payload_bytes = vox_postcard::to_vec(&42_u32).expect("serialize channel item");
+    let payload_bytes = vox_phon::to_vec(&42_u32).expect("serialize channel item");
     let backing = Backing::Boxed(payload_bytes.into_boxed_slice());
     let item_ref = SelfRef::try_new(backing, |bytes| {
         Ok::<_, std::convert::Infallible>(ChannelItem {
@@ -375,22 +375,23 @@ async fn rx_recv_signals_reset() {
 }
 
 #[test]
-fn test_deser_postcard_borrowed() {
+fn test_deser_phon_borrowed() {
     // A reply
     #[derive(Facet)]
     struct Reply<'a> {
         s: &'a str,
     }
 
-    let payload = vox_postcard::to_vec(&Reply {
+    let payload = vox_phon::to_vec(&Reply {
         s: "IAMA borrowed string AMA",
     })
     .unwrap();
 
     let backing = Backing::Boxed(payload.into_boxed_slice());
 
-    // now deser with Backing
-    let reply = crate::deserialize_postcard::<Reply>(backing).unwrap();
+    // Decode zero-copy: the `&str` borrows the backing, kept alive by the SelfRef.
+    let reply: SelfRef<Reply<'static>> =
+        SelfRef::try_new(backing, |b| vox_phon::from_slice_borrowed::<Reply>(b)).unwrap();
     let reply = reply.map(|reply| reply.s.to_string());
     assert_eq!(reply.get(), "IAMA borrowed string AMA");
 }

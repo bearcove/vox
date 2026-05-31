@@ -33,6 +33,7 @@ fn message_with_value_payload_roundtrips() {
             id: RequestId(7),
             body: RequestBody::Call(RequestCall {
                 method_id: MethodId(0xABCD),
+                channels: Vec::new(),
                 metadata: vox_types::metadata()
                     .str("trace", "abc")
                     .u64("n", 99)

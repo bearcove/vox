@@ -60,6 +60,7 @@ async fn open_virtual_connection_and_call() {
     let args_value: u32 = 123;
     let response = caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -73,7 +74,7 @@ async fn open_virtual_connection_and_call() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(result, 123);
 }
 
@@ -257,6 +258,7 @@ async fn close_virtual_connection() {
     let args_value: u32 = 42;
     let response = caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -270,7 +272,7 @@ async fn close_virtual_connection() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize");
     assert_eq!(result, 42);
 
     // Close the virtual connection.
@@ -330,6 +332,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
 
     let response = vconn_caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&11_u32),
             schemas: Default::default(),
@@ -342,7 +345,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(echoed, 11);
 
     drop(vconn_caller);
@@ -483,6 +486,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
 
     let response = vconn_caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&7_u32),
             schemas: Default::default(),
@@ -495,7 +499,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(echoed, 7);
 
     drop(vconn_caller);

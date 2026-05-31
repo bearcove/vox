@@ -1,4 +1,3 @@
-use facet::Facet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -64,6 +63,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
     let response = caller
         .caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&42_u32),
             schemas: Default::default(),
@@ -76,7 +76,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let echoed: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let echoed: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(echoed, 42);
 
     drop(caller);
@@ -128,7 +128,7 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
     };
     // Serializing the args binds the Tx's paired Rx via the thread-local binder.
     let _bytes = vox_types::channel::with_channel_binder(root_caller.caller.driver(), || {
-        vox_postcard::to_vec(&args).expect("serialize args")
+        vox_phon::to_vec(&args).expect("serialize args")
     });
     // The first allocated channel ID is 1 (odd parity).
     let channel_id = ChannelId(1);
@@ -232,6 +232,7 @@ async fn cancel_aborts_in_flight_handler() {
             caller
                 .caller
                 .call(RequestCall {
+                    channels: Vec::new(),
                     method_id: MethodId(1),
                     args: Payload::outgoing(&args_value),
                     schemas: Default::default(),
@@ -267,7 +268,7 @@ async fn cancel_aborts_in_flight_handler() {
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError> =
-        vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+        vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert!(
         matches!(error, Err(VoxError::Cancelled)),
         "expected Err(VoxError::Cancelled) in response payload"
@@ -288,13 +289,13 @@ async fn cancel_aborts_in_flight_handler() {
     );
 }
 
-/// Verify that MessagePlan built from identical schemas can round-trip a message.
+/// Verify that a `MessagePlan` built from identical schemas (the drift-free
+/// degenerate of the envelope compat path) can round-trip a message.
 #[test]
 fn message_plan_from_identical_schemas_round_trips() {
-    let schemas = vox_types::extract_schemas(<Message<'static> as Facet<'static>>::SHAPE)
-        .expect("schema extraction")
-        .schemas
-        .clone();
+    // The handshake carries the peer's Message schema as phon bytes; here it is
+    // our own (identical), so the compat program reconciles writer==reader.
+    let our_schema = vox_phon::schema_bytes::<Message<'static>>().expect("schema bytes");
     let handshake_result = HandshakeResult {
         role: SessionRole::Initiator,
         our_settings: ConnectionSettings {
@@ -309,25 +310,29 @@ fn message_plan_from_identical_schemas_round_trips() {
         },
         session_resume_key: None,
         peer_resume_key: None,
-        our_schema: schemas.clone(),
-        peer_schema: schemas,
+        our_schema: our_schema.clone(),
+        peer_schema: our_schema,
         peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
     };
     let plan = crate::MessagePlan::from_handshake(&handshake_result)
         .expect("should build message plan from identical schemas");
 
-    // Serialize a simple Ping message
+    // Build the compat decode program from the plan's writer schema (r[compat.plan-first]).
+    let writer = vox_phon::parse_schema_bytes(&plan.writer_schema).expect("parse writer schema");
+    let program =
+        vox_phon::build_decode_program::<Message<'static>>(&writer).expect("build decode program");
+
+    // Encode a Ping and decode it back through the program (zero-copy via SelfRef).
     let msg = Message {
         connection_id: vox_types::ConnectionId::ROOT,
         payload: MessagePayload::Ping(vox_types::Ping { nonce: 42 }),
     };
-    let bytes = vox_postcard::to_vec(&msg).expect("serialize message");
+    let bytes = vox_phon::to_vec(&msg).expect("serialize message");
     let backing = Backing::Boxed(bytes.into());
-
-    // Deserialize with the plan
-    let decoded: SelfRef<Message<'static>> =
-        crate::deserialize_postcard_with_plan(backing, &plan.plan, &plan.registry)
-            .expect("should deserialize with identical-schema plan");
+    let decoded: SelfRef<Message<'static>> = SelfRef::try_new(backing, |b| {
+        vox_phon::decode_with_program::<Message<'static>>(&program, b)
+    })
+    .expect("should decode with identical-schema program");
     let decoded = decoded.get();
     assert_eq!(decoded.connection_id, vox_types::ConnectionId::ROOT);
     match &decoded.payload {
@@ -361,6 +366,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
     let response = tokio::time::timeout(
         Duration::from_secs(1),
         caller.caller.call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&42_u32),
             schemas: Default::default(),
@@ -376,7 +382,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let value: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let value: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(value, 42);
 }
 
@@ -419,6 +425,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
     let response = tokio::time::timeout(
         Duration::from_millis(500),
         caller.caller.call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&123_u32),
             schemas: Default::default(),
@@ -435,7 +442,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
         _ => panic!("expected incoming payload in response"),
     };
     let error: Result<(), VoxError<std::convert::Infallible>> =
-        vox_postcard::from_slice(ret_bytes).expect("deserialize error response");
+        vox_phon::from_slice(ret_bytes).expect("deserialize error response");
     assert!(
         matches!(error, Err(VoxError::Cancelled)),
         "expected Cancelled error response, got {error:?}"
@@ -478,6 +485,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
             caller
                 .caller
                 .call(RequestCall {
+                    channels: Vec::new(),
                     method_id: MethodId(1),
                     args: Payload::outgoing(&123_u32),
                     schemas: Default::default(),
@@ -551,6 +559,7 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
             caller
                 .caller
                 .call(RequestCall {
+                    channels: Vec::new(),
                     method_id: MethodId(1),
                     args: Payload::outgoing(&123_u32),
                     schemas: Default::default(),
@@ -660,6 +669,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
     let response = root_caller
         .caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -672,7 +682,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize root response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize root response");
     assert_eq!(result, 100);
 
     // Open a virtual connection and call on it.
@@ -698,6 +708,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
     let args_value: u32 = 200;
     let response = vconn_caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -710,7 +721,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize vconn response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize vconn response");
     assert_eq!(result, 200);
 }
 
@@ -941,6 +952,7 @@ async fn echo_call_across_memory_link() {
     let response = caller
         .caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -955,7 +967,7 @@ async fn echo_call_across_memory_link() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload in response"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(result, 42);
 }
 
@@ -1013,7 +1025,7 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
         Payload::PostcardBytes(bytes) => bytes,
         _ => panic!("expected incoming payload"),
     };
-    let decoded: u32 = vox_postcard::from_slice(bytes).expect("deserialize buffered item");
+    let decoded: u32 = vox_phon::from_slice(bytes).expect("deserialize buffered item");
     assert_eq!(decoded, 123);
 }
 
@@ -1373,6 +1385,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
     let response = caller
         .caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -1386,7 +1399,7 @@ async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(result, 42);
 }
 
@@ -1493,6 +1506,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
     let args_value: u32 = 777;
     let response = proxy_caller
         .call(RequestCall {
+            channels: Vec::new(),
             method_id: MethodId(1),
             args: Payload::outgoing(&args_value),
             schemas: Default::default(),
@@ -1505,7 +1519,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         Payload::PostcardBytes(bytes) => *bytes,
         _ => panic!("expected incoming payload"),
     };
-    let result: u32 = vox_postcard::from_slice(ret_bytes).expect("deserialize proxied response");
+    let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize proxied response");
     assert_eq!(result, args_value);
 
     guest_a_session

@@ -27,6 +27,11 @@ pub use schema::{
     schema_bytes_for_shape, to_self_describing,
 };
 
+/// Opaque-passthrough sentinel: build an `OpaqueSerialize` that emits already-encoded
+/// `bytes` verbatim as the opaque inner content (no re-derive/re-encode). Used by the
+/// `Payload` adapter to forward an already-encoded RPC payload (e.g. a proxied call).
+pub use phon::derive::{RAW_OPAQUE_BYTES_SHAPE, RawOpaqueBytes, raw_opaque_bytes};
+
 /// A codec error: the type could not be lowered to a phon schema, or the
 /// value/bytes did not match it.
 #[derive(Debug)]
