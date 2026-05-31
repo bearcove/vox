@@ -393,6 +393,7 @@ mod tests {
             "sum",
             &["left", "right"],
             &[None, None],
+            <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
             None,
         );
         let metadata = crate::Metadata::default();

@@ -12,7 +12,15 @@ pub fn text_svc_service_descriptor() -> &'static ::vox::session::ServiceDescript
                 (String,),
                 ::std::borrow::Cow<'static, str>,
             >(
-                "TextSvc", "normalize", &["input"], &[None], None
+                "TextSvc",
+                "normalize",
+                &["input"],
+                &[None],
+                <Result<
+                    ::std::borrow::Cow<'static, str>,
+                    ::vox::VoxError<::core::convert::Infallible>,
+                > as ::vox::facet::Facet<'static>>::SHAPE,
+                None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "TextSvc",

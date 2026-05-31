@@ -40,6 +40,8 @@ export interface ServiceDescriptor {
   service_name: string;
   /** Canonical per-service schema table generated from Rust shapes. */
   send_schemas: ServiceSendSchemas;
+  /** The service's phon `Registry`, resolving every args/response/channel type. */
+  registry: import("@bearcove/phon-schema").Registry;
   /** Method metadata keyed by wire method ID. */
   methods: Map<bigint, MethodDescriptor>;
 }

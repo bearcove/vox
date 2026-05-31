@@ -357,6 +357,18 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
             let return_type = m.return_type();
             let return_ty_tokens = to_static_type_tokens(&return_type);
 
+            // The response *wire* shape `Result<T, VoxError<E>>` — what
+            // `RequestResponse.ret` carries. Reflection on `return_ty` alone can't
+            // see the wrapping, so capture it here for codegen.
+            let (resp_ok_ref, resp_err_ref) = method_ok_and_err_types(&return_type);
+            let resp_ok_ty = to_static_type_tokens(resp_ok_ref);
+            let resp_err_ty = resp_err_ref
+                .map(to_static_type_tokens)
+                .unwrap_or_else(|| quote! { ::core::convert::Infallible });
+            let response_wire_shape = quote! {
+                <Result<#resp_ok_ty, #vox::VoxError<#resp_err_ty>> as #vox::facet::Facet<'static>>::SHAPE
+            };
+
             let method_doc_expr = match m.doc() {
                 Some(d) => quote! { Some(#d) },
                 None => quote! { None },
@@ -368,6 +380,7 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
                     #method_name_str,
                     &[#(#arg_name_strs),*],
                     &[#(#channel_elements),*],
+                    #response_wire_shape,
                     #method_doc_expr,
                 )
             }

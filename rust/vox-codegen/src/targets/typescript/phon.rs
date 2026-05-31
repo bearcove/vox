@@ -43,11 +43,14 @@ fn args_closure_hex(shape: &'static Shape) -> String {
 pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     let name = lower_camel(service.service_name);
 
-    // One registry over every method's args + ok types (deduped, transitive).
+    // One registry over every method's args tuple + response wire type
+    // (`Result<T, VoxError<E>>`), deduped and transitive. The response wire shape
+    // pulls in `Result`/`VoxError`/`T`/`E` so the server can encode and the client
+    // can decode without a separate exchange for composites.
     let mut roots: Vec<&'static Shape> = Vec::new();
     for m in service.methods {
         roots.push(m.args_shape);
-        roots.push(ok_shape(m.return_shape));
+        roots.push(m.response_wire_shape);
     }
     let module = phon_codegen::Module::from_shapes(&roots).expect("derive service phon module");
 
@@ -73,12 +76,18 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         let method_id = crate::method_id(m);
         let args_root = root_id(m.args_shape);
         let ok_root = root_id(ok_shape(m.return_shape));
+        let response_root = root_id(m.response_wire_shape);
         let closure = args_closure_hex(m.args_shape);
+        let response_closure = args_closure_hex(m.response_wire_shape);
 
         out.push_str(&format!("  \"{}\": {{\n", hex_u64(method_id)));
         out.push_str(&format!("    argsRoot: {}n,\n", hex_u64(args_root)));
         out.push_str(&format!("    argsSchemaClosure: \"{closure}\",\n"));
         out.push_str(&format!("    okRoot: {}n,\n", hex_u64(ok_root)));
+        out.push_str(&format!("    responseRoot: {}n,\n", hex_u64(response_root)));
+        out.push_str(&format!(
+            "    responseSchemaClosure: \"{response_closure}\",\n"
+        ));
         out.push_str("    channels: [");
         let mut first = true;
         for (i, arg) in m.args.iter().enumerate() {

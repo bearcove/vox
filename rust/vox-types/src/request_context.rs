@@ -86,7 +86,14 @@ mod tests {
 
     #[test]
     fn transport_identifiers_are_exposed_when_present() {
-        let method = method_descriptor::<(), ()>("demo-service", "demo", &[], &[], None);
+        let method = method_descriptor::<(), ()>(
+            "demo-service",
+            "demo",
+            &[],
+            &[],
+            <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
+            None,
+        );
         let metadata = Metadata::default();
 
         let context = RequestContext::with_transport(

@@ -28,6 +28,7 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     method_name: &'static str,
     arg_names: &[&'static str],
     channel_elements: &[Option<&'static Shape>],
+    response_wire_shape: &'static Shape,
     doc: Option<&'static str>,
 ) -> &'static MethodDescriptor {
     assert!(
@@ -78,6 +79,7 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         args_shape: A::SHAPE,
         args,
         return_shape: R::SHAPE,
+        response_wire_shape,
         args_have_channels,
         doc,
     }))

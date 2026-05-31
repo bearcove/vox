@@ -6,21 +6,7 @@ expression: "generate(quote!\n{ pub trait Adder { async fn add(&self, a: i32, b:
 pub fn adder_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
     static DESCRIPTOR: std::sync::OnceLock<&'static ::vox::session::ServiceDescriptor> =
         std::sync::OnceLock::new();
-    DESCRIPTOR.get_or_init(|| {
-        let methods: Vec<&'static ::vox::session::MethodDescriptor> =
-            vec![::vox::hash::method_descriptor::<(i32, i32), i32>(
-                "Adder",
-                "add",
-                &["a", "b"],
-                &[None, None],
-                None,
-            )];
-        Box::leak(Box::new(::vox::session::ServiceDescriptor {
-            service_name: "Adder",
-            methods: Box::leak(methods.into_boxed_slice()),
-            doc: None,
-        }))
-    })
+    DESCRIPTOR . get_or_init (|| { let methods : Vec < & 'static :: vox :: session :: MethodDescriptor > = vec ! [:: vox :: hash :: method_descriptor :: < (i32 , i32 ,) , i32 > ("Adder" , "add" , & ["a" , "b"] , & [None , None] , < Result < i32 , :: vox :: VoxError < :: core :: convert :: Infallible >> as :: vox :: facet :: Facet < 'static >> :: SHAPE , None ,)] ; Box :: leak (Box :: new (:: vox :: session :: ServiceDescriptor { service_name : "Adder" , methods : Box :: leak (methods . into_boxed_slice ()) , doc : None , })) })
 }
 pub trait Adder
 where

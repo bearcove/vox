@@ -27,6 +27,10 @@ export interface PhonMethodSchemas {
   argsRoot: bigint;
   argsSchemaClosure: string;
   okRoot: bigint;
+  /** Root of the response wire type `Result<T, VoxError<E>>` (server encode). */
+  responseRoot: bigint;
+  /** Schema-closure hex for the response wire type (advertised by the server). */
+  responseSchemaClosure: string;
   channels: PhonChannelMeta[];
 }
 

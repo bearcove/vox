@@ -41,8 +41,15 @@ pub struct MethodDescriptor {
     /// Arguments in declaration order.
     pub args: &'static [ArgDescriptor],
 
-    /// Return type shape.
+    /// Return type shape (the handler's declared return, e.g. `Result<u64, E>`
+    /// or a bare `T` for an infallible method).
     pub return_shape: &'static Shape,
+
+    /// The response *wire* shape: `Result<T, VoxError<E>>`, what `RequestResponse.ret`
+    /// actually carries. Captured by the service macro (which sees the syntactic
+    /// ok/err types) so codegen can emit the response root + schema closure — the
+    /// wrapping is invisible to reflection on `return_shape` alone.
+    pub response_wire_shape: &'static Shape,
 
     /// Whether `args_shape` reaches a channel (Tx/Rx) anywhere in its tree.
     /// Computed once via `shape_contains_channel` when the descriptor is

@@ -213,6 +213,7 @@ mod tests {
                 Some(<u32 as facet::Facet>::SHAPE),
                 Some(<u32 as facet::Facet>::SHAPE),
             ],
+            <Result<(), vox_types::VoxError> as facet::Facet>::SHAPE,
             None,
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
@@ -257,6 +258,7 @@ mod tests {
             "describe",
             &["point", "choice"],
             &[None, None],
+            <Result<SwiftPoint, vox_types::VoxError> as facet::Facet>::SHAPE,
             None,
         );
         let methods = Box::leak(vec![describe].into_boxed_slice());

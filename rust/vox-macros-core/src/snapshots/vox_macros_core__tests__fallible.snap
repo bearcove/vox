@@ -12,7 +12,12 @@ pub fn calc_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
                 (f64, f64),
                 Result<f64, DivError>,
             >(
-                "Calc", "div", &["a", "b"], &[None, None], None
+                "Calc",
+                "div",
+                &["a", "b"],
+                &[None, None],
+                <Result<f64, ::vox::VoxError<DivError>> as ::vox::facet::Facet<'static>>::SHAPE,
+                None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Calc",
