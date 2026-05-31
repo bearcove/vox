@@ -77,6 +77,12 @@ importers:
 
   typescript/generated:
     dependencies:
+      '@bearcove/phon-engine':
+        specifier: workspace:*
+        version: link:../../../phon/typescript/packages/phon-engine
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../../../phon/typescript/packages/phon-schema
       '@bearcove/vox-core':
         specifier: workspace:*
         version: link:../packages/vox-core
@@ -175,6 +181,12 @@ importers:
 
   typescript/subject:
     dependencies:
+      '@bearcove/phon-engine':
+        specifier: workspace:*
+        version: link:../../../phon/typescript/packages/phon-engine
+      '@bearcove/phon-schema':
+        specifier: workspace:*
+        version: link:../../../phon/typescript/packages/phon-schema
       '@bearcove/vox-core':
         specifier: workspace:*
         version: link:../packages/vox-core
