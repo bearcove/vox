@@ -14,31 +14,45 @@ use crate::MessagePlan;
 /// The recv path yields `SelfRef<F::Msg<'static>>` (zero-copy: the decoded
 /// value borrows the received backing).
 ///
-/// The `Message` envelope is a fixed protocol type — identical on both peers —
-/// so it is encoded and decoded single-schema (no translation plan). Schema
-/// evolution lives at the *payload* level (the opaque `Payload` field + the
-/// `schemas` bindings), not the envelope.
+/// The `Message` envelope is an evolvable wire type like any other: the Rx half
+/// reconciles the peer's envelope schema (received in the handshake, carried in
+/// [`MessagePlan`]) against its own `Message` descriptor to build a phon
+/// compatibility decode program (`r[compat.plan-first]`). There is no
+/// same-version envelope shortcut.
 // r[impl conduit.bare]
 // r[impl zerocopy.framing.conduit.bare]
 pub struct BareConduit<F: MsgFamily, L: Link> {
     link: L,
+    /// The peer's `Message` envelope schema (phon bytes) from the handshake, or
+    /// `None` when built without a plan (tests / degenerate path) — in which case
+    /// the Rx half derives our own schema as the writer (the drift-free degenerate
+    /// of the one compat path, not a shortcut).
+    writer_schema: Option<Vec<u8>>,
     _phantom: PhantomData<fn(F) -> F>,
 }
 
 impl<F: MsgFamily, L: Link> BareConduit<F, L> {
-    /// Create a new BareConduit.
+    /// Create a new BareConduit without a pre-exchanged envelope schema. The Rx
+    /// half will reconcile our own `Message` schema against itself — the
+    /// drift-free degenerate of the compat path. Used by tests and the rare
+    /// no-handshake case.
     pub fn new(link: L) -> Self {
         Self {
             link,
+            writer_schema: None,
             _phantom: PhantomData,
         }
     }
 
-    /// Create a new BareConduit. The `MessagePlan` is vestigial now that the
-    /// envelope is decoded single-schema; it is accepted (and dropped) so session
-    /// construction sites need not change while the handshake is migrated.
-    pub fn with_message_plan(link: L, _message_plan: MessagePlan) -> Self {
-        Self::new(link)
+    /// Create a BareConduit carrying the peer's envelope schema from the
+    /// handshake. The Rx half reconciles it against its own `Message` descriptor
+    /// to build the compat decode program (`r[compat.plan-first]`).
+    pub fn with_message_plan(link: L, message_plan: MessagePlan) -> Self {
+        Self {
+            link,
+            writer_schema: Some(message_plan.writer_schema),
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -61,6 +75,8 @@ where
             BareConduitRx {
                 link_rx: rx,
                 pending_fds: vox_types::FrameFds::default(),
+                writer_schema: self.writer_schema,
+                program: None,
                 _phantom: PhantomData,
             },
         )
@@ -132,7 +148,37 @@ pub struct BareConduitRx<F: MsgFamily, LRx> {
     /// Descriptors that arrived with the most recently `recv`'d frame,
     /// awaiting [`take_frame_fds`](vox_types::ConduitRx::take_frame_fds).
     pending_fds: vox_types::FrameFds,
+    /// The peer's `Message` envelope schema (phon bytes) from the handshake, or
+    /// `None` to reconcile our own schema against itself (degenerate path).
+    writer_schema: Option<Vec<u8>>,
+    /// The compat decode program, built lazily on the first `recv` (reconciles
+    /// the writer schema against `F::Msg`, `r[compat.plan-first]`) and reused.
+    program: Option<vox_phon::DecodeProgram>,
     _phantom: PhantomData<fn() -> F>,
+}
+
+impl<F: MsgFamily, LRx> BareConduitRx<F, LRx> {
+    /// Build (once) and return the envelope compat decode program. Reconciles the
+    /// peer's `Message` schema — or our own, when none was exchanged (the
+    /// drift-free degenerate of the one compat path) — against `F::Msg`'s
+    /// descriptor via phon's `lower_decode` (`r[compat.plan-first]`).
+    fn ensure_program(&mut self) -> Result<&vox_phon::DecodeProgram, BareConduitError> {
+        if self.program.is_none() {
+            let writer_bytes = match &self.writer_schema {
+                Some(b) => std::borrow::Cow::Borrowed(b.as_slice()),
+                None => std::borrow::Cow::Owned(
+                    vox_phon::schema_bytes::<F::Msg<'static>>()
+                        .map_err(BareConduitError::Decode)?,
+                ),
+            };
+            let writer =
+                vox_phon::parse_schema_bytes(&writer_bytes).map_err(BareConduitError::Decode)?;
+            let program = vox_phon::build_decode_program::<F::Msg<'static>>(&writer)
+                .map_err(BareConduitError::Decode)?;
+            self.program = Some(program);
+        }
+        Ok(self.program.as_ref().expect("program built above"))
+    }
 }
 
 impl<F: MsgFamily, LRx> ConduitRx for BareConduitRx<F, LRx>
@@ -158,11 +204,17 @@ where
         // `take_frame_fds` and installed at that decode site, not here.
         self.pending_fds = self.link_rx.take_frame_fds();
 
-        // The envelope is decoded single-schema, zero-copy: the decoded
+        // Lazily build the envelope compat program: reconcile the peer's
+        // `Message` schema (or our own, in the degenerate no-exchange case)
+        // against our `Message` descriptor. Built once, reused for every frame.
+        // r[impl compat.plan-first]
+        let program = self.ensure_program()?;
+
+        // Decode the envelope through the compat program, zero-copy: the decoded
         // `Message` borrows the backing (payload span, metadata strings).
         // r[impl zerocopy.recv.selfref]
         SelfRef::try_new(backing, |bytes| {
-            vox_phon::from_slice_borrowed::<F::Msg<'static>>(bytes)
+            vox_phon::decode_with_program::<F::Msg<'static>>(program, bytes)
                 .map_err(BareConduitError::Decode)
         })
         .map(Some)

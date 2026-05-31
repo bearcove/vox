@@ -920,6 +920,9 @@ fn generate_client_method(
                 let mut metadata = Default::default();
                 let req = #vox::RequestCall {
                     method_id,
+                    // Filled out-of-band by the driver when args carry channels
+                    // (r[rpc.request], r[rpc.channel.allocation]).
+                    channels: Default::default(),
                     args: #vox::Payload::outgoing(&args),
                     metadata,
                     schemas: Default::default(),
@@ -974,6 +977,9 @@ fn generate_client_method(
                 let mut metadata = Default::default();
                 let req = #vox::RequestCall {
                     method_id,
+                    // Filled out-of-band by the driver when args carry channels
+                    // (r[rpc.request], r[rpc.channel.allocation]).
+                    channels: Default::default(),
                     args: #vox::Payload::outgoing(&args),
                     metadata,
                     schemas: Default::default(),

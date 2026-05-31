@@ -114,9 +114,6 @@ pub use facet;
 pub use facet_reflect;
 pub use facet_reflect::Peek;
 
-// Re-export vox-postcard for generated code and downstream helpers.
-pub use vox_postcard;
-
 // Re-export method identity functions (generated code uses `vox::hash::method_descriptor`)
 // TODO: generated code should be updated to use vox::method_descriptor directly
 pub mod hash {

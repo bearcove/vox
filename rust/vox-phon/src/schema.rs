@@ -187,6 +187,44 @@ pub fn decode_compat<'a, T: Facet<'a>>(bytes: &'a [u8], writer: &SchemaBundle) -
     decode_with_program::<T>(&program, bytes)
 }
 
+/// Encode `value` as a SELF-CONTAINED message: its phon schema closure (`u32` length
+/// then [`schema_bytes`]) followed by its compact value. Used where no schema was
+/// pre-exchanged — the handshake — so the message carries the schema needed to decode
+/// it (the phon analog of a CBOR-style self-describing typed value).
+///
+/// # Errors
+/// [`Error`] if `T` cannot be derived or encoded.
+pub fn to_self_describing<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
+    let schema = schema_bytes::<T>()?;
+    let value_bytes = crate::to_vec(value)?;
+    let mut out = Vec::with_capacity(4 + schema.len() + value_bytes.len());
+    out.extend_from_slice(&(schema.len() as u32).to_le_bytes());
+    out.extend_from_slice(&schema);
+    out.extend_from_slice(&value_bytes);
+    Ok(out)
+}
+
+/// Decode a self-contained message produced by [`to_self_describing`] into an OWNED
+/// `T`: parse the embedded writer schema closure, reconcile it against `T`
+/// (`r[compat.plan-first]`), and decode the value. The handshake decode — so even the
+/// bootstrap message reconciles writer↔reader rather than assuming same-version.
+///
+/// # Errors
+/// [`Error`] for malformed framing, an undecodable schema, or incompatible schemas.
+pub fn from_self_describing<T: Facet<'static>>(bytes: &[u8]) -> Result<T, Error> {
+    let mut r = Reader::new(bytes);
+    let schema_len =
+        r.read_u32()
+            .map_err(|e| Error(format!("self-describing schema length: {e:?}")))? as usize;
+    let schema = r
+        .read_slice(schema_len)
+        .map_err(|e| Error(format!("self-describing schema body: {e:?}")))?;
+    let value = &bytes[4 + schema_len..];
+    let writer = parse_schema_bytes(schema)?;
+    let program = build_decode_program::<T>(&writer)?;
+    decode_owned_with_program::<T>(&program, value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

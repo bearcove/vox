@@ -471,6 +471,7 @@ mod tests {
             crate::Backing::Boxed(Box::<[u8]>::default()),
             RequestCall {
                 method_id: crate::MethodId(1),
+                channels: Vec::new(),
                 metadata: Metadata::default(),
                 args: Payload::PostcardBytes(&[]),
                 schemas: Default::default(),

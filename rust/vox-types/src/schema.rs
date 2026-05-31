@@ -1609,26 +1609,16 @@ mod tests {
     #[test]
     fn tracker_record_and_get_received() {
         let tracker = SchemaRecvTracker::new();
-        let schemas = extract_schemas(<u32 as Facet>::SHAPE)
-            .unwrap()
-            .schemas
-            .clone();
-        let id = schemas[0].id;
-        assert!(tracker.get_received(&id).is_none());
-        tracker
-            .record_received(
-                MethodId(7),
-                BindingDirection::Args,
-                SchemaPayload {
-                    schemas,
-                    root: TypeRef::concrete(id),
-                },
-            )
-            .expect("first record should succeed");
-        assert!(tracker.get_received(&id).is_some());
+        let bytes = vox_phon::schema_bytes::<u32>().expect("schema bytes");
+        assert!(
+            tracker
+                .writer_schema_bytes(MethodId(7), BindingDirection::Args)
+                .is_none()
+        );
+        tracker.record_received(MethodId(7), BindingDirection::Args, bytes.clone());
         assert_eq!(
-            tracker.get_remote_args_root(MethodId(7)),
-            Some(TypeRef::concrete(id))
+            tracker.writer_schema_bytes(MethodId(7), BindingDirection::Args),
+            Some(bytes)
         );
     }
 
@@ -1636,17 +1626,12 @@ mod tests {
     // r[verify schema.type-id.hash]
     #[test]
     fn type_ids_are_content_hashes() {
-        let mut tracker = SchemaSendTracker::new();
-        let extracted = tracker
-            .extract_schemas(<(u32, String) as Facet>::SHAPE)
-            .unwrap();
+        let extracted = extract_schemas(<(u32, String) as Facet>::SHAPE).unwrap();
         let schemas = extracted.schemas.clone();
         assert!(schemas.len() >= 3);
 
         // Same type extracted again must produce the same content hash.
-        let mut tracker2 = SchemaSendTracker::new();
-        let schemas2 = tracker2
-            .extract_schemas(<(u32, String) as Facet>::SHAPE)
+        let schemas2 = extract_schemas(<(u32, String) as Facet>::SHAPE)
             .unwrap()
             .schemas
             .clone();
@@ -1656,10 +1641,7 @@ mod tests {
         }
 
         // Different types must produce different hashes.
-        let mut tracker3 = SchemaSendTracker::new();
-        let extracted3 = tracker3
-            .extract_schemas(<(u64, String) as Facet>::SHAPE)
-            .unwrap();
+        let extracted3 = extract_schemas(<(u64, String) as Facet>::SHAPE).unwrap();
         assert_ne!(
             extracted.root, extracted3.root,
             "different types should produce different root refs"
@@ -1786,70 +1768,40 @@ mod tests {
         let response_parsed = SchemaPayload::from_cbor(&response.0).expect("parse response CBOR");
         assert_ne!(args_parsed.root, response_parsed.root);
 
-        // Record received bindings and verify they go to separate maps
+        // Record received bindings (raw phon schema bytes) and verify args and
+        // response are tracked independently per (method, direction).
         let recv_tracker = SchemaRecvTracker::new();
-        recv_tracker
-            .record_received(
-                MethodId(42),
-                BindingDirection::Args,
-                SchemaPayload {
-                    schemas: extract_schemas(<u64 as Facet>::SHAPE)
-                        .unwrap()
-                        .schemas
-                        .clone(),
-                    root: TypeRef::concrete(SchemaHash(100)),
-                },
-            )
-            .expect("record should succeed");
-        recv_tracker
-            .record_received(
-                MethodId(42),
-                BindingDirection::Response,
-                SchemaPayload {
-                    schemas: vec![],
-                    root: TypeRef::concrete(SchemaHash(200)),
-                },
-            )
-            .expect("record should succeed");
+        let args_bytes = vox_phon::schema_bytes::<u64>().unwrap();
+        let response_bytes = vox_phon::schema_bytes::<String>().unwrap();
+        recv_tracker.record_received(MethodId(42), BindingDirection::Args, args_bytes.clone());
+        recv_tracker.record_received(
+            MethodId(42),
+            BindingDirection::Response,
+            response_bytes.clone(),
+        );
 
         assert_eq!(
-            recv_tracker.get_remote_args_root(MethodId(42)),
-            Some(TypeRef::concrete(SchemaHash(100)))
+            recv_tracker.writer_schema_bytes(MethodId(42), BindingDirection::Args),
+            Some(args_bytes)
         );
         assert_eq!(
-            recv_tracker.get_remote_response_root(MethodId(42)),
-            Some(TypeRef::concrete(SchemaHash(200)))
+            recv_tracker.writer_schema_bytes(MethodId(42), BindingDirection::Response),
+            Some(response_bytes)
         );
     }
 
+    // r[verify schema.exchange] receiving a schema more than once is best-effort
+    // and idempotent — it overwrites, it is NOT a protocol error.
     #[test]
-    fn duplicate_schema_is_protocol_error() {
+    fn duplicate_schema_is_best_effort() {
         let tracker = SchemaRecvTracker::new();
-        let schemas = extract_schemas(<u32 as Facet>::SHAPE)
-            .unwrap()
-            .schemas
-            .clone();
-        tracker
-            .record_received(
-                MethodId(9),
-                BindingDirection::Args,
-                SchemaPayload {
-                    schemas: schemas.clone(),
-                    root: TypeRef::concrete(schemas[0].id),
-                },
-            )
-            .expect("first record should succeed");
-        let err = tracker
-            .record_received(
-                MethodId(9),
-                BindingDirection::Args,
-                SchemaPayload {
-                    schemas: schemas.clone(),
-                    root: TypeRef::concrete(schemas[0].id),
-                },
-            )
-            .expect_err("duplicate should fail");
-        assert_eq!(err.type_id, schemas[0].id);
+        let bytes = vox_phon::schema_bytes::<u32>().unwrap();
+        tracker.record_received(MethodId(9), BindingDirection::Args, bytes.clone());
+        tracker.record_received(MethodId(9), BindingDirection::Args, bytes.clone());
+        assert_eq!(
+            tracker.writer_schema_bytes(MethodId(9), BindingDirection::Args),
+            Some(bytes)
+        );
     }
 
     #[test]

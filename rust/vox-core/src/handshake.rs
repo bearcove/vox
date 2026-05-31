@@ -1,5 +1,5 @@
 use vox_types::{
-    ConnectionSettings, HandshakeMessage, HandshakeResult, LinkRx, LinkTx, ResumeKeyBytes, Schema,
+    ConnectionSettings, HandshakeMessage, HandshakeResult, LinkRx, LinkTx, ResumeKeyBytes,
     SessionResumeKey, SessionRole,
 };
 
@@ -42,17 +42,20 @@ fn validate_initial_channel_credit(settings: &ConnectionSettings) -> Result<(), 
     Ok(())
 }
 
-/// Extract the Message schema from the static shape.
-fn message_schema() -> Vec<Schema> {
-    vox_types::extract_schemas(<vox_types::Message<'static> as facet::Facet<'static>>::SHAPE)
-        .expect("schema extraction")
-        .schemas
-        .clone()
+/// The `Message` envelope schema as phon self-describing bytes — exchanged in the
+/// handshake so each peer can build a compatibility decode program for the other's
+/// `Message` (`r[session.handshake.protocol-schema]`).
+fn message_schema() -> Vec<u8> {
+    vox_phon::schema_bytes::<vox_types::Message<'static>>()
+        .expect("derive phon schema for Message envelope")
 }
 
-/// Send a CBOR-encoded handshake message on a raw link.
+/// Send a handshake message on a raw link, self-describing (it carries its own phon
+/// schema closure, so the peer can decode it without a prior exchange — the phon
+/// analog of the old CBOR self-description).
 async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(), HandshakeError> {
-    let bytes = facet_cbor::to_vec(msg).map_err(|e| HandshakeError::Encode(e.to_string()))?;
+    let bytes =
+        vox_phon::to_self_describing(msg).map_err(|e| HandshakeError::Encode(e.to_string()))?;
     vox_types::dlog!(
         "[handshake] send {:?} ({} bytes)",
         handshake_tag(msg),
@@ -61,7 +64,9 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
     tx.send(bytes).await.map_err(HandshakeError::Io)
 }
 
-/// Receive and decode a CBOR handshake message from a raw link.
+/// Receive and decode a self-describing handshake message from a raw link. The
+/// embedded writer schema is reconciled against the local `HandshakeMessage`
+/// (`r[compat.plan-first]`), so even the bootstrap message survives version skew.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()
@@ -72,7 +77,7 @@ async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, Han
         "[handshake] recv raw frame ({} bytes)",
         backing.as_bytes().len()
     );
-    let msg = facet_cbor::from_slice(backing.as_bytes())
+    let msg = vox_phon::from_self_describing::<HandshakeMessage>(backing.as_bytes())
         .map_err(|e| HandshakeError::Decode(e.to_string()))?;
     vox_types::dlog!("[handshake] recv {:?}", handshake_tag(&msg));
     Ok(msg)

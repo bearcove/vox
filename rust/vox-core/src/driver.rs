@@ -1732,6 +1732,9 @@ impl DriverCaller {
                     id: req_id,
                     body: RequestBody::Call(RequestCall {
                         method_id: call.method_id,
+                        // Populated by the session's outbound pre-encode when args
+                        // carry channels (r[rpc.request]).
+                        channels: call.channels.clone(),
                         args: call.args.reborrow(),
                         metadata: call.metadata.clone(),
                         schemas: Default::default(),

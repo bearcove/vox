@@ -4,9 +4,9 @@ use std::panic::Location;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-use facet::Facet;
+use facet::{Facet, FacetOpaqueAdapter, OpaqueDeserialize, OpaqueSerialize};
 use facet_core::PtrConst;
 #[cfg(target_arch = "wasm32")]
 use moire::sync::TryAcquireError;
@@ -71,6 +71,119 @@ impl Drop for ChannelBinderGuard<'_> {
             *cell.borrow_mut() = self.prev.take();
         });
     }
+}
+
+// ---------------------------------------------------------------------------
+// Out-of-band channel-id table.
+//
+// `Tx<T>`/`Rx<T>` appear in request arguments, but on the wire they are NOT
+// serialized inline — each encodes only a small `u32` index, and the allocated
+// `ChannelId`s travel out-of-band in `RequestCall.channels`. This mirrors the
+// `Fd` → fd-table indirection (`crate::fd`): the binder above still does the
+// allocation/binding; these thread-locals carry the id list alongside the args
+// payload so the index can be re-associated at the peer.
+//
+// r[impl rpc.request] r[impl rpc.channel.allocation]
+// ---------------------------------------------------------------------------
+
+/// `wire_index` sentinel: this handle was never pushed into a collector (no
+/// collector installed at encode). Decoding such an index is a clean error,
+/// never a panic across the `extern "C"` encoder trampolines.
+const CHANNEL_NOT_COLLECTED: u32 = u32::MAX;
+
+/// The channel ids gathered while encoding one request's arguments.
+struct ChannelCollector {
+    /// Allocated channel ids, in encode walk-order — becomes `RequestCall.channels`.
+    ids: Vec<ChannelId>,
+    /// Handle value address → assigned index, scoped to this collector, so the
+    /// same handle encoded more than once claims one slot.
+    seen: std::collections::HashMap<usize, u32>,
+}
+
+std::thread_local! {
+    static CHANNEL_COLLECTOR: std::cell::RefCell<Option<ChannelCollector>> =
+        const { std::cell::RefCell::new(None) };
+    static CHANNEL_SOURCE: std::cell::RefCell<Option<Vec<ChannelId>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Install an empty channel collector for the duration of `f`, returning what
+/// `f` produced together with the channel ids it gathered (the out-of-band list
+/// for `RequestCall.channels`). Wrap the args encode with this — together with a
+/// [`ChannelBinder`] (the collector records ids the binder allocates).
+pub fn collect_channels<R>(f: impl FnOnce() -> R) -> (R, Vec<ChannelId>) {
+    struct Restore(Option<ChannelCollector>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CHANNEL_COLLECTOR.with(|c| *c.borrow_mut() = self.0.take());
+        }
+    }
+    let fresh = ChannelCollector {
+        ids: Vec::new(),
+        seen: std::collections::HashMap::new(),
+    };
+    let _restore = Restore(CHANNEL_COLLECTOR.with(|c| c.borrow_mut().replace(fresh)));
+    let out = f();
+    let ids = CHANNEL_COLLECTOR
+        .with(|c| {
+            c.borrow_mut()
+                .as_mut()
+                .map(|col| std::mem::take(&mut col.ids))
+        })
+        .unwrap_or_default();
+    (out, ids)
+}
+
+/// Provide the channel ids received with a request (`RequestCall.channels`) for
+/// the duration of `f` (typed args decoding). Each `Tx`/`Rx` decoded inside
+/// claims one by index. Wrap the args decode with this — together with a
+/// [`ChannelBinder`] (the index is looked up here, the binder binds it).
+pub fn provide_channels<R>(channels: Vec<ChannelId>, f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<Vec<ChannelId>>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CHANNEL_SOURCE.with(|c| *c.borrow_mut() = self.0.take());
+        }
+    }
+    let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(channels)));
+    f()
+}
+
+/// Record `channel_id` in the active collector, returning its stable index.
+/// Idempotent per handle value address. Returns [`CHANNEL_NOT_COLLECTED`] when
+/// no collector is installed (the error surfaces cleanly at decode).
+fn collect_channel(key: usize, channel_id: ChannelId) -> u32 {
+    CHANNEL_COLLECTOR.with(|c| {
+        let mut slot = c.borrow_mut();
+        let Some(col) = slot.as_mut() else {
+            return CHANNEL_NOT_COLLECTED;
+        };
+        if let Some(&idx) = col.seen.get(&key) {
+            return idx;
+        }
+        let idx = col.ids.len() as u32;
+        col.ids.push(channel_id);
+        col.seen.insert(key, idx);
+        idx
+    })
+}
+
+/// Look up channel `index` from the active source (the request's channel list).
+fn take_channel(index: u32) -> Result<ChannelId, String> {
+    if index == CHANNEL_NOT_COLLECTED {
+        return Err(
+            "channel handle was encoded without a channel id (no collector installed)".to_string(),
+        );
+    }
+    CHANNEL_SOURCE.with(|c| {
+        let slot = c.borrow();
+        let vec = slot
+            .as_ref()
+            .ok_or_else(|| "channel decoded with no channel source installed".to_string())?;
+        vec.get(index as usize)
+            .copied()
+            .ok_or_else(|| format!("channel wire index {index} out of range ({})", vec.len()))
+    })
 }
 
 // r[impl rpc.channel.pair]
@@ -987,23 +1100,23 @@ impl ReplenisherSlot {
 ///
 /// In method args, the handler holds it (handler sends → caller).
 ///
-/// Wire encoding is always unit (`()`), with channel IDs carried exclusively
-/// in `Message::Request.channels`.
+/// On the wire a `Tx` is a `u32` index into `Message::Request.channels`; the
+/// `ChannelId` itself travels out-of-band in that list (see [`TxChannelAdapter`]).
 // r[impl rpc.channel]
 // r[impl rpc.channel.direction]
 // r[impl rpc.channel.payload-encoding]
 #[derive(Facet)]
-#[facet(proxy = crate::ChannelId)]
+#[facet(opaque = TxChannelAdapter<T>)]
 pub struct Tx<T> {
     pub(crate) channel_id: ChannelId,
     pub(crate) sink: SinkSlot,
     pub(crate) core: CoreSlot,
     pub(crate) liveness: LivenessSlot,
-    #[facet(opaque)]
     debug_context: ChannelDebugContext,
-    #[facet(opaque)]
     closed: AtomicBool,
-    #[facet(opaque)]
+    /// Scratch the adapter points `OpaqueSerialize` at: the index assigned by the
+    /// channel collector at encode (`CHANNEL_NOT_COLLECTED` until then).
+    wire_index: AtomicU32,
     _marker: PhantomData<T>,
 }
 
@@ -1031,6 +1144,7 @@ impl<T> Tx<T> {
             liveness: LivenessSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
+            wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
             _marker: PhantomData,
         }
     }
@@ -1045,6 +1159,7 @@ impl<T> Tx<T> {
             liveness: LivenessSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
+            wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
             _marker: PhantomData,
         }
     }
@@ -1310,6 +1425,49 @@ impl<T> TryFrom<ChannelId> for Tx<T> {
     }
 }
 
+/// Opaque adapter bridging `Tx<T>` through the out-of-band channel table.
+///
+/// On the wire a `Tx` is a `u32` index into `RequestCall.channels`. Encode:
+/// allocate + register the channel via the active [`ChannelBinder`] (the same
+/// `TryFrom<&Tx>` logic the old proxy used), record the id in the active
+/// collector, and point the wire at the assigned index. Decode: read the index,
+/// resolve the id from the active source (`provide_channels`), and bind. Mirrors
+/// [`FdAdapter`](crate::fd). `serialize_map` is infallible (a missing binder
+/// yields the `CHANNEL_NOT_COLLECTED` sentinel; the error surfaces at decode).
+// r[impl rpc.channel.payload-encoding] r[impl rpc.channel.binding]
+pub struct TxChannelAdapter<T>(PhantomData<T>);
+
+impl<T> FacetOpaqueAdapter for TxChannelAdapter<T> {
+    type Error = String;
+    type SendValue<'a> = Tx<T>;
+    type RecvValue<'de> = Tx<T>;
+
+    fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
+        let idx = match ChannelId::try_from(value) {
+            Ok(channel_id) => collect_channel(value as *const Tx<T> as usize, channel_id),
+            Err(_) => CHANNEL_NOT_COLLECTED,
+        };
+        value.wire_index.store(idx, Ordering::Relaxed);
+        OpaqueSerialize {
+            ptr: PtrConst::new(value.wire_index.as_ptr().cast::<u8>()),
+            shape: <u32 as Facet>::SHAPE,
+        }
+    }
+
+    fn deserialize_build<'de>(
+        input: OpaqueDeserialize<'de>,
+    ) -> Result<Self::RecvValue<'de>, Self::Error> {
+        let bytes = match &input {
+            OpaqueDeserialize::Borrowed(b) => *b,
+            OpaqueDeserialize::Owned(b) => b.as_slice(),
+        };
+        let index =
+            vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Tx channel index: {e}"))?;
+        let channel_id = take_channel(index)?;
+        <Tx<T>>::try_from(channel_id)
+    }
+}
+
 /// Error when sending on a `Tx`.
 #[derive(Debug)]
 pub enum TxError {
@@ -1360,9 +1518,10 @@ impl<T: std::fmt::Debug> std::error::Error for TrySendError<T> {}
 ///
 /// In method args, the handler holds it (handler receives ← caller).
 ///
-/// Channel IDs are serialized inline in the postcard payload.
+/// On the wire an `Rx` is a `u32` index into `Message::Request.channels`; the
+/// `ChannelId` itself travels out-of-band in that list (see [`RxChannelAdapter`]).
 #[derive(Facet)]
-#[facet(proxy = crate::ChannelId)]
+#[facet(opaque = RxChannelAdapter<T>)]
 pub struct Rx<T> {
     pub(crate) channel_id: ChannelId,
     pub(crate) receiver: ReceiverSlot,
@@ -1370,11 +1529,11 @@ pub struct Rx<T> {
     pub(crate) core: CoreSlot,
     pub(crate) liveness: LivenessSlot,
     pub(crate) replenisher: ReplenisherSlot,
-    #[facet(opaque)]
     debug_context: ChannelDebugContext,
-    #[facet(opaque)]
     closed: AtomicBool,
-    #[facet(opaque)]
+    /// Scratch the adapter points `OpaqueSerialize` at: the index assigned by the
+    /// channel collector at encode (`CHANNEL_NOT_COLLECTED` until then).
+    wire_index: AtomicU32,
     _marker: PhantomData<T>,
 }
 
@@ -1404,6 +1563,7 @@ impl<T> Rx<T> {
             replenisher: ReplenisherSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
+            wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
             _marker: PhantomData,
         }
     }
@@ -1420,6 +1580,7 @@ impl<T> Rx<T> {
             replenisher: ReplenisherSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
+            wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
             _marker: PhantomData,
         }
     }
@@ -1589,6 +1750,43 @@ impl<T> TryFrom<ChannelId> for Rx<T> {
         })?;
 
         Ok(rx)
+    }
+}
+
+/// Opaque adapter bridging `Rx<T>` through the out-of-band channel table — the
+/// receiver-side mirror of [`TxChannelAdapter`]. On the wire a `Rx` is a `u32`
+/// index into `RequestCall.channels`.
+// r[impl rpc.channel.payload-encoding] r[impl rpc.channel.binding]
+pub struct RxChannelAdapter<T>(PhantomData<T>);
+
+impl<T> FacetOpaqueAdapter for RxChannelAdapter<T> {
+    type Error = String;
+    type SendValue<'a> = Rx<T>;
+    type RecvValue<'de> = Rx<T>;
+
+    fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
+        let idx = match ChannelId::try_from(value) {
+            Ok(channel_id) => collect_channel(value as *const Rx<T> as usize, channel_id),
+            Err(_) => CHANNEL_NOT_COLLECTED,
+        };
+        value.wire_index.store(idx, Ordering::Relaxed);
+        OpaqueSerialize {
+            ptr: PtrConst::new(value.wire_index.as_ptr().cast::<u8>()),
+            shape: <u32 as Facet>::SHAPE,
+        }
+    }
+
+    fn deserialize_build<'de>(
+        input: OpaqueDeserialize<'de>,
+    ) -> Result<Self::RecvValue<'de>, Self::Error> {
+        let bytes = match &input {
+            OpaqueDeserialize::Borrowed(b) => *b,
+            OpaqueDeserialize::Owned(b) => b.as_slice(),
+        };
+        let index =
+            vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Rx channel index: {e}"))?;
+        let channel_id = take_channel(index)?;
+        <Rx<T>>::try_from(channel_id)
     }
 }
 
@@ -1928,7 +2126,7 @@ mod tests {
         rx.bind(rx_inner);
         rx.replenisher.inner = Some(replenisher.clone());
 
-        let encoded = vox_postcard::to_vec(&123_u32).expect("serialize test item");
+        let encoded = vox_phon::to_vec(&123_u32).expect("serialize test item");
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
@@ -2015,7 +2213,7 @@ mod tests {
 
         let mut rx = Rx::<u32>::paired(core);
 
-        let encoded = vox_postcard::to_vec(&321_u32).expect("serialize test item");
+        let encoded = vox_phon::to_vec(&321_u32).expect("serialize test item");
         let item = SelfRef::owning(
             Backing::Boxed(Box::<[u8]>::default()),
             ChannelItem {
@@ -2094,8 +2292,9 @@ mod tests {
     }
 
     // Case 1: Caller passes Tx in args, keeps paired Rx.
-    // Serializing the Tx allocates a channel ID via create_rx() and stores
-    // the receiver in the shared logical core so the kept Rx can survive retries.
+    // Encoding the Tx allocates a channel ID via create_rx(), records it in the
+    // out-of-band collector (RequestCall.channels), and stores the receiver in
+    // the shared logical core so the kept Rx can survive retries.
     #[tokio::test]
     async fn case1_serialize_tx_allocates_and_binds_paired_rx() {
         use facet::Facet;
@@ -2110,11 +2309,14 @@ mod tests {
         let args = Args { data: 42, tx };
 
         let binder = TestBinder::new();
-        let bytes =
-            with_channel_binder(&binder, || vox_postcard::to_vec(&args).expect("serialize"));
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&binder, || vox_phon::to_vec(&args).expect("serialize"))
+        });
 
-        // The channel ID should be in the serialized bytes (after the u32 data field).
+        // The args still encode (the Tx is a small index); the channel id rode
+        // out-of-band into the collected list.
         assert!(!bytes.is_empty());
+        assert_eq!(channels.len(), 1, "one channel id collected out-of-band");
 
         // The kept Rx should now have a receiver binding in the shared core.
         assert!(
@@ -2129,8 +2331,8 @@ mod tests {
     }
 
     // Case 2: Caller passes Rx in args, keeps paired Tx.
-    // Serializing the Rx allocates a channel ID via create_tx() and stores
-    // the sink in the shared core so the kept Tx can use it.
+    // Encoding the Rx allocates a channel ID via create_tx(), records it
+    // out-of-band, and stores the sink in the shared core so the kept Tx can use it.
     #[test]
     fn case2_serialize_rx_allocates_and_binds_paired_tx() {
         use facet::Facet;
@@ -2145,10 +2347,12 @@ mod tests {
         let args = Args { data: 42, rx };
 
         let binder = TestBinder::new();
-        let bytes =
-            with_channel_binder(&binder, || vox_postcard::to_vec(&args).expect("serialize"));
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&binder, || vox_phon::to_vec(&args).expect("serialize"))
+        });
 
         assert!(!bytes.is_empty());
+        assert_eq!(channels.len(), 1, "one channel id collected out-of-band");
 
         // The kept Tx should now have a sink binding in the shared core.
         assert!(tx.core.inner.is_some());
@@ -2159,8 +2363,8 @@ mod tests {
         );
     }
 
-    // Case 3: Callee deserializes Tx from args.
-    // The Tx is bound directly via bind_tx() during deserialization.
+    // Case 3: Callee deserializes Tx from args. The handle's inline index selects
+    // its channel id from the provided out-of-band list, then binds via bind_tx().
     #[test]
     fn case3_deserialize_tx_binds_via_binder() {
         use facet::Facet;
@@ -2171,25 +2375,34 @@ mod tests {
             tx: Tx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (varint 7).
-        let mut bytes = vox_postcard::to_vec(&42_u32).unwrap();
-        bytes.extend_from_slice(&vox_postcard::to_vec(&ChannelId(7)).unwrap());
+        // Produce real wire bytes + out-of-band channel list by encoding on the
+        // caller side, then decode on the callee side.
+        let (tx, _rx) = channel::<u32>();
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&Args { data: 42, tx }).expect("serialize")
+            })
+        });
+        assert_eq!(channels.len(), 1);
+        let expected_id = channels[0];
 
-        let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
+        let callee_binder = TestBinder::new();
+        let args: Args = provide_channels(channels, || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize")
+            })
         });
 
         assert_eq!(args.data, 42);
-        assert_eq!(args.tx.channel_id, ChannelId(7));
+        assert_eq!(args.tx.channel_id, expected_id);
         assert!(
             args.tx.is_bound(),
             "deserialized Tx should be bound via bind_tx()"
         );
     }
 
-    // Case 4: Callee deserializes Rx from args.
-    // The Rx is bound directly via register_rx() during deserialization.
+    // Case 4: Callee deserializes Rx from args, binding via register_rx().
     #[test]
     fn case4_deserialize_rx_binds_via_binder() {
         use facet::Facet;
@@ -2200,26 +2413,34 @@ mod tests {
             rx: Rx<u32>,
         }
 
-        // Simulate wire bytes: a u32 (42) followed by a channel ID (varint 7).
-        let mut bytes = vox_postcard::to_vec(&42_u32).unwrap();
-        bytes.extend_from_slice(&vox_postcard::to_vec(&ChannelId(7)).unwrap());
+        let (_tx, rx) = channel::<u32>();
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&Args { data: 42, rx }).expect("serialize")
+            })
+        });
+        assert_eq!(channels.len(), 1);
+        let expected_id = channels[0];
 
-        let binder = TestBinder::new();
-        let args: Args = with_channel_binder(&binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
+        let callee_binder = TestBinder::new();
+        let args: Args = provide_channels(channels, || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize")
+            })
         });
 
         assert_eq!(args.data, 42);
-        assert_eq!(args.rx.channel_id, ChannelId(7));
+        assert_eq!(args.rx.channel_id, expected_id);
         assert!(
             args.rx.is_bound(),
             "deserialized Rx should be bound via register_rx()"
         );
     }
 
-    // Round-trip: serialize with caller binder, deserialize with callee binder.
-    // Verifies the channel ID allocated during serialization appears in the
-    // deserialized handle.
+    // Round-trip: encode with caller binder + collector, decode with callee binder
+    // + provided list. Verifies the channel ID allocated at encode is the one the
+    // decoded handle re-associates by index.
     #[test]
     fn channel_id_round_trips_through_ser_deser() {
         use facet::Facet;
@@ -2233,17 +2454,59 @@ mod tests {
         let args = Args { tx };
 
         let caller_binder = TestBinder::new();
-        let bytes = with_channel_binder(&caller_binder, || {
-            vox_postcard::to_vec(&args).expect("serialize")
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&args).expect("serialize")
+            })
         });
+
+        // The caller binder starts at ID 100, so the only channel id is 100.
+        assert_eq!(channels, vec![ChannelId(100)]);
 
         let callee_binder = TestBinder::new();
-        let deserialized: Args = with_channel_binder(&callee_binder, || {
-            vox_postcard::from_slice(&bytes).expect("deserialize")
+        let deserialized: Args = provide_channels(channels, || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize")
+            })
         });
 
-        // The caller binder starts at ID 100, so the deserialized Tx should have that ID.
         assert_eq!(deserialized.tx.channel_id, ChannelId(100));
         assert!(deserialized.tx.is_bound());
+    }
+
+    // Two channels in one args struct: each handle gets a distinct index, and the
+    // out-of-band list carries both ids in encode walk-order.
+    #[test]
+    fn two_channels_get_distinct_indices() {
+        use facet::Facet;
+
+        #[derive(Facet)]
+        struct Args {
+            first: Tx<u32>,
+            second: Rx<u32>,
+        }
+
+        let (first, _r) = channel::<u32>();
+        let (_t, second) = channel::<u32>();
+        let args = Args { first, second };
+
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&args).expect("serialize")
+            })
+        });
+        assert_eq!(channels.len(), 2, "two distinct channels collected");
+        assert_ne!(channels[0], channels[1]);
+
+        let callee_binder = TestBinder::new();
+        let decoded: Args = provide_channels(channels.clone(), || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize")
+            })
+        });
+        // Index 0 → first handle, index 1 → second handle.
+        assert_eq!(decoded.first.channel_id, channels[0]);
+        assert_eq!(decoded.second.channel_id, channels[1]);
     }
 }

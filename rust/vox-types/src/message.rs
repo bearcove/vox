@@ -152,6 +152,14 @@ structstruck::strike! {
                                     /// Unique method identifier, hash of fully qualified name + args etc.
                                     pub method_id: MethodId,
 
+                                    /// Channel IDs for the `Tx`/`Rx` handles that appear in `args`,
+                                    /// allocated by the caller, in encode walk-order. Travels
+                                    /// out-of-band from the args payload: each handle encodes only a
+                                    /// small index into this list, and the runtime re-associates them
+                                    /// at decode (mirrors the `Fd` → fd-table indirection).
+                                    // r[impl rpc.request] r[impl rpc.channel.allocation]
+                                    pub channels: Vec<ChannelId>,
+
                                     /// Metadata associated with this call
                                     pub metadata: Metadata,
 

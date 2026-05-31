@@ -292,10 +292,10 @@ mod unix {
                 OpaqueDeserialize::Borrowed(b) => *b,
                 OpaqueDeserialize::Owned(b) => b.as_slice(),
             };
-            let mut cursor = vox_postcard::decode::Cursor::new(bytes);
-            let index = cursor
-                .read_varint()
-                .map_err(|e| format!("Fd index varint: {e}"))? as u32;
+            // The opaque span is the phon-compact encoding of the `u32` wire index
+            // (the engine has already stripped the `u32` length frame): fixed 4-byte
+            // little-endian, decoded back through phon to stay codec-consistent.
+            let index = vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Fd index: {e}"))?;
             let owned = take_fd(index)?;
             Ok(Fd {
                 inner: Cell::new(Some(owned)),
@@ -330,18 +330,15 @@ mod unix {
         }
 
         #[test]
-        fn fd_round_trips_through_postcard() {
+        fn fd_round_trips_through_phon() {
             let file = temp_file_with(b"vox-fd-payload");
             let msg = Fd::new(OwnedFd::from(file));
 
-            let (bytes, collected) = collect_fds(|| vox_postcard::to_vec(&msg).expect("encode"));
+            let (bytes, collected) = collect_fds(|| vox_phon::to_vec(&msg).expect("encode"));
             assert_eq!(collected.len(), 1, "one fd collected");
-            assert_eq!(&bytes[..4], &1u32.to_le_bytes());
-            assert_eq!(bytes[4], 0);
 
-            let decoded: Fd = provide_fds(collected, || {
-                vox_postcard::from_slice(&bytes).expect("decode")
-            });
+            let decoded: Fd =
+                provide_fds(collected, || vox_phon::from_slice(&bytes).expect("decode"));
 
             let mut f = std::fs::File::from(decoded.into_owned_fd().expect("owned fd"));
             let mut got = String::new();
@@ -352,8 +349,8 @@ mod unix {
         #[test]
         fn missing_source_is_a_clean_error() {
             let msg = Fd::new(OwnedFd::from(temp_file_with(b"x")));
-            let (bytes, _fds) = collect_fds(|| vox_postcard::to_vec(&msg).unwrap());
-            let r = std::panic::catch_unwind(|| vox_postcard::from_slice::<Fd>(&bytes));
+            let (bytes, _fds) = collect_fds(|| vox_phon::to_vec(&msg).unwrap());
+            let r = std::panic::catch_unwind(|| vox_phon::from_slice::<Fd>(&bytes));
             assert!(
                 r.is_err() || r.unwrap().is_err(),
                 "decoding an Fd with no source must fail"

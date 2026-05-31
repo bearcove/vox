@@ -19,17 +19,10 @@ members = [
   "rust/vox-macros-core",
   "rust/vox-macros",
   "rust/vox",
-  "rust/vox-bench",
   "rust/subject-rust",
   "rust/vox-codegen",
   "rust/facet-cbor",
-  "rust/vox-postcard",
   "rust/vox-phon",
-  "rust/vox-jit-cal",
-  "rust/vox-jit-abi",
-  "rust/vox-jit",
-  "rust/vox-swift-abi",
-  "rust/vox-jit-tests",
   "rust/wasm-browser-tests",
   "rust/wasm-inprocess-tests",
   "typescript/peer-server",
@@ -66,9 +59,7 @@ vox-local = { path = "rust/vox-local", version = "0.8.2" }
 vox-ffi = { path = "rust/vox-ffi", version = "0.8.2" }
 subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
-vox-postcard = { path = "rust/vox-postcard", version = "0.8.2" }
 vox-phon = { path = "rust/vox-phon", version = "0.8.2" }
-vox-jit-cal = { path = "rust/vox-jit-cal", version = "0.8.2" }
 
 # phon: the next-generation codec (single self-describing schema + compact
 # payload codec), replacing vox-postcard + vox-jit on the `phon-codec` branch.
@@ -79,9 +70,6 @@ phon-engine = { path = "../phon/rust/phon-engine" }
 phon-ir = { path = "../phon/rust/phon-ir" }
 phon-schema = { path = "../phon/rust/phon-schema" }
 phon-jit = { path = "../phon/rust/phon-jit" }
-vox-jit-abi = { path = "rust/vox-jit-abi", version = "0.8.2" }
-vox-jit = { path = "rust/vox-jit", version = "0.8.2" }
-vox-swift-abi = { path = "rust/vox-swift-abi", version = "0.8.2" }
 facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
 

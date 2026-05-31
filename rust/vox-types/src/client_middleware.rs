@@ -127,6 +127,7 @@ mod tests {
     fn client_request_can_add_metadata() {
         let mut call = RequestCall {
             method_id: MethodId(1),
+            channels: Vec::new(),
             metadata: Default::default(),
             args: Payload::PostcardBytes(&[]),
             schemas: Default::default(),

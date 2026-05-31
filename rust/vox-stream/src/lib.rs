@@ -882,7 +882,7 @@ mod tests {
         let server = tokio::spawn(async move {
             let link = acceptor.accept().await.unwrap();
             let (tx, _rx) = link.split();
-            let (body, fds) = collect_fds(|| vox_postcard::to_vec(&fd_msg).unwrap());
+            let (body, fds) = collect_fds(|| vox_phon::to_vec(&fd_msg).unwrap());
             assert_eq!(fds.len(), 1);
             tx.send_with_fds(body, fds).await.unwrap();
         });
@@ -896,7 +896,7 @@ mod tests {
             Backing::Boxed(b) => b.to_vec(),
             Backing::Shared(s) => s.as_bytes().to_vec(),
         };
-        let decoded: Fd = provide_fds(frame_fds, || vox_postcard::from_slice(&bytes).unwrap());
+        let decoded: Fd = provide_fds(frame_fds, || vox_phon::from_slice(&bytes).unwrap());
         let mut f = std::fs::File::from(decoded.into_owned_fd().unwrap());
         let mut got = String::new();
         f.read_to_string(&mut got).unwrap();
