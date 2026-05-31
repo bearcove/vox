@@ -25,6 +25,19 @@ pub use schema::generate_send_schema_table;
 pub use server::generate_server;
 pub use types::{collect_named_types, generate_named_types};
 
+/// Generate the phon `Message` wire module for `@bearcove/vox-wire`: the envelope
+/// type declarations, the self-describing schema-bytes, a ready `registry`, and the
+/// `schemaId` constants — produced by delegating to `phon-codegen`. vox-wire's codec
+/// decodes/encodes the envelope against this registry via `@bearcove/phon-engine`.
+pub fn generate_phon_wire() -> String {
+    let module =
+        phon_codegen::Module::from_shapes(&[<vox_types::Message<'static> as facet_core::Facet<
+            'static,
+        >>::SHAPE])
+        .expect("derive phon schema for the Message envelope");
+    phon_codegen::typescript::render(&module)
+}
+
 /// Generate method IDs as a TypeScript constant record.
 pub fn generate_method_ids(methods: &[&MethodDescriptor]) -> String {
     use crate::render::{fq_name, hex_u64};
