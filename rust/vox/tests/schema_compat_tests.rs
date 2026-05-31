@@ -416,13 +416,14 @@ async fn missing_required_field_is_non_retryable() {
 
     // New client calls old daemon. The response has DaemonStatus with only
     // {uptime_ms, listen}, but the client expects {uptime_ms, listen, pid,
-    // executable_path}. Translation plan fails on the missing required fields.
+    // executable_path}. The phon compat decode rejects the missing required
+    // (non-default) reader fields up front (r[compat.plan-first]).
     let err = client.status().await.expect_err("call should fail");
 
-    // The error must be InvalidPayload (translation plan failure).
+    // The error must be InvalidPayload (schema reconciliation failure).
     assert!(
-        matches!(&err, VoxError::InvalidPayload(msg) if msg.contains("translation plan failed")),
-        "expected InvalidPayload with translation plan failure, got: {err:?}"
+        matches!(&err, VoxError::InvalidPayload(msg) if msg.contains("Incompatible")),
+        "expected InvalidPayload with a schema-incompatibility failure, got: {err:?}"
     );
 
     // And it must be non-retryable.

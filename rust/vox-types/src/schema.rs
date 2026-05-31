@@ -1574,9 +1574,17 @@ mod tests {
     // r[verify schema.tracking.sent]
     #[test]
     fn tracker_prepare_send_includes_transitive_deps() {
+        // A nested *composite* (`Inner`) is a real transitive dependency: the phon
+        // schema closure carries it alongside the root. (Scalars like `u32`/`String`
+        // are inline primitives, not separate schemas.)
+        #[derive(Facet)]
+        struct Inner {
+            x: u32,
+            y: u32,
+        }
         #[derive(Facet)]
         struct Outer {
-            inner: u32,
+            inner: Inner,
             name: String,
         }
 
@@ -1587,22 +1595,20 @@ mod tests {
             .attach_schemas_for_shape_if_needed(method, schematic.shape, &mut schematic)
             .unwrap();
         assert!(!first.is_empty(), "should return schemas");
-        let parsed = SchemaPayload::from_cbor(&first.0).expect("should parse CBOR");
+        let parsed =
+            vox_phon::parse_schema_bytes(&first.0).expect("should parse phon schema bytes");
         assert!(
-            parsed.schemas.len() >= 3,
-            "should include transitive deps, got {}",
+            parsed.schemas.len() >= 2,
+            "closure should include the transitive composite (Outer + Inner), got {}",
             parsed.schemas.len()
         );
 
-        // Same method again — nothing to send
+        // Same method again — nothing to send (binding deduped by method+direction).
         schematic.shape = <u32 as Facet>::SHAPE;
         let again = tracker
             .attach_schemas_for_shape_if_needed(method, schematic.shape, &mut schematic)
             .unwrap();
-        assert!(
-            again.is_empty(),
-            "u32 was already sent as transitive dep, method already bound"
-        );
+        assert!(again.is_empty(), "method binding already sent");
     }
 
     // r[verify schema.tracking.received]
@@ -1752,7 +1758,7 @@ mod tests {
             .attach_schemas_for_shape_if_needed(method, args_schematic.shape, &mut args_schematic)
             .unwrap();
         assert!(!args.is_empty(), "should send args");
-        let args_parsed = SchemaPayload::from_cbor(&args.0).expect("parse args CBOR");
+        let args_parsed = vox_phon::parse_schema_bytes(&args.0).expect("parse args phon bytes");
 
         // Send response binding for the same method — should NOT be deduplicated
         let mut response_schematic =
@@ -1765,7 +1771,8 @@ mod tests {
             )
             .unwrap();
         assert!(!response.is_empty(), "should send response");
-        let response_parsed = SchemaPayload::from_cbor(&response.0).expect("parse response CBOR");
+        let response_parsed =
+            vox_phon::parse_schema_bytes(&response.0).expect("parse response phon bytes");
         assert_ne!(args_parsed.root, response_parsed.root);
 
         // Record received bindings (raw phon schema bytes) and verify args and
