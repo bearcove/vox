@@ -1076,11 +1076,6 @@ impl ChannelSink for DriverChannelSink {
 /// Boxes the future returned by `handle()` so the trait is dyn-safe.
 /// Implemented automatically for any `Handler<DriverReplySink>`.
 pub trait ErasedHandler: MaybeSend + MaybeSync + 'static {
-    fn retry_policy(&self, method_id: vox_types::MethodId) -> vox_types::RetryPolicy {
-        let _ = method_id;
-        vox_types::RetryPolicy::VOLATILE
-    }
-
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         let _ = method_id;
         false
@@ -1100,10 +1095,6 @@ pub trait ErasedHandler: MaybeSend + MaybeSync + 'static {
 }
 
 impl<H: Handler<DriverReplySink>> ErasedHandler for H {
-    fn retry_policy(&self, method_id: vox_types::MethodId) -> vox_types::RetryPolicy {
-        Handler::retry_policy(self, method_id)
-    }
-
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         Handler::args_have_channels(self, method_id)
     }
@@ -1123,9 +1114,6 @@ impl<H: Handler<DriverReplySink>> ErasedHandler for H {
 }
 
 impl Handler<DriverReplySink> for Box<dyn ErasedHandler> {
-    fn retry_policy(&self, method_id: vox_types::MethodId) -> vox_types::RetryPolicy {
-        (**self).retry_policy(method_id)
-    }
 
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         (**self).args_have_channels(method_id)
@@ -1546,9 +1534,6 @@ pub struct DriverCaller {
     shared: Arc<DriverShared>,
     local_control_tx: mpsc::UnboundedSender<DriverLocalControl>,
     closed_rx: watch::Receiver<Option<ConnectionCloseReason>>,
-    resumed_rx: watch::Receiver<u64>,
-    resume_processed_rx: watch::Receiver<u64>,
-    peer_supports_retry: bool,
     _drop_guard: Option<Arc<CallerDropGuard>>,
 }
 
@@ -1782,9 +1767,6 @@ impl DriverCaller {
             "vox caller request sent; waiting for response"
         );
 
-        let mut resumed_rx = self.resumed_rx.clone();
-        let mut seen_resume_generation = *resumed_rx.borrow();
-        let mut resume_processed_rx = self.resume_processed_rx.clone();
         let mut closed_rx = self.closed_rx.clone();
         let mut response = std::pin::pin!(rx.named("awaiting_response"));
 
@@ -1853,7 +1835,6 @@ pub struct Driver<H: Handler<DriverReplySink>> {
     closed_rx: watch::Receiver<Option<ConnectionCloseReason>>,
     resumed_rx: watch::Receiver<u64>,
     resume_processed_tx: watch::Sender<u64>,
-    peer_supports_retry: bool,
     local_control_rx: mpsc::UnboundedReceiver<DriverLocalControl>,
     handler: Arc<H>,
     shared: Arc<DriverShared>,
@@ -2030,7 +2011,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             local_settings,
             peer_settings,
             parity,
-            peer_supports_retry,
             observer,
         } = handle;
         let drop_control_request = DropControlRequest::Close(conn_id);
@@ -2043,7 +2023,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             closed_rx,
             resumed_rx,
             resume_processed_tx,
-            peer_supports_retry,
             local_control_rx,
             handler: Arc::new(handler),
             shared: Arc::new(DriverShared {
@@ -2114,9 +2093,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             shared: Arc::clone(&self.shared),
             local_control_tx: self.local_control_tx.clone(),
             closed_rx: self.closed_rx.clone(),
-            resumed_rx: self.resumed_rx.clone(),
-            resume_processed_rx: self.resume_processed_tx.subscribe(),
-            peer_supports_retry: self.peer_supports_retry,
             _drop_guard: drop_guard,
         }
     }

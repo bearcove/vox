@@ -99,7 +99,6 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
     tx: &Tx,
     rx: &mut Rx,
     settings: ConnectionSettings,
-    supports_retry: bool,
     resume_key: Option<&SessionResumeKey>,
     metadata: vox_types::Metadata<'static>,
 ) -> Result<HandshakeResult, HandshakeError> {
@@ -111,7 +110,6 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
         parity: settings.parity,
         connection_settings: settings.clone(),
         message_payload_schema: our_schema.clone(),
-        supports_retry,
         resume_key: resume_key.map(ResumeKeyBytes::from_key),
         metadata,
     };
@@ -152,7 +150,6 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
         role: SessionRole::Initiator,
         our_settings: settings,
         peer_settings: hy.connection_settings,
-        peer_supports_retry: hy.supports_retry,
         session_resume_key,
         peer_resume_key: None, // initiator doesn't receive a peer resume key
         our_schema,
@@ -173,7 +170,6 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     tx: &Tx,
     rx: &mut Rx,
     settings: ConnectionSettings,
-    supports_retry: bool,
     resumable: bool,
     expected_resume_key: Option<&SessionResumeKey>,
     metadata: vox_types::Metadata<'static>,
@@ -235,7 +231,6 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     let hy = vox_types::HelloYourself {
         connection_settings: our_settings.clone(),
         message_payload_schema: our_schema.clone(),
-        supports_retry,
         resume_key: our_resume_key.as_ref().map(ResumeKeyBytes::from_key),
         metadata,
     };
@@ -255,7 +250,6 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
         role: SessionRole::Acceptor,
         our_settings,
         peer_settings: hello.connection_settings,
-        peer_supports_retry: hello.supports_retry,
         session_resume_key: our_resume_key,
         peer_resume_key,
         our_schema,

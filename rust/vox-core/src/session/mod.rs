@@ -467,7 +467,6 @@ pub struct Session {
 
     /// Shared core (for sending) — also held by all ConnectionSenders.
     sess_core: Arc<SessionCore>,
-    peer_supports_retry: bool,
     local_root_settings: ConnectionSettings,
     peer_root_settings: Option<ConnectionSettings>,
     resumable: bool,
@@ -774,7 +773,6 @@ pub struct ConnectionHandle {
     pub(crate) peer_settings: ConnectionSettings,
     /// The parity this side should use for allocating request/channel IDs.
     pub parity: Parity,
-    pub(crate) peer_supports_retry: bool,
     pub(crate) observer: Option<VoxObserverHandle>,
 }
 
@@ -832,9 +830,6 @@ impl ConnectionHandle {
         *self.closed_rx.borrow()
     }
 
-    pub fn peer_supports_retry(&self) -> bool {
-        self.peer_supports_retry
-    }
 
     // r[impl rpc.debug.snapshot]
     pub fn debug_snapshot(&self) -> VoxDebugSnapshot {
@@ -900,7 +895,6 @@ pub async fn proxy_connections(
         local_settings: _left_local_settings,
         peer_settings: _left_peer_settings,
         parity: _left_parity,
-        peer_supports_retry: _left_peer_supports_retry,
         observer: _left_observer,
     } = left;
     let ConnectionHandle {
@@ -913,7 +907,6 @@ pub async fn proxy_connections(
         local_settings: _right_local_settings,
         peer_settings: _right_peer_settings,
         parity: _right_parity,
-        peer_supports_retry: _right_peer_supports_retry,
         observer: _right_observer,
     } = right;
 
@@ -1103,7 +1096,6 @@ impl Session {
             role: SessionRole::Initiator, // overwritten in establish_as_*
             parity: Parity::Odd,          // overwritten in establish_as_*
             sess_core,
-            peer_supports_retry: false,
             local_root_settings: ConnectionSettings {
                 parity: Parity::Odd,
                 max_concurrent_requests: 64,
@@ -1144,7 +1136,6 @@ impl Session {
         self.conn_ids = IdAllocator::new(result.our_settings.parity);
         self.local_root_settings = result.our_settings.clone();
         self.peer_root_settings = Some(result.peer_settings.clone());
-        self.peer_supports_retry = result.peer_supports_retry;
         self.session_resume_key = result.session_resume_key;
 
         if self.resumable && self.session_resume_key.is_none() {
@@ -1211,7 +1202,6 @@ impl Session {
             local_settings: handle_local_settings,
             peer_settings: handle_peer_settings,
             parity,
-            peer_supports_retry: self.peer_supports_retry,
             observer: self.observer.clone(),
         }
     }
@@ -1406,7 +1396,6 @@ impl Session {
             ));
         }
 
-        self.peer_supports_retry = result.peer_supports_retry;
         self.session_resume_key = result.session_resume_key.or(self.session_resume_key);
 
         self.sess_core.replace_tx_and_reset_schemas(tx);

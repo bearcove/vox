@@ -101,7 +101,7 @@ where
     L::Rx: MaybeSend + 'static,
 {
     let (tx, mut rx) = link.split();
-    let handshake_result = handshake_as_initiator(&tx, &mut rx, settings, true, None, vec![])
+    let handshake_result = handshake_as_initiator(&tx, &mut rx, settings, None, vec![])
         .await
         .map_err(session_error_from_handshake)?;
     let message_plan =
@@ -126,7 +126,7 @@ where
     L::Rx: MaybeSend + 'static,
 {
     let (tx, mut rx) = link.split();
-    let handshake_result = handshake_as_acceptor(&tx, &mut rx, settings, true, false, None, vec![])
+    let handshake_result = handshake_as_acceptor(&tx, &mut rx, settings, false, None, vec![])
         .await
         .map_err(session_error_from_handshake)?;
     let message_plan =
@@ -555,7 +555,6 @@ impl<'a, S> SessionSourceInitiatorBuilder<'a, S> {
                     &link.tx,
                     &mut link.rx,
                     config.root_settings.clone(),
-                    true,
                     None,
                     metadata_into_owned(config.metadata.clone()),
                 )
@@ -758,7 +757,6 @@ impl<'a, L> SessionTransportInitiatorBuilder<'a, L> {
             &link.tx,
             &mut link.rx,
             config.root_settings.clone(),
-            true,
             None,
             metadata_into_owned(config.metadata.clone()),
         )
@@ -824,7 +822,6 @@ where
                         &link.tx,
                         &mut link.rx,
                         self.settings.clone(),
-                        true,
                         selected_resume_key,
                         metadata_into_owned(self.metadata.clone()),
                     )
@@ -1196,7 +1193,6 @@ impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
                     &link.tx,
                     &mut link.rx,
                     config.root_settings.clone(),
-                    true,
                     config.resumable,
                     None,
                     metadata_into_owned(config.metadata.clone()),
@@ -1233,7 +1229,6 @@ impl<'a, L: Link> SessionTransportAcceptorBuilder<'a, L> {
                     &link.tx,
                     &mut link.rx,
                     config.root_settings.clone(),
-                    true,
                     config.resumable,
                     None,
                     metadata_into_owned(config.metadata.clone()),
