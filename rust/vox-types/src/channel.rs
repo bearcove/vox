@@ -1,18 +1,12 @@
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
-use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::panic::Location;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use facet::Facet;
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
-use facet_core::ConstTypeId;
 use facet_core::PtrConst;
 #[cfg(target_arch = "wasm32")]
 use moire::sync::TryAcquireError;
@@ -27,12 +21,6 @@ use crate::{
     VoxObserverHandle,
 };
 use crate::{ChannelId, ConnectionId};
-
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
-struct ChannelDecodePlan {
-    plan: vox_postcard::TranslationPlan,
-    registry: vox_schema::SchemaRegistry,
-}
 
 // ---------------------------------------------------------------------------
 // Thread-local channel binder — set during deserialization so TryFrom impls
@@ -631,54 +619,16 @@ fn observe_optional_replenisher_channel(
     }
 }
 
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
-fn channel_decode_plan<T: Facet<'static>>() -> Arc<ChannelDecodePlan> {
-    static PLANS: OnceLock<Mutex<HashMap<ConstTypeId, Arc<ChannelDecodePlan>>>> = OnceLock::new();
-
-    let plans = PLANS.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = T::SHAPE.id;
-    let mut plans = plans.lock().expect("channel decode plan mutex poisoned");
-    plans
-        .entry(key)
-        .or_insert_with(|| {
-            Arc::new(ChannelDecodePlan {
-                plan: vox_postcard::build_identity_plan(T::SHAPE),
-                registry: vox_schema::SchemaRegistry::new(),
-            })
-        })
-        .clone()
-}
-
-#[cfg(all(feature = "jit", not(target_arch = "wasm32")))]
+/// Decode one channel item through phon.
+///
+/// FIXME(channel-compat): this decodes single-schema (the item is decoded against
+/// `T`'s own descriptor), inheriting the pre-existing identity-plan behavior. Proper
+/// `r[compat.plan-first]` for channel elements needs the *writer's* element schema
+/// threaded from the channel-establishing method's schema closure down to the `Rx`
+/// at construction — there is no method/tracker context here. Until then a channel
+/// element type that evolved between peers will not reconcile (same gap as before).
 fn decode_channel_payload<T: Facet<'static>>(bytes: &'static [u8]) -> Result<T, RxError> {
-    if vox_jit::require_pure_jit() && vox_jit::force_fallback() {
-        panic!(
-            "VOX_JIT_REQUIRE_PURE=1 but channel payload decode for '{}' was forced off by VOX_CODEC",
-            T::SHAPE
-        );
-    }
-
-    let resolved = channel_decode_plan::<T>();
-    match vox_jit::global_runtime().try_decode_borrowed::<T>(
-        bytes,
-        0,
-        &resolved.plan,
-        &resolved.registry,
-    ) {
-        Some(result) => result.map_err(RxError::Deserialize),
-        None if vox_jit::require_pure_jit() => {
-            panic!(
-                "VOX_JIT_REQUIRE_PURE=1 but channel payload decode for '{}' did not use the JIT",
-                T::SHAPE
-            )
-        }
-        None => vox_postcard::from_slice_borrowed(bytes).map_err(RxError::Deserialize),
-    }
-}
-
-#[cfg(not(all(feature = "jit", not(target_arch = "wasm32"))))]
-fn decode_channel_payload<T: Facet<'static>>(bytes: &'static [u8]) -> Result<T, RxError> {
-    vox_postcard::from_slice_borrowed(bytes).map_err(RxError::Deserialize)
+    vox_phon::from_slice_borrowed::<T>(bytes).map_err(|e| RxError::Deserialize(e.to_string()))
 }
 
 fn decode_channel_item<T>(msg: SelfRef<ChannelItem<'static>>) -> Result<Option<SelfRef<T>>, RxError>
@@ -1648,7 +1598,7 @@ pub enum RxError {
     Unbound,
     Reset,
     ConnectionClosed(ConnectionCloseReason),
-    Deserialize(vox_postcard::error::DeserializeError),
+    Deserialize(String),
     Protocol(String),
 }
 
