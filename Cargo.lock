@@ -4236,6 +4236,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "vox-jit",
+ "vox-phon",
  "vox-postcard",
  "vox-types",
  "wasm-bindgen-futures",

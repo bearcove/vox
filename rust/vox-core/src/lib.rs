@@ -133,43 +133,6 @@ pub(crate) fn deserialize_postcard_with_plan<T: facet::Facet<'static>>(
     }
 }
 
-/// Like [`deserialize_postcard`] but uses an already-resolved JIT decoder,
-/// skipping the global cache lookup. Used by conduits that resolved their
-/// decoder at construction.
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn deserialize_postcard_with_decoder<T: facet::Facet<'static>>(
-    backing: Backing,
-    decoder: Option<&'static vox_jit::cache::CompiledDecoder>,
-    plan: &vox_postcard::plan::TranslationPlan,
-    registry: &vox_types::SchemaRegistry,
-) -> Result<SelfRef<T>, vox_postcard::DeserializeError> {
-    SelfRef::try_new(backing, |bytes| {
-        let Some(decoder) = decoder else {
-            return vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry);
-        };
-        let Some(decode_fn) = decoder.owned_fn_ptr() else {
-            tracing::warn!(
-                shape = %T::SHAPE,
-                "vox message JIT decoder missing function pointer; falling back"
-            );
-            return vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry);
-        };
-        match std::panic::catch_unwind(AssertUnwindSafe(|| {
-            vox_jit::decode_owned_with::<T>(decode_fn, bytes)
-        })) {
-            Ok(result) => result,
-            Err(payload) => {
-                tracing::warn!(
-                    shape = %T::SHAPE,
-                    panic = %panic_payload_message(&payload),
-                    "vox message JIT decode panicked; falling back"
-                );
-                vox_postcard::from_slice_with_plan::<T>(bytes, plan, registry)
-            }
-        }
-    })
-}
-
 #[cfg(not(target_arch = "wasm32"))]
 fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(message) = payload.downcast_ref::<&'static str>() {
