@@ -25,7 +25,9 @@ import {
   ChannelError,
   ChannelIdAllocator,
   ChannelRegistry,
+  DEFAULT_INITIAL_CREDIT,
   Role,
+  bindPhonChannels,
 } from "./channeling/index.ts";
 import type { Caller, CallerRequest } from "./caller.ts";
 import { MiddlewareCaller } from "./caller.ts";
@@ -1185,29 +1187,47 @@ export class ConnectionHandle {
     }
 
     const { methodSchemas, registry } = request;
-    const encodeCurrentArgs = (): Uint8Array => {
-      const values = Object.values(request.args);
-      return values.length === 0
-        ? new Uint8Array(0)
-        : encodeTyped(values as never, methodSchemas.argsRoot, registry);
+    const channelMetas = methodSchemas.channels;
+    const hasChannels = channelMetas.length > 0;
+    const channelCredit = {
+      outgoing: this.peerSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT,
+      incoming: this.localSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT,
     };
-    const prepareRetry = request.prepareRetry
+
+    // Bind any `Tx`/`Rx` arguments (out-of-band index design): allocate channel
+    // ids, bind the local-facing handles with a phon per-item codec, and replace
+    // each channel arg with its wire-index `Bytes` before encoding the tuple.
+    const encodeWithChannels = (): { payload: Uint8Array; channels: bigint[] } => {
+      const rawValues = Object.values(request.args);
+      if (!hasChannels) {
+        const payload = rawValues.length === 0
+          ? new Uint8Array(0)
+          : encodeTyped(rawValues as never, methodSchemas.argsRoot, registry);
+        return { payload, channels: request.channels ?? [] };
+      }
+      const bound = bindPhonChannels(
+        rawValues,
+        channelMetas,
+        this.channelAllocator,
+        this.channelRegistry,
+        registry,
+        channelCredit,
+      );
+      finalizeChannels = bound.finalize;
+      const payload = encodeTyped(bound.values as never, methodSchemas.argsRoot, registry);
+      return { payload, channels: bound.channels };
+    };
+
+    let finalizeChannels = request.finalizeChannels;
+    const prepareRetry = hasChannels
+      ? () => encodeWithChannels()
+      : request.prepareRetry
       ? () => {
           const rebuilt = request.prepareRetry!();
-          return { payload: encodeCurrentArgs(), channels: rebuilt.channels };
+          return { payload: encodeWithChannels().payload, channels: rebuilt.channels };
         }
       : undefined;
-    const initial = request.channels !== undefined
-      ? {
-          payload: encodeCurrentArgs(),
-          channels: request.channels,
-        }
-      : prepareRetry
-      ? prepareRetry()
-      : {
-          payload: encodeCurrentArgs(),
-          channels: [],
-        };
+    const initial = encodeWithChannels();
     const metadataCarrier = request.metadata ? request.metadata.clone() : new ClientMetadata();
     if (this.peerSupportsRetry) {
       ensureOperationId(metadataCarrier, this.nextOperationId++);
@@ -1240,7 +1260,7 @@ export class ConnectionHandle {
         persist: request.descriptor.retry?.persist ?? false,
         idem: request.descriptor.retry?.idem ?? false,
         prepareRetry,
-        finalizeChannels: request.finalizeChannels,
+        finalizeChannels,
         requestIds: new Set(),
         settled: false,
       };

@@ -22,6 +22,7 @@ export {
 } from "./descriptor.ts";
 
 export {
-  bindChannelsForTypeRefs,
-  finalizeBoundChannelsForTypeRefs,
+  bindPhonChannels,
+  type BoundChannels,
+  type ChannelCredit,
 } from "./binding.ts";
