@@ -1,128 +1,83 @@
-// Schema tracker for schema exchange.
+// Schema exchange on the phon engine.
 //
-// Receives CBOR-encoded SchemaPayload from the remote peer, stores
-// Schema objects, and provides TranslationPlans for decoding.
+// A peer advertises its type for a (method, direction) binding as a phon
+// schema-closure (self-describing bytes) in the `schemas:` field. The receiver
+// records the writer closure and builds a compatibility decoder reconciling it
+// against the local reader type (`r[compat.plan-first]`, `r[schema.exchange]`).
+//
+// r[impl schema.tracking.received] r[impl schema.translation.field-matching]
+// r[impl schema.translation.reorder] r[impl schema.errors.missing-required]
 
-// r[impl schema.tracking.received]
-// r[impl schema.translation.field-matching]
-// r[impl schema.translation.skip-unknown]
-// r[impl schema.translation.fill-defaults]
-// r[impl schema.translation.reorder]
-// r[impl schema.errors.early-detection]
-// r[impl schema.errors.type-mismatch]
-// r[impl schema.errors.missing-required]
+import { type Registry, type Schema, hexToBytes } from "@bearcove/phon-schema";
+import { type CompiledDecoder, compile } from "@bearcove/phon-engine";
+import { parseSchemaClosure } from "@bearcove/vox-wire";
 
-import type {
-  Schema,
-  SchemaRegistry,
-  TypeRef,
-  SchemaHash,
-  TranslationPlan,
-  SchemaSet,
-  BindingDirection,
-} from "@bearcove/vox-postcard";
-import { buildPlan, resolveTypeRef } from "@bearcove/vox-postcard";
-import { encodeSchemaPayload, decodeSchemaPayload } from "./schema_cbor.ts";
-import { voxLogger } from "./logger.ts";
+export type BindingDirection = "args" | "response";
 
-function debugJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
+/** Per-method schema data emitted by vox-codegen (`{service}Methods`). */
+export interface PhonChannelMeta {
+  index: number;
+  direction: "tx" | "rx";
+  elementRoot: bigint;
+}
+export interface PhonMethodSchemas {
+  argsRoot: bigint;
+  argsSchemaClosure: string;
+  okRoot: bigint;
+  channels: PhonChannelMeta[];
 }
 
-export class DuplicateReceivedSchemaError extends Error {
-  readonly typeId: SchemaHash;
-
-  constructor(typeId: SchemaHash) {
-    super(`duplicate schema ${typeId.toString(16)} received on same connection`);
-    this.typeId = typeId;
-    this.name = "DuplicateReceivedSchemaError";
-  }
-}
+const bindingKey = (methodId: bigint, direction: BindingDirection): string =>
+  `${methodId}:${direction}`;
 
 /**
- * Tracks schemas received from the remote peer and provides
- * TranslationPlans for decoding with schema evolution.
+ * Tracks the writer schema closures a peer advertised, and builds compat decoders
+ * against local reader roots.
  */
 export class SchemaTracker {
-  private schemas = new Map<SchemaHash, Schema>();
-  private methodBindings = new Map<string, { rootRef: TypeRef }>();
+  private received = new Map<string, { root: bigint; schemas: Schema[] }>();
+  // Cache of built decoders, keyed by (method, direction, readerRoot).
+  private decoders = new Map<string, CompiledDecoder>();
 
   reset(): void {
-    this.schemas.clear();
-    this.methodBindings.clear();
+    this.received.clear();
+    this.decoders.clear();
   }
 
   /**
-   * Record a CBOR-encoded SchemaPayload from the remote peer.
+   * Record the peer's phon schema-closure bytes for a binding. Best-effort and
+   * idempotent — receiving a schema again simply overwrites (`r[schema.exchange]`).
    */
-  recordReceived(
-    methodId: bigint,
-    direction: BindingDirection,
-    cborBytes: Uint8Array,
-  ): void {
-    const payload = decodeSchemaPayload(cborBytes);
-    const resolvedRootKind = resolveTypeRef(payload.root, new Map([
-      ...this.schemas,
-      ...payload.schemas.map((schema) => [schema.id, schema] as const),
-    ]));
+  recordReceived(methodId: bigint, direction: BindingDirection, schemaBytes: Uint8Array): void {
+    if (schemaBytes.length === 0) return;
+    this.received.set(bindingKey(methodId, direction), parseSchemaClosure(schemaBytes));
+    this.decoders.delete(`${bindingKey(methodId, direction)}`);
+  }
 
-    for (const schema of payload.schemas) {
-      const existing = this.schemas.get(schema.id);
-      if (existing) {
-        throw new DuplicateReceivedSchemaError(schema.id);
-      }
-      this.schemas.set(schema.id, schema);
-    }
-    this.methodBindings.set(this.bindingKey(methodId, direction), {
-      rootRef: payload.root,
-    });
-
-    voxLogger()?.debug(
-      `[vox:schema] recorded ${payload.schemas.length} schemas for method=${methodId} direction=${direction} root=${debugJson(payload.root)} resolved=${resolvedRootKind?.tag ?? "missing"}`,
-    );
+  hasReceived(methodId: bigint, direction: BindingDirection): boolean {
+    return this.received.has(bindingKey(methodId, direction));
   }
 
   /**
-   * Build a TranslationPlan for decoding remote args of a method.
-   *
-   * @param methodId - The method ID
-   * @param localSchemaSet - The local schema set for this method's args
-   * @returns TranslationPlan, or null if no remote schema available (identity)
+   * Build (and cache) a compat decoder for `(methodId, direction)` producing the
+   * reader type identified by `readerRoot`, resolved through `local` plus the
+   * writer's exchanged schemas. Returns null when no writer schema was received.
    */
-  buildTranslation(
+  buildDecoder(
     methodId: bigint,
     direction: BindingDirection,
-    localSchemaSet: SchemaSet,
-  ): { plan: TranslationPlan; remoteSchemaSet: SchemaSet } | null {
-    const binding = this.methodBindings.get(this.bindingKey(methodId, direction));
-    if (!binding) return null;
-
-    const rootKind = resolveTypeRef(binding.rootRef, this.schemas);
-    if (!rootKind) return null;
-
-    voxLogger()?.debug(
-      `[vox:schema] buildTranslation method=${methodId} direction=${direction} remote=${rootKind.tag} local=${localSchemaSet.root.kind.tag} root=${debugJson(binding.rootRef)}`,
-    );
-
-    const rootId = binding.rootRef.tag === "concrete" ? binding.rootRef.type_id : 0n;
-    const remoteSchemaSet: SchemaSet = {
-      root: { id: rootId, type_params: [], kind: rootKind },
-      registry: this.schemas,
-    };
-
-    return {
-      plan: buildPlan(remoteSchemaSet, localSchemaSet),
-      remoteSchemaSet,
-    };
-  }
-
-  /** Get the registry of all received schemas. */
-  getRegistry(): SchemaRegistry {
-    return this.schemas;
-  }
-
-  private bindingKey(methodId: bigint, direction: BindingDirection): string {
-    return `${methodId}:${direction}`;
+    readerRoot: bigint,
+    local: Registry,
+  ): CompiledDecoder | null {
+    const writer = this.received.get(bindingKey(methodId, direction));
+    if (!writer) return null;
+    const cacheKey = `${bindingKey(methodId, direction)}:${readerRoot}`;
+    const cached = this.decoders.get(cacheKey);
+    if (cached) return cached;
+    const reg = local.with(writer.schemas);
+    const decoder = compile(writer.root, readerRoot, reg);
+    this.decoders.set(cacheKey, decoder);
+    return decoder;
   }
 }
 
@@ -133,192 +88,26 @@ export class SchemaTranslationError extends Error {
   }
 }
 
-// ============================================================================
-// SchemaSendTracker — outbound schema exchange
-// ============================================================================
-
-/** Info for a single method's schema exchange requirements. */
-export interface MethodSendSchemas {
-  /** Root TypeRef for the args tuple schema. */
-  argsRootRef: import("@bearcove/vox-postcard").TypeRef;
-  /** Root TypeRef for the response schema. */
-  responseRootRef: import("@bearcove/vox-postcard").TypeRef;
-}
-
-/** Pre-computed send schema data for a service (generated by vox-codegen). */
-export interface ServiceSendSchemas {
-  /** All type schemas used by this service. typeId (content hash) → Schema object. */
-  schemas: Map<bigint, import("@bearcove/vox-postcard").Schema>;
-  /** Per-method schema info. method_id (bigint) → schema info. */
-  methods: Map<bigint, MethodSendSchemas>;
-}
-
-function collectReachableSchemaIds(
-  rootRef: TypeRef,
-  registry: SchemaRegistry,
-): bigint[] {
-  const ids: bigint[] = [];
-  const seen = new Set<bigint>();
-
-  const visitRef = (ref: TypeRef): void => {
-    if (ref.tag === "var") {
-      return;
-    }
-
-    for (const arg of ref.args) {
-      visitRef(arg);
-    }
-
-    if (seen.has(ref.type_id)) {
-      return;
-    }
-    seen.add(ref.type_id);
-    ids.push(ref.type_id);
-
-    const schema = registry.get(ref.type_id);
-    if (!schema) {
-      return;
-    }
-
-    visitKind(schema.kind);
-  };
-
-  const visitKind = (kind: SchemaSet["root"]["kind"]): void => {
-    switch (kind.tag) {
-      case "primitive":
-        return;
-      case "list":
-      case "array":
-      case "option":
-      case "channel":
-        visitRef(kind.element);
-        return;
-      case "map":
-        visitRef(kind.key);
-        visitRef(kind.value);
-        return;
-      case "tuple":
-        for (const element of kind.elements) {
-          visitRef(element);
-        }
-        return;
-      case "struct":
-        for (const field of kind.fields) {
-          visitRef(field.type_ref);
-        }
-        return;
-      case "enum":
-        for (const variant of kind.variants) {
-          switch (variant.payload.tag) {
-            case "unit":
-              break;
-            case "newtype":
-              visitRef(variant.payload.type_ref);
-              break;
-            case "tuple":
-              for (const typeRef of variant.payload.types) {
-                visitRef(typeRef);
-              }
-              break;
-            case "struct":
-              for (const field of variant.payload.fields) {
-                visitRef(field.type_ref);
-              }
-              break;
-          }
-        }
-        return;
-    }
-  };
-
-  visitRef(rootRef);
-  return ids;
-}
-
-export function localSchemaSetForMethod(
-  methodId: bigint,
-  direction: BindingDirection,
-  schemaTable: ServiceSendSchemas,
-): SchemaSet | null {
-  const methodInfo = schemaTable.methods.get(methodId);
-  if (!methodInfo) return null;
-
-  const rootRef = direction === "args" ? methodInfo.argsRootRef : methodInfo.responseRootRef;
-  const rootKind = resolveTypeRef(rootRef, schemaTable.schemas);
-  if (!rootKind) return null;
-
-  const rootId = rootRef.tag === "concrete" ? rootRef.type_id : 0n;
-  return {
-    root: { id: rootId, type_params: [], kind: rootKind },
-    registry: schemaTable.schemas,
-  };
-}
-
-export function argElementRefsForMethod(
-  methodId: bigint,
-  schemaTable: ServiceSendSchemas,
-): TypeRef[] {
-  const schemaSet = localSchemaSetForMethod(methodId, "args", schemaTable);
-  if (!schemaSet) {
-    throw new Error(`missing canonical args schema for method ${methodId}`);
-  }
-  if (schemaSet.root.kind.tag === "tuple") {
-    return schemaSet.root.kind.elements;
-  }
-  if (schemaSet.root.kind.tag === "primitive" && schemaSet.root.kind.primitive_type === "unit") {
-    return [];
-  }
-  throw new Error(`expected tuple or unit args root for method ${methodId}`);
-}
-
 /**
- * Tracks which method+direction schemas have been sent on a connection.
- *
- * Uses canonical schema data from code generation (ServiceSendSchemas).
- * Call `reset()` on reconnect. Call `prepareSchemas()` to get the CBOR bytes
- * to embed in RequestCall.schemas / RequestResponse.schemas.
+ * Tracks which (method, direction) schema closures have been advertised on a
+ * connection, so each is sent at most once (`r[schema.exchange.idempotent]`).
  */
 export class SchemaSendTracker {
-  private sentTypeIds = new Set<bigint>();
-  private sentMethods = new Set<string>();
+  private sent = new Set<string>();
 
   reset(): void {
-    this.sentTypeIds.clear();
-    this.sentMethods.clear();
+    this.sent.clear();
   }
 
   /**
-   * Returns CBOR bytes for the SchemaPayload to embed in a
-   * request/response for method `methodId` in `direction`.
-   * Returns empty Uint8Array if schemas for this method+direction were already sent.
+   * The phon schema-closure bytes (as a `number[]` for the `schemas:` wire field)
+   * to advertise for `(methodId, direction)`, or `[]` when already sent. The
+   * closure hex comes from the generated `{service}Methods` table.
    */
-  prepareSchemas(
-    methodId: bigint,
-    direction: "args" | "response",
-    schemaTable: ServiceSendSchemas,
-  ): Uint8Array {
-    const key = `${methodId}:${direction}`;
-    if (this.sentMethods.has(key)) return new Uint8Array(0);
-    this.sentMethods.add(key);
-
-    const methodInfo = schemaTable.methods.get(methodId);
-    if (!methodInfo) return new Uint8Array(0);
-
-    const rootRef = direction === "args" ? methodInfo.argsRootRef : methodInfo.responseRootRef;
-    const deps = collectReachableSchemaIds(rootRef, schemaTable.schemas);
-
-    const newDeps = deps.filter((id) => !this.sentTypeIds.has(id));
-    for (const id of newDeps) this.sentTypeIds.add(id);
-
-    // Collect Schema objects for new deps.
-    const schemas = newDeps
-      .map((id) => schemaTable.schemas.get(id))
-      .filter((s): s is import("@bearcove/vox-postcard").Schema => s !== undefined);
-
-    // CBOR-encode the payload using the new internally-tagged format.
-    return encodeSchemaPayload({
-      schemas,
-      root: rootRef,
-    });
+  prepareSchemas(methodId: bigint, direction: BindingDirection, closureHex: string): number[] {
+    const key = bindingKey(methodId, direction);
+    if (this.sent.has(key)) return [];
+    this.sent.add(key);
+    return Array.from(hexToBytes(closureHex));
   }
 }
