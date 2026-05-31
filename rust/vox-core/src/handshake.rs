@@ -287,8 +287,7 @@ mod tests {
         let (tx, mut rx) = link.split();
 
         let result =
-            handshake_as_initiator(&tx, &mut rx, settings(Parity::Odd, 0), true, None, vec![])
-                .await;
+            handshake_as_initiator(&tx, &mut rx, settings(Parity::Odd, 0), None, vec![]).await;
 
         assert!(
             matches!(
@@ -312,7 +311,6 @@ mod tests {
                 &server_tx,
                 &mut server_rx,
                 settings(Parity::Even, 16),
-                true,
                 false,
                 None,
                 vec![],
@@ -326,7 +324,6 @@ mod tests {
                 parity: Parity::Odd,
                 connection_settings: settings(Parity::Odd, 0),
                 message_payload_schema: message_schema(),
-                supports_retry: true,
                 resume_key: None,
                 metadata: vec![],
             }),

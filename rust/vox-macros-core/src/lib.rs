@@ -1101,19 +1101,6 @@ mod tests {
     }
 
     #[test]
-    fn method_retry_helper_attributes() {
-        assert_snapshot!(generate(quote! {
-            trait Billing {
-                #[vox(idem)]
-                async fn get_balance(&self, account: String) -> u64;
-
-                #[vox(persist)]
-                async fn send_money(&self, from: String, to: String) -> Result<u64, TransferError>;
-            }
-        }));
-    }
-
-    #[test]
     fn unit_return() {
         assert_snapshot!(generate(quote! {
             trait Notifier { async fn notify(&self, msg: String); }
@@ -1208,23 +1195,6 @@ mod tests {
         assert_eq!(
             err.message,
             "method `ping` receiver must be `&self`; typed receivers like `self: Type` are not supported in #[vox::service] traits"
-        );
-    }
-
-    #[test]
-    fn rejects_persist_methods_with_channel_arguments() {
-        let parsed = vox_macros_parse::parse_trait(&quote! {
-            trait Streamer {
-                #[vox(persist)]
-                async fn stream(&self, output: Tx<i32>) -> u64;
-            }
-        })
-        .unwrap();
-        let vox = quote! { ::vox };
-        let err = crate::generate_service(&parsed, &vox).unwrap_err();
-        assert_eq!(
-            err.message,
-            "method `stream` declares `#[vox(persist)]` but has Channel (Tx/Rx) arguments - persist methods cannot carry channels"
         );
     }
 

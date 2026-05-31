@@ -8,18 +8,11 @@ pub fn streamer_service_descriptor() -> &'static ::vox::session::ServiceDescript
         std::sync::OnceLock::new();
     DESCRIPTOR.get_or_init(|| {
         let methods: Vec<&'static ::vox::session::MethodDescriptor> =
-            vec![::vox::hash::method_descriptor_with_retry::<
-                (i32, Tx<i32>),
-                i32,
-            >(
+            vec![::vox::hash::method_descriptor::<(i32, Tx<i32>), i32>(
                 "Streamer",
                 "count_up",
                 &["start", "output"],
                 None,
-                ::vox::RetryPolicy {
-                    persist: false,
-                    idem: false,
-                },
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Streamer",
@@ -78,15 +71,6 @@ where
     H: Streamer,
     R: ::vox::ReplySink,
 {
-    fn retry_policy(&self, method_id: ::vox::MethodId) -> ::vox::RetryPolicy {
-        if method_id == streamer_service_descriptor().methods[0usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        ::vox::RetryPolicy::VOLATILE
-    }
     fn args_have_channels(&self, method_id: ::vox::MethodId) -> bool {
         if method_id == streamer_service_descriptor().methods[0usize].id {
             return streamer_service_descriptor().methods[0usize].args_have_channels;
@@ -213,7 +197,6 @@ impl StreamerClient {
         let method_id = streamer_service_descriptor().methods[0usize].id;
         let args = (start, output);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::NonIdem);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),

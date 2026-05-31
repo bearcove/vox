@@ -2866,7 +2866,6 @@ mod tests {
             role: SessionRole::Initiator,
             our_settings,
             peer_settings,
-            peer_supports_retry: true,
             session_resume_key: Some(SessionResumeKey([7; 16])),
             peer_resume_key: None,
             our_schema: vec![],

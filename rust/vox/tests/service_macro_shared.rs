@@ -17,7 +17,6 @@ fn test_acceptor_handshake(service: &'static str) -> HandshakeResult {
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        peer_supports_retry: true,
         session_resume_key: None,
         peer_resume_key: None,
         our_schema: vec![],
@@ -39,7 +38,6 @@ fn test_initiator_handshake(service: &'static str) -> HandshakeResult {
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        peer_supports_retry: true,
         session_resume_key: None,
         peer_resume_key: None,
         our_schema: vec![],
@@ -435,7 +433,8 @@ pub async fn run_request_context_end_to_end<L>(
         .describe()
         .await
         .expect("describe call should succeed");
-    assert_eq!(described, "describe:1");
+    // No metadata is auto-injected now that operation-id/retry metadata is gone.
+    assert_eq!(described, "describe:0");
 
     let plain = client.plain().await.expect("plain call should succeed");
     assert_eq!(plain, "plain");

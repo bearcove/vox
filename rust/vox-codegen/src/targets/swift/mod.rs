@@ -201,7 +201,7 @@ fn generate_service_inner(
 mod tests {
     use super::generate_service;
     use vox::{Rx, Tx};
-    use vox_types::{MethodDescriptor, RetryPolicy, ServiceDescriptor, method_descriptor};
+    use vox_types::{ServiceDescriptor, method_descriptor};
 
     #[test]
     fn generated_swift_emits_channel_schemas() {
@@ -227,44 +227,6 @@ mod tests {
         assert!(
             generated.contains(".channel(direction: .rx, element:"),
             "generated Swift should emit Rx channel schema:\n{generated}"
-        );
-    }
-
-    #[test]
-    fn generated_swift_emits_retry_policy_for_client_and_dispatcher() {
-        let base = method_descriptor::<(u32,), ()>("RetrySvc", "rerun", &["value"], None);
-        let method = Box::leak(Box::new(MethodDescriptor {
-            id: base.id,
-            service_name: base.service_name,
-            method_name: base.method_name,
-            args_shape: base.args_shape,
-            args: base.args,
-            return_shape: base.return_shape,
-            args_have_channels: base.args_have_channels,
-            retry: RetryPolicy::PERSIST_IDEM,
-            doc: None,
-        }));
-        let methods: &'static [&'static MethodDescriptor] =
-            Box::leak(vec![method as &'static MethodDescriptor].into_boxed_slice());
-        let service = ServiceDescriptor {
-            service_name: "RetrySvc",
-            methods,
-            doc: None,
-        };
-
-        let generated = generate_service(&service);
-
-        assert!(
-            generated.contains("retry: .persistIdem"),
-            "generated Swift client should pass retry policy:\n{generated}"
-        );
-        assert!(
-            generated.contains("public func retryPolicy(methodId: UInt64) -> RetryPolicy"),
-            "generated Swift dispatcher should expose retry policy lookup:\n{generated}"
-        );
-        assert!(
-            generated.contains("return .persistIdem"),
-            "generated Swift dispatcher should return the method retry policy:\n{generated}"
         );
     }
 

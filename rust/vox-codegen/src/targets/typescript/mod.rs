@@ -192,9 +192,7 @@ mod tests {
 
     use super::generate_service;
     use facet::Facet;
-    use vox_types::{
-        RetryPolicy, Rx, ServiceDescriptor, Tx, method_descriptor, method_descriptor_with_retry,
-    };
+    use vox_types::{Rx, ServiceDescriptor, Tx, method_descriptor};
 
     #[derive(Facet)]
     struct RecursiveNode {
@@ -396,40 +394,6 @@ mod tests {
         assert!(
             generated.contains("kind: { tag: 'channel', direction: 'rx'"),
             "Rx<T> must be emitted into canonical service schemas:\n{generated}"
-        );
-    }
-
-    #[test]
-    fn generated_typescript_emits_retry_policy_on_method_descriptors() {
-        let fetch = method_descriptor_with_retry::<(), u64>(
-            "RetrySvc",
-            "fetch",
-            &[],
-            None,
-            RetryPolicy::IDEM,
-        );
-        let effect = method_descriptor_with_retry::<(), Result<u64, String>>(
-            "RetrySvc",
-            "effect",
-            &[],
-            None,
-            RetryPolicy::PERSIST,
-        );
-        let methods = Box::leak(vec![fetch, effect].into_boxed_slice());
-        let service = ServiceDescriptor {
-            service_name: "RetrySvc",
-            methods,
-            doc: None,
-        };
-
-        let generated = generate_service(&service);
-        assert!(
-            generated.contains("retry: { persist: false, idem: true }"),
-            "generated TypeScript must include retry policy for idem methods:\n{generated}"
-        );
-        assert!(
-            generated.contains("retry: { persist: true, idem: false }"),
-            "generated TypeScript must include retry policy for persist methods:\n{generated}"
         );
     }
 

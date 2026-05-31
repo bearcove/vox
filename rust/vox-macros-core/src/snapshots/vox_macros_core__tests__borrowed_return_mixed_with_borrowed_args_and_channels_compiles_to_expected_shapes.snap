@@ -1,13 +1,38 @@
 ---
 source: rust/vox-macros-core/src/lib.rs
-assertion_line: 1347
 expression: "generate(quote!\n{\n    trait WordLab\n    {\n        async fn is_short(&self, word: &str) -> bool; async fn\n        classify(&self, word: String) -> &'vox str; async fn\n        transform(&self, prefix: &str, input: Rx<String>, output: Tx<String>)\n        -> u32;\n    }\n})"
 ---
 #[allow(non_snake_case, clippy::all)]
 pub fn word_lab_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
     static DESCRIPTOR: std::sync::OnceLock<&'static ::vox::session::ServiceDescriptor> =
         std::sync::OnceLock::new();
-    DESCRIPTOR . get_or_init (|| { let methods : Vec < & 'static :: vox :: session :: MethodDescriptor > = vec ! [:: vox :: hash :: method_descriptor_with_retry :: < (& 'static str ,) , bool > ("WordLab" , "is_short" , & ["word"] , None , :: vox :: RetryPolicy { persist : false , idem : false , } ,) , :: vox :: hash :: method_descriptor_with_retry :: < (String ,) , & 'static str > ("WordLab" , "classify" , & ["word"] , None , :: vox :: RetryPolicy { persist : false , idem : false , } ,) , :: vox :: hash :: method_descriptor_with_retry :: < (& 'static str , Rx < String > , Tx < String > ,) , u32 > ("WordLab" , "transform" , & ["prefix" , "input" , "output"] , None , :: vox :: RetryPolicy { persist : false , idem : false , } ,)] ; Box :: leak (Box :: new (:: vox :: session :: ServiceDescriptor { service_name : "WordLab" , methods : Box :: leak (methods . into_boxed_slice ()) , doc : None , })) })
+    DESCRIPTOR.get_or_init(|| {
+        let methods: Vec<&'static ::vox::session::MethodDescriptor> = vec![
+            ::vox::hash::method_descriptor::<(&'static str,), bool>(
+                "WordLab",
+                "is_short",
+                &["word"],
+                None,
+            ),
+            ::vox::hash::method_descriptor::<(String,), &'static str>(
+                "WordLab",
+                "classify",
+                &["word"],
+                None,
+            ),
+            ::vox::hash::method_descriptor::<(&'static str, Rx<String>, Tx<String>), u32>(
+                "WordLab",
+                "transform",
+                &["prefix", "input", "output"],
+                None,
+            ),
+        ];
+        Box::leak(Box::new(::vox::session::ServiceDescriptor {
+            service_name: "WordLab",
+            methods: Box::leak(methods.into_boxed_slice()),
+            doc: None,
+        }))
+    })
 }
 pub trait WordLab
 where
@@ -66,27 +91,6 @@ where
     H: WordLab,
     R: ::vox::ReplySink,
 {
-    fn retry_policy(&self, method_id: ::vox::MethodId) -> ::vox::RetryPolicy {
-        if method_id == word_lab_service_descriptor().methods[0usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        if method_id == word_lab_service_descriptor().methods[1usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        if method_id == word_lab_service_descriptor().methods[2usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        ::vox::RetryPolicy::VOLATILE
-    }
     fn args_have_channels(&self, method_id: ::vox::MethodId) -> bool {
         if method_id == word_lab_service_descriptor().methods[0usize].id {
             return word_lab_service_descriptor().methods[0usize].args_have_channels;
@@ -334,7 +338,6 @@ impl WordLabClient {
         let method_id = word_lab_service_descriptor().methods[0usize].id;
         let args = (word,);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::None);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),
@@ -407,7 +410,6 @@ impl WordLabClient {
         let method_id = word_lab_service_descriptor().methods[1usize].id;
         let args = (word,);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::None);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),
@@ -485,7 +487,6 @@ impl WordLabClient {
         let method_id = word_lab_service_descriptor().methods[2usize].id;
         let args = (prefix, input, output);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::NonIdem);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),

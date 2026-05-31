@@ -1,6 +1,5 @@
 ---
 source: rust/vox-macros-core/src/lib.rs
-assertion_line: 1128
 expression: "generate(quote!\n{\n    trait Calc\n    { async fn div(&self, a: f64, b: f64) -> Result<f64, DivError>; }\n})"
 ---
 #[allow(non_snake_case, clippy::all)]
@@ -9,19 +8,10 @@ pub fn calc_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
         std::sync::OnceLock::new();
     DESCRIPTOR.get_or_init(|| {
         let methods: Vec<&'static ::vox::session::MethodDescriptor> =
-            vec![::vox::hash::method_descriptor_with_retry::<
+            vec![::vox::hash::method_descriptor::<
                 (f64, f64),
                 Result<f64, DivError>,
-            >(
-                "Calc",
-                "div",
-                &["a", "b"],
-                None,
-                ::vox::RetryPolicy {
-                    persist: false,
-                    idem: false,
-                },
-            )];
+            >("Calc", "div", &["a", "b"], None)];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Calc",
             methods: Box::leak(methods.into_boxed_slice()),
@@ -79,15 +69,6 @@ where
     H: Calc,
     R: ::vox::ReplySink,
 {
-    fn retry_policy(&self, method_id: ::vox::MethodId) -> ::vox::RetryPolicy {
-        if method_id == calc_service_descriptor().methods[0usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        ::vox::RetryPolicy::VOLATILE
-    }
     fn args_have_channels(&self, method_id: ::vox::MethodId) -> bool {
         if method_id == calc_service_descriptor().methods[0usize].id {
             return calc_service_descriptor().methods[0usize].args_have_channels;
@@ -216,7 +197,6 @@ impl CalcClient {
         let method_id = calc_service_descriptor().methods[0usize].id;
         let args = (a, b);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::None);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),

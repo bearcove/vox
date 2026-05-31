@@ -1,6 +1,5 @@
 ---
 source: rust/vox-macros-core/src/lib.rs
-assertion_line: 1338
 expression: "generate(quote!\n{\n    trait TextSvc\n    {\n        async fn normalize(&self, input: String) -> ::std::borrow::Cow<'vox,\n        str>;\n    }\n})"
 ---
 #[allow(non_snake_case, clippy::all)]
@@ -9,19 +8,10 @@ pub fn text_svc_service_descriptor() -> &'static ::vox::session::ServiceDescript
         std::sync::OnceLock::new();
     DESCRIPTOR.get_or_init(|| {
         let methods: Vec<&'static ::vox::session::MethodDescriptor> =
-            vec![::vox::hash::method_descriptor_with_retry::<
+            vec![::vox::hash::method_descriptor::<
                 (String,),
                 ::std::borrow::Cow<'static, str>,
-            >(
-                "TextSvc",
-                "normalize",
-                &["input"],
-                None,
-                ::vox::RetryPolicy {
-                    persist: false,
-                    idem: false,
-                },
-            )];
+            >("TextSvc", "normalize", &["input"], None)];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "TextSvc",
             methods: Box::leak(methods.into_boxed_slice()),
@@ -79,15 +69,6 @@ where
     H: TextSvc,
     R: ::vox::ReplySink,
 {
-    fn retry_policy(&self, method_id: ::vox::MethodId) -> ::vox::RetryPolicy {
-        if method_id == text_svc_service_descriptor().methods[0usize].id {
-            return ::vox::RetryPolicy {
-                persist: false,
-                idem: false,
-            };
-        }
-        ::vox::RetryPolicy::VOLATILE
-    }
     fn args_have_channels(&self, method_id: ::vox::MethodId) -> bool {
         if method_id == text_svc_service_descriptor().methods[0usize].id {
             return text_svc_service_descriptor().methods[0usize].args_have_channels;
@@ -215,7 +196,6 @@ impl TextSvcClient {
         let method_id = text_svc_service_descriptor().methods[0usize].id;
         let args = (input,);
         let mut metadata = Default::default();
-        ::vox::ensure_channel_retry_mode(&mut metadata, ::vox::ChannelRetryMode::None);
         let req = ::vox::RequestCall {
             method_id,
             args: ::vox::Payload::outgoing(&args),
