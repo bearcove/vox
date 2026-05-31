@@ -16,9 +16,11 @@ export {
 } from "./channeling/index.ts";
 
 export {
-  argElementRefsForMethod,
-  type MethodSendSchemas,
-  type ServiceSendSchemas,
+  SchemaTracker,
+  SchemaSendTracker,
+  type BindingDirection,
+  type PhonMethodSchemas,
+  type PhonChannelMeta,
 } from "./schema_tracker.ts";
 
 export {
@@ -91,8 +93,7 @@ export {
 export {
   ClientMetadata,
   type ClientMetadataValue,
-  clientMetadataToEntries,
-  metadataEntriesToClientMetadata,
+  clientMetadataToWire,
 } from "./metadata.ts";
 
 export {

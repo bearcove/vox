@@ -4,7 +4,14 @@
 // Uses localStorage.debug pattern matching (like npm's debug package).
 
 import type { ClientMiddleware, ClientContext, CallRequest, CallOutcome } from "./middleware.ts";
-import { RpcError, RpcErrorCode } from "@bearcove/vox-wire";
+import { MetadataKeys, RpcError, RpcErrorCode } from "@bearcove/vox-wire";
+
+/** Render a raw metadata value for log display. */
+function renderMetadataValue(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (value instanceof Uint8Array) return `<${value.length} bytes>`;
+  return value;
+}
 
 const START_TIME = Symbol("logging:start-time");
 
@@ -149,13 +156,15 @@ export function loggingMiddleware(options: LoggingOptions = {}): ClientMiddlewar
       if (logMetadata && request.metadata.size > 0) {
         // r[impl call.metadata.flags] - Respect SENSITIVE flag when logging
         const metaObj: Record<string, unknown> = {};
-        for (const [key, value] of request.metadata) {
+        for (const [key, value] of request.metadata.entries()) {
+          // Hide well-known flag keys from logged output.
+          if (key === MetadataKeys.SENSITIVE || key === MetadataKeys.NO_PROPAGATE) {
+            continue;
+          }
           if (request.metadata.isSensitive(key)) {
             metaObj[key] = "[REDACTED]";
-          } else if (value instanceof Uint8Array) {
-            metaObj[key] = `<${value.length} bytes>`;
           } else {
-            metaObj[key] = value;
+            metaObj[key] = renderMetadataValue(value);
           }
         }
         logObj.metadata = metaObj;

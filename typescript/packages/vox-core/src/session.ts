@@ -1,8 +1,4 @@
-import {
-  decodeWithKind,
-  decodeWithPlan,
-  encodeWithKind,
-} from "@bearcove/vox-postcard";
+import { encodeTyped } from "@bearcove/phon-engine";
 import {
   type ConnectionSettings,
   type RequestMessage,
@@ -10,7 +6,7 @@ import {
   type SchemaMessage,
   type Message,
   type Metadata,
-  type MetadataEntry,
+  emptyMetadata,
  // parityEven,
  // parityOdd,
   messageAccept,
@@ -34,7 +30,7 @@ import {
 import type { Caller, CallerRequest } from "./caller.ts";
 import { MiddlewareCaller } from "./caller.ts";
 import type { ClientMiddleware } from "./middleware.ts";
-import { ClientMetadata, clientMetadataToEntries } from "./metadata.ts";
+import { ClientMetadata } from "./metadata.ts";
 import type { Conduit } from "./conduit.ts";
 import { AsyncQueue } from "./internal/async_queue.ts";
 import { deferred, type Deferred } from "./internal/deferred.ts";
@@ -55,11 +51,7 @@ import {
 } from "./internal/parity.ts";
 import { BareConduit, buildMessageDecodePlan } from "./conduit.ts";
 import { voxLogger } from "./logger.ts";
-import {
-  localSchemaSetForMethod,
-  SchemaTracker,
-  SchemaSendTracker,
-} from "./schema_tracker.ts";
+import { SchemaTracker, SchemaSendTracker } from "./schema_tracker.ts";
 import type { Link, LinkSource } from "./link.ts";
 // import { singleLinkSource } from "./link.ts";
 import {
@@ -87,7 +79,7 @@ interface PendingResponse {
    * Called on every send so that after a SchemaSendTracker.reset() (session
    * resume), fresh schemas are included in the retried request.
    */
-  computeSchemas?: () => Uint8Array;
+  computeSchemas?: () => number[];
   /** Whether this method uses persist retry policy (affects close behavior). */
   persist: boolean;
   /** Whether this method is idempotent. */
@@ -106,7 +98,7 @@ export interface IncomingCall {
   methodId: bigint;
   args: Uint8Array;
   channels: bigint[];
-  metadata: MetadataEntry[];
+  metadata: Metadata;
 }
 
 /** Current connectivity state of a resumable session. */
@@ -251,23 +243,8 @@ function sessionResumeKeyId(key: Uint8Array): string {
   return Array.from(key, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function cloneMetadataValue(value: MetadataEntry["value"]): MetadataEntry["value"] {
-  switch (value.tag) {
-    case "Bytes":
-      return { tag: "Bytes", value: value.value.slice() };
-    case "String":
-      return { tag: "String", value: value.value };
-    case "U64":
-      return { tag: "U64", value: value.value };
-  }
-}
-
 function cloneMetadata(metadata: Metadata): Metadata {
-  return metadata.map((entry) => ({
-    key: entry.key,
-    value: cloneMetadataValue(entry.value),
-    flags: entry.flags,
-  }));
+  return new Map(metadata);
 }
 
 interface EstablishedTransport {
@@ -289,7 +266,7 @@ async function makeInitiatorEstablishedTransport(
   if (isLinkSource(transport)) {
     const attachment = await transport.nextLink();
     await requestTransportMode(attachment.link);
-    const handshake = await handshakeAsInitiator(attachment.link, localSettings, true, null, options.metadata ?? []);
+    const handshake = await handshakeAsInitiator(attachment.link, localSettings, true, null, options.metadata ?? emptyMetadata());
     const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
 
     // For resumable bare sessions: build a recoverConduit that reconnects,
@@ -323,7 +300,7 @@ async function makeInitiatorEstablishedTransport(
               localSettings,
               true,
               keyCell.value,
-              options.metadata ?? [],
+              options.metadata ?? emptyMetadata(),
             );
             // Update the key for the next reconnect.
             keyCell.value = newHandshake.sessionResumeKey;
@@ -394,7 +371,7 @@ async function makeInitiatorEstablishedTransport(
   }
 
   await requestTransportMode(transport);
-  const handshake = await handshakeAsInitiator(transport, localSettings, true, null, options.metadata ?? []);
+  const handshake = await handshakeAsInitiator(transport, localSettings, true, null, options.metadata ?? emptyMetadata());
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
 
   return {
@@ -424,7 +401,7 @@ async function makeAcceptorEstablishedTransport(
     true,
     options.resumable ?? false,
     null,
-    options.metadata ?? [],
+    options.metadata ?? emptyMetadata(),
   );
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
 
@@ -614,7 +591,7 @@ class SessionCore {
 
   async openConnection(
     settings: ConnectionSettings,
-    metadata: Metadata = [],
+    metadata: Metadata = emptyMetadata(),
   ): Promise<ConnectionHandle> {
     // r[impl connection.open]
     this.assertConnected("resume before opening connections");
@@ -639,7 +616,7 @@ class SessionCore {
     return result.promise;
   }
 
-  async closeConnection(connectionId: bigint, metadata: Metadata = []): Promise<void> {
+  async closeConnection(connectionId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
     // r[impl connection.close]
     this.assertConnected("resume before closing connections");
     if (connectionId === 0n) {
@@ -921,7 +898,7 @@ class SessionCore {
       connection.getSchemaTracker().recordReceived(
         schemaMessage.method_id,
         direction,
-        schemaMessage.schemas,
+        new Uint8Array(schemaMessage.schemas),
       );
     } catch (error) {
       throw SessionError.protocol(error instanceof Error ? error.message : String(error));
@@ -930,7 +907,7 @@ class SessionCore {
 
   private async handleConnectionOpen(
     connectionId: bigint,
-    value: { connection_settings: ConnectionSettings; metadata: Metadata },
+    value: { connection_settings: ConnectionSettings; metadata: unknown },
   ): Promise<void> {
     // r[impl connection.open]
     // r[impl connection.open.rejection]
@@ -938,7 +915,7 @@ class SessionCore {
     if (!this.onConnection) {
       await this.sendMessage({
         connection_id: connectionId,
-        payload: { tag: "ConnectionReject", value: { metadata: [] } },
+        payload: { tag: "ConnectionReject", value: { metadata: emptyMetadata() } },
       });
       return;
     }
@@ -946,7 +923,7 @@ class SessionCore {
     if (value.connection_settings.initial_channel_credit <= 0) {
       await this.sendMessage({
         connection_id: connectionId,
-        payload: { tag: "ConnectionReject", value: { metadata: [] } },
+        payload: { tag: "ConnectionReject", value: { metadata: emptyMetadata() } },
       });
       return;
     }
@@ -964,7 +941,7 @@ class SessionCore {
       this.peerSupportsRetry,
     );
     this.connections.set(connectionId, connection);
-    await this.sendMessage(messageAccept(connectionId, localSettings, []));
+    await this.sendMessage(messageAccept(connectionId, localSettings, emptyMetadata()));
     void this.onConnection(connection);
   }
 
@@ -1022,7 +999,7 @@ class SessionCore {
             connection.getSchemaTracker().recordReceived(
               request.body.value.method_id,
               "args",
-              callSchemas,
+              new Uint8Array(callSchemas),
             );
           } catch (error) {
             throw SessionError.protocol(error instanceof Error ? error.message : String(error));
@@ -1033,7 +1010,7 @@ class SessionCore {
           methodId: request.body.value.method_id,
           args: request.body.value.args,
           channels: [],
-          metadata: request.body.value.metadata,
+          metadata: request.body.value.metadata as Metadata,
         });
         return;
       }
@@ -1046,7 +1023,7 @@ class SessionCore {
             connection.getSchemaTracker().recordReceived(
               methodId,
               "response",
-              responseSchemas,
+              new Uint8Array(responseSchemas),
             );
           } catch (error) {
             throw SessionError.protocol(error instanceof Error ? error.message : String(error));
@@ -1098,12 +1075,12 @@ export class SessionHandle {
 
   openConnection(
     settings: ConnectionSettings = this.core.defaultConnectionSettings(),
-    metadata: Metadata = [],
+    metadata: Metadata = emptyMetadata(),
   ): Promise<ConnectionHandle> {
     return this.core.openConnection(settings, metadata);
   }
 
-  closeConnection(connectionId: bigint, metadata: Metadata = []): Promise<void> {
+  closeConnection(connectionId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
     return this.core.closeConnection(connectionId, metadata);
   }
 
@@ -1285,7 +1262,7 @@ export class ConnectionHandle {
     if (!decoder) {
       throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
     }
-    const decoded = decoder(responsePayload) as { tag: string; value?: unknown };
+    const decoded = decoder(responsePayload) as unknown as { tag: string; value?: unknown };
 
     if (decoded.tag === "Ok") {
       return decoded.value;
@@ -1314,14 +1291,14 @@ export class ConnectionHandle {
   async sendResponse(
     requestId: bigint,
     payload: Uint8Array,
-    metadata: Metadata = [],
-    channels: bigint[] = [],
-    schemas: Uint8Array = new Uint8Array(0),
+    metadata: Metadata = emptyMetadata(),
+    _channels: bigint[] = [],
+    schemas: number[] = [],
   ): Promise<void> {
-    await this.session.sendMessage(messageResponse(requestId, payload, metadata, channels, this.id, schemas));
+    await this.session.sendMessage(messageResponse(requestId, payload, metadata, this.id, schemas));
   }
 
-  async sendCancel(requestId: bigint, metadata: Metadata = []): Promise<void> {
+  async sendCancel(requestId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
     await this.session.sendMessage(messageCancel(requestId, this.id, metadata));
   }
 
@@ -1329,7 +1306,7 @@ export class ConnectionHandle {
     await this.session.sendMessage(messageData(channelId, payload, this.id));
   }
 
-  async sendChannelClose(channelId: bigint, metadata: Metadata = []): Promise<void> {
+  async sendChannelClose(channelId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
     await this.session.sendMessage(messageClose(channelId, this.id, metadata));
   }
 
@@ -1719,7 +1696,7 @@ export const session = {
       max_concurrent_requests: options.maxConcurrentRequests ?? 64,
       initial_channel_credit: channelCapacityFromOptions(options),
     };
-    const handshake = await handshakeAsInitiator(link, localSettings, true, null, options.metadata ?? []);
+    const handshake = await handshakeAsInitiator(link, localSettings, true, null, options.metadata ?? emptyMetadata());
     return Session.initiatorConduit(
       new BareConduit(link, buildMessageDecodePlan(handshake.peerMessageSchema)),
       handshake,
@@ -1736,7 +1713,7 @@ export const session = {
       max_concurrent_requests: options.maxConcurrentRequests ?? 64,
       initial_channel_credit: channelCapacityFromOptions(options),
     };
-    const handshake = await handshakeAsAcceptor(link, localSettings, true, false, null, options.metadata ?? []);
+    const handshake = await handshakeAsAcceptor(link, localSettings, true, false, null, options.metadata ?? emptyMetadata());
     return Session.initiatorConduit(
       new BareConduit(link, buildMessageDecodePlan(handshake.peerMessageSchema)),
       handshake,

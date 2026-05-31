@@ -4,7 +4,13 @@
 // value is a list of the key names they apply to (`r[rpc.metadata.flags]`).
 
 import type { Value } from "@bearcove/phon-schema";
-import { type Metadata, MetadataKeys, metadataAddFlag } from "@bearcove/vox-wire";
+import {
+  type Metadata,
+  MetadataKeys,
+  metadataAddFlag,
+  metadataIsSensitive,
+  metadataIsNoPropagate,
+} from "@bearcove/vox-wire";
 
 /** A metadata value: string, u64 (bigint), or raw bytes. */
 export type ClientMetadataValue = string | bigint | Uint8Array;
@@ -55,6 +61,18 @@ export class ClientMetadata {
 
   keys(): IterableIterator<string> {
     return this.map.keys();
+  }
+
+  entries(): IterableIterator<[string, Value]> {
+    return this.map.entries();
+  }
+
+  isSensitive(key: string): boolean {
+    return metadataIsSensitive(this.map, key);
+  }
+
+  isNoPropagate(key: string): boolean {
+    return metadataIsNoPropagate(this.map, key);
   }
 
   /** The wire `Value` map (flags already folded into well-known keys). */

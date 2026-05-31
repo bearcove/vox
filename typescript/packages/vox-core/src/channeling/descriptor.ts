@@ -3,7 +3,15 @@
 // These are the TypeScript equivalents of the Rust ServiceDescriptor,
 // carrying method metadata plus the canonical schema table used at runtime.
 
-import type { ServiceSendSchemas } from "../schema_tracker.ts";
+import type { PhonMethodSchemas } from "../schema_tracker.ts";
+
+// TODO(phon-channels): the per-method channel runtime is being rewritten on the
+// phon engine. The canonical per-service schema table is now a phon-shaped map
+// of `PhonMethodSchemas` keyed by wire method id; each entry carries the args
+// root, the args schema-closure hex, the ok root, and the channel bindings
+// (`PhonMethodSchemas.channels`). This is a minimal correct typing for the
+// descriptor until that runtime lands.
+export type ServiceSendSchemas = Map<bigint, PhonMethodSchemas>;
 
 export interface RetryPolicy {
   /** Whether an admitted operation must persist once started. */
