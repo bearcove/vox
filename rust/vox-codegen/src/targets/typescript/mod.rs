@@ -126,16 +126,16 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     // Request/Response type aliases
     output.push_str(&generate_request_response_types(service, &named_types));
 
+    // phon registry + per-method schema table (registry + roots + channel metadata)
+    output.push_str(&generate_phon_service(service));
+
     // Client
     output.push_str(&generate_client(service));
 
     // Server (handler interface + dispatcher)
     output.push_str(&generate_server(service));
 
-    // Pre-computed CBOR send schema table (must come before descriptor)
-    output.push_str(&generate_send_schema_table(service));
-
-    // Service descriptor
+    // Service descriptor (references {service}Methods above)
     output.push_str(&generate_descriptor(service));
 
     output
@@ -178,13 +178,9 @@ fn generate_imports(service: &ServiceDescriptor, w: &mut CodeWriter<&mut String>
         cw_writeln!(w, "import {{ RpcError }} from \"@bearcove/vox-core\";").unwrap();
     }
 
-    // Tx/Rx and bindChannels for streaming handler args and type aliases
+    // Tx/Rx types for streaming handler args/returns.
     if has_streaming {
-        cw_writeln!(
-            w,
-            "import {{ Tx, Rx, argElementRefsForMethod, bindChannelsForTypeRefs, finalizeBoundChannelsForTypeRefs }} from \"@bearcove/vox-core\";"
-        )
-        .unwrap();
+        cw_writeln!(w, "import {{ Tx, Rx }} from \"@bearcove/vox-core\";").unwrap();
     }
 }
 

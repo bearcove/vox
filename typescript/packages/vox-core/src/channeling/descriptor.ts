@@ -11,7 +11,7 @@ import type { PhonMethodSchemas } from "../schema_tracker.ts";
 // root, the args schema-closure hex, the ok root, and the channel bindings
 // (`PhonMethodSchemas.channels`). This is a minimal correct typing for the
 // descriptor until that runtime lands.
-export type ServiceSendSchemas = Map<bigint, PhonMethodSchemas>;
+export type ServiceSendSchemas = Record<string, PhonMethodSchemas>;
 
 export interface RetryPolicy {
   /** Whether an admitted operation must persist once started. */

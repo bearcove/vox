@@ -348,24 +348,26 @@ fn codegen_typescript(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
 fn codegen_typescript_wire(
     workspace_root: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use vox_codegen::targets::typescript::wire::*;
-    use vox_types as rt;
-
-    let out_path = workspace_root
+    // The phon Message envelope module for vox-wire.
+    let wire_path = workspace_root
         .join("typescript")
         .join("packages")
         .join("vox-wire")
         .join("src")
-        .join("wire.generated.ts");
+        .join("wire.phon.generated.ts");
+    let wire = vox_codegen::targets::typescript::generate_phon_wire();
+    write_if_changed(&wire_path, fmt_typescript(&wire_path, wire))?;
 
-    let config = WireTypeGenConfig {
-        types: vec![WireType {
-            shape: <rt::Message<'static> as facet::Facet<'static>>::SHAPE,
-        }],
-    };
+    // The phon HandshakeMessage module for vox-core.
+    let hs_path = workspace_root
+        .join("typescript")
+        .join("packages")
+        .join("vox-core")
+        .join("src")
+        .join("handshake.phon.generated.ts");
+    let hs = vox_codegen::targets::typescript::generate_phon_handshake();
+    write_if_changed(&hs_path, fmt_typescript(&hs_path, hs))?;
 
-    let code = generate_wire(&config)?;
-    write_if_changed(&out_path, fmt_typescript(&out_path, code))?;
     Ok(())
 }
 

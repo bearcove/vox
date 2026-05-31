@@ -66,21 +66,8 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     ));
     out.push('\n');
 
-    out.push_str("export interface PhonChannelMeta {\n");
-    out.push_str("  index: number;\n");
-    out.push_str("  direction: \"tx\" | \"rx\";\n");
-    out.push_str("  elementRoot: bigint;\n");
-    out.push_str("}\n\n");
-
-    out.push_str("export interface PhonMethodSchemas {\n");
-    out.push_str("  argsRoot: bigint;\n");
-    out.push_str("  argsSchemaClosure: string;\n");
-    out.push_str("  okRoot: bigint;\n");
-    out.push_str("  channels: PhonChannelMeta[];\n");
-    out.push_str("}\n\n");
-
     out.push_str(&format!(
-        "export const {name}Methods: Record<string, PhonMethodSchemas> = {{\n"
+        "export const {name}Methods: Record<string, import(\"@bearcove/vox-core\").PhonMethodSchemas> = {{\n"
     ));
     for m in service.methods {
         let method_id = crate::method_id(m);
