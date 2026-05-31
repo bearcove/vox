@@ -4358,6 +4358,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "vox-phon"
+version = "0.8.2"
+dependencies = [
+ "facet",
+ "phon",
+ "phon-engine",
+]
+
+[[package]]
 name = "vox-postcard"
 version = "0.8.2"
 dependencies = [

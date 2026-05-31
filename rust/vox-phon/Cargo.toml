@@ -1,0 +1,18 @@
+[package]
+name = "vox-phon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "phon as a vox codec: encode/decode facet types through phon's typed (schema-driven) path."
+
+[package.metadata]
+
+[package.metadata."docs.rs"]
+rustdoc-args = ["--html-in-header", "arborium-header.html"]
+
+[dependencies]
+phon = { workspace = true }
+phon-engine = { workspace = true }
+facet = { workspace = true }
