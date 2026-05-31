@@ -136,7 +136,7 @@ zerocopy = { version = "0.8", features = ["derive"] }
 # Benchmarking
 divan = "0.1"
 dprint-plugin-typescript = "0.96"
-figue = "2.0.3"
+figue = "4"
 prettyplease = "0.2"
 insta = "1"
 unsynn = "0.3"
@@ -195,6 +195,10 @@ facet-typescript = { path = "../facet-format/facet-typescript" }
 facet-python = { path = "../facet-format/facet-python" }
 facet-zod = { path = "../facet-format/facet-zod" }
 facet-cargo-toml = { path = "../facet-cargo-toml" }
+# figue (used only by xtask) — bump to the local 4.x, which builds against the
+# sealed facet (vox pinned the pre-seal 2.0.x).
+figue = { path = "../figue/crates/figue" }
+figue-attrs = { path = "../figue/crates/figue-attrs" }
 
 # # Uncomment to develop moire
 # [patch."https://github.com/bearcove/moire"]

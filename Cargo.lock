@@ -1283,9 +1283,7 @@ checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
 
 [[package]]
 name = "figue"
-version = "2.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "406cc06d1f397eaeae3d11484ec87f8a8f0758688457203e362df3cb040591d8"
+version = "4.0.3"
 dependencies = [
  "ariadne",
  "camino",
@@ -1309,9 +1307,7 @@ dependencies = [
 
 [[package]]
 name = "figue-attrs"
-version = "2.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8764eb1d2d251c46c0e191cd5c97864ad93ab66a09bfdb0eb6c9e6096944f23c"
+version = "4.0.3"
 dependencies = [
  "facet",
 ]
