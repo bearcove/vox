@@ -81,9 +81,7 @@ type BoxHighLevelFuture<T> = Pin<Box<dyn Future<Output = T>>>;
 /// # }
 /// ```
 // r[impl rpc.session-setup]
-pub fn connect<Client: FromVoxSession>(
-    addr: impl std::fmt::Display,
-) -> ConnectBuilder<'static, Client> {
+pub fn connect<Client: FromVoxSession>(addr: impl std::fmt::Display) -> ConnectBuilder<Client> {
     ConnectBuilder::new(addr.to_string())
 }
 
@@ -121,7 +119,7 @@ fn parse_connect_address(addr: String) -> Result<ConnectAddress, SessionError> {
     }
 }
 
-pub struct ConnectBuilder<'a, Client> {
+pub struct ConnectBuilder<Client> {
     addr: String,
     metadata: Metadata,
     on_connection: Option<Arc<dyn ConnectionAcceptor>>,
@@ -133,7 +131,7 @@ pub struct ConnectBuilder<'a, Client> {
     _client: std::marker::PhantomData<Client>,
 }
 
-impl<'a, Client> ConnectBuilder<'a, Client> {
+impl<Client> ConnectBuilder<Client> {
     fn new(addr: String) -> Self {
         Self {
             addr,
@@ -211,7 +209,7 @@ fn validate_channel_capacity(channel_capacity: u32) -> Result<(), SessionError> 
     Ok(())
 }
 
-impl<'a, Client> ConnectBuilder<'a, Client>
+impl<Client> ConnectBuilder<Client>
 where
     Client: FromVoxSession,
 {
@@ -449,12 +447,12 @@ where
     }
 }
 
-impl<'a, Client> IntoFuture for ConnectBuilder<'a, Client>
+impl<Client> IntoFuture for ConnectBuilder<Client>
 where
-    Client: FromVoxSession + 'a,
+    Client: FromVoxSession + 'static,
 {
     type Output = Result<Client, SessionError>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + 'a>>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output> + 'static>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.establish())

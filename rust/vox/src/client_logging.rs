@@ -4,7 +4,7 @@ use tracing::debug;
 
 use crate::{
     BoxMiddlewareFuture, ClientCallOutcome, ClientContext, ClientMiddleware, ClientRequest,
-    MetadataEntry, MetadataFlags, MetadataValue,
+    Metadata, MetadataExt,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -100,44 +100,37 @@ impl ClientMiddleware for ClientLogging {
 #[derive(Debug)]
 struct RequestStart(Instant);
 
+/// Debug view of metadata that redacts the values of keys marked sensitive
+/// (`r[rpc.metadata.flags.sensitive]`) and hides the well-known flag keys.
 #[derive(Clone, Copy)]
-struct RedactedMetadata<'a>(&'a [MetadataEntry<'a>]);
+pub(crate) struct RedactedMetadata<'a>(pub(crate) &'a Metadata);
 
 impl std::fmt::Debug for RedactedMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut entries = f.debug_list();
-        for entry in self.0 {
-            entries.entry(&MetadataEntryDebug(entry));
+        let mut map = f.debug_map();
+        for (key, value) in self.0.meta_entries() {
+            if self.0.meta_is_sensitive(key) {
+                map.entry(&key, &"[REDACTED]");
+            } else {
+                map.entry(&key, &MetadataValueDebug(value));
+            }
         }
-        entries.finish()
+        map.finish()
     }
 }
 
-struct MetadataEntryDebug<'a>(&'a MetadataEntry<'a>);
-
-impl std::fmt::Debug for MetadataEntryDebug<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let entry = self.0;
-        let mut debug = f.debug_struct("MetadataEntry");
-        debug.field("key", &entry.key);
-        if entry.flags.contains(MetadataFlags::SENSITIVE) {
-            debug.field("value", &"[REDACTED]");
-        } else {
-            debug.field("value", &MetadataValueDebug(&entry.value));
-        }
-        debug.field("flags", &entry.flags);
-        debug.finish()
-    }
-}
-
-struct MetadataValueDebug<'a>(&'a MetadataValue<'a>);
+struct MetadataValueDebug<'a>(&'a Metadata);
 
 impl std::fmt::Debug for MetadataValueDebug<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            MetadataValue::String(value) => value.fmt(f),
-            MetadataValue::Bytes(bytes) => write!(f, "<{} bytes>", bytes.len()),
-            MetadataValue::U64(value) => value.fmt(f),
+        if let Some(s) = self.0.as_string() {
+            s.as_str().fmt(f)
+        } else if let Some(b) = self.0.as_bytes() {
+            write!(f, "<{} bytes>", b.as_slice().len())
+        } else if let Some(n) = self.0.as_number().and_then(|n| n.to_u64()) {
+            n.fmt(f)
+        } else {
+            write!(f, "{:?}", self.0)
         }
     }
 }
@@ -157,27 +150,28 @@ mod tests {
     };
 
     use super::{ClientLogging, ClientLoggingOptions, RedactedMetadata};
-    use crate::{MetadataEntry, MetadataFlags, MetadataValue, MethodDescriptor, MethodId};
+    use crate::{MetadataFlags, MethodDescriptor, MethodId, meta_set, metadata};
 
     #[test]
     fn metadata_debug_redacts_sensitive_values() {
-        let metadata = vec![
-            MetadataEntry {
-                key: "authorization".into(),
-                value: MetadataValue::String("Bearer secret".into()),
-                flags: MetadataFlags::SENSITIVE,
-            },
-            MetadataEntry {
-                key: "blob".into(),
-                value: MetadataValue::Bytes((&[1, 2, 3][..]).into()),
-                flags: MetadataFlags::NONE,
-            },
-        ];
-
-        assert_eq!(
-            format!("{:?}", RedactedMetadata(&metadata)),
-            "[MetadataEntry { key: \"authorization\", value: \"[REDACTED]\", flags: MetadataFlags(1) }, MetadataEntry { key: \"blob\", value: <3 bytes>, flags: MetadataFlags(0) }]"
+        let mut m = metadata().bytes("blob", &[1u8, 2, 3][..]).build();
+        meta_set(
+            &mut m,
+            "authorization",
+            "Bearer secret",
+            MetadataFlags::SENSITIVE,
         );
+
+        let rendered = format!("{:?}", RedactedMetadata(&m));
+        // The sensitive value is redacted; the non-sensitive one is shown; the
+        // secret never appears; the well-known flag key is hidden.
+        assert!(
+            rendered.contains("\"authorization\": \"[REDACTED]\""),
+            "{rendered}"
+        );
+        assert!(rendered.contains("\"blob\": <3 bytes>"), "{rendered}");
+        assert!(!rendered.contains("Bearer secret"), "{rendered}");
+        assert!(!rendered.contains("vox:sensitive"), "{rendered}");
     }
 
     #[tokio::test]
@@ -237,21 +231,17 @@ mod tests {
         let logging = ClientLogging::new(ClientLoggingOptions { log_metadata: true });
         let caller = caller.caller.with_middleware(&SERVICE, logging);
 
+        let mut request_metadata = metadata().u64("attempt", 2).build();
+        meta_set(
+            &mut request_metadata,
+            "authorization",
+            "Bearer secret",
+            MetadataFlags::SENSITIVE,
+        );
         let _ = caller
             .call(crate::RequestCall {
                 method_id: MethodId(7),
-                metadata: vec![
-                    MetadataEntry {
-                        key: "authorization".into(),
-                        value: MetadataValue::String("Bearer secret".into()),
-                        flags: MetadataFlags::SENSITIVE,
-                    },
-                    MetadataEntry {
-                        key: "attempt".into(),
-                        value: MetadataValue::U64(2),
-                        flags: MetadataFlags::NONE,
-                    },
-                ],
+                metadata: request_metadata,
                 args: crate::Payload::PostcardBytes(&[]),
                 schemas: Default::default(),
             })

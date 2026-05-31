@@ -4,9 +4,8 @@ use facet_pretty::{ColorMode, PrettyPrinter};
 use tracing::{debug, trace};
 
 use crate::{
-    BoxMiddlewareFuture, MetadataEntry, MetadataFlags, MetadataValue, RequestContext,
-    ServerCallOutcome, ServerMiddleware, ServerRequest, ServerResponse, ServerResponseContext,
-    ServerResponsePayload,
+    BoxMiddlewareFuture, Metadata, MetadataExt, RequestContext, ServerCallOutcome,
+    ServerMiddleware, ServerRequest, ServerResponse, ServerResponseContext, ServerResponsePayload,
 };
 
 const DEFAULT_PAYLOAD_MAX_DEPTH: usize = 4;
@@ -166,44 +165,37 @@ impl ServerMiddleware for ServerLogging {
 #[derive(Debug)]
 struct RequestStart(Instant);
 
+/// Debug view of metadata that redacts the values of keys marked sensitive
+/// (`r[rpc.metadata.flags.sensitive]`) and hides the well-known flag keys.
 #[derive(Clone, Copy)]
-struct RedactedMetadata<'a>(&'a [MetadataEntry<'a>]);
+struct RedactedMetadata<'a>(&'a Metadata);
 
 impl std::fmt::Debug for RedactedMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut entries = f.debug_list();
-        for entry in self.0 {
-            entries.entry(&MetadataEntryDebug(entry));
+        let mut map = f.debug_map();
+        for (key, value) in self.0.meta_entries() {
+            if self.0.meta_is_sensitive(key) {
+                map.entry(&key, &"[REDACTED]");
+            } else {
+                map.entry(&key, &MetadataValueDebug(value));
+            }
         }
-        entries.finish()
+        map.finish()
     }
 }
 
-struct MetadataEntryDebug<'a>(&'a MetadataEntry<'a>);
-
-impl std::fmt::Debug for MetadataEntryDebug<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let entry = self.0;
-        let mut debug = f.debug_struct("MetadataEntry");
-        debug.field("key", &entry.key);
-        if entry.flags.contains(MetadataFlags::SENSITIVE) {
-            debug.field("value", &"[REDACTED]");
-        } else {
-            debug.field("value", &MetadataValueDebug(&entry.value));
-        }
-        debug.field("flags", &entry.flags);
-        debug.finish()
-    }
-}
-
-struct MetadataValueDebug<'a>(&'a MetadataValue<'a>);
+struct MetadataValueDebug<'a>(&'a Metadata);
 
 impl std::fmt::Debug for MetadataValueDebug<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            MetadataValue::String(value) => value.fmt(f),
-            MetadataValue::Bytes(bytes) => write!(f, "<{} bytes>", bytes.len()),
-            MetadataValue::U64(value) => value.fmt(f),
+        if let Some(s) = self.0.as_string() {
+            s.as_str().fmt(f)
+        } else if let Some(b) = self.0.as_bytes() {
+            write!(f, "<{} bytes>", b.as_slice().len())
+        } else if let Some(n) = self.0.as_number().and_then(|n| n.to_u64()) {
+            n.fmt(f)
+        } else {
+            write!(f, "{:?}", self.0)
         }
     }
 }
@@ -222,53 +214,34 @@ mod tests {
         layer::SubscriberExt,
     };
 
-    use super::{
-        MetadataEntryDebug, MetadataValueDebug, RedactedMetadata, ServerLogging,
-        ServerLoggingOptions,
-    };
+    use super::{RedactedMetadata, ServerLogging, ServerLoggingOptions};
     use crate::{
-        Extensions, MetadataEntry, MetadataFlags, MetadataValue, RequestContext, ServerCallOutcome,
-        ServerMiddleware, ServerRequest,
+        Extensions, MetadataFlags, RequestContext, ServerCallOutcome, ServerMiddleware,
+        ServerRequest, meta_set, metadata,
     };
 
     #[test]
     fn metadata_debug_redacts_sensitive_values() {
-        let metadata = vec![
-            MetadataEntry {
-                key: "authorization".into(),
-                value: MetadataValue::String("Bearer secret".into()),
-                flags: MetadataFlags::SENSITIVE,
-            },
-            MetadataEntry {
-                key: "blob".into(),
-                value: MetadataValue::Bytes((&[1, 2, 3][..]).into()),
-                flags: MetadataFlags::NONE,
-            },
-            MetadataEntry {
-                key: "attempt".into(),
-                value: MetadataValue::U64(2),
-                flags: MetadataFlags::NONE,
-            },
-        ];
-
-        assert_eq!(
-            format!("{:?}", RedactedMetadata(&metadata)),
-            "[MetadataEntry { key: \"authorization\", value: \"[REDACTED]\", flags: MetadataFlags(1) }, MetadataEntry { key: \"blob\", value: <3 bytes>, flags: MetadataFlags(0) }, MetadataEntry { key: \"attempt\", value: 2, flags: MetadataFlags(0) }]"
+        let mut m = metadata()
+            .bytes("blob", &[1u8, 2, 3][..])
+            .u64("attempt", 2)
+            .build();
+        meta_set(
+            &mut m,
+            "authorization",
+            "Bearer secret",
+            MetadataFlags::SENSITIVE,
         );
 
-        let bytes = MetadataValue::Bytes((&[0; 4][..]).into());
-        assert_eq!(format!("{:?}", MetadataValueDebug(&bytes)), "<4 bytes>");
-        assert_eq!(
-            format!(
-                "{:?}",
-                MetadataEntryDebug(&MetadataEntry {
-                    key: "plain".into(),
-                    value: MetadataValue::String("value".into()),
-                    flags: MetadataFlags::NONE,
-                })
-            ),
-            "MetadataEntry { key: \"plain\", value: \"value\", flags: MetadataFlags(0) }"
+        let rendered = format!("{:?}", RedactedMetadata(&m));
+        assert!(
+            rendered.contains("\"authorization\": \"[REDACTED]\""),
+            "{rendered}"
         );
+        assert!(rendered.contains("\"blob\": <3 bytes>"), "{rendered}");
+        assert!(rendered.contains("\"attempt\": 2"), "{rendered}");
+        assert!(!rendered.contains("Bearer secret"), "{rendered}");
+        assert!(!rendered.contains("vox:sensitive"), "{rendered}");
     }
 
     #[tokio::test]
@@ -294,20 +267,15 @@ mod tests {
             doc: None,
         };
 
-        let metadata = vec![
-            MetadataEntry {
-                key: "authorization".into(),
-                value: MetadataValue::String("Bearer secret".into()),
-                flags: MetadataFlags::SENSITIVE,
-            },
-            MetadataEntry {
-                key: "attempt".into(),
-                value: MetadataValue::U64(2),
-                flags: MetadataFlags::NONE,
-            },
-        ];
+        let mut request_metadata = metadata().u64("attempt", 2).build();
+        meta_set(
+            &mut request_metadata,
+            "authorization",
+            "Bearer secret",
+            MetadataFlags::SENSITIVE,
+        );
         let extensions = Extensions::new();
-        let context = RequestContext::with_extensions(&METHOD, &metadata, &extensions);
+        let context = RequestContext::with_extensions(&METHOD, &request_metadata, &extensions);
         let request = ServerRequest::new(context, crate::Peek::new(&()));
         let response_wire: Result<i32, crate::VoxError<std::convert::Infallible>> = Ok(42);
         let response = crate::RequestResponse {
