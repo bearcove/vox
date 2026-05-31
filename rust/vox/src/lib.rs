@@ -120,10 +120,7 @@ pub use vox_postcard;
 // Re-export method identity functions (generated code uses `vox::hash::method_descriptor`)
 // TODO: generated code should be updated to use vox::method_descriptor directly
 pub mod hash {
-    pub use vox_types::{
-        method_descriptor, method_descriptor_with_retry, method_id_name_only,
-        shape_contains_channel,
-    };
+    pub use vox_types::{method_descriptor, method_id_name_only, shape_contains_channel};
 }
 
 // Re-export vox-types items used by generated code
@@ -141,7 +138,6 @@ pub use vox_types::{
     ChannelId,
     ChannelReceiverState,
     ChannelResetReason,
-    ChannelRetryMode,
     ChannelSendOutcome,
     ChannelTrySendOutcome,
     ClientCallOutcome,
@@ -178,12 +174,9 @@ pub use vox_types::{
     MethodDescriptor,
     MethodId,
     MsgFamily,
-    OPERATION_ID_METADATA_KEY,
     Parity,
     Payload,
     ProtocolErrorKind,
-    RETRY_SUPPORT_METADATA_KEY,
-    RETRY_SUPPORT_VERSION,
     ReplySink,
     RequestCall,
     RequestContext,
@@ -191,7 +184,6 @@ pub use vox_types::{
     RequestDebugState,
     RequestResponse,
     ResponseParts,
-    RetryPolicy,
     RpcEvent,
     RpcOutcome,
     RpcSide,
@@ -222,7 +214,6 @@ pub use vox_types::{
     WithTracker,
     // Channels
     channel,
-    ensure_channel_retry_mode,
     // Metadata helpers
     metadata_get_str,
     metadata_get_u64,
@@ -345,5 +336,5 @@ pub use vox_types::channel::{set_channel_binder, with_channel_binder};
 
 // Re-export the session module (generated code uses `vox::session::ServiceDescriptor`)
 pub mod session {
-    pub use vox_types::{MethodDescriptor, RetryPolicy, ServiceDescriptor};
+    pub use vox_types::{MethodDescriptor, ServiceDescriptor};
 }

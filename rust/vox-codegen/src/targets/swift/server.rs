@@ -13,15 +13,6 @@ use crate::code_writer::CodeWriter;
 use crate::cw_writeln;
 use crate::render::hex_u64;
 
-fn swift_retry_policy_literal(method: &MethodDescriptor) -> &'static str {
-    match (method.retry.persist, method.retry.idem) {
-        (false, false) => ".volatile",
-        (false, true) => ".idem",
-        (true, false) => ".persist",
-        (true, true) => ".persistIdem",
-    }
-}
-
 fn dispatch_helper_name(method_name: &str) -> String {
     format!("dispatch_{method_name}")
 }
@@ -148,24 +139,6 @@ fn generate_dispatcher(service: &ServiceDescriptor) -> String {
                 "    taskSender(.response(requestId: requestId, payload: encodeUnknownMethodError()))",
             )
             .unwrap();
-            w.writeln("}").unwrap();
-        }
-        w.writeln("}").unwrap();
-        w.blank_line().unwrap();
-
-        w.writeln("public func retryPolicy(methodId: UInt64) -> RetryPolicy {")
-            .unwrap();
-        {
-            let _indent = w.indent();
-            w.writeln("switch methodId {").unwrap();
-            for method in service.methods {
-                let method_id = crate::method_id(method);
-                let retry_policy = swift_retry_policy_literal(method);
-                cw_writeln!(w, "case {}:", hex_u64(method_id)).unwrap();
-                cw_writeln!(w, "    return {retry_policy}").unwrap();
-            }
-            w.writeln("default:").unwrap();
-            w.writeln("    return .volatile").unwrap();
             w.writeln("}").unwrap();
         }
         w.writeln("}").unwrap();
@@ -406,17 +379,10 @@ fn generate_channeling_dispatch_method(w: &mut CodeWriter<&mut String>, method: 
             w.writeln("} catch {").unwrap();
             {
                 let _indent = w.indent();
-                if method.retry.persist {
-                    w.writeln(
-                        "taskSender(.response(requestId: requestId, payload: encodeIndeterminateError(), methodId: methodId, schemaPayload: responseSchemaPayload))",
-                    )
-                    .unwrap();
-                } else {
-                    w.writeln(
-                        "taskSender(.response(requestId: requestId, payload: encodeInvalidPayloadError(reason: String(describing: error)), methodId: methodId, schemaPayload: responseSchemaPayload))",
-                    )
-                    .unwrap();
-                }
+                w.writeln(
+                    "taskSender(.response(requestId: requestId, payload: encodeInvalidPayloadError(reason: String(describing: error)), methodId: methodId, schemaPayload: responseSchemaPayload))",
+                )
+                .unwrap();
             }
             w.writeln("}").unwrap();
         }

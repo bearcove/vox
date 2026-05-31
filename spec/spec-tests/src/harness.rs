@@ -1326,7 +1326,6 @@ where
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            true,
             false,
             None,
             vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
@@ -1372,7 +1371,6 @@ where
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        true,
         None,
         vec![vox_types::MetadataEntry::str("vox-service", "Noop")],
     )

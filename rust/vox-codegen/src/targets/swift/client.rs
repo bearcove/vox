@@ -16,14 +16,6 @@ use crate::code_writer::CodeWriter;
 use crate::cw_writeln;
 use crate::render::hex_u64;
 
-fn swift_retry_policy_literal(method: &MethodDescriptor) -> &'static str {
-    match (method.retry.persist, method.retry.idem) {
-        (false, false) => ".volatile",
-        (false, true) => ".idem",
-        (true, false) => ".persist",
-        (true, true) => ".persistIdem",
-    }
-}
 
 /// Generate complete client code (caller protocol + client implementation).
 ///
@@ -166,7 +158,6 @@ fn generate_client_method(
 
     let ret_type = swift_type_client_return(method.return_shape);
     let has_streaming = method.args.iter().any(|a| is_channel(a.shape));
-    let retry_policy = swift_retry_policy_literal(method);
 
     // Method signature
     if ret_type == "Void" {
@@ -199,7 +190,6 @@ fn generate_client_method(
                 service_name,
                 &method_id_name,
                 &cursor_var,
-                retry_policy,
             );
         } else {
             // Encode arguments
@@ -216,7 +206,7 @@ fn generate_client_method(
             // Start the first request attempt for this logical call.
             cw_writeln!(
                 w,
-                "let response = try await connection.call(methodId: {}, metadata: [], payload: payload, retry: {retry_policy}, timeout: timeout, prepareRetry: nil, finalizeChannels: nil, schemaInfo: schemaInfo)",
+                "let response = try await connection.call(methodId: {}, metadata: [], payload: payload, timeout: timeout, prepareRetry: nil, finalizeChannels: nil, schemaInfo: schemaInfo)",
                 hex_u64(method_id),
             )
             .unwrap();
@@ -258,7 +248,6 @@ fn generate_streaming_client_body(
     service_name: &str,
     _method_id_name: &str,
     cursor_var: &str,
-    retry_policy: &str,
 ) {
     let service_name_lower = service_name.to_lower_camel_case();
 
@@ -314,7 +303,7 @@ fn generate_streaming_client_body(
     let _ = ret_type;
     cw_writeln!(
         w,
-        "let response = try await connection.call(methodId: {}, metadata: [], payload: prepared.payload, retry: {retry_policy}, timeout: timeout, prepareRetry: prepareRetry, finalizeChannels: {{ finalizeBoundChannels(argsRoot: {service_name_lower}_method_schemas[{}]!.argsRoot, schemaRegistry: {service_name_lower}_schema_registry, args: [{}]) }}, schemaInfo: schemaInfo)",
+        "let response = try await connection.call(methodId: {}, metadata: [], payload: prepared.payload, timeout: timeout, prepareRetry: prepareRetry, finalizeChannels: {{ finalizeBoundChannels(argsRoot: {service_name_lower}_method_schemas[{}]!.argsRoot, schemaRegistry: {service_name_lower}_schema_registry, args: [{}]) }}, schemaInfo: schemaInfo)",
         hex_u64(method_id),
         hex_u64(method_id),
         arg_names.join(", ")
