@@ -13,8 +13,8 @@
 
 use std::mem::MaybeUninit;
 
-use facet::Facet;
-use phon::derive::of;
+use facet::{Facet, Shape};
+use phon::derive::{of, of_shape};
 use phon_engine::{Registry, typed};
 use phon_ir::MemProgram;
 use phon_schema::bytes::Reader;
@@ -38,6 +38,16 @@ pub struct SchemaBundle {
 /// [`Error`] if `T` cannot be lowered to a phon schema.
 pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
     let d = of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
+    Ok(encode_bundle(d.root, &d.schemas))
+}
+
+/// Like [`schema_bytes`] but from a reflected `Shape` directly (the send tracker
+/// works with `&'static Shape`, not a generic `T`).
+///
+/// # Errors
+/// [`Error`] if the shape cannot be lowered to a phon schema.
+pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
+    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
     Ok(encode_bundle(d.root, &d.schemas))
 }
 

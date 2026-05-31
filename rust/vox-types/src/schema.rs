@@ -347,14 +347,14 @@ impl std::fmt::Debug for SchemaSendTracker {
 // r[impl schema.tracking.received]
 // r[impl schema.type-id.per-connection]
 pub struct SchemaRecvTracker {
-    /// Type schemas received from the remote peer.
-    received: Mutex<HashMap<SchemaHash, Schema>>,
-    /// Args bindings received: method_id → root TypeRef for args.
-    received_args_bindings: Mutex<HashMap<MethodId, TypeRef>>,
-    /// Response bindings received: method_id → root TypeRef for response.
-    received_response_bindings: Mutex<HashMap<MethodId, TypeRef>>,
+    /// Per (method, direction): the raw phon self-describing schema-closure bytes the
+    /// peer sent for that binding (`vox_phon::schema_bytes`). Receiving a binding more
+    /// than once is best-effort and idempotent — a later send overwrites, never errors
+    /// (`r[schema.exchange]`).
+    received_bindings: Mutex<HashMap<(MethodId, BindingDirection), Vec<u8>>>,
     /// Type-erased plan cache. Keyed by (method, direction, local Shape ptr).
-    /// Populated by higher-level crates (e.g. vox) that know the concrete plan type.
+    /// Populated by higher-level crates (e.g. vox) that hold the concrete plan type
+    /// (a `vox_phon::DecodeProgram`).
     plan_cache: Mutex<HashMap<PlanCacheKey, Box<dyn std::any::Any + Send + Sync>>>,
 }
 
@@ -366,102 +366,46 @@ pub struct PlanCacheKey {
     pub local_shape: &'static Shape,
 }
 
-/// Error returned when recording received schemas detects a protocol violation.
-#[derive(Debug)]
-pub struct DuplicateSchemaError {
-    pub type_id: SchemaHash,
-}
-
-impl std::fmt::Display for DuplicateSchemaError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "duplicate TypeSchemaId {:?} received on same connection — protocol error",
-            self.type_id
-        )
-    }
-}
-
-impl std::error::Error for DuplicateSchemaError {}
-
 impl SchemaRecvTracker {
     pub fn new() -> Self {
         SchemaRecvTracker {
-            received: Mutex::new(HashMap::new()),
-            received_args_bindings: Mutex::new(HashMap::new()),
-            received_response_bindings: Mutex::new(HashMap::new()),
+            received_bindings: Mutex::new(HashMap::new()),
             plan_cache: Mutex::new(HashMap::new()),
         }
     }
 
-    /// Record a parsed schema message from the remote peer.
-    ///
-    /// Returns `Err` if a TypeSchemaId was already received — this is a
-    /// protocol error (the send tracker didn't reset on reconnection).
+    /// Record the raw phon schema-closure bytes a peer sent for a binding. Best-effort
+    /// and idempotent: a duplicate send for the same (method, direction) simply
+    /// overwrites — it is NOT a protocol error (`r[schema.exchange]`).
     pub fn record_received(
         &self,
         method_id: MethodId,
         direction: BindingDirection,
-        payload: SchemaPayload,
-    ) -> Result<(), DuplicateSchemaError> {
-        {
-            let mut received = self.received.lock().unwrap();
-            for schema in &payload.schemas {
-                dlog!("[schema] record_received: id={:?}", schema.id);
-            }
-            for schema in payload.schemas {
-                if let Some(existing) = received.get(&schema.id) {
-                    dlog!(
-                        "[schema] DUPLICATE: id={:?} existing={:?} new={:?}",
-                        schema.id,
-                        existing,
-                        schema
-                    );
-                    return Err(DuplicateSchemaError { type_id: schema.id });
-                }
-                received.insert(schema.id, schema);
-            }
-        }
-        let map = match direction {
-            BindingDirection::Args => &self.received_args_bindings,
-            BindingDirection::Response => &self.received_response_bindings,
-        };
+        schema_bytes: Vec<u8>,
+    ) {
         dlog!(
-            "[schema] record binding: method={:?} direction={:?} root={:?}",
+            "[schema] record binding: method={:?} direction={:?} ({} bytes)",
             method_id,
             direction,
-            payload.root
+            schema_bytes.len()
         );
-        map.lock().unwrap().insert(method_id, payload.root);
-        Ok(())
-    }
-
-    /// Look up the remote's root TypeRef for a method's args.
-    pub fn get_remote_args_root(&self, method_id: MethodId) -> Option<TypeRef> {
-        self.received_args_bindings
+        self.received_bindings
             .lock()
             .unwrap()
-            .get(&method_id)
-            .cloned()
+            .insert((method_id, direction), schema_bytes);
     }
 
-    /// Look up the remote's root TypeRef for a method's response.
-    pub fn get_remote_response_root(&self, method_id: MethodId) -> Option<TypeRef> {
-        self.received_response_bindings
+    /// The raw phon schema-closure bytes the peer sent for a binding, if received.
+    pub fn writer_schema_bytes(
+        &self,
+        method_id: MethodId,
+        direction: BindingDirection,
+    ) -> Option<Vec<u8>> {
+        self.received_bindings
             .lock()
             .unwrap()
-            .get(&method_id)
+            .get(&(method_id, direction))
             .cloned()
-    }
-
-    /// Look up a received schema by type ID.
-    pub fn get_received(&self, type_id: &SchemaHash) -> Option<Schema> {
-        self.received.lock().unwrap().get(type_id).cloned()
-    }
-
-    /// Get a snapshot of the received schema registry for building translation plans.
-    pub fn received_registry(&self) -> SchemaRegistry {
-        self.received.lock().unwrap().clone()
     }
 
     /// Look up a cached plan by key, downcasting to `T`.
@@ -486,12 +430,6 @@ impl SchemaRecvTracker {
 impl Default for SchemaRecvTracker {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl SchemaSource for SchemaRecvTracker {
-    fn get_schema(&self, id: SchemaHash) -> Option<Schema> {
-        self.get_received(&id)
     }
 }
 
