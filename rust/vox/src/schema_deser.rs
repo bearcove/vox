@@ -49,7 +49,7 @@ pub fn schema_deserialize_response<T: Facet<'static>>(
     tracker: &SchemaRecvTracker,
 ) -> Result<T, Error> {
     let program = resolve_program::<T>(method_id, BindingDirection::Response, tracker)?;
-    vox_phon::decode_with_program::<T>(&program, bytes)
+    vox_phon::decode_owned_with_program::<T>(&program, bytes)
 }
 
 /// Resolve (and cache) the compat decode program for `T` against the peer's schema

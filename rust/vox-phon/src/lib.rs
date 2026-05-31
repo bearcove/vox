@@ -22,8 +22,8 @@ use phon_engine::{Registry, typed};
 
 pub mod schema;
 pub use schema::{
-    DecodeProgram, SchemaBundle, build_decode_program, decode_compat, decode_with_program,
-    parse_schema_bytes, schema_bytes, schema_bytes_for_shape,
+    DecodeProgram, SchemaBundle, build_decode_program, decode_compat, decode_owned_with_program,
+    decode_with_program, parse_schema_bytes, schema_bytes, schema_bytes_for_shape,
 };
 
 /// A codec error: the type could not be lowered to a phon schema, or the

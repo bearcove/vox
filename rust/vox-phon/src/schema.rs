@@ -103,6 +103,14 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
 #[derive(Clone)]
 pub struct DecodeProgram(MemProgram);
 
+// A built program is immutable, and its thunk `ctx` pointers are all `&'static`
+// references (facet defs / adapter defs) cast to `*const ()` — morally `Send + Sync`,
+// but the raw-pointer representation loses the auto-trait. Re-assert it so a program
+// can be cached on the shared `SchemaRecvTracker` and run from any thread.
+// Safety: immutable after build; thunk pointers are `&'static` / stateless.
+unsafe impl Send for DecodeProgram {}
+unsafe impl Sync for DecodeProgram {}
+
 /// Build the compat decode program reconciling `writer`'s schema against `T`'s
 /// derived descriptor (`r[compat.plan-first]`). Fails if the schemas are
 /// incompatible — before any bytes are touched.
@@ -140,6 +148,28 @@ pub fn decode_with_program<'a, T: Facet<'a>>(
     let mut slot = MaybeUninit::<T>::uninit();
     // Safety: `program` was lowered for `T`'s descriptor; on `Ok`, `decode_with`
     // fully initializes the slot. Borrowed fields point into `bytes` (the `'a` tie).
+    unsafe {
+        typed::decode_with(&program.0, bytes, slot.as_mut_ptr().cast::<u8>())
+            .map_err(|e| Error(format!("decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+        Ok(slot.assume_init())
+    }
+}
+
+/// Decode an OWNED `T` (`T: Facet<'static>`) through a prebuilt compat
+/// [`DecodeProgram`], independent of the input's lifetime. An owned wire type's
+/// descriptor uses owned vtables (allocating `String`/`Vec`, never `&str`/`Cow`), so
+/// the result borrows nothing from `bytes` and `bytes` may be short-lived.
+///
+/// # Errors
+/// [`Error`] for malformed or trailing input.
+pub fn decode_owned_with_program<T: Facet<'static>>(
+    program: &DecodeProgram,
+    bytes: &[u8],
+) -> Result<T, Error> {
+    let mut slot = MaybeUninit::<T>::uninit();
+    // Safety: `program` was lowered for `T`'s descriptor; `T: Facet<'static>` means
+    // the descriptor is fully owned (no borrowed leaves), so the decoded value owns
+    // its data and does not reference `bytes`.
     unsafe {
         typed::decode_with(&program.0, bytes, slot.as_mut_ptr().cast::<u8>())
             .map_err(|e| Error(format!("decode {}: {e:?}", T::SHAPE.type_identifier)))?;

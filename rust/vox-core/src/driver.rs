@@ -2185,23 +2185,23 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                         };
                         if let Some(method_id) = in_flight_method_id
                             && let Some(response_shape) = self.handler.response_wire_shape(method_id)
-                            && let Ok(extracted) = vox_types::extract_schemas(response_shape)
                         {
-                            let registry = vox_types::build_registry(&extracted.schemas);
+                            // The Err arm of `Result<T, VoxError<E>>` is independent of
+                            // T/E for non-`User` errors, so we can encode an erased
+                            // `Result<(), VoxError<Infallible>>` inline while advertising
+                            // the method's REAL response schema (so the caller decodes
+                            // against its own `Result<T, VoxError<E>>`).
                             let error: Result<(), VoxError<core::convert::Infallible>> =
                                 Err(vox_error);
-                            let encoded = vox_postcard::to_vec(&error)
-                                .expect("serialize runtime-generated error response");
                             let mut response = RequestResponse {
-                                ret: Payload::PostcardBytes(Box::leak(encoded.into_boxed_slice())),
+                                ret: Payload::outgoing(&error),
                                 metadata: Default::default(),
                                 schemas: Default::default(),
                             };
-                            self.sender.prepare_response_from_source(
+                            self.sender.prepare_response_for_shape(
                                 req_id,
                                 method_id,
-                                &extracted.root,
-                                &registry,
+                                response_shape,
                                 &mut response,
                             );
                             let _ = self.sender.send_response(req_id, response).await;

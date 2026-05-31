@@ -34,6 +34,7 @@ transport-all = ["transport-tcp", "transport-local", "transport-websocket"]
 
 [dependencies]
 vox-types.workspace = true
+vox-phon.workspace = true
 vox-service-macros.workspace = true
 vox-core = { workspace = true, optional = true }
 vox-stream = { workspace = true, optional = true }

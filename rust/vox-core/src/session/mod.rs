@@ -736,21 +736,21 @@ impl ConnectionSender {
         );
     }
 
-    /// Shape a response using an explicit canonical root type and schema source.
-    pub(crate) fn prepare_response_from_source(
+    /// Attach the method's response schema for an explicit wire `shape`. Used when the
+    /// driver synthesizes an error response whose payload is an erased `Result` but
+    /// which must advertise the method's real response schema so the caller can decode.
+    pub(crate) fn prepare_response_for_shape(
         &self,
         request_id: RequestId,
         method_id: vox_types::MethodId,
-        root_type: &vox_types::TypeRef,
-        source: &dyn vox_types::SchemaSource,
+        shape: &'static Shape,
         response: &mut RequestResponse<'_>,
     ) {
-        self.sess_core.prepare_response_from_source(
+        self.sess_core.prepare_response_for_shape(
             self.connection_id,
             request_id,
             method_id,
-            root_type,
-            source,
+            shape,
             response,
         );
     }
@@ -1033,29 +1033,17 @@ impl Session {
 
     fn record_received_schema_cbor(
         &mut self,
-        conn_id: ConnectionId,
+        _conn_id: ConnectionId,
         schema_recv_tracker: Arc<vox_types::SchemaRecvTracker>,
         method_id: vox_types::MethodId,
         direction: vox_types::BindingDirection,
-        schemas_cbor: &vox_types::CborPayload,
-        context: &str,
+        schema_bytes: &vox_types::CborPayload,
+        _context: &str,
     ) -> bool {
-        let payload = match vox_types::SchemaPayload::from_cbor(&schemas_cbor.0) {
-            Ok(payload) => payload,
-            Err(error) => {
-                self.close_connection_for_protocol_error(
-                    conn_id,
-                    format!("{context}: invalid schema CBOR: {error}"),
-                );
-                return false;
-            }
-        };
-
-        if let Err(error) = schema_recv_tracker.record_received(method_id, direction, payload) {
-            self.close_connection_for_protocol_error(conn_id, format!("{context}: {error}"));
-            return false;
-        }
-
+        // The `schemas` field carries the peer's phon self-describing schema closure.
+        // Store it verbatim; recording is best-effort/idempotent (`r[schema.exchange]`),
+        // so a duplicate binding is not a protocol error.
+        schema_recv_tracker.record_received(method_id, direction, schema_bytes.0.clone());
         true
     }
 
@@ -2558,23 +2546,23 @@ impl SessionCore {
                 return;
             }
         };
-        response.schemas = prepared.to_cbor();
+        response.schemas = prepared.to_payload();
     }
 
-    /// Prepare response schemas from an explicit canonical root type and schema source.
-    pub(crate) fn prepare_response_from_source(
+    /// Attach the method's response schema for an explicit wire `shape` (the
+    /// erased-error-response path). Commits directly (best-effort dedup,
+    /// `r[schema.exchange]`).
+    pub(crate) fn prepare_response_for_shape(
         &self,
         conn_id: ConnectionId,
         _request_id: RequestId,
         method_id: vox_types::MethodId,
-        root_type: &vox_types::TypeRef,
-        source: &dyn vox_types::SchemaSource,
+        shape: &'static Shape,
         response: &mut RequestResponse<'_>,
     ) {
         let mut inner = self.inner.lock().expect("session core mutex poisoned");
         let conn_state = get_or_create_send_conn_state(&mut inner, conn_id);
         let mut conn_state = conn_state.lock().expect("send conn state mutex poisoned");
-        let key = (vox_types::BindingDirection::Response, method_id);
         if conn_state
             .send_tracker
             .has_sent_binding(method_id, vox_types::BindingDirection::Response)
@@ -2582,9 +2570,16 @@ impl SessionCore {
             response.schemas = Default::default();
             return;
         }
-        let prepared =
-            Self::get_or_plan_binding_from_source(&mut conn_state, key, root_type, source);
-        response.schemas = prepared.to_cbor();
+        match vox_types::SchemaSendTracker::plan_for_shape(shape) {
+            Ok(prepared) => {
+                response.schemas = conn_state.send_tracker.commit_prepared_plan(
+                    method_id,
+                    vox_types::BindingDirection::Response,
+                    prepared,
+                );
+            }
+            Err(e) => tracing::error!("error-response schema extraction failed: {e}"),
+        }
     }
 
     fn get_or_plan_binding_for_shape(
@@ -2601,7 +2596,7 @@ impl SessionCore {
             Ok(prepared) => {
                 vox_types::dlog!(
                     "[schema] planned {} {} schemas for method {:?} (req {:?})",
-                    prepared.schemas.len(),
+                    prepared.bytes.len(),
                     kind,
                     key.1,
                     request_id
@@ -2616,18 +2611,21 @@ impl SessionCore {
         }
     }
 
-    fn get_or_plan_binding_from_source(
+    /// Forward a binding's schema for the proxy/relay path: source the peer's phon
+    /// schema-closure bytes from the receive tracker (where they were stored when the
+    /// upstream sent them) and re-send them verbatim. `None` if not received yet.
+    fn get_or_plan_binding_from_tracker(
         conn_state: &mut SendConnState,
         key: (vox_types::BindingDirection, vox_types::MethodId),
-        root_type: &vox_types::TypeRef,
-        source: &dyn vox_types::SchemaSource,
-    ) -> vox_types::PreparedSchemaPlan {
+        tracker: &vox_types::SchemaRecvTracker,
+    ) -> Option<vox_types::PreparedSchemaPlan> {
         if let Some(prepared) = conn_state.planned_bindings.get(&key) {
-            return prepared.clone();
+            return Some(prepared.clone());
         }
-        let prepared = vox_types::SchemaSendTracker::plan_from_source(root_type, source);
+        let bytes = tracker.writer_schema_bytes(key.1, key.0)?;
+        let prepared = vox_types::PreparedSchemaPlan { bytes };
         conn_state.planned_bindings.insert(key, prepared.clone());
-        prepared
+        Some(prepared)
     }
 
     fn plan_response_schema_send(
@@ -2647,17 +2645,14 @@ impl SessionCore {
 
         let key = (vox_types::BindingDirection::Response, method_id);
         let prepared = if !response.schemas.is_empty() {
+            // The response already carries its phon schema closure (forwarded from
+            // upstream, or set by an earlier stage) — re-send it verbatim.
             conn_state
                 .planned_bindings
                 .get(&key)
                 .cloned()
-                .unwrap_or_else(|| {
-                    let prepared_payload = vox_types::SchemaPayload::from_cbor(&response.schemas.0)
-                        .expect("prepared schema payloads must be valid CBOR");
-                    vox_types::PreparedSchemaPlan {
-                        schemas: prepared_payload.schemas,
-                        root: prepared_payload.root,
-                    }
+                .unwrap_or_else(|| vox_types::PreparedSchemaPlan {
+                    bytes: response.schemas.0.clone(),
                 })
         } else {
             match &response.ret {
@@ -2672,14 +2667,7 @@ impl SessionCore {
                         );
                         return None;
                     };
-                    let Some(root) = source.get_remote_response_root(method_id) else {
-                        tracing::error!(
-                            "schema attachment failed: missing forwarded response root for method {:?}",
-                            method_id
-                        );
-                        return None;
-                    };
-                    Self::get_or_plan_binding_from_source(conn_state, key, &root, source)
+                    Self::get_or_plan_binding_from_tracker(conn_state, key, source)?
                 }
             }
         };
@@ -2720,14 +2708,7 @@ impl SessionCore {
                     );
                     return None;
                 };
-                let Some(root) = source.get_remote_args_root(method_id) else {
-                    tracing::error!(
-                        "schema attachment failed: missing forwarded args root for method {:?}",
-                        method_id
-                    );
-                    return None;
-                };
-                Self::get_or_plan_binding_from_source(conn_state, key, &root, source)
+                Self::get_or_plan_binding_from_tracker(conn_state, key, source)?
             }
         };
 

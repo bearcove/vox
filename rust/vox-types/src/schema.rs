@@ -34,6 +34,9 @@ pub enum SchemaExtractError {
 
     /// A DeclId was expected in the assigned map but wasn't found.
     MissingAssignment { context: String },
+
+    /// phon could not derive a schema for the wire type.
+    Phon(String),
 }
 
 impl std::fmt::Display for SchemaExtractError {
@@ -57,6 +60,7 @@ impl std::fmt::Display for SchemaExtractError {
             Self::MissingAssignment { context } => {
                 write!(f, "schema extraction: missing DeclId assignment: {context}")
             }
+            Self::Phon(why) => write!(f, "phon schema derive: {why}"),
         }
     }
 }
@@ -100,28 +104,25 @@ impl std::error::Error for SchemaExtractError {}
 // r[impl schema.tracking.sent]
 // r[impl schema.type-id.per-connection]
 pub struct SchemaSendTracker {
-    /// Per-method, per-direction: the CborPayload that was sent. Keyed by
-    /// (method_id, direction). If present, schemas were already sent.
+    /// Per-method, per-direction bindings already sent on this connection. The first
+    /// time a binding is used, the full phon schema closure is sent; afterwards the
+    /// `schemas` field is empty. Duplicates are tolerated on the recv side
+    /// (`r[schema.exchange]`), so this is best-effort dedup, not a hard guarantee.
     sent_bindings: HashSet<(MethodId, BindingDirection)>,
-
-    /// SchemaHashes already sent on this connection.
-    sent_schemas: HashSet<SchemaHash>,
 }
 
-/// Structured schema plan computed before send ordering is known.
-#[derive(Debug, Clone)]
+/// The phon self-describing schema-closure bytes prepared for a binding, computed
+/// before send ordering is known. Empty when the binding was already sent.
+#[derive(Debug, Clone, Default)]
 pub struct PreparedSchemaPlan {
-    pub schemas: Vec<Schema>,
-    pub root: TypeRef,
+    /// `vox_phon::schema_bytes` for the wire type (root id + reachable schemas).
+    pub bytes: Vec<u8>,
 }
 
 impl PreparedSchemaPlan {
-    pub fn to_cbor(&self) -> CborPayload {
-        SchemaPayload {
-            schemas: self.schemas.clone(),
-            root: self.root.clone(),
-        }
-        .to_cbor()
+    /// Wrap the bytes in the wire schema-payload carrier (now phon, not CBOR).
+    pub fn to_payload(&self) -> CborPayload {
+        CborPayload(self.bytes.clone())
     }
 }
 
@@ -129,14 +130,12 @@ impl SchemaSendTracker {
     pub fn new() -> Self {
         SchemaSendTracker {
             sent_bindings: HashSet::new(),
-            sent_schemas: HashSet::new(),
         }
     }
 
     /// Reset connection-scoped state — call on reconnection.
     pub fn reset(&mut self) {
         self.sent_bindings.clear();
-        self.sent_schemas.clear();
     }
 
     /// Whether this method+direction binding has already been sent on the wire.
@@ -144,119 +143,66 @@ impl SchemaSendTracker {
         self.sent_bindings.contains(&(method_id, direction))
     }
 
-    /// Compute the full schema payload for a shaped value without mutating
-    /// any per-connection send tracking.
+    /// The phon self-describing schema closure for a wire `shape` (root + reachable
+    /// schemas), independent of per-connection send tracking.
     pub fn plan_for_shape(shape: &'static Shape) -> Result<PreparedSchemaPlan, SchemaExtractError> {
-        let extracted = extract_schemas(shape)?;
-        Ok(PreparedSchemaPlan {
-            schemas: extracted.schemas.to_vec(),
-            root: extracted.root.clone(),
-        })
+        let bytes = vox_phon::schema_bytes_for_shape(shape)
+            .map_err(|e| SchemaExtractError::Phon(e.to_string()))?;
+        Ok(PreparedSchemaPlan { bytes })
     }
 
-    /// Compute the full schema payload for a canonical root type and schema
-    /// source without mutating any per-connection send tracking.
-    pub fn plan_from_source(root_type: &TypeRef, source: &dyn SchemaSource) -> PreparedSchemaPlan {
-        let mut all_schemas = Vec::new();
-        let mut visited = HashSet::new();
-        let mut queue = Vec::new();
-        root_type.collect_ids(&mut queue);
-
-        while let Some(id) = queue.pop() {
-            if !visited.insert(id) {
-                continue;
-            }
-            if let Some(schema) = source.get_schema(id) {
-                for child_id in schema_child_ids(&schema.kind) {
-                    queue.push(child_id);
-                }
-                all_schemas.push(schema);
-            }
-        }
-
-        PreparedSchemaPlan {
-            schemas: all_schemas,
-            root: root_type.clone(),
-        }
-    }
-
-    fn unsent_schemas_for_prepared_plan(&self, prepared: &PreparedSchemaPlan) -> Vec<Schema> {
-        prepared
-            .schemas
-            .iter()
-            .filter(|schema| !self.sent_schemas.contains(&schema.id))
-            .cloned()
-            .collect()
-    }
-
-    /// Compute the schema payload that would be sent for a binding without
-    /// mutating connection-scoped send tracking.
+    /// The schema payload that would be sent for a binding, without mutating send
+    /// tracking. Empty if the binding was already sent (idempotent best-effort).
     pub fn preview_prepared_plan(
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
         prepared: &PreparedSchemaPlan,
     ) -> CborPayload {
-        let key = (method_id, direction);
-        if self.sent_bindings.contains(&key) {
-            return CborPayload::default();
+        if self.sent_bindings.contains(&(method_id, direction)) {
+            CborPayload::default()
+        } else {
+            prepared.to_payload()
         }
-        let schema_payload = SchemaPayload {
-            schemas: self.unsent_schemas_for_prepared_plan(prepared),
-            root: prepared.root.clone(),
-        };
-        schema_payload.to_cbor()
     }
 
-    /// Mark a previously previewed schema payload as successfully sent.
+    /// Mark a binding's schema payload as sent.
     pub fn mark_prepared_plan_sent(
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
-        prepared: &PreparedSchemaPlan,
+        _prepared: &PreparedSchemaPlan,
     ) {
-        let key = (method_id, direction);
-        if self.sent_bindings.contains(&key) {
-            return;
-        }
-        for schema in &prepared.schemas {
-            self.sent_schemas.insert(schema.id);
-        }
-        self.sent_bindings.insert(key);
+        self.sent_bindings.insert((method_id, direction));
     }
 
-    /// Commit a previously prepared schema payload against the live
-    /// per-connection tracking state, returning only the schemas that still
-    /// need to be sent on the wire for this binding.
+    /// Commit a prepared schema payload: return the full closure bytes the first
+    /// time a binding is sent, empty afterwards (`r[schema.exchange]` — relaxed,
+    /// best-effort, no per-schema dedup).
     pub fn commit_prepared_plan(
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
         prepared: PreparedSchemaPlan,
     ) -> CborPayload {
-        let schema_payload = SchemaPayload {
-            schemas: self.unsent_schemas_for_prepared_plan(&prepared),
-            root: prepared.root.clone(),
-        };
+        if self.sent_bindings.contains(&(method_id, direction)) {
+            return CborPayload::default();
+        }
         dlog!(
-            "[schema] commit binding: method={:?} direction={:?} root={:?} schema_count={}",
+            "[schema] commit binding: method={:?} direction={:?} ({} bytes)",
             method_id,
             direction,
-            schema_payload.root,
-            schema_payload.schemas.len()
+            prepared.bytes.len()
         );
-        let cbor = schema_payload.to_cbor();
-        self.mark_prepared_plan_sent(method_id, direction, &prepared);
-        cbor
+        self.sent_bindings.insert((method_id, direction));
+        prepared.to_payload()
     }
 
-    /// Prepare schemas for a method call/response, returning a CBOR payload
-    /// to inline in the request/response. Returns empty payload if schemas
-    /// were already sent for this shape.
+    /// Prepare schemas for a method call/response: attach the wire type's phon schema
+    /// closure to the message the first time the binding is used, empty afterwards.
     ///
     // r[impl schema.tracking.transitive]
     // r[impl schema.exchange.idempotent]
-    // r[impl schema.principles.once-per-type]
     // r[impl schema.principles.sender-driven]
     // r[impl schema.principles.no-roundtrips]
     pub fn attach_schemas_for_shape_if_needed(
@@ -265,61 +211,32 @@ impl SchemaSendTracker {
         shape: &'static Shape,
         schematic: &mut impl Schematic,
     ) -> Result<CborPayload, SchemaExtractError> {
-        let key = (method_id, schematic.direction());
-
-        // Fast path: already sent for this method+direction.
-        if self.sent_bindings.contains(&key) {
+        let direction = schematic.direction();
+        if self.sent_bindings.contains(&(method_id, direction)) {
             let empty = CborPayload::default();
             schematic.attach_schemas(empty.clone());
             return Ok(empty);
         }
-
         let prepared = Self::plan_for_shape(shape)?;
-        let cbor = self.commit_prepared_plan(method_id, schematic.direction(), prepared);
-        schematic.attach_schemas(cbor.clone());
-        Ok(cbor)
+        let payload = self.commit_prepared_plan(method_id, direction, prepared);
+        schematic.attach_schemas(payload.clone());
+        Ok(payload)
     }
 
-    /// Prepare schemas for sending, sourcing them from a `SchemaSource`.
-    ///
-    /// Used for replay paths where we don't have a live value shape but do
-    /// have the bound root `TypeRef` and a schema source.
-    pub fn prepare_send(
-        &mut self,
-        method_id: MethodId,
-        direction: BindingDirection,
-        root_type: &TypeRef,
-        source: &dyn SchemaSource,
-    ) -> CborPayload {
-        let prepared = Self::plan_from_source(root_type, source);
-        self.commit_prepared_plan(method_id, direction, prepared)
-    }
-
+    /// Commit a previously prepared schema payload (raw phon bytes) for a binding,
+    /// forwarding it the first time, empty afterwards. Used for the proxy/relay path
+    /// where the bytes were received from upstream rather than freshly derived.
     pub fn commit_prepared_send(
         &mut self,
         method_id: MethodId,
         direction: BindingDirection,
         prepared: &CborPayload,
     ) -> CborPayload {
-        let prepared_payload = SchemaPayload::from_cbor(&prepared.0)
-            .expect("prepared schema payloads must be valid CBOR");
-        self.commit_prepared_plan(
-            method_id,
-            direction,
-            PreparedSchemaPlan {
-                schemas: prepared_payload.schemas,
-                root: prepared_payload.root,
-            },
-        )
-    }
-
-    /// Compatibility shim: schema extraction is now independent from
-    /// connection-scoped send tracking.
-    pub fn extract_schemas(
-        &mut self,
-        shape: &'static Shape,
-    ) -> Result<Arc<ExtractedSchemas>, SchemaExtractError> {
-        self::extract_schemas(shape)
+        if self.sent_bindings.contains(&(method_id, direction)) {
+            return CborPayload::default();
+        }
+        self.sent_bindings.insert((method_id, direction));
+        prepared.clone()
     }
 }
 
