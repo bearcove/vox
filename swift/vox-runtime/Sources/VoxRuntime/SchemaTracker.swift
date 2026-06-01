@@ -1,3 +1,4 @@
+import Foundation
 import PhonEngine
 import PhonIR
 import PhonSchema
@@ -33,7 +34,7 @@ public struct PhonChannelMeta: Sendable {
 /// Per-method schema data emitted by vox-codegen (`{service}Methods`). Carries both
 /// the content roots + closures (for advertising / reconciliation) and the Swift
 /// typed-path descriptors (for the concrete memory decode).
-public struct PhonMethodSchemas: Sendable {
+public struct PhonMethodSchemas: @unchecked Sendable {
     public let argsRoot: SchemaId
     public let argsSchemaClosure: [UInt8]
     public let argsDescriptor: Descriptor
@@ -62,7 +63,7 @@ public struct PhonMethodSchemas: Sendable {
 
 /// A service's phon registry + per-method schemas (the `ServiceDescriptor.send_schemas`
 /// + `registry` of TS). Emitted by codegen.
-public struct ServiceSchemas: Sendable {
+public struct ServiceSchemas: @unchecked Sendable {
     public let registry: Registry
     public let methods: [UInt64: PhonMethodSchemas]
     public init(registry: Registry, methods: [UInt64: PhonMethodSchemas]) {
@@ -73,7 +74,7 @@ public struct ServiceSchemas: Sendable {
 
 /// Schema information for a single client call (replaces the old vox-schema
 /// `ClientSchemaInfo`).
-public struct ClientSchemaInfo: Sendable {
+public struct ClientSchemaInfo: @unchecked Sendable {
     public let methodSchemas: PhonMethodSchemas
     public let registry: Registry
     public init(methodSchemas: PhonMethodSchemas, registry: Registry) {
