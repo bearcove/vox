@@ -41,7 +41,7 @@ extension Driver {
                 else {
                     // Missing or non-string vox-service metadata — reject
                     try await conduit.send(
-                        .connectionReject(connId: msg.connectionId, metadata: []))
+                        .connectionReject(connId: msg.connectionId, metadata: .null))
                     return
                 }
                 let request = ConnectionRequest(metadata: metadata, service: service)
@@ -56,7 +56,7 @@ extension Driver {
                                 .connectionAccept(
                                     connId: connId,
                                     settings: connectionSettings,
-                                    metadata: []
+                                    metadata: .null
                                 ))
                         }
                     },
@@ -64,13 +64,13 @@ extension Driver {
                         guard let self else { return }
                         Task {
                             try? await self.conduit.send(
-                                .connectionReject(connId: connId, metadata: []))
+                                .connectionReject(connId: connId, metadata: .null))
                         }
                     }
                 )
                 acceptor.accept(request: request, connection: pending)
             } else {
-                try await conduit.send(.connectionReject(connId: msg.connectionId, metadata: []))
+                try await conduit.send(.connectionReject(connId: msg.connectionId, metadata: .null))
             }
         case .connectionAccept, .connectionReject:
             break
@@ -159,7 +159,7 @@ extension Driver {
         connId: UInt64,
         requestId: UInt64,
         methodId: UInt64,
-        metadata: [MetadataEntry],
+        metadata: Metadata,
         payload: [UInt8]
     ) async throws {
         // Resolve which dispatcher handles this connection.

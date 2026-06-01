@@ -15,7 +15,7 @@ struct DriverQueuedTaskMessage: Sendable {
 struct DriverQueuedCall: Sendable {
     let requestId: UInt64
     let methodId: UInt64
-    let metadata: [MetadataEntry]
+    let metadata: Metadata
     let payload: [UInt8]
     let retry: RetryPolicy
     let timeout: TimeInterval?

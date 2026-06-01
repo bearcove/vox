@@ -5,7 +5,7 @@ enum HandleCommand: Sendable {
     case call(
         requestId: UInt64,
         methodId: UInt64,
-        metadata: [MetadataEntry],
+        metadata: Metadata,
         payload: [UInt8],
         retry: RetryPolicy,
         timeout: TimeInterval?,

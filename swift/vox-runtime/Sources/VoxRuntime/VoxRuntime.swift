@@ -16,7 +16,7 @@ public protocol VoxConnection: Sendable {
     /// Make a raw RPC call.
     func call(
         methodId: UInt64,
-        metadata: [MetadataEntry],
+        metadata: Metadata,
         payload: [UInt8],
         retry: RetryPolicy,
         timeout: TimeInterval?,
@@ -38,7 +38,7 @@ public protocol VoxConnection: Sendable {
 extension VoxConnection {
     public func call(
         methodId: UInt64,
-        metadata: [MetadataEntry],
+        metadata: Metadata,
         payload: [UInt8],
         retry: RetryPolicy,
         timeout: TimeInterval?,
@@ -65,7 +65,7 @@ extension VoxConnection {
     ) async throws -> [UInt8] {
         try await call(
             methodId: methodId,
-            metadata: [],
+            metadata: .null,
             payload: payload,
             retry: retry,
             timeout: timeout,
@@ -85,7 +85,7 @@ extension VoxConnection {
     ) async throws -> [UInt8] {
         try await call(
             methodId: methodId,
-            metadata: [],
+            metadata: .null,
             payload: payload,
             retry: retry,
             timeout: timeout,
@@ -97,7 +97,7 @@ extension VoxConnection {
 
     public func call(
         methodId: UInt64,
-        metadata: [MetadataEntry],
+        metadata: Metadata,
         payload: [UInt8],
         timeout: TimeInterval?
     ) async throws -> [UInt8] {
@@ -116,7 +116,7 @@ extension VoxConnection {
     public func call(methodId: UInt64, payload: [UInt8]) async throws -> [UInt8] {
         try await call(
             methodId: methodId,
-            metadata: [],
+            metadata: .null,
             payload: payload,
             retry: .volatile,
             timeout: nil,
@@ -131,7 +131,7 @@ extension VoxConnection {
     {
         try await call(
             methodId: methodId,
-            metadata: [],
+            metadata: .null,
             payload: payload,
             retry: .volatile,
             timeout: timeout,

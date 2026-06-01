@@ -9,13 +9,13 @@ public enum NoopClient: ExpectedRootClient {
 }
 
 private func injectExpectedRootService(
-    _ metadata: [MetadataEntry],
+    _ metadata: Metadata,
     serviceName: String
-) -> [MetadataEntry] {
-    if metadata.contains(where: { $0.key == "vox-service" }) {
+) -> Metadata {
+    if metadata.metaHas("vox-service") {
         return metadata
     }
-    return [MetadataEntry(key: "vox-service", value: .string(serviceName), flags: 0)] + metadata
+    return metadata.metaSetting("vox-service", .string(serviceName))
 }
 
 public final class Session: @unchecked Sendable {
@@ -23,7 +23,7 @@ public final class Session: @unchecked Sendable {
     public let rootConnection: Connection
     public let driver: Driver
     public let handle: SessionHandle
-    public let peerMetadata: [MetadataEntry]
+    public let peerMetadata: Metadata
     let sessionResumeKey: [UInt8]?
 
     public var connection: Connection {
@@ -35,7 +35,7 @@ public final class Session: @unchecked Sendable {
         rootConnection: Connection,
         driver: Driver,
         handle: SessionHandle,
-        peerMetadata: [MetadataEntry],
+        peerMetadata: Metadata,
         sessionResumeKey: [UInt8]?
     ) {
         self.role = role
@@ -72,7 +72,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = true,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         let metadata = injectExpectedRootService(
             metadata, serviceName: ExpectedClient.voxServiceName)
@@ -92,7 +92,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = true,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         let attachment = try await connector.openAttachment()
         let recoverAttachment: (@Sendable () async throws -> LinkAttachment)?
@@ -131,7 +131,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         let attachment = try await connector.openAttachment()
         return try await acceptFreshAttachment(
@@ -152,7 +152,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         try await acceptor(
             connector,
@@ -173,7 +173,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         let attachment = try await connector.openAttachment()
         return try await acceptFreshAttachmentOrResume(
@@ -196,7 +196,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         try await acceptorOrResume(
             connector,
@@ -245,7 +245,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         let selectedConduit = conduit ?? attachment.negotiatedConduit ?? .bare
         let metadata = injectExpectedRootService(
@@ -277,7 +277,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         try await acceptFreshAttachment(
             attachment,
@@ -299,7 +299,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         try await acceptFreshAttachment(
             .fresh(link),
@@ -320,7 +320,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> Session {
         try await acceptFreshLink(
             link,
@@ -343,7 +343,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         let selectedConduit = conduit ?? attachment.negotiatedConduit ?? .bare
         let readyAttachment: LinkAttachment
@@ -412,7 +412,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         try await acceptFreshAttachmentOrResume(
             attachment,
@@ -436,7 +436,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         try await acceptFreshAttachmentOrResume(
             .fresh(link),
@@ -459,7 +459,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         resumable: Bool = false,
-        metadata: [MetadataEntry] = []
+        metadata: Metadata = .null
     ) async throws -> SessionAcceptOutcome {
         try await acceptFreshLinkOrResume(
             link,
