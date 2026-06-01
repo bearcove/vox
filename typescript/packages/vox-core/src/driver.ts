@@ -514,7 +514,7 @@ export class Driver {
     voxLogger()?.debug(`[vox:driver] handleCall: methodId=${incoming.methodId} method=${method?.name ?? "UNKNOWN"}`);
     if (!method) {
       voxLogger()?.debug(`[vox:driver] unknown method, sending error response`);
-      await this.connection.sendResponse(incoming.requestId, encodeUnknownMethod());
+      await this.connection.sendResponse(incoming.requestId, encodeUnknownMethod(descriptor));
       return;
     }
 
@@ -534,10 +534,10 @@ export class Driver {
           await this.connection.sendResponse(incoming.requestId, admit.payload);
           return;
         case "conflict":
-          await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload());
+          await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload(descriptor));
           return;
         case "indeterminate":
-          await this.connection.sendResponse(incoming.requestId, encodeIndeterminate());
+          await this.connection.sendResponse(incoming.requestId, encodeIndeterminate(descriptor));
           return;
         case "start":
           break;
@@ -560,7 +560,7 @@ export class Driver {
     const methodSchemas = descriptor.send_schemas[methodKey(method.id)];
     if (!methodSchemas) {
       voxLogger()?.error(`[vox:driver] no phon schemas for method ${method.id}`);
-      await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload());
+      await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload(descriptor));
       return;
     }
 
@@ -596,14 +596,14 @@ export class Driver {
             taskSender({
               kind: "response",
               requestId: waiter,
-              payload: method.retry.persist || failClosedOnDrop ? encodeIndeterminate() : encodeCancelled(),
+              payload: method.retry.persist || failClosedOnDrop ? encodeIndeterminate(descriptor) : encodeCancelled(descriptor),
             });
           }
         } else if (method.retry.persist) {
           this.taskQueue.push({
             kind: "response",
             requestId: incoming.requestId,
-            payload: encodeIndeterminate(),
+            payload: encodeIndeterminate(descriptor),
           });
         } else {
           call.replyInternalError();
@@ -631,12 +631,18 @@ export class Driver {
         return;
       case "detach":
         return;
-      case "release":
+      case "release": {
+        const descriptor = this.dispatcher.getDescriptor();
         for (const waiter of cancel.waiters) {
-          this.taskQueue.push({ kind: "response", requestId: waiter, payload: encodeCancelled() });
+          this.taskQueue.push({
+            kind: "response",
+            requestId: waiter,
+            payload: encodeCancelled(descriptor),
+          });
         }
         this.signalWakeup();
         return;
+      }
     }
   }
 
@@ -724,18 +730,32 @@ export class Driver {
   }
 }
 
-function encodeUnknownMethod(): Uint8Array {
-  return new Uint8Array([0x01, 0x01]);
+// Protocol-error responses are `Result<T, VoxError<E>>::Err(VoxError::…)`. The
+// `Err` payload (UnknownMethod / Cancelled / Indeterminate / InvalidPayload) is
+// independent of the method's `T`/`E`, so any method's `responseRoot` encodes it;
+// the caller decodes against its own response root (no schema is advertised).
+function encodeVoxError(
+  descriptor: ServiceDescriptor,
+  err: { tag: string; value?: unknown },
+): Uint8Array {
+  for (const ms of Object.values(descriptor.send_schemas)) {
+    return encodeTyped({ tag: "Err", value: err } as never, ms.responseRoot, descriptor.registry);
+  }
+  throw new Error("service has no methods to derive a response root");
 }
 
-function encodeInvalidPayload(): Uint8Array {
-  return new Uint8Array([0x01, 0x02]);
+function encodeUnknownMethod(descriptor: ServiceDescriptor): Uint8Array {
+  return encodeVoxError(descriptor, { tag: "UnknownMethod" });
 }
 
-function encodeCancelled(): Uint8Array {
-  return new Uint8Array([0x01, 0x03]);
+function encodeInvalidPayload(descriptor: ServiceDescriptor): Uint8Array {
+  return encodeVoxError(descriptor, { tag: "InvalidPayload", value: "invalid payload" });
 }
 
-function encodeIndeterminate(): Uint8Array {
-  return new Uint8Array([0x01, 0x04]);
+function encodeCancelled(descriptor: ServiceDescriptor): Uint8Array {
+  return encodeVoxError(descriptor, { tag: "Cancelled" });
+}
+
+function encodeIndeterminate(descriptor: ServiceDescriptor): Uint8Array {
+  return encodeVoxError(descriptor, { tag: "Indeterminate" });
 }

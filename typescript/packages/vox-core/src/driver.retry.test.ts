@@ -9,7 +9,16 @@ import { session } from "./session.ts";
 import { ClientMetadata } from "./metadata.ts";
 import { OPERATION_ID_METADATA_KEY } from "./retry.ts";
 import type { MethodDescriptor, ServiceDescriptor } from "./channeling/index.ts";
-import type { ServiceSendSchemas } from "./schema_tracker.ts";
+import {
+  resumeEchoRegistry,
+  resumeEchoMethods,
+  RESUME_ECHO_METHOD_ID,
+  RESUME_PING_METHOD_ID,
+} from "./resume_echo.fixture.ts";
+
+const keyOf = (id: bigint) => `0x${id.toString(16).padStart(16, "0")}`;
+const ECHO_METHOD_SCHEMAS = resumeEchoMethods[keyOf(RESUME_ECHO_METHOD_ID)]!;
+const PING_METHOD_SCHEMAS = resumeEchoMethods[keyOf(RESUME_PING_METHOD_ID)]!;
 
 class MemoryLink {
   private readonly queue: Uint8Array[] = [];
@@ -85,197 +94,28 @@ function makeDeferred<T = void>() {
 
 const METHOD: MethodDescriptor = {
   name: "echo",
-  id: 1n,
+  id: RESUME_ECHO_METHOD_ID,
   retry: { persist: true, idem: false },
 };
 
-const UNIT_ID = 10n;
-const U32_ID = 11n;
-const STRING_ID = 12n;
-const RESULT_ID = 13n;
-const VOX_ERROR_ID = 14n;
-const U32_ARGS_ID = 15n;
-
-const ECHO_SEND_SCHEMAS: ServiceSendSchemas = {
-  schemas: new Map([
-    [UNIT_ID, { id: UNIT_ID, type_params: [], kind: { tag: "primitive", primitive_type: "unit" } }],
-    [U32_ID, { id: U32_ID, type_params: [], kind: { tag: "primitive", primitive_type: "u32" } }],
-    [
-      U32_ARGS_ID,
-      {
-        id: U32_ARGS_ID,
-        type_params: [],
-        kind: {
-          tag: "tuple",
-          elements: [{ tag: "concrete", type_id: U32_ID, args: [] }],
-        },
-      },
-    ],
-    [
-      RESULT_ID,
-      {
-        id: RESULT_ID,
-        type_params: ["T", "E"],
-        kind: {
-          tag: "enum",
-          name: "Result",
-          variants: [
-            {
-              name: "Ok",
-              index: 0,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "T" } },
-            },
-            {
-              name: "Err",
-              index: 1,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "E" } },
-            },
-          ],
-        },
-      },
-    ],
-    [
-      VOX_ERROR_ID,
-      {
-        id: VOX_ERROR_ID,
-        type_params: ["E"],
-        kind: {
-          tag: "enum",
-          name: "VoxError",
-          variants: [
-            {
-              name: "User",
-              index: 0,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "E" } },
-            },
-            { name: "UnknownMethod", index: 1, payload: { tag: "unit" } },
-            { name: "InvalidPayload", index: 2, payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: STRING_ID, args: [] } } },
-            { name: "Cancelled", index: 3, payload: { tag: "unit" } },
-            { name: "Indeterminate", index: 4, payload: { tag: "unit" } },
-          ],
-        },
-      },
-    ],
-    [STRING_ID, { id: STRING_ID, type_params: [], kind: { tag: "primitive", primitive_type: "string" } }],
-  ]),
-  methods: new Map([
-    [
-      METHOD.id,
-      {
-        argsRootRef: { tag: "concrete", type_id: U32_ARGS_ID, args: [] },
-        responseRootRef: {
-          tag: "concrete",
-          type_id: RESULT_ID,
-          args: [
-            { tag: "concrete", type_id: U32_ID, args: [] },
-            {
-              tag: "concrete",
-              type_id: VOX_ERROR_ID,
-              args: [{ tag: "concrete", type_id: UNIT_ID, args: [] }],
-            },
-          ],
-        },
-      },
-    ],
-  ]),
-};
-
 const DESCRIPTOR: ServiceDescriptor = {
-  service_name: "Test",
-  send_schemas: ECHO_SEND_SCHEMAS,
+  service_name: "ResumeEcho",
+  send_schemas: resumeEchoMethods,
+  registry: resumeEchoRegistry,
   methods: new Map([[METHOD.id, METHOD]]),
 };
 
 const CANONICAL_ZERO_ARG_METHOD: MethodDescriptor = {
   name: "ping",
-  id: 2n,
+  id: RESUME_PING_METHOD_ID,
   retry: { persist: false, idem: false },
 };
 
-const CANONICAL_ZERO_ARG_SEND_SCHEMAS: ServiceSendSchemas = {
-  schemas: new Map([
-    [UNIT_ID, { id: UNIT_ID, type_params: [], kind: { tag: "primitive", primitive_type: "unit" } }],
-    [U32_ID, { id: U32_ID, type_params: [], kind: { tag: "primitive", primitive_type: "u32" } }],
-    [STRING_ID, { id: STRING_ID, type_params: [], kind: { tag: "primitive", primitive_type: "string" } }],
-    [
-      RESULT_ID,
-      {
-        id: RESULT_ID,
-        type_params: ["T", "E"],
-        kind: {
-          tag: "enum",
-          name: "Result",
-          variants: [
-            {
-              name: "Ok",
-              index: 0,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "T" } },
-            },
-            {
-              name: "Err",
-              index: 1,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "E" } },
-            },
-          ],
-        },
-      },
-    ],
-    [
-      VOX_ERROR_ID,
-      {
-        id: VOX_ERROR_ID,
-        type_params: ["E"],
-        kind: {
-          tag: "enum",
-          name: "VoxError",
-          variants: [
-            {
-              name: "User",
-              index: 0,
-              payload: { tag: "newtype", type_ref: { tag: "var", name: "E" } },
-            },
-            { name: "UnknownMethod", index: 1, payload: { tag: "unit" } },
-            {
-              name: "InvalidPayload",
-              index: 2,
-              payload: { tag: "newtype", type_ref: { tag: "concrete", type_id: STRING_ID, args: [] } },
-            },
-            { name: "Cancelled", index: 3, payload: { tag: "unit" } },
-            { name: "ConnectionClosed", index: 4, payload: { tag: "unit" } },
-            { name: "SessionShutdown", index: 5, payload: { tag: "unit" } },
-            { name: "SendFailed", index: 6, payload: { tag: "unit" } },
-            { name: "Indeterminate", index: 7, payload: { tag: "unit" } },
-          ],
-        },
-      },
-    ],
-  ]),
-  methods: new Map([
-    [
-      CANONICAL_ZERO_ARG_METHOD.id,
-      {
-        argsRootRef: { tag: "concrete", type_id: UNIT_ID, args: [] },
-        responseRootRef: {
-          tag: "concrete",
-          type_id: RESULT_ID,
-          args: [
-            { tag: "concrete", type_id: U32_ID, args: [] },
-            {
-              tag: "concrete",
-              type_id: VOX_ERROR_ID,
-              args: [{ tag: "concrete", type_id: UNIT_ID, args: [] }],
-            },
-          ],
-        },
-      },
-    ],
-  ]),
-};
-
 const CANONICAL_ZERO_ARG_DESCRIPTOR: ServiceDescriptor = {
-  service_name: "Test",
+  service_name: "ResumeEcho",
   methods: new Map([[CANONICAL_ZERO_ARG_METHOD.id, CANONICAL_ZERO_ARG_METHOD]]),
-  send_schemas: CANONICAL_ZERO_ARG_SEND_SCHEMAS,
+  send_schemas: resumeEchoMethods,
+  registry: resumeEchoRegistry,
 };
 
 describe("retry operation identity", () => {
@@ -323,7 +163,8 @@ describe("retry operation identity", () => {
       method: "Test.ping",
       args: {},
       descriptor: CANONICAL_ZERO_ARG_METHOD,
-      sendSchemas: CANONICAL_ZERO_ARG_SEND_SCHEMAS,
+      methodSchemas: PING_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
     });
 
     await expect(seen.promise).resolves.toBe(0);
@@ -379,7 +220,8 @@ describe("retry operation identity", () => {
       args: { value: 7 },
       descriptor: METHOD,
       metadata: new ClientMetadata(),
-      sendSchemas: ECHO_SEND_SCHEMAS,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
     });
 
     await expect(seen.promise).resolves.toBeTypeOf("bigint");
@@ -443,14 +285,16 @@ describe("retry operation identity", () => {
       args: { value: 11 },
       descriptor: METHOD,
       metadata: new ClientMetadata(),
-      sendSchemas: ECHO_SEND_SCHEMAS,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
     });
     const second = caller.call({
       method: "Test.echo",
       args: { value: 11 },
       descriptor: METHOD,
       metadata: new ClientMetadata(),
-      sendSchemas: ECHO_SEND_SCHEMAS,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
     });
 
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -467,7 +311,8 @@ describe("retry operation identity", () => {
       args: { value: 11 },
       descriptor: METHOD,
       metadata: new ClientMetadata(),
-      sendSchemas: ECHO_SEND_SCHEMAS,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
     });
     expect(replayed).toBe(11);
     expect(runs).toBe(1);

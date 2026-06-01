@@ -27,8 +27,7 @@
   ],
   "dependencies": {
     "@bearcove/phon-schema": "workspace:*",
-    "@bearcove/phon-engine": "workspace:*",
-    "@bearcove/vox-postcard": "workspace:*"
+    "@bearcove/phon-engine": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.0.0",

@@ -1,4 +1,4 @@
-import { encodeTyped } from "@bearcove/phon-engine";
+import { encodeTyped, decodeTyped } from "@bearcove/phon-engine";
 import {
   type ConnectionSettings,
   type RequestMessage,
@@ -1274,15 +1274,14 @@ export class ConnectionHandle {
 
     // Decode the response against the server's advertised `Result<T, VoxError<E>>`
     // schema (received in the response's `schemas:` field). Writer == reader for
-    // the `{ tag: "Ok" | "Err", value }` structure the client then unwraps.
-    const decoder = this.getSchemaTracker().buildWriterDecoder(
-      request.descriptor.id,
-      "response",
-      registry,
-    );
-    if (!decoder) {
-      throw new RpcError(RpcErrorCode.INVALID_PAYLOAD);
-    }
+    // the `{ tag: "Ok" | "Err", value }` structure the client then unwraps. A
+    // protocol error (UnknownMethod / Cancelled / Indeterminate / ...) carries no
+    // schema — those `Err(VoxError::…)` payloads are T/E-independent, so fall back
+    // to our own response root.
+    const decoder =
+      this.getSchemaTracker().buildWriterDecoder(request.descriptor.id, "response", registry) ??
+      ((bytes: Uint8Array) =>
+        decodeTyped(bytes, methodSchemas.responseRoot, methodSchemas.responseRoot, registry));
     const decoded = decoder(responsePayload) as unknown as { tag: string; value?: unknown };
 
     if (decoded.tag === "Ok") {
