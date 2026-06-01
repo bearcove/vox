@@ -6,12 +6,12 @@ import PhonEngine
 import PhonIR
 import PhonSchema
 
-public enum Parity: Codable, Sendable {
+public enum Parity: Sendable {
   case odd
   case even
 }
 
-public struct ConnectionSettings: Codable, Sendable {
+public struct ConnectionSettings: Sendable {
   public var parity: Parity
   public var maxConcurrentRequests: UInt32
   public var initialChannelCredit: UInt32
@@ -25,7 +25,7 @@ public struct ConnectionSettings: Codable, Sendable {
   }
 }
 
-public struct ProtocolError: Codable, Sendable {
+public struct ProtocolError: Sendable {
   public var description: String
 
   nonisolated public init(description: String) {
@@ -33,7 +33,7 @@ public struct ProtocolError: Codable, Sendable {
   }
 }
 
-public struct Ping: Codable, Sendable {
+public struct Ping: Sendable {
   public var nonce: UInt64
 
   nonisolated public init(nonce: UInt64) {
@@ -41,7 +41,7 @@ public struct Ping: Codable, Sendable {
   }
 }
 
-public struct Pong: Codable, Sendable {
+public struct Pong: Sendable {
   public var nonce: UInt64
 
   nonisolated public init(nonce: UInt64) {
@@ -49,7 +49,7 @@ public struct Pong: Codable, Sendable {
   }
 }
 
-public struct ConnectionOpen: Codable, Sendable {
+public struct ConnectionOpen: Sendable {
   public var connectionSettings: ConnectionSettings
   public var metadata: Data
 
@@ -59,7 +59,7 @@ public struct ConnectionOpen: Codable, Sendable {
   }
 }
 
-public struct ConnectionAccept: Codable, Sendable {
+public struct ConnectionAccept: Sendable {
   public var connectionSettings: ConnectionSettings
   public var metadata: Data
 
@@ -69,7 +69,7 @@ public struct ConnectionAccept: Codable, Sendable {
   }
 }
 
-public struct ConnectionReject: Codable, Sendable {
+public struct ConnectionReject: Sendable {
   public var metadata: Data
 
   nonisolated public init(metadata: Data) {
@@ -77,7 +77,7 @@ public struct ConnectionReject: Codable, Sendable {
   }
 }
 
-public struct ConnectionClose: Codable, Sendable {
+public struct ConnectionClose: Sendable {
   public var metadata: Data
 
   nonisolated public init(metadata: Data) {
@@ -85,7 +85,7 @@ public struct ConnectionClose: Codable, Sendable {
   }
 }
 
-public struct RequestCall: Codable, Sendable {
+public struct RequestCall: Sendable {
   public var methodId: UInt64
   public var channels: [UInt64]
   public var metadata: Data
@@ -103,7 +103,7 @@ public struct RequestCall: Codable, Sendable {
   }
 }
 
-public struct RequestResponse: Codable, Sendable {
+public struct RequestResponse: Sendable {
   public var metadata: Data
   public var ret: Data
   public var schemas: Data
@@ -115,7 +115,7 @@ public struct RequestResponse: Codable, Sendable {
   }
 }
 
-public struct RequestCancel: Codable, Sendable {
+public struct RequestCancel: Sendable {
   public var metadata: Data
 
   nonisolated public init(metadata: Data) {
@@ -123,13 +123,13 @@ public struct RequestCancel: Codable, Sendable {
   }
 }
 
-public enum RequestBody: Codable, Sendable {
+public enum RequestBody: Sendable {
   case call(RequestCall)
   case response(RequestResponse)
   case cancel(RequestCancel)
 }
 
-public struct RequestMessage: Codable, Sendable {
+public struct RequestMessage: Sendable {
   public var id: UInt64
   public var body: RequestBody
 
@@ -139,7 +139,7 @@ public struct RequestMessage: Codable, Sendable {
   }
 }
 
-public struct SchemaMessage: Codable, Sendable {
+public struct SchemaMessage: Sendable {
   public var methodId: UInt64
   public var direction: BindingDirection
   public var schemas: Data
@@ -151,7 +151,7 @@ public struct SchemaMessage: Codable, Sendable {
   }
 }
 
-public struct ChannelItem: Codable, Sendable {
+public struct ChannelItem: Sendable {
   public var item: Data
 
   nonisolated public init(item: Data) {
@@ -159,7 +159,7 @@ public struct ChannelItem: Codable, Sendable {
   }
 }
 
-public struct ChannelClose: Codable, Sendable {
+public struct ChannelClose: Sendable {
   public var metadata: Data
 
   nonisolated public init(metadata: Data) {
@@ -167,7 +167,7 @@ public struct ChannelClose: Codable, Sendable {
   }
 }
 
-public struct ChannelReset: Codable, Sendable {
+public struct ChannelReset: Sendable {
   public var metadata: Data
 
   nonisolated public init(metadata: Data) {
@@ -175,7 +175,7 @@ public struct ChannelReset: Codable, Sendable {
   }
 }
 
-public struct ChannelGrantCredit: Codable, Sendable {
+public struct ChannelGrantCredit: Sendable {
   public var additional: UInt32
 
   nonisolated public init(additional: UInt32) {
@@ -183,14 +183,14 @@ public struct ChannelGrantCredit: Codable, Sendable {
   }
 }
 
-public enum ChannelBody: Codable, Sendable {
+public enum ChannelBody: Sendable {
   case item(ChannelItem)
   case close(ChannelClose)
   case reset(ChannelReset)
   case grantCredit(ChannelGrantCredit)
 }
 
-public struct ChannelMessage: Codable, Sendable {
+public struct ChannelMessage: Sendable {
   public var id: UInt64
   public var body: ChannelBody
 
@@ -200,7 +200,7 @@ public struct ChannelMessage: Codable, Sendable {
   }
 }
 
-public enum MessagePayload: Codable, Sendable {
+public enum MessagePayload: Sendable {
   case protocolError(ProtocolError)
   case connectionOpen(ConnectionOpen)
   case connectionAccept(ConnectionAccept)
@@ -213,7 +213,7 @@ public enum MessagePayload: Codable, Sendable {
   case pong(Pong)
 }
 
-public struct Message: Codable, Sendable {
+public struct Message: Sendable {
   public var connectionId: UInt64
   public var payload: MessagePayload
 
@@ -633,10 +633,10 @@ private let MessageSchemaClosure: [UInt8] = [
   0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 172, 57, 22, 184, 152, 98, 53, 217, 4, 0, 0, 0, 97, 114, 103,
   115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
 ]
-public let MessageRegistry: Registry = Registry(
+nonisolated(unsafe) public let MessageRegistry: Registry = Registry(
   (try! parseSchemaClosure(MessageSchemaClosure)).schemas)
 public let MessageRootId = SchemaId(0x88cc_53fd_8357_cd73)
-public let MessageDescriptor: Descriptor = Descriptor(
+nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x88cc_53fd_8357_cd73)),
   layout: Layout(size: MemoryLayout<Message>.size, align: MemoryLayout<Message>.alignment),
   access: .record(
@@ -1635,8 +1635,10 @@ public let MessageDescriptor: Descriptor = Descriptor(
                     ], payloadLayout: MemoryLayout<Pong>.phonLayout),
                 ])))),
       ], construct: .inPlace)))
-private let MessageEncodeProgram: MemProgram = try! lowerTyped(MessageDescriptor, MessageRegistry)
-private let MessageDecodeProgram: MemProgram = try! lowerDecode(MessageDescriptor, MessageRegistry)
+nonisolated(unsafe) private let MessageEncodeProgram: MemProgram = try! lowerTyped(
+  MessageDescriptor, MessageRegistry)
+nonisolated(unsafe) private let MessageDecodeProgram: MemProgram = try! lowerDecode(
+  MessageDescriptor, MessageRegistry)
 
 public func encodeMessage(_ value: Message) -> [UInt8] {
   var v = value
