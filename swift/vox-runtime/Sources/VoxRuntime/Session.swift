@@ -1,4 +1,5 @@
 import Foundation
+import PhonSchema
 
 public protocol ExpectedRootClient {
     static var voxServiceName: String { get }
@@ -365,7 +366,7 @@ public final class Session: @unchecked Sendable {
         guard let firstBytes = try await readyAttachment.link.recvRawPrologue() else {
             throw ConnectionError.connectionClosed
         }
-        let firstMessage = try HandshakeMessage.decodeCbor(firstBytes)
+        let firstMessage = try decodeHandshakeFrame(firstBytes)
         guard case .hello(let hello) = firstMessage else {
             throw ConnectionError.handshakeFailed("expected Hello")
         }
@@ -375,7 +376,7 @@ public final class Session: @unchecked Sendable {
             state: .conduitNegotiated(selectedConduit)
         )
 
-        if let resumeKey = hello.resumeKey?.bytes {
+        if let resumeKey = hello.resumeKey.map({ [UInt8]($0.bytes) }) {
             guard let handle = registry.get(resumeKey) else {
                 throw ConnectionError.protocolViolation(rule: "unknown session resume key")
             }
