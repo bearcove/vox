@@ -1,14 +1,20 @@
 import {
   emptyMetadata,
 } from "@bearcove/vox-wire";
+import { encodeTyped, decodeTyped } from "@bearcove/phon-engine";
+import type { Registry } from "@bearcove/phon-schema";
 import {
   type MethodDescriptor,
   type VoxCall,
   type ServiceDescriptor,
   type TaskMessage,
   type TaskSender,
+  createServerTx,
+  createServerRx,
+  DEFAULT_INITIAL_CREDIT,
 } from "./channeling/index.ts";
 import type { ServiceSendSchemas } from "./channeling/descriptor.ts";
+import type { PhonMethodSchemas } from "./schema_tracker.ts";
 import { Extensions } from "./middleware.ts";
 import { RequestContext } from "./request_context.ts";
 import { metadataOperationId } from "./retry.ts";
@@ -98,6 +104,16 @@ type OperationCancel =
   | { kind: "none" }
   | { kind: "detach" }
   | { kind: "release"; ownerRequestId: bigint; waiters: bigint[] };
+
+/** The `send_schemas` map key for a method id (matches codegen `0x{:016x}`). */
+function methodKey(id: bigint): string {
+  return `0x${id.toString(16).padStart(16, "0")}`;
+}
+
+/** Read a little-endian `u32` from a 4-byte phon-compact scalar. */
+function readU32LE(bytes: Uint8Array): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, true);
+}
 
 function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   if (left.length !== right.length) {
@@ -246,7 +262,8 @@ class VoxCallImpl implements VoxCall {
   private readonly operations: OperationStore;
   private readonly operationId: bigint | undefined;
   private readonly schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker;
-  private readonly sendSchemas: ServiceSendSchemas;
+  private readonly methodSchemas: PhonMethodSchemas;
+  private readonly registry: Registry;
 
   constructor(
     method: MethodDescriptor,
@@ -255,7 +272,8 @@ class VoxCallImpl implements VoxCall {
     operations: OperationStore,
     operationId: bigint | undefined,
     schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker,
-    sendSchemas: ServiceSendSchemas,
+    methodSchemas: PhonMethodSchemas,
+    registry: Registry,
   ) {
     this.method = method;
     this.requestId = requestId;
@@ -263,7 +281,8 @@ class VoxCallImpl implements VoxCall {
     this.operations = operations;
     this.operationId = operationId;
     this.schemaSendTracker = schemaSendTracker;
-    this.sendSchemas = sendSchemas;
+    this.methodSchemas = methodSchemas;
+    this.registry = registry;
   }
 
   didReply(): boolean {
@@ -301,34 +320,29 @@ class VoxCallImpl implements VoxCall {
   }
 
   /**
-   * Encode a `Result<T, VoxError<E>>` response payload as phon bytes.
-   *
-   * TODO(phon): server-side response encode. The response wire root for the
-   * `Result<T, VoxError<E>>` shape is not emitted by vox-codegen yet (deferred),
-   * so there is no `okRoot`-style reader/registry reachable here to drive
-   * `encodeTyped`. The TS-server path (Rust client -> TS server) is not exercised
-   * by the current client-side target; wire this up once codegen emits the
-   * response root + a service `Registry` on the server descriptor.
+   * Encode a `Result<T, VoxError<E>>` response payload as phon bytes against the
+   * method's `responseRoot` (`r[zerocopy.payload]`). The `{ tag, value }` shape
+   * mirrors the Rust `RequestResponse.ret`.
    */
-  private encodeResponse(_result: {
+  private encodeResponse(result: {
     tag: "Ok" | "Err";
     value: unknown;
   }): Uint8Array {
-    void this.sendSchemas;
-    throw new Error("TODO(phon): server-side response encode");
+    return encodeTyped(result as never, this.methodSchemas.responseRoot, this.registry);
   }
 
   /**
    * The phon schema-closure bytes to advertise for this method's response
-   * binding, or undefined when nothing is to be sent.
-   *
-   * TODO(phon): server-side response schema exchange. `PhonMethodSchemas` only
-   * carries the args schema-closure today; once codegen emits a response
-   * schema-closure, advertise it here via
-   * `this.schemaSendTracker.prepareSchemas(this.method.id, "response", closureHex)`.
+   * binding, or undefined when already sent on this connection
+   * (`r[schema.exchange.idempotent]`).
    */
   private prepareResponseSchemas(): Uint8Array | undefined {
-    return undefined;
+    const nums = this.schemaSendTracker.prepareSchemas(
+      this.method.id,
+      "response",
+      this.methodSchemas.responseSchemaClosure,
+    );
+    return nums.length > 0 ? new Uint8Array(nums) : undefined;
   }
 
   private sendPayload(payload: Uint8Array): void {
@@ -541,6 +555,13 @@ export class Driver {
       this.signalWakeup();
     };
 
+    const methodSchemas = descriptor.send_schemas[methodKey(method.id)];
+    if (!methodSchemas) {
+      voxLogger()?.error(`[vox:driver] no phon schemas for method ${method.id}`);
+      await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload());
+      return;
+    }
+
     const call = new VoxCallImpl(
       method,
       incoming.requestId,
@@ -548,7 +569,8 @@ export class Driver {
       this.operations,
       operationId,
       this.connection.getSchemaSendTracker(),
-      descriptor.send_schemas,
+      methodSchemas,
+      descriptor.registry,
     );
 
     let outcome: ServerCallOutcome = { kind: "dropped" };
@@ -626,38 +648,62 @@ export class Driver {
     // r[impl rpc.channel.binding.callee-args.rx]
     // r[impl rpc.channel.binding.callee-args.tx]
     // r[impl schema.translation.field-matching]
+    const ms = descriptor.send_schemas[methodKey(method.id)];
+    if (!ms) {
+      throw new Error(`no phon schemas for method ${method.id}`);
+    }
+    const registry = descriptor.registry;
 
-    // TODO(phon): server-side args decode + channel binding.
-    //
-    // The incoming call's writer schema-closure was recorded by the session via
-    // `SchemaTracker.recordReceived(methodId, "args", new Uint8Array(call.schemas))`.
-    // Decoding it cleanly requires reconciling that writer closure against the
-    // handler's args reader root through a phon `Registry`:
-    //
-    //   const ms = descriptor.send_schemas.get(method.id);   // PhonMethodSchemas
-    //   const decoder = this.connection.getSchemaTracker()
-    //     .buildDecoder(method.id, "args", ms.argsRoot, registry);
-    //   const tuple = decoder(incoming.args);                // reader-shaped Value
-    //
-    // and then, per channel binding in `ms.channels`, wiring the channel element
-    // codec on the phon engine:
-    //
-    //   createServerTx(channelId, taskSender, this.connection.getChannelRegistry(),
-    //     DEFAULT_INITIAL_CREDIT, (v) => encodeTyped(v, ch.elementRoot, registry));
-    //   createServerRx(channelId, receiver,
-    //     (bytes) => compile(ch.elementRoot, ch.elementRoot, registry)(bytes));
-    //
-    // The blocker is that the server `ServiceDescriptor` does not yet carry the
-    // service phon `Registry` (only `send_schemas: Map<bigint, PhonMethodSchemas>`),
-    // so `argsRoot`/`elementRoot` cannot be resolved here. The TS-server path
-    // (Rust client -> TS server) is not exercised by the current client-side
-    // target; wire this up once codegen threads the service `Registry` onto the
-    // descriptor. Until then, fail loudly rather than silently mis-decode.
-    void descriptor;
-    void method;
-    void incoming;
-    void taskSender;
-    throw new Error("TODO(phon): server-side args decode");
+    // Decode the args tuple, reconciling the peer's writer closure (recorded by
+    // the session in the `schemas:` field) against our `argsRoot` reader. A 0-arg
+    // method carries no bytes. Falls back to writer==reader when nothing was sent.
+    let values: unknown[] = [];
+    if (incoming.args.length > 0) {
+      const decoder =
+        this.connection.getSchemaTracker().buildDecoder(method.id, "args", ms.argsRoot, registry) ??
+        ((bytes: Uint8Array) =>
+          decodeTyped(bytes, ms.argsRoot, ms.argsRoot, registry));
+      values = decoder(incoming.args) as unknown[];
+    }
+
+    if (ms.channels.length === 0) {
+      return values;
+    }
+
+    // Bind each server-side `Tx`/`Rx` from `RequestCall.channels`. The decoded
+    // arg at a channel position is the 4-byte LE wire index into that list
+    // (`r[rpc.channel.payload-encoding]`); resolve it to a `ChannelId` and replace
+    // the slot with a runtime handle whose per-item codec is keyed on the element.
+    const channelRegistry = this.connection.getChannelRegistry();
+    const creditOut = this.connection.peerSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT;
+    const creditIn = this.connection.localSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT;
+    for (const ch of ms.channels) {
+      const wireIndex = readU32LE(values[ch.index] as Uint8Array);
+      const channelId = incoming.channels[wireIndex];
+      if (channelId === undefined) {
+        throw new Error(`channel wire index ${wireIndex} out of range (${incoming.channels.length})`);
+      }
+      if (ch.direction === "tx") {
+        // The handler holds a `Tx` and SENDS to the caller.
+        values[ch.index] = createServerTx(
+          channelId,
+          taskSender,
+          channelRegistry,
+          creditOut,
+          (value: unknown) => encodeTyped(value as never, ch.elementRoot, registry),
+        );
+      } else {
+        // The handler holds an `Rx` and RECEIVES from the caller.
+        const receiver = channelRegistry.registerIncoming(channelId, creditIn);
+        values[ch.index] = createServerRx(
+          channelId,
+          receiver,
+          (bytes: Uint8Array) => decodeTyped(bytes, ch.elementRoot, ch.elementRoot, registry),
+        );
+      }
+    }
+
+    return values;
   }
 
   private async runPreHooks(context: RequestContext): Promise<void> {

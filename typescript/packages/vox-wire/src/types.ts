@@ -61,6 +61,15 @@ export function emptyMetadata(): Metadata {
   return new Map();
 }
 
+/**
+ * Coerce a decoded `dynamic` metadata Value into a `Metadata` map. A peer that
+ * carries no metadata encodes it as `Value::Null` (the Rust default), which
+ * decodes to `null` here; normalize that (and any non-map value) to an empty map.
+ */
+export function coerceMetadata(value: unknown): Metadata {
+  return value instanceof Map ? (value as Metadata) : new Map();
+}
+
 /** Mark `key` under a well-known flag list (`vox:sensitive` / `vox:no-propagate`). */
 export function metadataAddFlag(meta: Metadata, flagKey: string, key: string): void {
   const existing = meta.get(flagKey);

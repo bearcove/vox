@@ -7,6 +7,7 @@ import {
   type Message,
   type Metadata,
   emptyMetadata,
+  coerceMetadata,
  // parityEven,
  // parityOdd,
   messageAccept,
@@ -1011,8 +1012,8 @@ class SessionCore {
           requestId: request.id,
           methodId: request.body.value.method_id,
           args: request.body.value.args,
-          channels: [],
-          metadata: request.body.value.metadata as Metadata,
+          channels: request.body.value.channels,
+          metadata: coerceMetadata(request.body.value.metadata),
         });
         return;
       }

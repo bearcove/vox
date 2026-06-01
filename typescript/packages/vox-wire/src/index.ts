@@ -38,6 +38,7 @@ export type {
 export {
   MetadataKeys,
   emptyMetadata,
+  coerceMetadata,
   metadataAddFlag,
   metadataIsSensitive,
   metadataIsNoPropagate,

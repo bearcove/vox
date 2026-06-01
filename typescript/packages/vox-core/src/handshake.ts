@@ -1,6 +1,6 @@
 import { hexToBytes } from "@bearcove/phon-schema";
 import { decodeTyped, encodeTyped } from "@bearcove/phon-engine";
-import { parseSchemaClosure, messageSchemaClosure, type Metadata, emptyMetadata } from "@bearcove/vox-wire";
+import { parseSchemaClosure, messageSchemaClosure, type Metadata, emptyMetadata, coerceMetadata } from "@bearcove/vox-wire";
 import type { ConnectionSettings, Parity } from "@bearcove/vox-wire";
 import type { Link } from "./link.ts";
 import {
@@ -147,7 +147,7 @@ export async function handshakeAsInitiator(
     sessionResumeKey: resumeKeyFromBytes(helloYourself.value.resume_key),
     peerResumeKey: null,
     peerMessageSchema: new Uint8Array(helloYourself.value.message_payload_schema),
-    peerMetadata: helloYourself.value.metadata as Metadata,
+    peerMetadata: coerceMetadata(helloYourself.value.metadata),
   };
 }
 
@@ -203,7 +203,7 @@ export async function handshakeAsAcceptor(
     sessionResumeKey,
     peerResumeKey: resumeKeyFromBytes(hello.value.resume_key),
     peerMessageSchema: new Uint8Array(hello.value.message_payload_schema),
-    peerMetadata: hello.value.metadata as Metadata,
+    peerMetadata: coerceMetadata(hello.value.metadata),
   };
 }
 
