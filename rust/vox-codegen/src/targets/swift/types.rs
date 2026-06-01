@@ -320,6 +320,22 @@ pub fn swift_type_base(shape: &'static Shape) -> String {
         ShapeKind::Struct(StructInfo {
             name: Some(name), ..
         }) => name.to_string(),
+        // The wire error `VoxError<E>` is the one generic the typed path materializes;
+        // its single param is the `User(E)` variant's payload. Without the arg, every
+        // method would collapse to a bare `VoxError`, so emit `VoxError<E>` explicitly.
+        ShapeKind::Enum(EnumInfo {
+            name: Some(name),
+            variants,
+        }) if name == "VoxError" => {
+            let e = variants
+                .first()
+                .and_then(|v| v.data.fields.first())
+                .map(|f| f.shape());
+            match e {
+                Some(s) => format!("VoxError<{}>", swift_type_base(s)),
+                None => "VoxError<Infallible>".into(),
+            }
+        }
         ShapeKind::Enum(EnumInfo {
             name: Some(name), ..
         }) => name.to_string(),

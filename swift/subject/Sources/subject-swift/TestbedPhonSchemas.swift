@@ -5,6 +5,23 @@ import PhonIR
 import PhonSchema
 import VoxRuntime
 
+// MARK: - wire error type
+
+public enum Infallible: Sendable {}
+
+/// The wire error of `Result<T, VoxError<E>>`. Variant order matches the
+/// Rust `VoxError<E>` (User=0 … Indeterminate=7) so wire indices align.
+public enum VoxError<E>: Error {
+  case user(E)
+  case unknownMethod
+  case invalidPayload(String)
+  case cancelled
+  case connectionClosed
+  case sessionShutdown
+  case sendFailed
+  case indeterminate
+}
+
 // MARK: - phon service schemas (registry + per-method roots/descriptors/channels)
 
 nonisolated(unsafe) let testbed_echo_ArgsDescriptor: Descriptor = Descriptor(
@@ -23,35 +40,36 @@ nonisolated(unsafe) let testbed_echo_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa40b_e1c5_eb24_4dd8)),
   layout: Layout(
-    size: MemoryLayout<Result<String, VoxError>>.size,
-    align: MemoryLayout<Result<String, VoxError>>.alignment),
+    size: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<String, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<String, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: String.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: String.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<String, VoxError> =
+        let v: Result<String, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: String.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<String, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -73,11 +91,12 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -89,7 +108,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -116,7 +135,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -133,7 +152,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -174,7 +193,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_reverse_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5de8_e650_cc7a_124f)),
@@ -192,35 +211,36 @@ nonisolated(unsafe) let testbed_reverse_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa40b_e1c5_eb24_4dd8)),
   layout: Layout(
-    size: MemoryLayout<Result<String, VoxError>>.size,
-    align: MemoryLayout<Result<String, VoxError>>.alignment),
+    size: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<String, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<String, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: String.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: String.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<String, VoxError> =
+        let v: Result<String, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: String.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<String, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -242,11 +262,12 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -258,7 +279,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -285,7 +306,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -302,7 +323,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -343,7 +364,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_divide_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4e34_9a94_88f6_7103)),
@@ -368,35 +389,36 @@ nonisolated(unsafe) let testbed_divide_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6f0b_1a12_0e48_a192)),
   layout: Layout(
-    size: MemoryLayout<Result<Int64, VoxError>>.size,
-    align: MemoryLayout<Result<Int64, VoxError>>.alignment),
+    size: MemoryLayout<Result<Int64, VoxError<MathError>>>.size,
+    align: MemoryLayout<Result<Int64, VoxError<MathError>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError<MathError>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Int64, VoxError<MathError>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Int64.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<MathError>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Int64.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<MathError>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Int64, VoxError> =
+        let v: Result<Int64, VoxError<MathError>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Int64.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Int64, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<MathError>.self).move())
+        slot.assumingMemoryBound(to: Result<Int64, VoxError<MathError>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -418,11 +440,12 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x931a_b5bf_53c1_e6a8)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<MathError>>.size,
+                  align: MemoryLayout<VoxError<MathError>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<MathError>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -434,7 +457,7 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<MathError>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: MathError.self).initialize(
                           to: f0)
@@ -461,7 +484,7 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<MathError>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: MathError.self)
@@ -478,7 +501,7 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<MathError>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -554,7 +577,7 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<MathError>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_lookup_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1f74_dcfd_1f8a_321e)),
@@ -572,35 +595,36 @@ nonisolated(unsafe) let testbed_lookup_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9860_7d9d_3144_cfae)),
   layout: Layout(
-    size: MemoryLayout<Result<Person, VoxError>>.size,
-    align: MemoryLayout<Result<Person, VoxError>>.alignment),
+    size: MemoryLayout<Result<Person, VoxError<LookupError>>>.size,
+    align: MemoryLayout<Result<Person, VoxError<LookupError>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Person, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Person, VoxError<LookupError>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Person, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Person, VoxError<LookupError>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Person.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<LookupError>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Person.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<LookupError>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Person, VoxError> =
+        let v: Result<Person, VoxError<LookupError>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Person.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Person, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<LookupError>.self).move())
+        slot.assumingMemoryBound(to: Result<Person, VoxError<LookupError>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -656,11 +680,12 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x6b8d_9a00_70a4_e569)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<LookupError>>.size,
+                  align: MemoryLayout<VoxError<LookupError>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<LookupError>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -672,7 +697,7 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<LookupError>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: LookupError.self)
                           .initialize(to: f0)
@@ -699,7 +724,7 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<LookupError>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: LookupError.self)
@@ -716,7 +741,7 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<LookupError>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -792,7 +817,7 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<LookupError>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_sum_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
@@ -810,35 +835,36 @@ nonisolated(unsafe) let testbed_sum_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xe7a0_d782_b8cf_c829)),
   layout: Layout(
-    size: MemoryLayout<Result<Int64, VoxError>>.size,
-    align: MemoryLayout<Result<Int64, VoxError>>.alignment),
+    size: MemoryLayout<Result<Int64, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Int64, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Int64.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Int64.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Int64, VoxError> =
+        let v: Result<Int64, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Int64.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Int64, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -860,11 +886,12 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -876,7 +903,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -903,7 +930,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -920,7 +947,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -961,7 +988,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_generate_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
@@ -986,35 +1013,36 @@ nonisolated(unsafe) let testbed_generate_ArgsDescriptor: Descriptor = Descriptor
 nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1035,11 +1063,12 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1051,7 +1080,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1078,7 +1107,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1095,7 +1124,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -1136,7 +1165,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
@@ -1161,35 +1190,36 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptor: Descriptor 
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1210,11 +1240,12 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1226,7 +1257,7 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1253,7 +1284,7 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1270,7 +1301,7 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -1311,7 +1342,7 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
@@ -1336,35 +1367,36 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptor: Descriptor = D
 nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1385,11 +1417,12 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1401,7 +1434,7 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1428,7 +1461,7 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1445,7 +1478,7 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -1486,7 +1519,7 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_transform_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb6a6_8f26_51e5_1847)),
@@ -1511,35 +1544,36 @@ nonisolated(unsafe) let testbed_transform_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1560,11 +1594,12 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1576,7 +1611,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1603,7 +1638,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1620,7 +1655,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -1661,7 +1696,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
@@ -1679,35 +1714,36 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDescriptor: Descriptor = D
 nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1728,11 +1764,12 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1744,7 +1781,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1771,7 +1808,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1788,7 +1825,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -1829,7 +1866,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_postReplySum_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb6a6_8f26_51e5_1847)),
@@ -1854,35 +1891,36 @@ nonisolated(unsafe) let testbed_postReplySum_ArgsDescriptor: Descriptor = Descri
 nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -1903,11 +1941,12 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -1919,7 +1958,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -1946,7 +1985,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -1963,7 +2002,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -2004,7 +2043,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoPoint_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x7ff8_8e78_869e_c387)),
@@ -2039,35 +2078,36 @@ nonisolated(unsafe) let testbed_echoPoint_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9c32_6659_5237_5af5)),
   layout: Layout(
-    size: MemoryLayout<Result<Point, VoxError>>.size,
-    align: MemoryLayout<Result<Point, VoxError>>.alignment),
+    size: MemoryLayout<Result<Point, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Point, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Point, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Point, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Point, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Point, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Point.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Point.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Point, VoxError> =
+        let v: Result<Point, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Point.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Point, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Point, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -2106,11 +2146,12 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -2122,7 +2163,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -2149,7 +2190,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -2166,7 +2207,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -2207,7 +2248,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_createPerson_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xdad1_25d8_13de_759d)),
@@ -2247,35 +2288,36 @@ nonisolated(unsafe) let testbed_createPerson_ArgsDescriptor: Descriptor = Descri
 nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0cd4_8b48_c7f2_0221)),
   layout: Layout(
-    size: MemoryLayout<Result<Person, VoxError>>.size,
-    align: MemoryLayout<Result<Person, VoxError>>.alignment),
+    size: MemoryLayout<Result<Person, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Person, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Person, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Person, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Person, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Person, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Person.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Person.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Person, VoxError> =
+        let v: Result<Person, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Person.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Person, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Person, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -2331,11 +2373,12 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -2347,7 +2390,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -2374,7 +2417,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -2391,7 +2434,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -2432,7 +2475,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_rectangleArea_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xaab3_a8ad_add2_7279)),
@@ -2518,35 +2561,36 @@ nonisolated(unsafe) let testbed_rectangleArea_ArgsDescriptor: Descriptor = Descr
 nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x36c9_dacd_c09f_0c17)),
   layout: Layout(
-    size: MemoryLayout<Result<Double, VoxError>>.size,
-    align: MemoryLayout<Result<Double, VoxError>>.alignment),
+    size: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Double, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Double, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Double.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Double.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Double, VoxError> =
+        let v: Result<Double, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Double.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Double, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -2568,11 +2612,12 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -2584,7 +2629,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -2611,7 +2656,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -2628,7 +2673,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -2669,7 +2714,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_parseColor_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5de8_e650_cc7a_124f)),
@@ -2687,35 +2732,36 @@ nonisolated(unsafe) let testbed_parseColor_ArgsDescriptor: Descriptor = Descript
 nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8491_f02e_2f36_1a92)),
   layout: Layout(
-    size: MemoryLayout<Result<Color?, VoxError>>.size,
-    align: MemoryLayout<Result<Color?, VoxError>>.alignment),
+    size: MemoryLayout<Result<Color?, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Color?, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Color?, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Color?, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Color?, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Color?, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Color?.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Color?.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Color?, VoxError> =
+        let v: Result<Color?, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Color?.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Color?, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Color?, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -2785,11 +2831,12 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -2801,7 +2848,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -2828,7 +2875,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -2845,7 +2892,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -2886,7 +2933,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_shapeArea_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x191a_fdc0_4fd3_2d16)),
@@ -2987,35 +3034,36 @@ nonisolated(unsafe) let testbed_shapeArea_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x36c9_dacd_c09f_0c17)),
   layout: Layout(
-    size: MemoryLayout<Result<Double, VoxError>>.size,
-    align: MemoryLayout<Result<Double, VoxError>>.alignment),
+    size: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Double, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Double, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Double.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Double.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Double, VoxError> =
+        let v: Result<Double, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Double.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Double, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -3037,11 +3085,12 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -3053,7 +3102,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -3080,7 +3129,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -3097,7 +3146,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -3138,7 +3187,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_createCanvas_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x53cc_f1af_fbbc_c42d)),
@@ -3303,35 +3352,36 @@ nonisolated(unsafe) let testbed_createCanvas_ArgsDescriptor: Descriptor = Descri
 nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1d10_69b5_f959_89fd)),
   layout: Layout(
-    size: MemoryLayout<Result<Canvas, VoxError>>.size,
-    align: MemoryLayout<Result<Canvas, VoxError>>.alignment),
+    size: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Canvas, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Canvas, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Canvas, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Canvas, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Canvas.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Canvas.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Canvas, VoxError> =
+        let v: Result<Canvas, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Canvas.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Canvas, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Canvas, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -3525,11 +3575,12 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -3541,7 +3592,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -3568,7 +3619,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -3585,7 +3636,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -3626,7 +3677,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoGnarly_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x403a_1e92_5952_6407)),
@@ -4070,36 +4121,41 @@ nonisolated(unsafe) let testbed_echoGnarly_ArgsDescriptor: Descriptor = Descript
 nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x442d_b813_0bbe_8cf3)),
   layout: Layout(
-    size: MemoryLayout<Result<GnarlyPayload, VoxError>>.size,
-    align: MemoryLayout<Result<GnarlyPayload, VoxError>>.alignment),
+    size: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<GnarlyPayload, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<GnarlyPayload, VoxError<Infallible>>.self).pointee
+        {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<GnarlyPayload, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<GnarlyPayload, VoxError<Infallible>>.self)
+          .pointee
+        {
         case .success(let f0):
           scratch.assumingMemoryBound(to: GnarlyPayload.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: GnarlyPayload.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<GnarlyPayload, VoxError> =
+        let v: Result<GnarlyPayload, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: GnarlyPayload.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<GnarlyPayload, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<GnarlyPayload, VoxError<Infallible>>.self).initialize(
+          to: v)
       },
       variants: [
         VariantAccess(
@@ -4558,11 +4614,12 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -4574,7 +4631,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -4601,7 +4658,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -4618,7 +4675,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -4659,7 +4716,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_processMessage_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc194_4d95_92b9_cc2c)),
@@ -4761,35 +4818,36 @@ nonisolated(unsafe) let testbed_processMessage_ArgsDescriptor: Descriptor = Desc
 nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xea8b_7645_9b7d_fba0)),
   layout: Layout(
-    size: MemoryLayout<Result<Message, VoxError>>.size,
-    align: MemoryLayout<Result<Message, VoxError>>.alignment),
+    size: MemoryLayout<Result<Message, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Message, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Message, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Message, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Message, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Message, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Message.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Message.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Message, VoxError> =
+        let v: Result<Message, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Message.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Message, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Message, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -4899,11 +4957,12 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -4915,7 +4974,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -4942,7 +5001,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -4959,7 +5018,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5000,7 +5059,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_getPoints_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1f74_dcfd_1f8a_321e)),
@@ -5018,35 +5077,36 @@ nonisolated(unsafe) let testbed_getPoints_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5d26_cffd_4e85_1c85)),
   layout: Layout(
-    size: MemoryLayout<Result<[Point], VoxError>>.size,
-    align: MemoryLayout<Result<[Point], VoxError>>.alignment),
+    size: MemoryLayout<Result<[Point], VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<[Point], VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<[Point], VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<[Point], VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<[Point], VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<[Point], VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: [Point].self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: [Point].self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<[Point], VoxError> =
+        let v: Result<[Point], VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: [Point].self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<[Point], VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<[Point], VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -5092,11 +5152,12 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -5108,7 +5169,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -5135,7 +5196,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -5152,7 +5213,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5193,7 +5254,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_swapPair_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x61ff_33d8_9cfe_8490)),
@@ -5231,36 +5292,42 @@ nonisolated(unsafe) let testbed_swapPair_ArgsDescriptor: Descriptor = Descriptor
 nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8f14_292d_cb9b_e55b)),
   layout: Layout(
-    size: MemoryLayout<Result<(String, Int32), VoxError>>.size,
-    align: MemoryLayout<Result<(String, Int32), VoxError>>.alignment),
+    size: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<(String, Int32), VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<(String, Int32), VoxError<Infallible>>.self)
+          .pointee
+        {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<(String, Int32), VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<(String, Int32), VoxError<Infallible>>.self)
+          .pointee
+        {
         case .success(let f0):
           scratch.assumingMemoryBound(to: (String, Int32).self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: (String, Int32).self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<(String, Int32), VoxError> =
+        let v: Result<(String, Int32), VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: (String, Int32).self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<(String, Int32), VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<(String, Int32), VoxError<Infallible>>.self).initialize(
+          to: v)
       },
       variants: [
         VariantAccess(
@@ -5300,11 +5367,12 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -5316,7 +5384,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -5343,7 +5411,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -5360,7 +5428,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5401,7 +5469,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoBytes_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x78f2_65ad_9f57_691e)),
@@ -5419,35 +5487,36 @@ nonisolated(unsafe) let testbed_echoBytes_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef05_bb23_1efe_35be)),
   layout: Layout(
-    size: MemoryLayout<Result<Data, VoxError>>.size,
-    align: MemoryLayout<Result<Data, VoxError>>.alignment),
+    size: MemoryLayout<Result<Data, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Data, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Data, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Data, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Data, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Data, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Data.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Data.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Data, VoxError> =
+        let v: Result<Data, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Data.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Data, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Data, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -5468,11 +5537,12 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -5484,7 +5554,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -5511,7 +5581,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -5528,7 +5598,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5569,7 +5639,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoBool_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xead4_0bc4_96a5_38f5)),
@@ -5587,35 +5657,36 @@ nonisolated(unsafe) let testbed_echoBool_ArgsDescriptor: Descriptor = Descriptor
 nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x05e5_08ed_abe6_1a65)),
   layout: Layout(
-    size: MemoryLayout<Result<Bool, VoxError>>.size,
-    align: MemoryLayout<Result<Bool, VoxError>>.alignment),
+    size: MemoryLayout<Result<Bool, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Bool, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Bool, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Bool, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Bool, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Bool, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Bool.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Bool.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Bool, VoxError> =
+        let v: Result<Bool, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Bool.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Bool, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Bool, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -5636,11 +5707,12 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -5652,7 +5724,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -5679,7 +5751,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -5696,7 +5768,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5737,7 +5809,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoU64_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc167_9e74_6a3c_4865)),
@@ -5755,35 +5827,36 @@ nonisolated(unsafe) let testbed_echoU64_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9e68_ea22_35d9_3672)),
   layout: Layout(
-    size: MemoryLayout<Result<UInt64, VoxError>>.size,
-    align: MemoryLayout<Result<UInt64, VoxError>>.alignment),
+    size: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<UInt64, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<UInt64, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<UInt64, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<UInt64, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: UInt64.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: UInt64.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<UInt64, VoxError> =
+        let v: Result<UInt64, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: UInt64.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<UInt64, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<UInt64, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -5805,11 +5878,12 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -5821,7 +5895,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -5848,7 +5922,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -5865,7 +5939,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -5906,7 +5980,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoOptionString_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xd5e9_4240_5ce8_f027)),
@@ -5932,35 +6006,36 @@ nonisolated(unsafe) let testbed_echoOptionString_ArgsDescriptor: Descriptor = De
 nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xd0db_9b65_fa9b_8844)),
   layout: Layout(
-    size: MemoryLayout<Result<String?, VoxError>>.size,
-    align: MemoryLayout<Result<String?, VoxError>>.alignment),
+    size: MemoryLayout<Result<String?, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<String?, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<String?, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<String?, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<String?, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<String?, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: String?.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: String?.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<String?, VoxError> =
+        let v: Result<String?, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: String?.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<String?, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<String?, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -5989,11 +6064,12 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -6005,7 +6081,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -6032,7 +6108,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -6049,7 +6125,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -6090,7 +6166,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_sumLarge_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
@@ -6108,35 +6184,36 @@ nonisolated(unsafe) let testbed_sumLarge_ArgsDescriptor: Descriptor = Descriptor
 nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xe7a0_d782_b8cf_c829)),
   layout: Layout(
-    size: MemoryLayout<Result<Int64, VoxError>>.size,
-    align: MemoryLayout<Result<Int64, VoxError>>.alignment),
+    size: MemoryLayout<Result<Int64, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Int64, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Int64, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Int64.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Int64.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Int64, VoxError> =
+        let v: Result<Int64, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Int64.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Int64, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Int64, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -6158,11 +6235,12 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -6174,7 +6252,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -6201,7 +6279,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -6218,7 +6296,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -6259,7 +6337,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_generateLarge_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
@@ -6284,35 +6362,36 @@ nonisolated(unsafe) let testbed_generateLarge_ArgsDescriptor: Descriptor = Descr
 nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError>>.size,
-    align: MemoryLayout<Result<Void, VoxError>>.alignment),
+    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError> =
+        let v: Result<Void, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -6333,11 +6412,12 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -6349,7 +6429,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -6376,7 +6456,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -6393,7 +6473,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -6434,7 +6514,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_allColors_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
@@ -6443,35 +6523,36 @@ nonisolated(unsafe) let testbed_allColors_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc176_4926_08a1_c63f)),
   layout: Layout(
-    size: MemoryLayout<Result<[Color], VoxError>>.size,
-    align: MemoryLayout<Result<[Color], VoxError>>.alignment),
+    size: MemoryLayout<Result<[Color], VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<[Color], VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<[Color], VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<[Color], VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<[Color], VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<[Color], VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: [Color].self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: [Color].self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<[Color], VoxError> =
+        let v: Result<[Color], VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: [Color].self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<[Color], VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<[Color], VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -6541,11 +6622,12 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -6557,7 +6639,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -6584,7 +6666,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -6601,7 +6683,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -6642,7 +6724,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_describePoint_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb532_0808_0224_fc2f)),
@@ -6680,35 +6762,38 @@ nonisolated(unsafe) let testbed_describePoint_ArgsDescriptor: Descriptor = Descr
 nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xee6c_127c_6bb3_53e3)),
   layout: Layout(
-    size: MemoryLayout<Result<TaggedPoint, VoxError>>.size,
-    align: MemoryLayout<Result<TaggedPoint, VoxError>>.alignment),
+    size: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<TaggedPoint, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<TaggedPoint, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<TaggedPoint, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<TaggedPoint, VoxError<Infallible>>.self).pointee
+        {
         case .success(let f0): scratch.assumingMemoryBound(to: TaggedPoint.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: TaggedPoint.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<TaggedPoint, VoxError> =
+        let v: Result<TaggedPoint, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: TaggedPoint.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<TaggedPoint, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<TaggedPoint, VoxError<Infallible>>.self).initialize(
+          to: v)
       },
       variants: [
         VariantAccess(
@@ -6761,11 +6846,12 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -6777,7 +6863,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -6804,7 +6890,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -6821,7 +6907,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -6862,7 +6948,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoShape_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x191a_fdc0_4fd3_2d16)),
@@ -6963,35 +7049,36 @@ nonisolated(unsafe) let testbed_echoShape_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1780_b3a5_e062_b2a7)),
   layout: Layout(
-    size: MemoryLayout<Result<Shape, VoxError>>.size,
-    align: MemoryLayout<Result<Shape, VoxError>>.alignment),
+    size: MemoryLayout<Result<Shape, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Shape, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Shape, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Shape, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Shape, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Shape, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Shape.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Shape.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Shape, VoxError> =
+        let v: Result<Shape, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Shape.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Shape, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Shape, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -7099,11 +7186,12 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -7115,7 +7203,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -7142,7 +7230,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -7159,7 +7247,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -7200,7 +7288,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoStatusV1_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0429_8c79_019a_0e71)),
@@ -7251,35 +7339,36 @@ nonisolated(unsafe) let testbed_echoStatusV1_ArgsDescriptor: Descriptor = Descri
 nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef48_b0f8_1fce_aad5)),
   layout: Layout(
-    size: MemoryLayout<Result<Status, VoxError>>.size,
-    align: MemoryLayout<Result<Status, VoxError>>.alignment),
+    size: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Status, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Status, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Status.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Status.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Status, VoxError> =
+        let v: Result<Status, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Status.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Status, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -7334,11 +7423,12 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -7350,7 +7440,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -7377,7 +7467,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -7394,7 +7484,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -7435,7 +7525,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoTagV1_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x56bf_b591_1622_a4e8)),
@@ -7477,35 +7567,36 @@ nonisolated(unsafe) let testbed_echoTagV1_ArgsDescriptor: Descriptor = Descripto
 nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9234_7142_0d12_ed66)),
   layout: Layout(
-    size: MemoryLayout<Result<Tag, VoxError>>.size,
-    align: MemoryLayout<Result<Tag, VoxError>>.alignment),
+    size: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Tag, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Tag, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Tag.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Tag.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Tag, VoxError> =
+        let v: Result<Tag, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Tag.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Tag, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -7550,11 +7641,12 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -7566,7 +7658,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -7593,7 +7685,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -7610,7 +7702,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -7651,7 +7743,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoProfile_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6b04_d781_087b_195b)),
@@ -7687,35 +7779,36 @@ nonisolated(unsafe) let testbed_echoProfile_ArgsDescriptor: Descriptor = Descrip
 nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb846_cefd_aa87_0e66)),
   layout: Layout(
-    size: MemoryLayout<Result<Profile, VoxError>>.size,
-    align: MemoryLayout<Result<Profile, VoxError>>.alignment),
+    size: MemoryLayout<Result<Profile, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Profile, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Profile, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Profile, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Profile, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Profile, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Profile.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Profile.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Profile, VoxError> =
+        let v: Result<Profile, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Profile.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Profile, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Profile, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -7754,11 +7847,12 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -7770,7 +7864,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -7797,7 +7891,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -7814,7 +7908,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -7855,7 +7949,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoRecord_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x03ba_2164_48a2_9bdb)),
@@ -7897,35 +7991,36 @@ nonisolated(unsafe) let testbed_echoRecord_ArgsDescriptor: Descriptor = Descript
 nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x57e7_05b3_5162_4c54)),
   layout: Layout(
-    size: MemoryLayout<Result<Record, VoxError>>.size,
-    align: MemoryLayout<Result<Record, VoxError>>.alignment),
+    size: MemoryLayout<Result<Record, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Record, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Record, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Record, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Record, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Record, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Record.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Record.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Record, VoxError> =
+        let v: Result<Record, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Record.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Record, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Record, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -7971,11 +8066,12 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -7987,7 +8083,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -8014,7 +8110,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -8031,7 +8127,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -8072,7 +8168,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoStatus_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0429_8c79_019a_0e71)),
@@ -8123,35 +8219,36 @@ nonisolated(unsafe) let testbed_echoStatus_ArgsDescriptor: Descriptor = Descript
 nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef48_b0f8_1fce_aad5)),
   layout: Layout(
-    size: MemoryLayout<Result<Status, VoxError>>.size,
-    align: MemoryLayout<Result<Status, VoxError>>.alignment),
+    size: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Status, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Status, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Status.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Status.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Status, VoxError> =
+        let v: Result<Status, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Status.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Status, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -8206,11 +8303,12 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -8222,7 +8320,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -8249,7 +8347,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -8266,7 +8364,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -8307,7 +8405,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoTag_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x56bf_b591_1622_a4e8)),
@@ -8349,35 +8447,36 @@ nonisolated(unsafe) let testbed_echoTag_ArgsDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9234_7142_0d12_ed66)),
   layout: Layout(
-    size: MemoryLayout<Result<Tag, VoxError>>.size,
-    align: MemoryLayout<Result<Tag, VoxError>>.alignment),
+    size: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Tag, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Tag, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Tag.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Tag.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Tag, VoxError> =
+        let v: Result<Tag, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Tag.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Tag, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -8422,11 +8521,12 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -8438,7 +8538,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -8465,7 +8565,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -8482,7 +8582,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -8523,7 +8623,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoMeasurement_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9682_cd83_92fb_e56a)),
@@ -8560,35 +8660,38 @@ nonisolated(unsafe) let testbed_echoMeasurement_ArgsDescriptor: Descriptor = Des
 nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8df1_0dc3_2f6b_fae7)),
   layout: Layout(
-    size: MemoryLayout<Result<Measurement, VoxError>>.size,
-    align: MemoryLayout<Result<Measurement, VoxError>>.alignment),
+    size: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Measurement, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Measurement, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Measurement, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Measurement, VoxError<Infallible>>.self).pointee
+        {
         case .success(let f0): scratch.assumingMemoryBound(to: Measurement.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Measurement.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Measurement, VoxError> =
+        let v: Result<Measurement, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Measurement.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Measurement, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Measurement, VoxError<Infallible>>.self).initialize(
+          to: v)
       },
       variants: [
         VariantAccess(
@@ -8627,11 +8730,12 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -8643,7 +8747,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -8670,7 +8774,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -8687,7 +8791,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -8728,7 +8832,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_echoConfig_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x11e0_1a6d_10db_566f)),
@@ -8763,35 +8867,36 @@ nonisolated(unsafe) let testbed_echoConfig_ArgsDescriptor: Descriptor = Descript
 nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc54e_add5_d706_4851)),
   layout: Layout(
-    size: MemoryLayout<Result<Config, VoxError>>.size,
-    align: MemoryLayout<Result<Config, VoxError>>.alignment),
+    size: MemoryLayout<Result<Config, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Config, VoxError<Infallible>>>.alignment),
   access: .enumeration(
     EnumAccess(
       tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Config, VoxError>.self).pointee {
+        switch ptr.assumingMemoryBound(to: Result<Config, VoxError<Infallible>>.self).pointee {
         case .success: return 0
         case .failure: return 1
         }
       },
       projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Config, VoxError>.self).pointee {
+        switch value.assumingMemoryBound(to: Result<Config, VoxError<Infallible>>.self).pointee {
         case .success(let f0): scratch.assumingMemoryBound(to: Config.self).initialize(to: f0)
-        case .failure(let f0): scratch.assumingMemoryBound(to: VoxError.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         if localIndex == 0 {
           scratch.assumingMemoryBound(to: Config.self).deinitialize(count: 1)
         } else {
-          scratch.assumingMemoryBound(to: VoxError.self).deinitialize(count: 1)
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
         }
       },
       inject: { slot, localIndex, scratch in
-        let v: Result<Config, VoxError> =
+        let v: Result<Config, VoxError<Infallible>> =
           localIndex == 0
           ? .success(scratch.assumingMemoryBound(to: Config.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError.self).move())
-        slot.assumingMemoryBound(to: Result<Config, VoxError>.self).initialize(to: v)
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Config, VoxError<Infallible>>.self).initialize(to: v)
       },
       variants: [
         VariantAccess(
@@ -8830,11 +8935,12 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
               descriptor: Descriptor(
                 schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
                 layout: Layout(
-                  size: MemoryLayout<VoxError>.size, align: MemoryLayout<VoxError>.alignment),
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
                 access: .enumeration(
                   EnumAccess(
                     tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user: return 0
                       case .unknownMethod: return 1
                       case .invalidPayload: return 2
@@ -8846,7 +8952,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError.self).pointee {
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
                       case .user(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
                           to: f0)
@@ -8873,7 +8979,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                       }
                     },
                     inject: { slot, localIndex, scratch in
-                      let v: VoxError
+                      let v: VoxError<Infallible>
                       switch localIndex {
                       case 0:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
@@ -8890,7 +8996,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                       case 7: v = .indeterminate
                       default: fatalError("bad variant index")
                       }
-                      slot.assumingMemoryBound(to: VoxError.self).initialize(to: v)
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
                     },
                     variants: [
                       VariantAccess(
@@ -8931,7 +9037,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                       VariantAccess(
                         wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                     ]))))
-          ], payloadLayout: MemoryLayout<VoxError>.phonLayout),
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 
 public let testbedMethods: [UInt64: PhonMethodSchemas] = [

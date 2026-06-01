@@ -38,11 +38,36 @@ fn closure_bytes(shape: &'static Shape) -> String {
         .join(", ")
 }
 
+/// The wire error type `VoxError<E>` (`Result<T, VoxError<E>>` is every method's
+/// response) + the empty `Infallible` (the `E` of an infallible method). Generated
+/// once; the per-method response descriptors materialize them on the typed path.
+pub fn generate_wire_error_types() -> String {
+    let mut out = String::new();
+    out.push_str("// MARK: - wire error type\n\n");
+    // `Infallible`: Rust `core::convert::Infallible` (uninhabited) — an infallible
+    // method's `User(E)` arm is never constructed.
+    out.push_str("public enum Infallible: Sendable {}\n\n");
+    out.push_str("/// The wire error of `Result<T, VoxError<E>>`. Variant order matches the\n");
+    out.push_str("/// Rust `VoxError<E>` (User=0 … Indeterminate=7) so wire indices align.\n");
+    out.push_str("public enum VoxError<E>: Error {\n");
+    out.push_str("    case user(E)\n");
+    out.push_str("    case unknownMethod\n");
+    out.push_str("    case invalidPayload(String)\n");
+    out.push_str("    case cancelled\n");
+    out.push_str("    case connectionClosed\n");
+    out.push_str("    case sessionShutdown\n");
+    out.push_str("    case sendFailed\n");
+    out.push_str("    case indeterminate\n");
+    out.push_str("}\n\n");
+    out
+}
+
 /// Generate the `{service}` phon registry + per-method schema table + descriptors.
 pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     let name = service.service_name.to_lower_camel_case();
     let mut out = String::new();
 
+    out.push_str(&generate_wire_error_types());
     out.push_str(
         "// MARK: - phon service schemas (registry + per-method roots/descriptors/channels)\n\n",
     );
