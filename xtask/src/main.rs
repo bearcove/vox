@@ -437,6 +437,7 @@ fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
 
     let types = vec![
         wire_type!("Parity", rt::Parity),
+        wire_type!("BindingDirection", rt::BindingDirection),
         wire_type!("ConnectionSettings", rt::ConnectionSettings),
         wire_type!("ProtocolError", rt::ProtocolError<'static>),
         wire_type!("Ping", rt::Ping),

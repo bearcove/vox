@@ -11,6 +11,11 @@ public enum Parity: Sendable {
   case even
 }
 
+public enum BindingDirection: Sendable {
+  case args
+  case response
+}
+
 public struct ConnectionSettings: Sendable {
   public var parity: Parity
   public var maxConcurrentRequests: UInt32
