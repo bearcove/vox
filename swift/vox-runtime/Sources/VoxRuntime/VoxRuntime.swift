@@ -145,15 +145,15 @@ extension VoxConnection {
 
 // MARK: - Connection VoxConnection Conformance
 
-// MARK: - VoxError
+// MARK: - VoxRuntimeError
 
-/// Errors that can occur during vox operations.
+/// Runtime-originated call errors (the wire error `VoxError<E>` is a separate,
+/// generated, generic type the client surfaces). This is what the runtime passes
+/// to `ServiceDispatcher.encodeVoxError` to be mapped onto the wire `Err` arm.
 ///
-/// r[impl rpc.fallible.vox-error] - VoxError represents call-level errors.
+/// r[impl rpc.fallible.vox-error] - call-level errors.
 /// r[impl rpc.error.scope] - Call errors don't terminate connection.
-/// r[impl rpc.fallible] - VoxError variants for different error types.
-/// r[impl rpc.fallible.caller-signature] - User errors propagate through VoxError.
-public enum VoxError: Error {
+public enum VoxRuntimeError: Error {
     case unknownMethod
     case notImplemented
     case invalidPayload(String)
