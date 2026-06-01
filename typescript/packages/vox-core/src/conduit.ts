@@ -17,7 +17,7 @@ export interface Conduit<T> {
 
 /**
  * Build the envelope decoder reconciling the peer's `Message` schema (exchanged
- * in the handshake, as phon schema-closure bytes) against ours (`r[compat.plan-first]`).
+ * in the handshake, as phon schema-closure bytes) against ours (`r[zerocopy.framing.value.decode-plan]`).
  * With no peer schema it degenerates to writer==reader.
  */
 export function buildMessageDecodePlan(peerSchemaBytes?: Uint8Array): MessageDecoder {

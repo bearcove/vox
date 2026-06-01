@@ -17,7 +17,7 @@ use crate::MessagePlan;
 /// The `Message` envelope is an evolvable wire type like any other: the Rx half
 /// reconciles the peer's envelope schema (received in the handshake, carried in
 /// [`MessagePlan`]) against its own `Message` descriptor to build a phon
-/// compatibility decode program (`r[compat.plan-first]`). There is no
+/// compatibility decode program (`r[zerocopy.framing.value.decode-plan]`). There is no
 /// same-version envelope shortcut.
 // r[impl conduit.bare]
 // r[impl zerocopy.framing.conduit.bare]
@@ -46,7 +46,7 @@ impl<F: MsgFamily, L: Link> BareConduit<F, L> {
 
     /// Create a BareConduit carrying the peer's envelope schema from the
     /// handshake. The Rx half reconciles it against its own `Message` descriptor
-    /// to build the compat decode program (`r[compat.plan-first]`).
+    /// to build the compat decode program (`r[zerocopy.framing.value.decode-plan]`).
     pub fn with_message_plan(link: L, message_plan: MessagePlan) -> Self {
         Self {
             link,
@@ -152,7 +152,7 @@ pub struct BareConduitRx<F: MsgFamily, LRx> {
     /// `None` to reconcile our own schema against itself (degenerate path).
     writer_schema: Option<Vec<u8>>,
     /// The compat decode program, built lazily on the first `recv` (reconciles
-    /// the writer schema against `F::Msg`, `r[compat.plan-first]`) and reused.
+    /// the writer schema against `F::Msg`, `r[zerocopy.framing.value.decode-plan]`) and reused.
     program: Option<vox_phon::DecodeProgram>,
     _phantom: PhantomData<fn() -> F>,
 }
@@ -161,7 +161,7 @@ impl<F: MsgFamily, LRx> BareConduitRx<F, LRx> {
     /// Build (once) and return the envelope compat decode program. Reconciles the
     /// peer's `Message` schema — or our own, when none was exchanged (the
     /// drift-free degenerate of the one compat path) — against `F::Msg`'s
-    /// descriptor via phon's `lower_decode` (`r[compat.plan-first]`).
+    /// descriptor via phon's `lower_decode` (`r[zerocopy.framing.value.decode-plan]`).
     fn ensure_program(&mut self) -> Result<&vox_phon::DecodeProgram, BareConduitError> {
         if self.program.is_none() {
             let writer_bytes = match &self.writer_schema {
@@ -207,7 +207,7 @@ where
         // Lazily build the envelope compat program: reconcile the peer's
         // `Message` schema (or our own, in the degenerate no-exchange case)
         // against our `Message` descriptor. Built once, reused for every frame.
-        // r[impl compat.plan-first]
+        // r[impl zerocopy.framing.value.decode-plan]
         let program = self.ensure_program()?;
 
         // Decode the envelope through the compat program, zero-copy: the decoded

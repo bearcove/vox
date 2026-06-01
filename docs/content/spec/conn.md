@@ -176,14 +176,16 @@ weight = 11
 
 > r[conduit]
 >
-> Conduits provide Postcard serialization/deserialization on top of links.
-> Sending is split into synchronous preparation and asynchronous enqueue.
+> Conduits provide [phon](https://github.com/bearcove/phon)
+> serialization/deserialization on top of links. Sending is split into
+> synchronous preparation and asynchronous enqueue.
 
 > r[conduit.typeplan]
 >
 > Conduits are built to serialize and deserialize _one_ type (typically an enum).
-> For deserialization, conduits MUST use a `TypePlan` to avoid re-planning on every
-> item.
+> For deserialization, conduits MUST reuse a single phon decode plan
+> (`phon r[compat.plan-first]`) across items rather than re-planning on every
+> message.
 
 > r[conduit.bare]
 >
@@ -292,65 +294,67 @@ starts only after that conduit has been selected and initialized.
 >   * ResetChannel
 >   * GrantCredit
 >
-> Schemas are not a standalone message type. They are delivered inline
-> with `Request` and `Response` payloads (see `r[schema.format.delivery]`).
+> Schemas may be delivered inline with `Request` and `Response` payloads or
+> via a standalone `SchemaMessage` binding (see `r[schema.format.delivery]`).
 >
 > `Hello`, `HelloYourself`, `LetsGo`, and `Sorry` are NOT message payloads.
-> They are CBOR-encoded handshake structs exchanged before the postcard
-> `MessagePayload` enum is used (see `r[session.handshake]`).
+> They are phon self-describing handshake messages exchanged before the
+> phon-encoded `MessagePayload` enum is used (see `r[session.handshake]`).
 
 > r[session.handshake]
 >
-> To establish a session on top of an existing conduit, a three-step CBOR
-> handshake MUST be performed. The handshake messages are CBOR-encoded
-> structs, NOT postcard-encoded `MessagePayload` variants. This is the
-> bootstrap: it establishes the schemas needed to interpret the postcard
-> `MessagePayload` enum that follows.
+> To establish a session on top of an existing conduit, a three-step phon
+> self-describing handshake MUST be performed. The handshake messages are phon
+> self-describing values, NOT phon-compact `MessagePayload` variants. This is
+> the bootstrap: phon's self-describing mode needs no prior schema to read
+> (`phon r[self-describing.bootstraps-schemas]`), and it establishes the schema
+> needed to interpret the phon-compact `MessagePayload` enum that follows.
 >
 > 1. The initiator sends a **`Hello`** containing:
 >    - `parity`: the identifier partition desired by the initiator
 >    - `connection_settings`: limits for the root connection
->    - `message_payload_schemas`: a self-contained set of schemas describing
->      the initiator's `MessagePayload` enum and all types it references
->      (the postcard enum used for all subsequent communication)
+>    - `message_payload_schema`: the phon schema-closure bytes describing the
+>      initiator's `Message` envelope and all types it references (the enum used
+>      for all subsequent communication)
 >
-> 2. The acceptor adopts the opposite parity, compares the `MessagePayload`
->    schemas, and replies with one of:
+> 2. The acceptor adopts the opposite parity, builds a phon decode plan for the
+>    initiator's `Message` schema, and replies with one of:
 >    - **`HelloYourself`** containing:
 >      - `connection_settings`: limits for the root connection
->      - `message_payload_schemas`: a self-contained set of schemas describing
->        the acceptor's `MessagePayload` enum and all types it references
+>      - `message_payload_schema`: the phon schema-closure bytes describing the
+>        acceptor's `Message` envelope and all types it references
 >    - **`Sorry`** if the schemas are incompatible (see `r[session.handshake.sorry]`)
 >
-> 3. The initiator compares schemas and replies with one of:
+> 3. The initiator builds a phon decode plan for the acceptor's `Message` schema
+>    and replies with one of:
 >    - **`LetsGo`**: confirms compatibility; the session is established
 >    - **`Sorry`**: rejects the session
 
-> r[session.handshake.cbor]
+> r[session.handshake.phon]
 >
 > All handshake messages (`Hello`, `HelloYourself`, `LetsGo`, `Sorry`) MUST
-> be CBOR-encoded. CBOR is self-describing and does not require a schema to
-> parse, avoiding the chicken-and-egg problem of needing a schema to read a
-> schema. After `LetsGo`, all subsequent communication is postcard-encoded
-> `MessagePayload` values, deserialized using translation plans built from
-> the schemas exchanged in the handshake.
+> be phon self-describing values. phon's self-describing mode is tag-led and
+> needs no prior schema to parse (`phon r[self-describing.tag-led]`), avoiding
+> the chicken-and-egg problem of needing a schema to read a schema. After
+> `LetsGo`, all subsequent communication is phon-compact `MessagePayload`
+> values, decoded using phon decode plans built from the `message_payload_schema`
+> closures exchanged in the handshake.
 
 > r[session.handshake.sorry]
 >
-> `Sorry` MUST contain a structured CBOR description of the incompatibility:
+> `Sorry` MUST contain a structured description of the incompatibility:
 > which variants or fields the rejecting peer requires that the other peer's
 > schema does not provide. After sending or receiving `Sorry`, the session
 > MUST NOT proceed and the conduit SHOULD be closed.
 
 > r[session.handshake.protocol-schema]
 >
-> The `message_payload_schemas` exchanged during the handshake are a
-> self-contained set of schemas describing the `MessagePayload` enum and
-> all types it references — the top-level type for all post-handshake
-> communication. Each peer builds a translation plan for the other's
-> `MessagePayload` schema. This allows the protocol to evolve: peers with
-> different versions of `MessagePayload` can communicate as long as a
-> translation plan can be built.
+> The `message_payload_schema` exchanged during the handshake is the phon
+> schema closure for the `Message` envelope and all types it references — the
+> top-level type for all post-handshake communication. Each peer builds a phon
+> decode plan for the other's `Message` schema. This allows the protocol to
+> evolve: peers with different versions of `Message` can communicate as long as
+> phon can build a decode plan.
 >
 > The sender MUST NOT send a `MessagePayload` variant that the receiver's
 > schema does not include. If a peer's schema is missing a variant the other
@@ -366,8 +370,8 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.unversioned]
 >
 > There is no version field in `Hello`. Protocol evolution is handled entirely
-> through schema exchange: each peer describes its `MessagePayload` enum and
-> peers build translation plans from the schemas. If a peer's schema is
+> through schema exchange: each peer describes its `Message` envelope and peers
+> build phon decode plans from the schema closures. If a peer's schema is
 > missing a variant the other peer requires, the handshake fails with `Sorry`.
 
 > r[session.handshake.resume]

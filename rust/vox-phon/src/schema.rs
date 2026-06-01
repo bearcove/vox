@@ -4,7 +4,7 @@
 //! bytes (this is what CBOR used to carry). The receiver parses that closure into a
 //! [`SchemaBundle`], then builds a compatibility decode program reconciling the
 //! *writer's* schema against the *reader's* derived descriptor — phon's
-//! `lower_decode` (`r[compat.plan-first]`). Every decode goes through this; there is
+//! `lower_decode` (`r[zerocopy.framing.value.decode-plan]`). Every decode goes through this; there is
 //! no same-version shortcut (the drift-free case is just the degenerate output of
 //! the one program, `r[ir.inlining]`).
 //!
@@ -112,7 +112,7 @@ unsafe impl Send for DecodeProgram {}
 unsafe impl Sync for DecodeProgram {}
 
 /// Build the compat decode program reconciling `writer`'s schema against `T`'s
-/// derived descriptor (`r[compat.plan-first]`). Fails if the schemas are
+/// derived descriptor (`r[zerocopy.framing.value.decode-plan]`). Fails if the schemas are
 /// incompatible — before any bytes are touched.
 ///
 /// # Errors
@@ -206,7 +206,7 @@ pub fn to_self_describing<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error>
 
 /// Decode a self-contained message produced by [`to_self_describing`] into an OWNED
 /// `T`: parse the embedded writer schema closure, reconcile it against `T`
-/// (`r[compat.plan-first]`), and decode the value. The handshake decode — so even the
+/// (`r[zerocopy.framing.value.decode-plan]`), and decode the value. The handshake decode — so even the
 /// bootstrap message reconciles writer↔reader rather than assuming same-version.
 ///
 /// # Errors

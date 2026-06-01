@@ -4,7 +4,7 @@
 // schema-closure (self-describing bytes) in the `schemas:` field. The receiver
 // records the writer closure and builds a compatibility decoder reconciling it
 // against the local reader type. Field matching, reordering, and defaulting are
-// phon's compatibility plan (`phon r[compat.plan-first]`); vox only records the
+// phon's compatibility plan; vox only records the
 // writer closure and asks phon to build the decoder.
 //
 // r[impl schema.tracking.received]
@@ -54,7 +54,7 @@ export class SchemaTracker {
 
   /**
    * Record the peer's phon schema-closure bytes for a binding. Best-effort and
-   * idempotent — receiving a schema again simply overwrites (`r[schema.exchange]`).
+   * idempotent — receiving a schema again simply overwrites (best-effort).
    */
   recordReceived(methodId: bigint, direction: BindingDirection, schemaBytes: Uint8Array): void {
     if (schemaBytes.length === 0) return;

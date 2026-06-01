@@ -38,7 +38,7 @@ pub use driver::*;
 ///
 /// The envelope is an evolvable wire type like any other: the Rx half reconciles
 /// this *writer* schema against its own `Message` descriptor to build a phon
-/// compatibility decode program (`r[compat.plan-first]`). There is no
+/// compatibility decode program (`r[zerocopy.framing.value.decode-plan]`). There is no
 /// same-version envelope shortcut — when no schema was exchanged, the writer
 /// schema defaults to our own, which is the *drift-free degenerate output* of the
 /// one compat path (the identical `lower_decode`), not a second code path.

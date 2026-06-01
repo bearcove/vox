@@ -317,7 +317,7 @@ fn message_plan_from_identical_schemas_round_trips() {
     let plan = crate::MessagePlan::from_handshake(&handshake_result)
         .expect("should build message plan from identical schemas");
 
-    // Build the compat decode program from the plan's writer schema (r[compat.plan-first]).
+    // Build the compat decode program from the plan's writer schema (r[zerocopy.framing.value.decode-plan]).
     let writer = vox_phon::parse_schema_bytes(&plan.writer_schema).expect("parse writer schema");
     let program =
         vox_phon::build_decode_program::<Message<'static>>(&writer).expect("build decode program");

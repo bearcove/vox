@@ -155,36 +155,50 @@ insert_anchor_links = "left"
 
 > r[zerocopy.framing.value]
 >
-> The user's Rust value is serialized using postcard (via facet-postcard).
-> Postcard produces a compact binary encoding that supports zero-copy
+> The user's Rust value is serialized using [phon](https://github.com/bearcove/phon)
+> in its compact mode (`phon r[compact.schema-driven]`). phon produces a
+> compact, schema-driven binary encoding that supports zero-copy
 > deserialization — string and byte slice fields can borrow directly from
 > the input buffer.
 >
 > The output of this layer is a contiguous byte sequence representing the
 > serialized value.
 
+> r[zerocopy.framing.value.decode-plan]
+>
+> Every incoming `Message` is decoded through a phon compatibility plan that
+> reconciles the writer's `Message` schema (exchanged in the handshake) against
+> the local `Message` type — phon's plan-first path (`phon r[compat.plan-first]`).
+> There is no single-schema fast path: even when writer and reader schemas are
+> identical, decoding goes through the same compat plan, so envelope evolution
+> is handled uniformly. Per-method argument and response payloads are decoded
+> the same way against their exchanged schemas (see `r[schema.errors.call-level]`).
+
 > r[zerocopy.framing.value.opaque]
 >
-> For `Message<'payload>` payload fields marked as opaque, value encoding is
-> the boundary where erased payload behavior is applied:
+> For `Message<'payload>` payload fields marked as opaque (the `args`/`ret`
+> `Payload`), value encoding is the boundary where erased payload behavior is
+> applied:
 >
-> - **Outgoing (`Message<'call>`):** the opaque adapter maps the payload to
->   `(PtrConst, Shape, Option<TypePlanCore>)`, and postcard serializes that
->   mapped value.
-> - **Incoming (`Message<'static>` inside `SelfRef`):** postcard decodes the
->   payload byte sequence and materializes deferred payload state as either a
->   borrowed byte slice (when input backing is stable) or owned bytes.
+> - **Outgoing (`Message<'call>`):** the opaque adapter maps the payload to a
+>   `(PtrConst, Shape)` pair, and phon serializes that mapped value — or passes
+>   already-encoded bytes through verbatim.
+> - **Incoming (`Message<'static>` inside `SelfRef`):** phon decodes the
+>   surrounding envelope and yields the payload as a byte slice borrowed from
+>   the input backing (when stable) or owned bytes; the concrete payload type is
+>   decoded later, once the method is known.
 >
 > Conduit framing and link framing do not change this mapping contract; they
 > only add/remove their own framing around the same encoded payload bytes.
 
 > r[zerocopy.framing.value.opaque.length-prefix]
 >
-> Opaque values are length-prefixed with a fixed 4-byte little-endian u32,
-> not a varint. This allows the serializer to reserve the prefix bytes,
+> On the wire an opaque payload is a phon `Bytes` run: a fixed 4-byte
+> little-endian `u32` length followed by that many bytes (`phon r[value]`,
+> bytes). The fixed-width prefix lets the serializer reserve the prefix bytes,
 > serialize the mapped value directly into the output buffer, and patch the
-> length afterward — avoiding a temporary allocation to measure the size.
-> The deserializer reads a u32le to determine how many bytes to consume
+> length afterward — avoiding a temporary allocation to measure the size. The
+> deserializer reads the `u32` LE length to determine how many bytes to consume
 > (or skip, for unknown fields).
 
 ### Layer 2: Conduit framing
@@ -209,7 +223,7 @@ insert_anchor_links = "left"
 > - `ack: Option<u32>` — highest sequence number received from the peer
 > - `item: T` — the actual value
 >
-> The entire `Frame<T>` is serialized in one postcard pass — there is no
+> The entire `Frame<T>` is serialized in one phon pass — there is no
 > separate header serialization step. The conduit framing fields are just
 > the first fields of the serialized output. The conduit maintains a
 > replay buffer of serialized frame bytes for retransmission after
@@ -299,7 +313,7 @@ insert_anchor_links = "left"
 > - **BareConduit** serializes `T` into one owned outbound buffer.
 > - **StableConduit** serializes `Frame<T>` into one owned outbound buffer.
 >
-> In both cases, postcard writes the output into the prepared buffer owned by
+> In both cases, phon writes the output into the prepared buffer owned by
 > the conduit. There is no intermediate re-serialization between layers —
 > value encoding and conduit framing are a single serialization pass, and the
 > link applies transport framing (length prefix, WebSocket frame boundary,
@@ -316,8 +330,8 @@ insert_anchor_links = "left"
 > r[zerocopy.scatter]
 >
 > Serializing into a prepared outbound buffer requires knowing the total
-> encoded size before allocating that buffer. Postcard's encoding
-> is sequential and deterministic, so the serializer can compute the
+> encoded size before allocating that buffer. phon's compact encoding
+> is deterministic, so the serializer can compute the
 > exact output size and collect copy instructions without writing to a
 > final destination buffer.
 
@@ -328,7 +342,8 @@ insert_anchor_links = "left"
 > Each segment is either:
 >
 > - **Staged** — a byte range within the staging buffer (structural
->   bytes: varints, enum tags, length prefixes, fixed-size fields), or
+>   bytes: fixed-width integers, enum tags, length prefixes, alignment
+>   padding), or
 > - **Reference** — a pointer and length into the original value's memory
 >   (blob fields: `&[u8]`, `&str`).
 >
@@ -387,8 +402,8 @@ insert_anchor_links = "left"
 
 > r[zerocopy.payload.bytes]
 >
-> **Bytes** — a contiguous byte buffer that is already serialized (e.g.
-> when forwarding a message without deserializing, or when the link
+> **Encoded** — a contiguous byte buffer that is already phon-serialized
+> (e.g. when forwarding a message without deserializing, or when the link
 > provides raw bytes). Paired with a Backing to keep the buffer alive.
 
 ## Copy count summary

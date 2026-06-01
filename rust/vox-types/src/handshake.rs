@@ -3,7 +3,7 @@ use facet::Facet;
 use crate::{ConnectionSettings, Metadata, Parity, SessionResumeKey};
 
 // r[impl session.handshake]
-// r[impl session.handshake.cbor]
+// r[impl session.handshake.phon]
 /// CBOR-encoded handshake message exchanged before postcard traffic begins.
 #[derive(Debug, Clone, Facet)]
 #[repr(u8)]

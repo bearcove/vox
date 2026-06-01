@@ -2,7 +2,7 @@
 //
 // The envelope is an evolvable wire type like any other: decode reconciles the
 // peer's `Message` schema (exchanged in the handshake) against our own via phon's
-// compatibility plan (`r[compat.plan-first]`). With no peer schema it degenerates
+// compatibility plan (`r[zerocopy.framing.value.decode-plan]`). With no peer schema it degenerates
 // to writer==reader — the same plan, not a shortcut.
 
 import {

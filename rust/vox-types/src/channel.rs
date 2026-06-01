@@ -736,7 +736,7 @@ fn observe_optional_replenisher_channel(
 ///
 /// FIXME(channel-compat): this decodes single-schema (the item is decoded against
 /// `T`'s own descriptor), inheriting the pre-existing identity-plan behavior. Proper
-/// `r[compat.plan-first]` for channel elements needs the *writer's* element schema
+/// `r[zerocopy.framing.value.decode-plan]` for channel elements needs the *writer's* element schema
 /// threaded from the channel-establishing method's schema closure down to the `Rx`
 /// at construction — there is no method/tracker context here. Until then a channel
 /// element type that evolved between peers will not reconcile (same gap as before).

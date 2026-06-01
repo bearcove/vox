@@ -66,7 +66,7 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
 
 /// Receive and decode a self-describing handshake message from a raw link. The
 /// embedded writer schema is reconciled against the local `HandshakeMessage`
-/// (`r[compat.plan-first]`), so even the bootstrap message survives version skew.
+/// (`r[zerocopy.framing.value.decode-plan]`), so even the bootstrap message survives version skew.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()
@@ -93,7 +93,7 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 }
 
 // r[impl session.handshake]
-// r[impl session.handshake.cbor]
+// r[impl session.handshake.phon]
 /// Perform the CBOR handshake as the initiator.
 ///
 /// Three-step exchange:
@@ -164,7 +164,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 }
 
 // r[impl session.handshake]
-// r[impl session.handshake.cbor]
+// r[impl session.handshake.phon]
 /// Perform the CBOR handshake as the acceptor.
 ///
 /// Three-step exchange:
