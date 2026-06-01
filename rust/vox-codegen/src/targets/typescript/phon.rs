@@ -69,8 +69,10 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     ));
     out.push('\n');
 
+    // An index signature (not `Record<…>`): a service may define a type named
+    // `Record`, which would shadow the global utility type here.
     out.push_str(&format!(
-        "export const {name}Methods: Record<string, import(\"@bearcove/vox-core\").PhonMethodSchemas> = {{\n"
+        "export const {name}Methods: {{ [methodId: string]: import(\"@bearcove/vox-core\").PhonMethodSchemas }} = {{\n"
     ));
     for m in service.methods {
         let method_id = crate::method_id(m);

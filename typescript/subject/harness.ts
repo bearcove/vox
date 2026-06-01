@@ -11,7 +11,7 @@ import {
   type Metadata,
 } from "@bearcove/vox-core";
 
-export async function runSubjectServer(createDispatcher: () => Dispatcher, metadata: Metadata = []): Promise<void> {
+export async function runSubjectServer(createDispatcher: () => Dispatcher, metadata: Metadata = new Map()): Promise<void> {
   const addr = process.env.PEER_ADDR;
   if (!addr) {
     throw new Error("PEER_ADDR env var not set");

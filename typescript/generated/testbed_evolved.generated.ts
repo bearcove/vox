@@ -123,7 +123,7 @@ export const testbedRegistry = new Registry(
   testbedRegistry_PRIMITIVES.map(([id, tag]) => ({ id: BigInt(`0x${id}`), tag })),
 );
 
-export const testbedMethods: Record<string, import("@bearcove/vox-core").PhonMethodSchemas> = {
+export const testbedMethods: { [methodId: string]: import("@bearcove/vox-core").PhonMethodSchemas } = {
   "0xbd9bcabddeebeb04": {
     argsRoot: 0x858e15ee6b6e5863n,
     argsSchemaClosure:
