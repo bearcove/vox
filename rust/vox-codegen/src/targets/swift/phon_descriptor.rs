@@ -13,6 +13,7 @@
 //! Result. Unsupported shapes panic at codegen time (loud, not silent).
 
 use facet_core::{ScalarType, Shape};
+use vox_phon::schema_bytes_for_shape;
 use vox_types::{
     EnumInfo, ShapeKind, StructInfo, VariantKind, classify_shape, classify_variant,
     extract_schemas, is_bytes,
@@ -20,6 +21,64 @@ use vox_types::{
 
 use super::types::{swift_field_name, swift_type_base};
 use crate::render::hex_u64;
+
+/// Emit the phon codec for a set of root types: per root, the schema-closure
+/// bytes, a `Registry`, the `Descriptor`, the encode/decode programs (cached), and
+/// `encode<Name>` / `decode<Name>` entry points. The engine does the rest.
+pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
+    let mut out = String::new();
+    for (name, shape) in roots {
+        let ty = swift_type_base(shape);
+        let id = phon_schema_id(shape);
+        let closure = schema_bytes_for_shape(shape).expect("phon schema closure bytes");
+        let bytes = closure
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let id_hex = hex_u64(id);
+        let desc = descriptor_expr(shape);
+        out.push_str(&format!("// MARK: - {name} codec\n\n"));
+        out.push_str(&format!(
+            "private let {name}SchemaClosure: [UInt8] = [{bytes}]\n"
+        ));
+        out.push_str(&format!(
+            "public let {name}Registry: Registry = Registry((try! parseSchemaClosure({name}SchemaClosure)).schemas)\n"
+        ));
+        out.push_str(&format!("public let {name}RootId = SchemaId({id_hex})\n"));
+        out.push_str(&format!(
+            "public let {name}Descriptor: Descriptor = {desc}\n"
+        ));
+        out.push_str(&format!(
+            "private let {name}EncodeProgram: MemProgram = try! lowerTyped({name}Descriptor, {name}Registry)\n"
+        ));
+        out.push_str(&format!(
+            "private let {name}DecodeProgram: MemProgram = try! lowerDecode({name}Descriptor, {name}Registry)\n\n"
+        ));
+        out.push_str(&format!(
+            "public func encode{name}(_ value: {ty}) -> [UInt8] {{\n"
+        ));
+        out.push_str("    var v = value\n");
+        out.push_str(&format!(
+            "    return withUnsafeBytes(of: &v) {{ encodeWith({name}EncodeProgram, $0.baseAddress!) }}\n}}\n\n"
+        ));
+        out.push_str(&format!(
+            "public func decode{name}(_ bytes: [UInt8]) throws -> {ty} {{\n"
+        ));
+        out.push_str(&format!(
+            "    let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{ty}>.size, alignment: MemoryLayout<{ty}>.alignment)\n"
+        ));
+        out.push_str("    defer { raw.deallocate() }\n");
+        out.push_str(&format!(
+            "    try decodeInto({name}DecodeProgram, bytes, raw)\n"
+        ));
+        out.push_str(&format!(
+            "    return raw.assumingMemoryBound(to: {ty}.self).move()\n}}\n\n"
+        ));
+    }
+    out
+}
 
 /// The phon content-id (`SchemaId`) of a shape's root.
 fn phon_schema_id(shape: &'static Shape) -> u64 {
@@ -84,6 +143,18 @@ mod tests {
             expr.contains(".enumeration"),
             "envelope should be an enum at the root payload"
         );
+    }
+
+    #[test]
+    fn envelope_codec_module_emits() {
+        let module = generate_phon_codec(&[(
+            "Message".to_string(),
+            <vox_types::Message<'static> as Facet>::SHAPE,
+        )]);
+        assert!(module.contains("MessageSchemaClosure: [UInt8] = ["));
+        assert!(module.contains("public func encodeMessage(_ value: Message)"));
+        assert!(module.contains("public func decodeMessage(_ bytes: [UInt8]) throws -> Message"));
+        assert!(module.contains("lowerDecode(MessageDescriptor, MessageRegistry)"));
     }
 }
 
