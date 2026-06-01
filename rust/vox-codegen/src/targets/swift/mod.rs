@@ -13,6 +13,7 @@ pub mod client;
 pub mod decode;
 pub mod descriptor;
 pub mod encode;
+pub mod phon_descriptor;
 pub mod schema;
 pub mod server;
 pub mod types;
