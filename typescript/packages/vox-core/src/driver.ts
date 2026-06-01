@@ -294,7 +294,9 @@ class VoxCallImpl implements VoxCall {
       return;
     }
     this.replied = true;
-    const payload = this.encodeResponse({ tag: "Ok", value });
+    // A void handler returns `undefined`; phon's unit Value is `null`. Coerce so a
+    // `Result<(), E>` Ok payload encodes (`??` keeps falsy values like `0`/`false`).
+    const payload = this.encodeResponse({ tag: "Ok", value: value ?? null });
     this.sendPayload(payload);
   }
 
