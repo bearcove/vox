@@ -1,4 +1,5 @@
 import Foundation
+import PhonEngine
 import PhonSchema
 
 // The handshake messages (HandshakeMessage / Hello / HelloYourself / LetsGo / Sorry

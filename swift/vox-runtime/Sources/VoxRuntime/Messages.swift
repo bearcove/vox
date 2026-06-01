@@ -126,7 +126,9 @@ func messagePong(nonce: UInt64, connectionId: UInt64 = 0) -> Message {
 /// A decoder that reconciles a peer's advertised (writer) Message schema against the
 /// local reader. When the peer advertises nothing — or the same content-addressed
 /// root — this is the degenerate same-schema decode (ids match cross-language).
-public typealias MessageDecoder = @Sendable ([UInt8]) throws -> Message
+/// Not `@Sendable`: it may capture a (non-Sendable) `MemProgram`; the conduit that
+/// holds it is `@unchecked Sendable` and only invokes it from its own recv loop.
+public typealias MessageDecoder = ([UInt8]) throws -> Message
 
 /// Build the Message decoder for a peer, given the peer's `message_payload_schema`
 /// closure (from the handshake). Mirrors TS `buildMessageDecoder`.

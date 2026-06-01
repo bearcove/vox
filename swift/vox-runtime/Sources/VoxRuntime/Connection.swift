@@ -1,4 +1,5 @@
 import Foundation
+import PhonSchema
 
 public final class Connection: @unchecked Sendable {
     let handle: ConnectionHandle
