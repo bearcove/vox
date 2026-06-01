@@ -51,7 +51,7 @@ public enum TaskMessage: Sendable {
         requestId: UInt64,
         payload: [UInt8],
         methodId: UInt64? = nil,
-        schemaPayload: SchemaPayload? = nil
+        schemas: [UInt8] = []
     )
 }
 

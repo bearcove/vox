@@ -165,48 +165,9 @@ public enum VoxError: Error {
     case indeterminate
 }
 
-// MARK: - Response Encoding Helpers
-
-/// Encode a successful result into a fresh [UInt8] payload.
-public func encodeResultOk<T>(_ value: T, encoder: (T, inout ByteBuffer) -> Void) -> [UInt8] {
-    var buffer = ByteBufferAllocator().buffer(capacity: 64)
-    buffer.writeInteger(UInt8(0))  // Ok discriminant
-    encoder(value, &buffer)
-    return buffer.readBytes(length: buffer.readableBytes) ?? []
-}
-
-/// Encode a successful unit result.
-public func encodeResultOkUnit() -> [UInt8] {
-    [0]  // Ok(()) - just the discriminant
-}
-
-/// Encode an unknown method error.
-///
-/// r[impl rpc.unknown-method] - UnknownMethod when method_id not recognized.
-public func encodeUnknownMethodError() -> [UInt8] {
-    [1, 1]  // Err discriminant + UnknownMethod variant
-}
-
-/// Encode an invalid payload error.
-///
-/// r[impl rpc.error.scope] - InvalidPayload when payload fails to decode.
-public func encodeInvalidPayloadError(reason: String = "invalid payload") -> [UInt8] {
-    var buffer = ByteBufferAllocator().buffer(capacity: 32)
-    buffer.writeInteger(UInt8(1))
-    buffer.writeInteger(UInt8(2))
-    encodeString(reason, into: &buffer)
-    return buffer.readBytes(length: buffer.readableBytes) ?? []
-}
-
-/// Encode a cancelled error.
-public func encodeCancelledError() -> [UInt8] {
-    [1, 3]
-}
-
-/// Encode an indeterminate error.
-public func encodeIndeterminateError() -> [UInt8] {
-    [1, 4]
-}
+// Response/error encoding now goes through the generated dispatcher's phon response
+// descriptor (`ServiceDispatcher.encodeVoxError` + the `{service}Methods` table) — the
+// hand-rolled postcard byte-literals are gone.
 
 // MARK: - Server-side Channel Helpers
 

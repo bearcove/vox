@@ -113,6 +113,10 @@ func messageCredit(channelId: UInt64, additional: UInt32, connectionId: UInt64 =
         payload: .channelMessage(ChannelMessage(id: channelId, body: .grantCredit(ChannelGrantCredit(additional: additional)))))
 }
 
+func messageProtocolError(description: String, connectionId: UInt64 = 0) -> Message {
+    Message(connectionId: connectionId, payload: .protocolError(ProtocolError(description: description)))
+}
+
 func messagePing(nonce: UInt64, connectionId: UInt64 = 0) -> Message {
     Message(connectionId: connectionId, payload: .ping(Ping(nonce: nonce)))
 }

@@ -23,10 +23,10 @@ extension Driver {
             break
         case .ping(let ping):
             do {
-                try await conduit.send(.pong(.init(nonce: ping.nonce)))
+                try await conduit.send(messagePong(nonce: ping.nonce))
             } catch TransportError.wouldBlock {
                 pendingTaskMessages.append(
-                    DriverQueuedTaskMessage(message: .pong(.init(nonce: ping.nonce))))
+                    DriverQueuedTaskMessage(message: messagePong(nonce: ping.nonce)))
             }
         case .pong(let pong):
             handlePong(nonce: pong.nonce, keepaliveRuntime: &keepaliveRuntime)
@@ -36,12 +36,10 @@ extension Driver {
         case .connectionOpen(let open):
             if let acceptor = connectionAcceptor {
                 let metadata = open.metadata
-                guard let serviceEntry = metadata.first(where: { $0.key == "vox-service" }),
-                    case .string(let service) = serviceEntry.value
-                else {
+                guard let service = metadata.metaStr("vox-service") else {
                     // Missing or non-string vox-service metadata — reject
                     try await conduit.send(
-                        .connectionReject(connId: msg.connectionId, metadata: .null))
+                        messageReject(connectionId: msg.connectionId, metadata: .null))
                     return
                 }
                 let request = ConnectionRequest(metadata: metadata, service: service)
@@ -53,8 +51,8 @@ extension Driver {
                         Task {
                             await self.addVirtualConnection(connId, dispatcher: dispatcher)
                             try? await self.conduit.send(
-                                .connectionAccept(
-                                    connId: connId,
+                                messageAccept(
+                                    connectionId: connId,
                                     settings: connectionSettings,
                                     metadata: .null
                                 ))
@@ -64,13 +62,13 @@ extension Driver {
                         guard let self else { return }
                         Task {
                             try? await self.conduit.send(
-                                .connectionReject(connId: connId, metadata: .null))
+                                messageReject(connectionId: connId, metadata: .null))
                         }
                     }
                 )
                 acceptor.accept(request: request, connection: pending)
             } else {
-                try await conduit.send(.connectionReject(connId: msg.connectionId, metadata: .null))
+                try await conduit.send(messageReject(connectionId: msg.connectionId, metadata: .null))
             }
         case .connectionAccept, .connectionReject:
             break
@@ -85,8 +83,11 @@ extension Driver {
         case .requestMessage(let request):
             switch request.body {
             case .call(let call):
-                var argsBuf = call.args.bytes
-                let argsBytes = argsBuf.readBytes(length: argsBuf.readableBytes) ?? []
+                // The peer advertised its args (writer) schema closure on this binding.
+                if !call.schemas.isEmpty {
+                    schemaReceiveTracker.recordReceived(call.methodId, .args, [UInt8](call.schemas))
+                }
+                let argsBytes = [UInt8](call.args)
                 try await handleRequest(
                     connId: msg.connectionId,
                     requestId: request.id,
@@ -95,8 +96,7 @@ extension Driver {
                     payload: argsBytes
                 )
             case .response(let response):
-                var retBuf = response.ret.bytes
-                let payload = retBuf.readBytes(length: retBuf.readableBytes) ?? []
+                let payload = [UInt8](response.ret)
                 guard let pending = await state.claimPendingResponse(request.id, reason: "response")
                 else {
                     if let finalized = await state.takeFinalizedRequest(request.id) {
@@ -128,16 +128,16 @@ extension Driver {
                     break
                 case .release(_, let waiters):
                     let taskTx = taskSender()
+                    let cancelled = dispatcher.encodeVoxError(.cancelled)
                     for waiter in waiters {
-                        taskTx(.response(requestId: waiter, payload: encodeCancelledError()))
+                        taskTx(.response(requestId: waiter, payload: cancelled))
                     }
                 }
             }
         case .channelMessage(let channel):
             switch channel.body {
             case .item(let item):
-                var itemBuf = item.item.bytes
-                let itemBytes = itemBuf.readBytes(length: itemBuf.readableBytes) ?? []
+                let itemBytes = [UInt8](item.item)
                 try await handleData(channelId: channel.id, payload: itemBytes)
             case .close:
                 try await handleClose(channelId: channel.id)
@@ -211,13 +211,15 @@ extension Driver {
                 taskTx(
                     .response(
                         requestId: requestId,
-                        payload: encodeInvalidPayloadError(
-                            reason: "already received operation with ID \(operationId)")
+                        payload: effectiveDispatcher.encodeVoxError(
+                            .invalidPayload("already received operation with ID \(operationId)"))
                     )
                 )
                 return
             case .indeterminate:
-                taskTx(.response(requestId: requestId, payload: encodeIndeterminateError()))
+                taskTx(.response(
+                    requestId: requestId,
+                    payload: effectiveDispatcher.encodeVoxError(.indeterminate)))
                 return
             }
         }
@@ -235,6 +237,7 @@ extension Driver {
                 requestId: requestId,
                 registry: serverRegistry,
                 schemaSendTracker: schemaSendTracker,
+                schemaReceiveTracker: schemaReceiveTracker,
                 taskTx: taskTx
             )
         }
@@ -286,7 +289,7 @@ extension Driver {
     /// r[impl connection.close.semantics] - Send Goodbye with rule ID before closing.
     /// r[impl session.protocol-error] - Reason contains violated rule ID.
     func sendProtocolError(_ reason: String) async throws {
-        try await conduit.send(.protocolError(description: reason))
+        try await conduit.send(messageProtocolError(description: reason))
     }
 
     func failAllPending() async {

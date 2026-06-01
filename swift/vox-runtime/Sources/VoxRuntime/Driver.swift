@@ -25,6 +25,9 @@ public final class Driver: @unchecked Sendable {
     let state: DriverState
     let virtualConnState: VirtualConnectionState
     let schemaSendTracker: SchemaSendTracker
+    /// Writer schema closures the peer advertised (per method+direction), used by
+    /// the dispatcher to build args compat decoders.
+    let schemaReceiveTracker = SchemaTracker()
 
     let eventContinuation: AsyncStream<DriverEvent>.Continuation
     let eventStream: AsyncStream<DriverEvent>
