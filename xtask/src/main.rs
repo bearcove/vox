@@ -472,6 +472,35 @@ fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
     let code = generate_phon_wire(&type_pairs, &roots);
     write_if_changed(&out_path, fmt_swift(&out_path, code))?;
 
+    // The phon HandshakeMessage module — a second self-describing root, framed
+    // exactly like the Message envelope but used during the connection handshake.
+    // `Parity` and `ConnectionSettings` are already declared in Wire.swift (same
+    // module), so emit only the handshake-unique types here.
+    let hs_out_path = workspace_root
+        .join("swift")
+        .join("vox-runtime")
+        .join("Sources")
+        .join("VoxRuntime")
+        .join("HandshakeWire.swift");
+    let hs_types = vec![
+        wire_type!("ResumeKeyBytes", rt::ResumeKeyBytes),
+        wire_type!("Hello", rt::Hello),
+        wire_type!("HelloYourself", rt::HelloYourself),
+        wire_type!("LetsGo", rt::LetsGo),
+        wire_type!("Sorry", rt::Sorry),
+        wire_type!("HandshakeMessage", rt::HandshakeMessage),
+    ];
+    let hs_type_pairs: Vec<_> = hs_types
+        .iter()
+        .map(|w| (w.swift_name.clone(), w.shape))
+        .collect();
+    let hs_roots = vec![(
+        "HandshakeMessage".to_string(),
+        <rt::HandshakeMessage as facet::Facet>::SHAPE,
+    )];
+    let hs_code = generate_phon_wire(&hs_type_pairs, &hs_roots);
+    write_if_changed(&hs_out_path, fmt_swift(&hs_out_path, hs_code))?;
+
     Ok(())
 }
 

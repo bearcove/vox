@@ -51,6 +51,17 @@ pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
     Ok(encode_bundle(d.root, &d.schemas))
 }
 
+/// The phon **content-derived** schema id of a shape's root — the canonical id
+/// peers agree on (the first 8 bytes of the closure from [`schema_bytes_for_shape`]).
+/// This is NOT the vox-types `extract_schemas` `SchemaHash` (a different scheme).
+///
+/// # Errors
+/// [`Error`] if the shape cannot be lowered to a phon schema.
+pub fn schema_id_for_shape(shape: &'static Shape) -> Result<SchemaId, Error> {
+    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    Ok(d.root)
+}
+
 /// Encode a `(root, schemas)` closure to self-describing bytes.
 fn encode_bundle(root: SchemaId, schemas: &[Schema]) -> Vec<u8> {
     let mut out = Vec::new();

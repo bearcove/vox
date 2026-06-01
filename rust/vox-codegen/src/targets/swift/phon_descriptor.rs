@@ -13,10 +13,9 @@
 //! Result. Unsupported shapes panic at codegen time (loud, not silent).
 
 use facet_core::{ScalarType, Shape};
-use vox_phon::schema_bytes_for_shape;
+use vox_phon::{schema_bytes_for_shape, schema_id_for_shape};
 use vox_types::{
-    EnumInfo, ShapeKind, StructInfo, VariantKind, classify_shape, classify_variant,
-    extract_schemas, is_bytes,
+    EnumInfo, ShapeKind, StructInfo, VariantKind, classify_shape, classify_variant, is_bytes,
 };
 
 use super::types::{generate_named_types, swift_field_name, swift_type_base};
@@ -104,13 +103,10 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
     out
 }
 
-/// The phon content-id (`SchemaId`) of a shape's root.
+/// The phon content-derived id (`SchemaId`) of a shape's root — the canonical id
+/// peers agree on, matching the closure bytes (NOT the vox-types `SchemaHash`).
 fn phon_schema_id(shape: &'static Shape) -> u64 {
-    use vox_types::TypeRef;
-    match extract_schemas(shape).expect("phon schema extraction").root {
-        TypeRef::Concrete { type_id, .. } => type_id.0,
-        TypeRef::Var { .. } => panic!("phon descriptor root cannot be a type variable"),
-    }
+    schema_id_for_shape(shape).expect("phon schema id").0
 }
 
 /// `MemoryLayout<T>` size/align expression for a shape's Swift type.

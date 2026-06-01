@@ -635,9 +635,9 @@ private let MessageSchemaClosure: [UInt8] = [
 ]
 nonisolated(unsafe) public let MessageRegistry: Registry = Registry(
   (try! parseSchemaClosure(MessageSchemaClosure)).schemas)
-public let MessageRootId = SchemaId(0x88cc_53fd_8357_cd73)
+public let MessageRootId = SchemaId(0x39a8_7b2f_58f4_b9f2)
 nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x88cc_53fd_8357_cd73)),
+  schema: .concrete(SchemaId(0x39a8_7b2f_58f4_b9f2)),
   layout: Layout(size: MemoryLayout<Message>.size, align: MemoryLayout<Message>.alignment),
   access: .record(
     RecordAccess(
@@ -651,7 +651,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
         FieldAccess(
           offset: MemoryLayout<Message>.offset(of: \Message.payload)!,
           descriptor: Descriptor(
-            schema: .concrete(SchemaId(0x1635_4de3_6878_dd0a)),
+            schema: .concrete(SchemaId(0xf7a8_0c76_b434_cedd)),
             layout: Layout(
               size: MemoryLayout<MessagePayload>.size, align: MemoryLayout<MessagePayload>.alignment
             ),
@@ -749,7 +749,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x32fb_5118_f321_7535)),
+                          schema: .concrete(SchemaId(0x2543_08d0_1e0e_6368)),
                           layout: Layout(
                             size: MemoryLayout<ProtocolError>.size,
                             align: MemoryLayout<ProtocolError>.alignment),
@@ -774,7 +774,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0xfe43_81a4_4965_0fd4)),
+                          schema: .concrete(SchemaId(0x5496_b14a_3bc3_0675)),
                           layout: Layout(
                             size: MemoryLayout<ConnectionOpen>.size,
                             align: MemoryLayout<ConnectionOpen>.alignment),
@@ -785,7 +785,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionOpen>.offset(
                                     of: \ConnectionOpen.connectionSettings)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x7ea7_4c54_ebb9_1597)),
+                                    schema: .concrete(SchemaId(0x8742_ae89_755a_7ab2)),
                                     layout: Layout(
                                       size: MemoryLayout<ConnectionSettings>.size,
                                       align: MemoryLayout<ConnectionSettings>.alignment),
@@ -796,7 +796,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                             offset: MemoryLayout<ConnectionSettings>.offset(
                                               of: \ConnectionSettings.parity)!,
                                             descriptor: Descriptor(
-                                              schema: .concrete(SchemaId(0x5b12_eb5d_f700_6752)),
+                                              schema: .concrete(SchemaId(0x18e6_2ae4_12f0_f6af)),
                                               layout: Layout(
                                                 size: MemoryLayout<Parity>.size,
                                                 align: MemoryLayout<Parity>.alignment),
@@ -864,7 +864,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionOpen>.offset(
                                     of: \ConnectionOpen.metadata)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x897e_e609_6f7b_b726)),
+                                    schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
                                       size: MemoryLayout<Data>.size,
                                       align: MemoryLayout<Data>.alignment),
@@ -878,7 +878,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x50b2_d957_85d8_2f68)),
+                          schema: .concrete(SchemaId(0x1f6d_34a3_96e6_4e2e)),
                           layout: Layout(
                             size: MemoryLayout<ConnectionAccept>.size,
                             align: MemoryLayout<ConnectionAccept>.alignment),
@@ -889,7 +889,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionAccept>.offset(
                                     of: \ConnectionAccept.connectionSettings)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x7ea7_4c54_ebb9_1597)),
+                                    schema: .concrete(SchemaId(0x8742_ae89_755a_7ab2)),
                                     layout: Layout(
                                       size: MemoryLayout<ConnectionSettings>.size,
                                       align: MemoryLayout<ConnectionSettings>.alignment),
@@ -900,7 +900,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                             offset: MemoryLayout<ConnectionSettings>.offset(
                                               of: \ConnectionSettings.parity)!,
                                             descriptor: Descriptor(
-                                              schema: .concrete(SchemaId(0x5b12_eb5d_f700_6752)),
+                                              schema: .concrete(SchemaId(0x18e6_2ae4_12f0_f6af)),
                                               layout: Layout(
                                                 size: MemoryLayout<Parity>.size,
                                                 align: MemoryLayout<Parity>.alignment),
@@ -968,7 +968,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionAccept>.offset(
                                     of: \ConnectionAccept.metadata)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x897e_e609_6f7b_b726)),
+                                    schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
                                       size: MemoryLayout<Data>.size,
                                       align: MemoryLayout<Data>.alignment),
@@ -982,7 +982,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x1515_3cdd_4585_f2c6)),
+                          schema: .concrete(SchemaId(0x00ed_50a2_45e3_4109)),
                           layout: Layout(
                             size: MemoryLayout<ConnectionReject>.size,
                             align: MemoryLayout<ConnectionReject>.alignment),
@@ -993,7 +993,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionReject>.offset(
                                     of: \ConnectionReject.metadata)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x897e_e609_6f7b_b726)),
+                                    schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
                                       size: MemoryLayout<Data>.size,
                                       align: MemoryLayout<Data>.alignment),
@@ -1007,7 +1007,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x663b_7097_6db4_c119)),
+                          schema: .concrete(SchemaId(0xcd9b_8279_fef8_265d)),
                           layout: Layout(
                             size: MemoryLayout<ConnectionClose>.size,
                             align: MemoryLayout<ConnectionClose>.alignment),
@@ -1018,7 +1018,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ConnectionClose>.offset(
                                     of: \ConnectionClose.metadata)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x897e_e609_6f7b_b726)),
+                                    schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
                                       size: MemoryLayout<Data>.size,
                                       align: MemoryLayout<Data>.alignment),
@@ -1032,7 +1032,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x29af_cbc5_b75c_df65)),
+                          schema: .concrete(SchemaId(0x9a66_720e_c460_55dc)),
                           layout: Layout(
                             size: MemoryLayout<RequestMessage>.size,
                             align: MemoryLayout<RequestMessage>.alignment),
@@ -1051,7 +1051,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<RequestMessage>.offset(
                                     of: \RequestMessage.body)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0xed7a_ce82_3117_2b1c)),
+                                    schema: .concrete(SchemaId(0x90a5_7557_a3db_4a0b)),
                                     layout: Layout(
                                       size: MemoryLayout<RequestBody>.size,
                                       align: MemoryLayout<RequestBody>.alignment),
@@ -1123,7 +1123,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0x0113_c294_b1ef_190b)),
+                                                    SchemaId(0x73bf_7413_8f10_c010)),
                                                   layout: Layout(
                                                     size: MemoryLayout<RequestCall>.size,
                                                     align: MemoryLayout<RequestCall>.alignment),
@@ -1145,7 +1145,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \RequestCall.channels)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x0a96_b404_b4d7_9d67)),
+                                                              SchemaId(0xe657_ddfa_9147_07de)),
                                                             layout: Layout(
                                                               size: MemoryLayout<[UInt64]>.size,
                                                               align: MemoryLayout<[UInt64]>
@@ -1162,7 +1162,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \RequestCall.metadata)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1175,7 +1175,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \RequestCall.args)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0xba81_2587_6d63_88b4)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1188,7 +1188,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \RequestCall.schemas)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0xba81_2587_6d63_88b4)),
+                                                              SchemaId(0xaa06_67df_4299_d151)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1205,7 +1205,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0xb2dc_8400_c771_b45d)),
+                                                    SchemaId(0x7905_945d_a56b_0920)),
                                                   layout: Layout(
                                                     size: MemoryLayout<RequestResponse>.size,
                                                     align: MemoryLayout<RequestResponse>.alignment),
@@ -1217,7 +1217,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             .offset(of: \RequestResponse.metadata)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1230,7 +1230,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             .offset(of: \RequestResponse.ret)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0xba81_2587_6d63_88b4)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1243,7 +1243,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             .offset(of: \RequestResponse.schemas)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0xba81_2587_6d63_88b4)),
+                                                              SchemaId(0xaa06_67df_4299_d151)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1261,7 +1261,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0xc669_8a97_6702_8a93)),
+                                                    SchemaId(0x5730_9ade_ec6b_41c2)),
                                                   layout: Layout(
                                                     size: MemoryLayout<RequestCancel>.size,
                                                     align: MemoryLayout<RequestCancel>.alignment),
@@ -1273,7 +1273,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             .offset(of: \RequestCancel.metadata)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1293,7 +1293,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0xc13c_b529_d615_c412)),
+                          schema: .concrete(SchemaId(0xf062_507b_4c2f_77ad)),
                           layout: Layout(
                             size: MemoryLayout<SchemaMessage>.size,
                             align: MemoryLayout<SchemaMessage>.alignment),
@@ -1312,7 +1312,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<SchemaMessage>.offset(
                                     of: \SchemaMessage.direction)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0xf610_6d8a_227b_a44a)),
+                                    schema: .concrete(SchemaId(0x8174_dced_29b4_51d9)),
                                     layout: Layout(
                                       size: MemoryLayout<BindingDirection>.size,
                                       align: MemoryLayout<BindingDirection>.alignment),
@@ -1361,7 +1361,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<SchemaMessage>.offset(
                                     of: \SchemaMessage.schemas)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0xba81_2587_6d63_88b4)),
+                                    schema: .concrete(SchemaId(0xaa06_67df_4299_d151)),
                                     layout: Layout(
                                       size: MemoryLayout<Data>.size,
                                       align: MemoryLayout<Data>.alignment),
@@ -1375,7 +1375,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0xfa16_ef68_96f8_642e)),
+                          schema: .concrete(SchemaId(0xd7a7_583f_8798_1dac)),
                           layout: Layout(
                             size: MemoryLayout<ChannelMessage>.size,
                             align: MemoryLayout<ChannelMessage>.alignment),
@@ -1394,7 +1394,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   offset: MemoryLayout<ChannelMessage>.offset(
                                     of: \ChannelMessage.body)!,
                                   descriptor: Descriptor(
-                                    schema: .concrete(SchemaId(0x96b1_1c06_2d18_a84e)),
+                                    schema: .concrete(SchemaId(0x0bd7_b3c7_a288_b7df)),
                                     layout: Layout(
                                       size: MemoryLayout<ChannelBody>.size,
                                       align: MemoryLayout<ChannelBody>.alignment),
@@ -1478,7 +1478,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0x0b34_71c5_512d_b3e0)),
+                                                    SchemaId(0x54e2_d1dd_38fe_e401)),
                                                   layout: Layout(
                                                     size: MemoryLayout<ChannelItem>.size,
                                                     align: MemoryLayout<ChannelItem>.alignment),
@@ -1490,7 +1490,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \ChannelItem.item)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0xba81_2587_6d63_88b4)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1507,7 +1507,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0x6ab2_ac16_8b10_7c42)),
+                                                    SchemaId(0xbf44_b5eb_0b60_80ce)),
                                                   layout: Layout(
                                                     size: MemoryLayout<ChannelClose>.size,
                                                     align: MemoryLayout<ChannelClose>.alignment),
@@ -1519,7 +1519,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \ChannelClose.metadata)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1536,7 +1536,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0x3b98_2538_f561_9ba8)),
+                                                    SchemaId(0x7540_1491_8221_e608)),
                                                   layout: Layout(
                                                     size: MemoryLayout<ChannelReset>.size,
                                                     align: MemoryLayout<ChannelReset>.alignment),
@@ -1548,7 +1548,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             of: \ChannelReset.metadata)!,
                                                           descriptor: Descriptor(
                                                             schema: .concrete(
-                                                              SchemaId(0x897e_e609_6f7b_b726)),
+                                                              SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
                                                               size: MemoryLayout<Data>.size,
                                                               align: MemoryLayout<Data>.alignment),
@@ -1565,7 +1565,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                 offset: 0,
                                                 descriptor: Descriptor(
                                                   schema: .concrete(
-                                                    SchemaId(0x9ca3_8b4c_fef5_2253)),
+                                                    SchemaId(0xc7d7_e29b_ce87_03c5)),
                                                   layout: Layout(
                                                     size: MemoryLayout<ChannelGrantCredit>.size,
                                                     align: MemoryLayout<ChannelGrantCredit>
@@ -1597,7 +1597,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x6ce4_66c0_6c30_4d3c)),
+                          schema: .concrete(SchemaId(0xb7ad_0148_d17b_2c88)),
                           layout: Layout(
                             size: MemoryLayout<Ping>.size, align: MemoryLayout<Ping>.alignment),
                           access: .record(
@@ -1618,7 +1618,7 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                       FieldAccess(
                         offset: 0,
                         descriptor: Descriptor(
-                          schema: .concrete(SchemaId(0x5375_efd2_8633_3410)),
+                          schema: .concrete(SchemaId(0xc1e5_6c3f_1816_61b0)),
                           layout: Layout(
                             size: MemoryLayout<Pong>.size, align: MemoryLayout<Pong>.alignment),
                           access: .record(
