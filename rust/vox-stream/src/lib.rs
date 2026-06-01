@@ -542,7 +542,7 @@ impl Link for LocalLink {
 /// Each call to `next_link` connects to the same local endpoint and yields an
 /// initiator attachment for stable conduit reconnects.
 // r[impl transport.stream.local]
-// r[impl stable.link-source]
+// r[impl conduit.stable]
 pub struct LocalLinkSource {
     addr: String,
 }

@@ -140,7 +140,7 @@ extension Driver {
         // Reset operations tracker (the peer will send operation 0, 1, 2 etc. again)
         await self.operations.onConduitReset()
 
-        // r[impl retry.channel.disconnect.closes] - Close all channels on resume.
+        // r[impl rpc.channel.connection-closure] - Close all channels on resume.
         // Channel handles become invalid on disconnect. When idem methods with channels
         // are re-run, fresh channels will be allocated and the handles will be rebound.
         await serverRegistry.closeAllChannels()

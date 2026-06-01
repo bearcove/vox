@@ -499,7 +499,7 @@ public actor ChannelRegistry {
 
     /// Close all channels. Called on session resume.
     ///
-    /// r[impl retry.channel.disconnect.closes] - Channel handles become invalid on disconnect.
+    /// r[impl rpc.channel.connection-closure] - Channel handles become invalid on disconnect.
     public func closeAllChannels() async {
         for (_, receiver) in receivers {
             receiver.deliverReset()

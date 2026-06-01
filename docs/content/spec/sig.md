@@ -34,8 +34,10 @@ This means:
 ## Signature Hash
 
 The signature hash is no longer part of method identity (see
-`r[method.identity.computation]`), but the canonical encoding below is
-still used for schema extraction and compatibility tooling.
+`r[method.identity.computation]`), and type identity / schema extraction is now
+phon's content-hash (`phon r[schema-identity.computation]`), not the canonical
+encoding below. This section is retained for reference and for tooling that
+predates phon; it is not on the wire path.
 
 > r[signature.hash.algorithm]
 >
@@ -44,9 +46,9 @@ still used for schema extraction and compatibility tooling.
 
 > r[signature.varint]
 >
-> Variable-length integers (`varint`) in signature encoding use the
-> same format as [POSTCARD]: unsigned LEB128. Each byte contains 7
-> data bits; the high bit indicates continuation (1 = more bytes).
+> Variable-length integers (`varint`) in signature encoding use unsigned
+> LEB128. Each byte contains 7 data bits; the high bit indicates continuation
+> (1 = more bytes).
 
 > r[signature.endianness]
 >

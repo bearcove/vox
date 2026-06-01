@@ -558,52 +558,57 @@ identity described in [Retry](./retry/).
 
 > r[rpc.metadata]
 >
-> Requests and Responses carry metadata: a list of `(key, value, flags)`
-> triples for out-of-band information such as tracing context, authentication
-> tokens, or deadlines.
+> Requests and Responses carry **metadata**: a self-describing phon `Value` map
+> from UTF-8 string keys to arbitrary `Value`s, for out-of-band information such
+> as tracing context, authentication tokens, or deadlines. Because metadata is a
+> self-describing `Value`, it is not nominally typed and does not participate in
+> schema exchange (see `r[schema.interaction.metadata]`).
 
 > r[rpc.metadata.value]
 >
-> A metadata value is one of three types:
->
->   * `String` — a UTF-8 string
->   * `Bytes` — an opaque byte buffer
->   * `U64` — a 64-bit unsigned integer
+> A metadata value is any phon self-describing `Value` (`phon r[value]`) —
+> commonly a `String`, a `Bytes` buffer, or a `U64`, but lists and nested maps
+> are also valid. A peer carrying no metadata MAY encode it as the unit/null
+> `Value` rather than an empty map.
 
 > r[rpc.metadata.flags]
 >
-> Each metadata entry carries a `u64` flags bitfield that controls handling
-> behavior. Unknown flag bits MUST be preserved when forwarding metadata,
-> but MUST be ignored for handling decisions.
+> Handling flags are carried as **well-known keys** in the metadata map, not as
+> a per-entry bitfield. Each flag key maps to a `Value` list naming the metadata
+> keys that bear that flag:
 >
-> | Bit | Name | Meaning |
-> |-----|------|---------|
-> | 0 | `SENSITIVE` | See `r[rpc.metadata.flags.sensitive]` |
-> | 1 | `NO_PROPAGATE` | See `r[rpc.metadata.flags.no-propagate]` |
-> | 2–63 | Reserved | MUST be zero when creating; MUST be preserved when forwarding |
+> | Key | Meaning |
+> |-----|---------|
+> | `vox:sensitive` | See `r[rpc.metadata.flags.sensitive]` |
+> | `vox:no-propagate` | See `r[rpc.metadata.flags.no-propagate]` |
+>
+> The `vox:` key prefix is reserved for protocol use. Implementations MAY expose
+> flags as an ergonomic per-entry API, but on the wire they MUST lower to these
+> keys. Unknown `vox:` keys MUST be preserved when forwarding but ignored for
+> handling decisions.
 
 > r[rpc.metadata.flags.sensitive]
 >
-> When the `SENSITIVE` flag (bit 0) is set, the value MUST NOT be logged,
-> traced, or included in error messages. Implementations MUST take care
-> not to expose sensitive values in debug output, telemetry, or crash reports.
+> A metadata key listed in the `vox:sensitive` list MUST NOT be logged, traced,
+> or included in error messages. Implementations MUST take care not to expose
+> such values in debug output, telemetry, or crash reports.
 
 > r[rpc.metadata.flags.no-propagate]
 >
-> When the `NO_PROPAGATE` flag (bit 1) is set, the value MUST NOT be
-> forwarded to downstream calls. A proxy or middleware that forwards
-> metadata MUST strip entries with this flag set.
+> A metadata key listed in the `vox:no-propagate` list MUST NOT be forwarded to
+> downstream calls. A proxy or middleware that forwards metadata MUST strip those
+> keys, and prune them from the `vox:no-propagate` list it forwards.
 
 > r[rpc.metadata.keys]
 >
-> Metadata keys are case-sensitive UTF-8 strings. By convention, keys
+> Metadata keys are case-sensitive UTF-8 strings. By convention, application keys
 > use lowercase kebab-case (e.g. `authorization`, `trace-parent`,
-> `request-deadline`).
+> `request-deadline`); the `vox:` prefix is reserved for protocol keys.
 
 > r[rpc.metadata.duplicates]
 >
-> Duplicate keys are allowed. When multiple entries share the same key,
-> all values MUST be preserved in order.
+> Metadata is a map: each key appears at most once. To associate multiple values
+> with a single key, use a list `Value`.
 
 > r[rpc.metadata.unknown]
 >
@@ -612,25 +617,26 @@ identity described in [Retry](./retry/).
 
 ### Examples
 
-Authentication tokens should be marked sensitive to prevent logging:
+Build a metadata map and mark an authentication token sensitive (and
+non-propagating) so it is not logged or forwarded downstream:
 
 ```rust
-metadata.push((
-    "authorization".into(),
-    MetadataValue::String("Bearer sk-...".into()),
-    MetadataFlags::SENSITIVE,
-));
-```
+let mut metadata = vox_types::metadata()
+    .str("trace-id", "abc123")
+    .u64("attempt", 2)
+    .build();
 
-Session tokens that shouldn't leak to downstream services:
-
-```rust
-metadata.push((
-    "session-id".into(),
-    MetadataValue::String(session_id),
+vox_types::meta_set(
+    &mut metadata,
+    "authorization",
+    "Bearer sk-...",
     MetadataFlags::SENSITIVE | MetadataFlags::NO_PROPAGATE,
-));
+);
 ```
+
+On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
+"authorization": "Bearer sk-...", "vox:sensitive": ["authorization"],
+"vox:no-propagate": ["authorization"] }`.
 
 # Channel binding
 
