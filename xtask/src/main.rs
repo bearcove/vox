@@ -415,7 +415,8 @@ fn codegen_swift(
 }
 
 fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-    use vox_codegen::targets::swift::wire::{WireType, generate_wire_types};
+    use vox_codegen::targets::swift::phon_descriptor::generate_phon_wire;
+    use vox_codegen::targets::swift::wire::WireType;
     use vox_types as rt;
 
     let out_path = workspace_root
@@ -460,16 +461,16 @@ fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
         wire_type!("Message", rt::Message<'static>),
     ];
 
-    let (code, cbor_bytes) = generate_wire_types(&types);
+    let type_pairs: Vec<_> = types
+        .iter()
+        .map(|w| (w.swift_name.clone(), w.shape))
+        .collect();
+    let roots = vec![(
+        "Message".to_string(),
+        <rt::Message<'static> as facet::Facet>::SHAPE,
+    )];
+    let code = generate_phon_wire(&type_pairs, &roots);
     write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-
-    let bin_path = workspace_root
-        .join("swift")
-        .join("vox-runtime")
-        .join("Sources")
-        .join("VoxRuntime")
-        .join("wireMessageSchemas.bin");
-    write_if_changed(&bin_path, cbor_bytes)?;
 
     Ok(())
 }
