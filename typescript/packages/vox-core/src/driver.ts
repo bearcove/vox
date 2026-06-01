@@ -655,7 +655,6 @@ export class Driver {
     // r[impl rpc.channel.binding]
     // r[impl rpc.channel.binding.callee-args.rx]
     // r[impl rpc.channel.binding.callee-args.tx]
-    // r[impl schema.translation.field-matching]
     const ms = descriptor.send_schemas[methodKey(method.id)];
     if (!ms) {
       throw new Error(`no phon schemas for method ${method.id}`);

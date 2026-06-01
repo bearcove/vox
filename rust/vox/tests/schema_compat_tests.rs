@@ -121,7 +121,6 @@ impl point_v2::Geometry for V2GeometryService {
     }
 }
 
-// r[verify schema.translation.fill-defaults]
 // r[verify schema.interaction.channels]
 #[tokio::test]
 async fn v1_client_v2_server_fills_default() {
@@ -155,7 +154,6 @@ async fn v1_client_v2_server_fills_default() {
     server_task.abort();
 }
 
-// r[verify schema.translation.skip-unknown]
 #[tokio::test]
 async fn v2_client_v1_server_skips_unknown_field() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -232,7 +230,6 @@ impl reordered_v1::PairService for PairEchoV1 {
     }
 }
 
-// r[verify schema.translation.reorder]
 #[tokio::test]
 async fn reordered_fields_are_matched_by_name() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -314,9 +311,6 @@ impl evolved_v1::ConfigService for ConfigServiceV1 {
     }
 }
 
-// r[verify schema.translation.fill-defaults]
-// r[verify schema.translation.skip-unknown]
-// r[verify schema.translation.reorder]
 #[tokio::test]
 async fn evolved_schema_combined_changes() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -393,7 +387,6 @@ impl status_old::Daemon for OldDaemonService {
     }
 }
 
-// r[verify schema.errors.missing-required]
 // r[verify schema.errors.non-retryable]
 // r[verify rpc.fallible.vox-error.retryable]
 #[tokio::test]

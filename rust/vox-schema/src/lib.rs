@@ -497,7 +497,7 @@ pub enum PrimitiveType {
 }
 
 // ============================================================================
-// Content hashing — r[schema.type-id.hash]
+// Content hashing (legacy vox-schema model; the live wire is phon).
 // ============================================================================
 
 impl PrimitiveType {
@@ -569,11 +569,6 @@ impl<'a, Id: Copy> SchemaHasher<'a, Id> {
         }
     }
 
-    // r[impl schema.type-id.hash.primitives]
-    // r[impl schema.type-id.hash.struct]
-    // r[impl schema.type-id.hash.enum]
-    // r[impl schema.type-id.hash.container]
-    // r[impl schema.type-id.hash.tuple]
     fn feed_schema(&mut self, kind: &SchemaKind<Id>, type_params: &[TypeParamName]) {
         match kind {
             SchemaKind::Primitive { primitive_type } => {

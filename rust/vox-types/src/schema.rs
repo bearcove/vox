@@ -412,9 +412,7 @@ fn extract_schemas_uncached(shape: &'static Shape) -> Result<ExtractedSchemas, S
 ///
 /// Schemas must be in dependency order (dependencies before dependents).
 /// For non-recursive types, this is a simple bottom-up pass. For recursive
-/// types, the 4-step algorithm from r[schema.hash.recursive] is used.
-// r[impl schema.type-id.hash]
-// r[impl schema.hash.recursive]
+/// types, a multi-step recursive hashing algorithm is used (legacy vox-schema model).
 /// Resolve a MixedId to a TypeSchemaId for hashing purposes.
 fn resolve_mixed(id: MixedId, temp_to_final: &HashMap<CycleSchemaIndex, SchemaHash>) -> SchemaHash {
     match id {
@@ -434,11 +432,9 @@ enum ExtractKey {
 ///
 /// Schemas must be in dependency order (dependencies before dependents).
 /// For non-recursive types, this is a simple bottom-up pass. For recursive
-/// types, the 4-step algorithm from r[schema.hash.recursive] is used.
+/// types, a multi-step recursive hashing algorithm is used (legacy vox-schema model).
 ///
 /// Returns the finalized schemas and a mapping from temp IDs to final IDs.
-// r[impl schema.type-id.hash]
-// r[impl schema.hash.recursive]
 fn finalize_content_hashes(
     schemas: Vec<MixedSchema>,
 ) -> Result<(Vec<Schema>, HashMap<CycleSchemaIndex, SchemaHash>), SchemaExtractError> {
@@ -707,7 +703,6 @@ impl ExtractCtx {
         let key = self.key_for_shape(shape);
         let id = self.id_for_key(key);
 
-        // r[impl schema.format.recursive]
         // Cycle detection: if we've already started walking this shape,
         // return the assigned id without re-entering.
         if !self.seen.insert(shape) {
@@ -746,7 +741,6 @@ impl ExtractCtx {
             .map(|tp| TypeParamName(tp.name.to_string()))
             .collect();
 
-        // r[impl schema.format.primitive]
         // Scalars
         if let Some(scalar) = shape.scalar_type() {
             self.emit_schema(
@@ -762,7 +756,6 @@ impl ExtractCtx {
             return Ok(TypeRef::concrete(id));
         }
 
-        // r[impl schema.format.container]
         // Containers
         match shape.def {
             Def::List(list_def) => {
@@ -937,8 +930,6 @@ impl ExtractCtx {
 
         // User-defined types.
         let kind = match shape.ty {
-            // r[impl schema.format.struct]
-            // r[impl schema.format.tuple]
             Type::User(UserType::Struct(struct_type)) => match struct_type.kind {
                 StructKind::Unit => {
                     let primitive_type = if is_infallible_shape(shape) {
@@ -988,7 +979,6 @@ impl ExtractCtx {
                     }
                 }
             },
-            // r[impl schema.format.enum]
             Type::User(UserType::Enum(enum_type)) => {
                 let mut variants = Vec::with_capacity(enum_type.variants.len());
                 for (i, v) in enum_type.variants.iter().enumerate() {
@@ -1183,7 +1173,6 @@ mod tests {
         assert_ne!(id, SchemaHash(43));
     }
 
-    // r[verify schema.principles.cbor]
     // r[verify schema.format.self-contained]
     #[test]
     fn cbor_round_trip() {
@@ -1205,7 +1194,6 @@ mod tests {
         assert_eq!(payload.root, TypeRef::concrete(schema.id));
     }
 
-    // r[verify schema.format.primitive]
     #[test]
     fn primitive_u32() {
         let schemas = extract_schemas(<u32 as Facet>::SHAPE)
@@ -1251,7 +1239,6 @@ mod tests {
         ));
     }
 
-    // r[verify schema.format.struct]
     #[test]
     fn simple_struct() {
         #[derive(Facet)]
@@ -1280,7 +1267,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.enum]
     #[test]
     fn simple_enum() {
         #[derive(Facet)]
@@ -1305,7 +1291,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.enum]
     #[test]
     fn enum_with_payloads() {
         #[derive(Facet)]
@@ -1340,7 +1325,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.container]
     #[test]
     fn container_vec() {
         let schemas = extract_schemas(<Vec<u32> as Facet>::SHAPE)
@@ -1357,7 +1341,6 @@ mod tests {
         assert!(matches!(schemas[1].kind, SchemaKind::List { .. }));
     }
 
-    // r[verify schema.format.container]
     #[test]
     fn container_option() {
         let schemas = extract_schemas(<Option<String> as Facet>::SHAPE)
@@ -1374,7 +1357,6 @@ mod tests {
         assert!(matches!(schemas[1].kind, SchemaKind::Option { .. }));
     }
 
-    // r[verify schema.format.recursive]
     #[test]
     fn recursive_type_terminates() {
         #[derive(Facet)]
@@ -1390,7 +1372,6 @@ mod tests {
         assert!(matches!(node_schema.kind, SchemaKind::Struct { .. }));
     }
 
-    // r[verify schema.format.primitive]
     #[test]
     fn vec_u8_is_bytes() {
         let schemas = extract_schemas(<Vec<u8> as Facet>::SHAPE)
@@ -1489,7 +1470,6 @@ mod tests {
         assert_eq!(schemas.len(), 2);
     }
 
-    // r[verify schema.format.container]
     #[test]
     fn container_map() {
         let schemas = extract_schemas(<std::collections::HashMap<String, u32> as Facet>::SHAPE)
@@ -1500,7 +1480,6 @@ mod tests {
         assert!(matches!(map_schema.kind, SchemaKind::Map { .. }));
     }
 
-    // r[verify schema.format.container]
     #[test]
     fn container_array() {
         let schemas = extract_schemas(<[u32; 4] as Facet>::SHAPE)
@@ -1514,7 +1493,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.format.tuple]
     #[test]
     fn tuple_type() {
         let schemas = extract_schemas(<(u32, String) as Facet>::SHAPE)
@@ -1531,7 +1509,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.format]
     #[test]
     fn extract_schemas_returns_all_kinds() {
         #[derive(Facet)]
@@ -1629,7 +1606,6 @@ mod tests {
     }
 
     // r[verify schema.type-id]
-    // r[verify schema.type-id.hash]
     #[test]
     fn type_ids_are_content_hashes() {
         let extracted = extract_schemas(<(u32, String) as Facet>::SHAPE).unwrap();
@@ -1654,7 +1630,6 @@ mod tests {
         );
     }
 
-    // r[verify schema.type-id.hash.primitives]
     #[test]
     fn primitive_content_hashes_are_stable() {
         // These are the canonical hash values for primitive types.
@@ -1703,7 +1678,6 @@ mod tests {
         }
     }
 
-    // r[verify schema.type-id.hash.struct]
     #[test]
     fn struct_hash_is_deterministic() {
         #[derive(Facet)]
@@ -1721,7 +1695,6 @@ mod tests {
         );
     }
 
-    // r[verify schema.hash.recursive]
     #[test]
     fn recursive_type_hash_is_deterministic() {
         #[derive(Facet)]
@@ -1797,7 +1770,7 @@ mod tests {
         );
     }
 
-    // r[verify schema.exchange] receiving a schema more than once is best-effort
+    // r[verify schema.tracking.received] receiving a schema more than once is best-effort
     // and idempotent — it overwrites, it is NOT a protocol error.
     #[test]
     fn duplicate_schema_is_best_effort() {

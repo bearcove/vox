@@ -3,10 +3,11 @@
 // A peer advertises its type for a (method, direction) binding as a phon
 // schema-closure (self-describing bytes) in the `schemas:` field. The receiver
 // records the writer closure and builds a compatibility decoder reconciling it
-// against the local reader type (`r[compat.plan-first]`, `r[schema.exchange]`).
+// against the local reader type. Field matching, reordering, and defaulting are
+// phon's compatibility plan (`phon r[compat.plan-first]`); vox only records the
+// writer closure and asks phon to build the decoder.
 //
-// r[impl schema.tracking.received] r[impl schema.translation.field-matching]
-// r[impl schema.translation.reorder] r[impl schema.errors.missing-required]
+// r[impl schema.tracking.received]
 
 import { type Registry, type Schema, hexToBytes } from "@bearcove/phon-schema";
 import { type Typed, decodeTyped } from "@bearcove/phon-engine";
