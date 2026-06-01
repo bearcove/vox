@@ -15,6 +15,24 @@ fn has_channels(method: &MethodDescriptor) -> bool {
     method.args.iter().any(|a| is_tx(a.shape) || is_rx(a.shape))
 }
 
+/// The server-side (handler) Swift type of an argument — channel args become
+/// `Tx`/`Rx` over the `channel_element` (the arg `shape` is an opaque adapter).
+fn server_arg_ty(a: &vox_types::ArgDescriptor) -> String {
+    if is_tx(a.shape) {
+        format!(
+            "Tx<{}>",
+            swift_type_base(a.channel_element.expect("tx element"))
+        )
+    } else if is_rx(a.shape) {
+        format!(
+            "Rx<{}>",
+            swift_type_base(a.channel_element.expect("rx element"))
+        )
+    } else {
+        swift_type_server_arg(a.shape)
+    }
+}
+
 /// `(ret_ty, response_wire_ty, user_error_ty?)`. `user_error_ty` is `Some` only for a
 /// fallible method (`Result<T, E>` return) — its `E` is the handler's thrown error.
 fn method_types(method: &MethodDescriptor) -> (String, String, Option<String>) {
@@ -46,13 +64,7 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
         let args: Vec<String> = method
             .args
             .iter()
-            .map(|a| {
-                format!(
-                    "{}: {}",
-                    a.name.to_lower_camel_case(),
-                    swift_type_server_arg(a.shape)
-                )
-            })
+            .map(|a| format!("{}: {}", a.name.to_lower_camel_case(), server_arg_ty(a)))
             .collect();
         let ret = swift_type_server_return(method.return_shape);
         if ret == "Void" {

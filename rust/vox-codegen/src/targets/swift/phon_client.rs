@@ -10,19 +10,32 @@ use super::phon_service::method_global_prefix;
 use super::types::{format_doc, swift_type_base, swift_type_client_arg, swift_type_client_return};
 use crate::render::hex_u64;
 
+/// The client-side Swift type of an argument. A channel arg's `shape` is an opaque
+/// adapter (→ `Data`); its real element lives in `channel_element`, so emit the
+/// `UnboundTx`/`UnboundRx` the caller binds.
+fn client_arg_ty(a: &vox_types::ArgDescriptor) -> String {
+    if is_tx(a.shape) {
+        format!(
+            "UnboundTx<{}>",
+            swift_type_base(a.channel_element.expect("tx element"))
+        )
+    } else if is_rx(a.shape) {
+        format!(
+            "UnboundRx<{}>",
+            swift_type_base(a.channel_element.expect("rx element"))
+        )
+    } else {
+        swift_type_client_arg(a.shape)
+    }
+}
+
 /// A method's signature `name(arg: T, …)` and its return type (or `Void`).
 fn method_signature(method: &vox_types::MethodDescriptor) -> (String, String, String) {
     let name = method.method_name.to_lower_camel_case();
     let args: Vec<String> = method
         .args
         .iter()
-        .map(|a| {
-            format!(
-                "{}: {}",
-                a.name.to_lower_camel_case(),
-                swift_type_client_arg(a.shape)
-            )
-        })
+        .map(|a| format!("{}: {}", a.name.to_lower_camel_case(), client_arg_ty(a)))
         .collect();
     let ret = swift_type_client_return(method.return_shape);
     (name, args.join(", "), ret)

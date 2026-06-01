@@ -4,6 +4,7 @@
 /// is compliant with the vox protocol spec.
 
 import Foundation
+import PhonSchema
 import VoxRuntime
 
 // MARK: - Testbed Service Implementation
@@ -316,10 +317,9 @@ func runServer() async throws {
         "server mode: connecting to \(addr), transport=\(transport), acceptConnections=\(acceptConnections)"
     )
 
-    let rootMetadata: [MetadataEntry] = [
-        MetadataEntry(key: "vox-service", value: .string("Testbed"), flags: 0),
-        MetadataEntry(key: "vox-connection-kind", value: .string("root"), flags: 0),
-    ]
+    var rootMetadata: Metadata = .null
+    rootMetadata.metaSet("vox-service", .string("Testbed"))
+    rootMetadata.metaSet("vox-connection-kind", .string("root"))
     let connection: Connection
     let driver: Driver
     if addr.hasPrefix("local://") {
@@ -522,7 +522,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             try await callTask.value
             log("channel_retry_non_idem expected indeterminate")
             throw SubjectError.invalidResponse
-        } catch VoxError.indeterminate {
+        } catch VoxError<Infallible>.indeterminate {
         } catch {
             log("channel_retry_non_idem unexpected error: \(error)")
             throw error

@@ -13815,31 +13815,31 @@ public protocol TestbedCaller: Sendable {
   ///  Client sends numbers, server returns their sum.
   ///
   ///  Tests: client→server streaming. Server receives via `Rx<T>`, returns scalar.
-  func sum(numbers: Data) async throws -> Int64
+  func sum(numbers: UnboundRx<Int32>) async throws -> Int64
   ///  Server streams numbers back to client.
   ///
   ///  Tests: server→client streaming. Server sends via `Tx<T>`.
-  func generate(count: UInt32, output: Data) async throws
+  func generate(count: UInt32, output: UnboundTx<Int32>) async throws
   ///  Server streams numbers back to client on a non-idempotent retry probe.
   ///
   ///  Tests: channel retry fails closed when the session breaks mid-stream.
-  func generateRetryNonIdem(count: UInt32, output: Data) async throws
+  func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws
   ///  Server streams numbers back to client on an idempotent retry probe.
   ///
   ///  Tests: channel retry reruns the method with fresh channel bindings.
-  func generateRetryIdem(count: UInt32, output: Data) async throws
+  func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws
   ///  Bidirectional: client sends strings, server echoes each back.
   ///
   ///  Tests: bidirectional streaming. Server receives via `Rx<T>`, sends via `Tx<T>`.
-  func transform(input: Data, output: Data) async throws
+  func transform(input: UnboundRx<String>, output: UnboundTx<String>) async throws
   ///  Server returns before streaming numbers back to the client.
   ///
   ///  Tests: callee-held `Tx<T>` outlives the unary method response.
-  func postReplyGenerate(output: Data) async throws
+  func postReplyGenerate(output: UnboundTx<Int32>) async throws
   ///  Server returns before receiving numbers from the client, then reports their sum.
   ///
   ///  Tests: callee-held `Rx<T>` outlives the unary method response.
-  func postReplySum(input: Data, result: Data) async throws
+  func postReplySum(input: UnboundRx<Int32>, result: UnboundTx<Int64>) async throws
   ///  Echo a point back.
   func echoPoint(point: Point) async throws -> Point
   ///  Create a person and return it.
@@ -13871,11 +13871,11 @@ public protocol TestbedCaller: Sendable {
   ///  Sum a large stream (tests channel credit/backpressure for > initial credit).
   ///
   ///  Tests: channel flow control when sender must wait for credit grants.
-  func sumLarge(numbers: Data) async throws -> Int64
+  func sumLarge(numbers: UnboundRx<Int32>) async throws -> Int64
   ///  Generate a large stream (tests Tx backpressure with > initial credit items).
   ///
   ///  Tests: server must wait for client to grant credit mid-stream.
-  func generateLarge(count: UInt32, output: Data) async throws
+  func generateLarge(count: UInt32, output: UnboundTx<Int32>) async throws
   ///  Return all three Color variants in a Vec, testing enum + vec round-trip.
   func allColors() async throws -> [Color]
   ///  Accept multiple args of different types; return a summary struct.
@@ -14000,31 +14000,31 @@ public final class TestbedClient: TestbedCaller, Sendable {
     }
   }
 
-  public func sum(numbers: Data) async throws -> Int64 {
+  public func sum(numbers: UnboundRx<Int32>) async throws -> Int64 {
     fatalError("phon Swift client: channel method `sum` not yet wired")
   }
 
-  public func generate(count: UInt32, output: Data) async throws {
+  public func generate(count: UInt32, output: UnboundTx<Int32>) async throws {
     fatalError("phon Swift client: channel method `generate` not yet wired")
   }
 
-  public func generateRetryNonIdem(count: UInt32, output: Data) async throws {
+  public func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
     fatalError("phon Swift client: channel method `generateRetryNonIdem` not yet wired")
   }
 
-  public func generateRetryIdem(count: UInt32, output: Data) async throws {
+  public func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
     fatalError("phon Swift client: channel method `generateRetryIdem` not yet wired")
   }
 
-  public func transform(input: Data, output: Data) async throws {
+  public func transform(input: UnboundRx<String>, output: UnboundTx<String>) async throws {
     fatalError("phon Swift client: channel method `transform` not yet wired")
   }
 
-  public func postReplyGenerate(output: Data) async throws {
+  public func postReplyGenerate(output: UnboundTx<Int32>) async throws {
     fatalError("phon Swift client: channel method `postReplyGenerate` not yet wired")
   }
 
-  public func postReplySum(input: Data, result: Data) async throws {
+  public func postReplySum(input: UnboundRx<Int32>, result: UnboundTx<Int64>) async throws {
     fatalError("phon Swift client: channel method `postReplySum` not yet wired")
   }
 
@@ -14339,11 +14339,11 @@ public final class TestbedClient: TestbedCaller, Sendable {
     }
   }
 
-  public func sumLarge(numbers: Data) async throws -> Int64 {
+  public func sumLarge(numbers: UnboundRx<Int32>) async throws -> Int64 {
     fatalError("phon Swift client: channel method `sumLarge` not yet wired")
   }
 
-  public func generateLarge(count: UInt32, output: Data) async throws {
+  public func generateLarge(count: UInt32, output: UnboundTx<Int32>) async throws {
     fatalError("phon Swift client: channel method `generateLarge` not yet wired")
   }
 
@@ -14609,31 +14609,31 @@ public protocol TestbedHandler: Sendable {
   ///  Client sends numbers, server returns their sum.
   ///
   ///  Tests: client→server streaming. Server receives via `Rx<T>`, returns scalar.
-  func sum(numbers: Data) async throws -> Int64
+  func sum(numbers: Rx<Int32>) async throws -> Int64
   ///  Server streams numbers back to client.
   ///
   ///  Tests: server→client streaming. Server sends via `Tx<T>`.
-  func generate(count: UInt32, output: Data) async throws
+  func generate(count: UInt32, output: Tx<Int32>) async throws
   ///  Server streams numbers back to client on a non-idempotent retry probe.
   ///
   ///  Tests: channel retry fails closed when the session breaks mid-stream.
-  func generateRetryNonIdem(count: UInt32, output: Data) async throws
+  func generateRetryNonIdem(count: UInt32, output: Tx<Int32>) async throws
   ///  Server streams numbers back to client on an idempotent retry probe.
   ///
   ///  Tests: channel retry reruns the method with fresh channel bindings.
-  func generateRetryIdem(count: UInt32, output: Data) async throws
+  func generateRetryIdem(count: UInt32, output: Tx<Int32>) async throws
   ///  Bidirectional: client sends strings, server echoes each back.
   ///
   ///  Tests: bidirectional streaming. Server receives via `Rx<T>`, sends via `Tx<T>`.
-  func transform(input: Data, output: Data) async throws
+  func transform(input: Rx<String>, output: Tx<String>) async throws
   ///  Server returns before streaming numbers back to the client.
   ///
   ///  Tests: callee-held `Tx<T>` outlives the unary method response.
-  func postReplyGenerate(output: Data) async throws
+  func postReplyGenerate(output: Tx<Int32>) async throws
   ///  Server returns before receiving numbers from the client, then reports their sum.
   ///
   ///  Tests: callee-held `Rx<T>` outlives the unary method response.
-  func postReplySum(input: Data, result: Data) async throws
+  func postReplySum(input: Rx<Int32>, result: Tx<Int64>) async throws
   ///  Echo a point back.
   func echoPoint(point: Point) async throws -> Point
   ///  Create a person and return it.
@@ -14665,11 +14665,11 @@ public protocol TestbedHandler: Sendable {
   ///  Sum a large stream (tests channel credit/backpressure for > initial credit).
   ///
   ///  Tests: channel flow control when sender must wait for credit grants.
-  func sumLarge(numbers: Data) async throws -> Int64
+  func sumLarge(numbers: Rx<Int32>) async throws -> Int64
   ///  Generate a large stream (tests Tx backpressure with > initial credit items).
   ///
   ///  Tests: server must wait for client to grant credit mid-stream.
-  func generateLarge(count: UInt32, output: Data) async throws
+  func generateLarge(count: UInt32, output: Tx<Int32>) async throws
   ///  Return all three Color variants in a Vec, testing enum + vec round-trip.
   func allColors() async throws -> [Color]
   ///  Accept multiple args of different types; return a summary struct.
