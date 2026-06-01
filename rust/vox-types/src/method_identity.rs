@@ -29,6 +29,8 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     arg_names: &[&'static str],
     channel_elements: &[Option<&'static Shape>],
     response_wire_shape: &'static Shape,
+    retry_persist: bool,
+    retry_idem: bool,
     doc: Option<&'static str>,
 ) -> &'static MethodDescriptor {
     assert!(
@@ -81,6 +83,8 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         return_shape: R::SHAPE,
         response_wire_shape,
         args_have_channels,
+        retry_persist,
+        retry_idem,
         doc,
     }))
 }

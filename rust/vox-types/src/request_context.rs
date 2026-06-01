@@ -92,6 +92,8 @@ mod tests {
             &[],
             &[],
             <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let metadata = Metadata::default();

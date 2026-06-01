@@ -1806,191 +1806,229 @@ export class TestbedDispatcher implements Dispatcher {
 export const testbed_echo_method: MethodDescriptor = {
   name: "echo",
   id: 0x880bc4eee23574ben,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_reverse_method: MethodDescriptor = {
   name: "reverse",
   id: 0x1c223f30e180392an,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_divide_method: MethodDescriptor = {
   name: "divide",
   id: 0xfb68d9318f830875n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_lookup_method: MethodDescriptor = {
   name: "lookup",
   id: 0xa15ff52094712a3bn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_sum_method: MethodDescriptor = {
   name: "sum",
   id: 0x51f9cfd8e86577c9n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_generate_method: MethodDescriptor = {
   name: "generate",
   id: 0x239e5b99b1f8207an,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_generateRetryNonIdem_method: MethodDescriptor = {
   name: "generateRetryNonIdem",
   id: 0x34419529478cc7b8n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_generateRetryIdem_method: MethodDescriptor = {
   name: "generateRetryIdem",
   id: 0xe2d27fd9098c6ea2n,
+  retry: { persist: false, idem: true },
 };
 
 export const testbed_transform_method: MethodDescriptor = {
   name: "transform",
   id: 0xcb469cff8d798febn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_postReplyGenerate_method: MethodDescriptor = {
   name: "postReplyGenerate",
   id: 0xec36e84751a897ben,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_postReplySum_method: MethodDescriptor = {
   name: "postReplySum",
   id: 0xc1ce3c397e4ca6e7n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoPoint_method: MethodDescriptor = {
   name: "echoPoint",
   id: 0x81f5386d589dfbe4n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_createPerson_method: MethodDescriptor = {
   name: "createPerson",
   id: 0x68ffa90b7728bde7n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_rectangleArea_method: MethodDescriptor = {
   name: "rectangleArea",
   id: 0x223fe0282d263107n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_parseColor_method: MethodDescriptor = {
   name: "parseColor",
   id: 0xd4f16ea9eca132e6n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_shapeArea_method: MethodDescriptor = {
   name: "shapeArea",
   id: 0x04385a4be2a882f5n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_createCanvas_method: MethodDescriptor = {
   name: "createCanvas",
   id: 0xef421eb5b08c973an,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoGnarly_method: MethodDescriptor = {
   name: "echoGnarly",
   id: 0xb6facae6a7a86e99n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_processMessage_method: MethodDescriptor = {
   name: "processMessage",
   id: 0xe08f0f5254e7a997n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_getPoints_method: MethodDescriptor = {
   name: "getPoints",
   id: 0x598518523a6266bfn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_swapPair_method: MethodDescriptor = {
   name: "swapPair",
   id: 0x7d55a713ad612bf2n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoBytes_method: MethodDescriptor = {
   name: "echoBytes",
   id: 0x44056c7842fa336cn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoBool_method: MethodDescriptor = {
   name: "echoBool",
   id: 0x5136d8f01a5f496cn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoU64_method: MethodDescriptor = {
   name: "echoU64",
   id: 0x85e2380dbf7ffe65n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoOptionString_method: MethodDescriptor = {
   name: "echoOptionString",
   id: 0xb1a5bfd205b3fbfcn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_sumLarge_method: MethodDescriptor = {
   name: "sumLarge",
   id: 0x9a7bed545e088054n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_generateLarge_method: MethodDescriptor = {
   name: "generateLarge",
   id: 0x8edfbd65d162f685n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_allColors_method: MethodDescriptor = {
   name: "allColors",
   id: 0xfbfb05bbcaade4a0n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_describePoint_method: MethodDescriptor = {
   name: "describePoint",
   id: 0x62feb14a8fcf9b6dn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoShape_method: MethodDescriptor = {
   name: "echoShape",
   id: 0x4125b5e678b7b4a5n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoStatusV1_method: MethodDescriptor = {
   name: "echoStatusV1",
   id: 0xc7c5aa845cfb8bf6n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoTagV1_method: MethodDescriptor = {
   name: "echoTagV1",
   id: 0x6619071be5d5c259n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoProfile_method: MethodDescriptor = {
   name: "echoProfile",
   id: 0xbd9bcabddeebeb04n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoRecord_method: MethodDescriptor = {
   name: "echoRecord",
   id: 0x100b0e08da4b8f1an,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoStatus_method: MethodDescriptor = {
   name: "echoStatus",
   id: 0x697590d3ffc36703n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoTag_method: MethodDescriptor = {
   name: "echoTag",
   id: 0x2bd1b3149d73ce97n,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoMeasurement_method: MethodDescriptor = {
   name: "echoMeasurement",
   id: 0x3b3d22b015fa1a3fn,
+  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoConfig_method: MethodDescriptor = {
   name: "echoConfig",
   id: 0xe13a477fb964ce28n,
+  retry: { persist: false, idem: false },
 };
 
 // Service descriptor for runtime dispatch metadata

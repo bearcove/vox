@@ -16,6 +16,8 @@ pub fn notifier_service_descriptor() -> &'static ::vox::session::ServiceDescript
                 <Result<(), ::vox::VoxError<::core::convert::Infallible>> as ::vox::facet::Facet<
                     'static,
                 >>::SHAPE,
+                false,
+                false,
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {

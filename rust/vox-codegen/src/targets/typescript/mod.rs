@@ -347,6 +347,8 @@ mod tests {
             &["message"],
             &[None],
             <Result<String, vox_types::VoxError> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
@@ -355,6 +357,8 @@ mod tests {
             &["lhs", "rhs"],
             &[None, None],
             <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![echo, divide].into_boxed_slice());
@@ -383,6 +387,8 @@ mod tests {
             &["node"],
             &[None],
             <Result<RecursiveNode, vox_types::VoxError> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![recurse].into_boxed_slice());
@@ -411,6 +417,8 @@ mod tests {
             &["id"],
             &[None],
             <Result<SessionSummary, vox_types::VoxError> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![summarize].into_boxed_slice());
@@ -442,6 +450,8 @@ mod tests {
                 Some(<u32 as facet::Facet>::SHAPE),
             ],
             <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
@@ -470,6 +480,8 @@ mod tests {
             &[],
             &[],
             <Result<SubscribeMessage, vox_types::VoxError> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
@@ -512,6 +524,8 @@ mod tests {
             &["lhs", "rhs"],
             &[None, None],
             <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+            false,
+            false,
             None,
         );
         let methods = Box::leak(vec![divide].into_boxed_slice());

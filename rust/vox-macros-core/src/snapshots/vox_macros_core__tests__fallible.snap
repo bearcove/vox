@@ -17,6 +17,8 @@ pub fn calc_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
                 &["a", "b"],
                 &[None, None],
                 <Result<f64, ::vox::VoxError<DivError>> as ::vox::facet::Facet<'static>>::SHAPE,
+                false,
+                false,
                 None,
             )];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
