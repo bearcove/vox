@@ -83,6 +83,17 @@ public struct ClientSchemaInfo: @unchecked Sendable {
     }
 }
 
+/// Build a service registry by merging every method's args + response schema
+/// closures (deduped by id in `Registry`). Used by codegen's `{service}Registry`.
+public func buildServiceRegistry(_ methods: [UInt64: PhonMethodSchemas]) -> Registry {
+    var schemas: [Schema] = []
+    for m in methods.values {
+        if let a = try? parseSchemaClosure(m.argsSchemaClosure) { schemas += a.schemas }
+        if let r = try? parseSchemaClosure(m.responseSchemaClosure) { schemas += r.schemas }
+    }
+    return Registry(schemas)
+}
+
 private struct BindingKey: Hashable {
     let methodId: UInt64
     let direction: SchemaBindingDirection

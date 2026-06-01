@@ -255,6 +255,18 @@ fn access_expr(shape: &'static Shape) -> String {
             name: Some(_),
             variants,
         }) => enum_access(shape, variants),
+        // A tuple — chiefly a method's args (the phon schema is a positional struct
+        // `(_,…)`; the record's fields zip with it by index). A 1-tuple collapses to
+        // its element in Swift (no `.0` keypath), so its single field is at offset 0;
+        // a 0-tuple is unit (0 bytes); N≥2 use the Swift tuple's element offsets.
+        ShapeKind::Tuple { elements } => {
+            let shapes: Vec<&'static Shape> = elements.iter().map(|p| p.shape).collect();
+            tuple_access(shape, &shapes)
+        }
+        ShapeKind::TupleStruct { fields } => {
+            let shapes: Vec<&'static Shape> = fields.iter().map(|f| f.shape()).collect();
+            tuple_access(shape, &shapes)
+        }
         ShapeKind::Result { ok, err } => result_access(ok, err),
         // An opaque field (the already-phon-encoded method payload) rides the wire
         // as a length-prefixed byte run — a `Primitive::Bytes`. In memory it is a
@@ -263,6 +275,36 @@ fn access_expr(shape: &'static Shape) -> String {
             ".bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data))".to_string()
         }
         other => panic!("phon descriptor: unsupported shape {other:?}"),
+    }
+}
+
+/// A tuple as a positional `.record`. The Swift type is `swift_type_base(shape)`:
+/// `Void` for 0 elements, the bare element type for 1 (a Swift 1-tuple collapses —
+/// its field is at offset 0), or `(A, B, …)` for N≥2 (element offsets via keypath).
+fn tuple_access(shape: &'static Shape, elements: &[&'static Shape]) -> String {
+    match elements.len() {
+        0 => ".scalar".to_string(), // unit: 0 bytes
+        1 => format!(
+            ".record(RecordAccess(fields: [FieldAccess(offset: 0, descriptor: {})], construct: .inPlace))",
+            descriptor_expr(elements[0])
+        ),
+        _ => {
+            let ty = swift_type_base(shape);
+            let fields: Vec<String> = elements
+                .iter()
+                .enumerate()
+                .map(|(i, e)| {
+                    format!(
+                        "FieldAccess(offset: MemoryLayout<{ty}>.offset(of: \\.{i})!, descriptor: {})",
+                        descriptor_expr(e)
+                    )
+                })
+                .collect();
+            format!(
+                ".record(RecordAccess(fields: [{}], construct: .inPlace))",
+                fields.join(", ")
+            )
+        }
     }
 }
 
@@ -281,14 +323,24 @@ fn sequence_or_bulk(element: &'static Shape) -> String {
     }
 }
 
-/// One unit/newtype variant's Swift case name + (for newtype) its payload shape.
-fn variant_newtype_payload(variant: &facet_core::Variant) -> Option<&'static Shape> {
+/// A variant's payload fields as `(optional Swift label, shape)`. Unit → empty;
+/// newtype/tuple → unlabeled; struct → labeled (Swift constructs `.case(label: …)`).
+fn variant_payload_fields(variant: &facet_core::Variant) -> Vec<(Option<String>, &'static Shape)> {
     match classify_variant(variant) {
-        VariantKind::Unit => None,
-        VariantKind::Newtype { .. } => Some(variant.data.fields[0].shape()),
-        VariantKind::Tuple { .. } | VariantKind::Struct { .. } => {
-            panic!("phon descriptor: tuple/struct enum variants not yet supported")
-        }
+        VariantKind::Unit => Vec::new(),
+        VariantKind::Newtype { .. } => vec![(None, variant.data.fields[0].shape())],
+        VariantKind::Tuple { .. } => variant
+            .data
+            .fields
+            .iter()
+            .map(|f| (None, f.shape()))
+            .collect(),
+        VariantKind::Struct { .. } => variant
+            .data
+            .fields
+            .iter()
+            .map(|f| (Some(swift_field_name(f.name)), f.shape()))
+            .collect(),
     }
 }
 
@@ -303,31 +355,86 @@ fn enum_access(shape: &'static Shape, variants: &[facet_core::Variant]) -> Strin
     for (i, v) in variants.iter().enumerate() {
         let case = swift_field_name(v.name);
         tag_cases.push_str(&format!("case .{case}: return {i}\n            "));
-        match variant_newtype_payload(v) {
-            None => {
-                project_cases.push_str(&format!("case .{case}: break\n            "));
-                inject_cases.push_str(&format!("case {i}: v = .{case}\n            "));
-                variant_entries.push(format!(
-                    "VariantAccess(wireIndex: {i}, payloadFields: [], payloadLayout: Layout(size: 0, align: 1))"
-                ));
-            }
-            Some(payload) => {
-                let pty = swift_type_base(payload);
-                project_cases.push_str(&format!(
-                    "case .{case}(let f0): scratch.assumingMemoryBound(to: {pty}.self).initialize(to: f0)\n            "
-                ));
-                destroy_cases.push_str(&format!(
-                    "case {i}: scratch.assumingMemoryBound(to: {pty}.self).deinitialize(count: 1)\n            "
-                ));
-                inject_cases.push_str(&format!(
-                    "case {i}: v = .{case}(scratch.assumingMemoryBound(to: {pty}.self).move())\n            "
-                ));
-                variant_entries.push(format!(
-                    "VariantAccess(wireIndex: {i}, payloadFields: [FieldAccess(offset: 0, descriptor: {})], payloadLayout: MemoryLayout<{pty}>.phonLayout)",
-                    descriptor_expr(payload)
-                ));
-            }
+        let fields = variant_payload_fields(v);
+        if fields.is_empty() {
+            project_cases.push_str(&format!("case .{case}: break\n            "));
+            inject_cases.push_str(&format!("case {i}: v = .{case}\n            "));
+            variant_entries.push(format!(
+                "VariantAccess(wireIndex: {i}, payloadFields: [], payloadLayout: Layout(size: 0, align: 1))"
+            ));
+            continue;
         }
+        // The scratch payload record: a Swift tuple of the field types (or the bare
+        // type for a single field). Field offsets are this tuple's natural layout.
+        let tys: Vec<String> = fields.iter().map(|(_, s)| swift_type_base(s)).collect();
+        let scratch_ty = if tys.len() == 1 {
+            tys[0].clone()
+        } else {
+            format!("({})", tys.join(", "))
+        };
+        let offset = |k: usize| -> String {
+            if fields.len() == 1 {
+                "0".to_string()
+            } else {
+                format!("MemoryLayout<{scratch_ty}>.offset(of: \\.{k})!")
+            }
+        };
+        // project: bind each associated value, store it into scratch at its offset.
+        let binds: Vec<String> = (0..fields.len()).map(|k| format!("let f{k}")).collect();
+        let mut proj = format!("case .{case}({}): ", binds.join(", "));
+        for k in 0..fields.len() {
+            proj.push_str(&format!(
+                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).initialize(to: f{k}); ",
+                offset(k),
+                tys[k]
+            ));
+        }
+        project_cases.push_str(&format!("{proj}\n            "));
+        // destroy: deinit each field at its offset.
+        let mut des = format!("case {i}: ");
+        for k in 0..fields.len() {
+            des.push_str(&format!(
+                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).deinitialize(count: 1); ",
+                offset(k),
+                tys[k]
+            ));
+        }
+        destroy_cases.push_str(&format!("{des}\n            "));
+        // inject: move each field out of scratch, construct the case (labels for struct).
+        let mut inj = format!("case {i}: ");
+        for k in 0..fields.len() {
+            inj.push_str(&format!(
+                "let f{k} = scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).move(); ",
+                offset(k),
+                tys[k]
+            ));
+        }
+        let args: Vec<String> = fields
+            .iter()
+            .enumerate()
+            .map(|(k, (label, _))| match label {
+                Some(l) => format!("{l}: f{k}"),
+                None => format!("f{k}"),
+            })
+            .collect();
+        inj.push_str(&format!("v = .{case}({})", args.join(", ")));
+        inject_cases.push_str(&format!("{inj}\n            "));
+        // variant entry: payloadFields at the scratch offsets; payloadLayout = tuple.
+        let pfields: Vec<String> = fields
+            .iter()
+            .enumerate()
+            .map(|(k, (_, s))| {
+                format!(
+                    "FieldAccess(offset: {}, descriptor: {})",
+                    offset(k),
+                    descriptor_expr(s)
+                )
+            })
+            .collect();
+        variant_entries.push(format!(
+            "VariantAccess(wireIndex: {i}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
+            pfields.join(", ")
+        ));
     }
 
     format!(
