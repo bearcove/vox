@@ -116,6 +116,7 @@ extension Driver {
                 role: role,
                 transport: transport,
                 attachment: establishedAttachment,
+                peerMessageSchema: [],
                 recoverAttachment: nil
             )
             traceLog(.resume, "recoverAttachment succeeded")

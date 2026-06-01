@@ -119,7 +119,7 @@ actor DriverState {
         return (
             removed,
             context?.connectionId ?? 0,
-            context?.responseMetadata ?? []
+            context?.responseMetadata ?? .null
         )
     }
 

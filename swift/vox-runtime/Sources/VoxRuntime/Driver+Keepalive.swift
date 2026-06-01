@@ -66,7 +66,7 @@ extension Driver {
 
         let nonce = runtime.nextPingNonce
         do {
-            try await conduit.send(.ping(.init(nonce: nonce)))
+            try await conduit.send(messagePing(nonce: nonce))
             runtime.waitingPongNonce = nonce
             runtime.pongDeadlineNs = Self.saturatingAdd(now, runtime.pongTimeoutNs)
             runtime.nextPingAtNs = Self.saturatingAdd(now, runtime.pingIntervalNs)

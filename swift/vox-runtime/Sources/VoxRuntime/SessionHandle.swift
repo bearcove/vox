@@ -138,6 +138,7 @@ public final class SessionHandle: @unchecked Sendable {
             role: role,
             transport: transport,
             attachment: readyAttachment,
+            peerMessageSchema: [],
             recoverAttachment: nil
         )
     }
