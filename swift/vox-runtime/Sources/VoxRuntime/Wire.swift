@@ -51,9 +51,9 @@ public struct Pong: Sendable {
 
 public struct ConnectionOpen: Sendable {
   public var connectionSettings: ConnectionSettings
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(connectionSettings: ConnectionSettings, metadata: Data) {
+  nonisolated public init(connectionSettings: ConnectionSettings, metadata: Value) {
     self.connectionSettings = connectionSettings
     self.metadata = metadata
   }
@@ -61,26 +61,26 @@ public struct ConnectionOpen: Sendable {
 
 public struct ConnectionAccept: Sendable {
   public var connectionSettings: ConnectionSettings
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(connectionSettings: ConnectionSettings, metadata: Data) {
+  nonisolated public init(connectionSettings: ConnectionSettings, metadata: Value) {
     self.connectionSettings = connectionSettings
     self.metadata = metadata
   }
 }
 
 public struct ConnectionReject: Sendable {
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(metadata: Data) {
+  nonisolated public init(metadata: Value) {
     self.metadata = metadata
   }
 }
 
 public struct ConnectionClose: Sendable {
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(metadata: Data) {
+  nonisolated public init(metadata: Value) {
     self.metadata = metadata
   }
 }
@@ -88,12 +88,12 @@ public struct ConnectionClose: Sendable {
 public struct RequestCall: Sendable {
   public var methodId: UInt64
   public var channels: [UInt64]
-  public var metadata: Data
+  public var metadata: Value
   public var args: Data
   public var schemas: Data
 
   nonisolated public init(
-    methodId: UInt64, channels: [UInt64], metadata: Data, args: Data, schemas: Data
+    methodId: UInt64, channels: [UInt64], metadata: Value, args: Data, schemas: Data
   ) {
     self.methodId = methodId
     self.channels = channels
@@ -104,11 +104,11 @@ public struct RequestCall: Sendable {
 }
 
 public struct RequestResponse: Sendable {
-  public var metadata: Data
+  public var metadata: Value
   public var ret: Data
   public var schemas: Data
 
-  nonisolated public init(metadata: Data, ret: Data, schemas: Data) {
+  nonisolated public init(metadata: Value, ret: Data, schemas: Data) {
     self.metadata = metadata
     self.ret = ret
     self.schemas = schemas
@@ -116,9 +116,9 @@ public struct RequestResponse: Sendable {
 }
 
 public struct RequestCancel: Sendable {
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(metadata: Data) {
+  nonisolated public init(metadata: Value) {
     self.metadata = metadata
   }
 }
@@ -160,17 +160,17 @@ public struct ChannelItem: Sendable {
 }
 
 public struct ChannelClose: Sendable {
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(metadata: Data) {
+  nonisolated public init(metadata: Value) {
     self.metadata = metadata
   }
 }
 
 public struct ChannelReset: Sendable {
-  public var metadata: Data
+  public var metadata: Value
 
-  nonisolated public init(metadata: Data) {
+  nonisolated public init(metadata: Value) {
     self.metadata = metadata
   }
 }
@@ -866,10 +866,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   descriptor: Descriptor(
                                     schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
-                                      size: MemoryLayout<Data>.size,
-                                      align: MemoryLayout<Data>.alignment),
-                                    access: .bytes(
-                                      BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                                      size: MemoryLayout<Value>.size,
+                                      align: MemoryLayout<Value>.alignment), access: .dynamic)),
                               ], construct: .inPlace))))
                     ], payloadLayout: MemoryLayout<ConnectionOpen>.phonLayout),
                   VariantAccess(
@@ -970,10 +968,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   descriptor: Descriptor(
                                     schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
-                                      size: MemoryLayout<Data>.size,
-                                      align: MemoryLayout<Data>.alignment),
-                                    access: .bytes(
-                                      BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                                      size: MemoryLayout<Value>.size,
+                                      align: MemoryLayout<Value>.alignment), access: .dynamic)),
                               ], construct: .inPlace))))
                     ], payloadLayout: MemoryLayout<ConnectionAccept>.phonLayout),
                   VariantAccess(
@@ -995,10 +991,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   descriptor: Descriptor(
                                     schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
-                                      size: MemoryLayout<Data>.size,
-                                      align: MemoryLayout<Data>.alignment),
-                                    access: .bytes(
-                                      BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
+                                      size: MemoryLayout<Value>.size,
+                                      align: MemoryLayout<Value>.alignment), access: .dynamic))
                               ], construct: .inPlace))))
                     ], payloadLayout: MemoryLayout<ConnectionReject>.phonLayout),
                   VariantAccess(
@@ -1020,10 +1014,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                   descriptor: Descriptor(
                                     schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                                     layout: Layout(
-                                      size: MemoryLayout<Data>.size,
-                                      align: MemoryLayout<Data>.alignment),
-                                    access: .bytes(
-                                      BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
+                                      size: MemoryLayout<Value>.size,
+                                      align: MemoryLayout<Value>.alignment), access: .dynamic))
                               ], construct: .inPlace))))
                     ], payloadLayout: MemoryLayout<ConnectionClose>.phonLayout),
                   VariantAccess(
@@ -1164,12 +1156,9 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             schema: .concrete(
                                                               SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
-                                                              size: MemoryLayout<Data>.size,
-                                                              align: MemoryLayout<Data>.alignment),
-                                                            access: .bytes(
-                                                              BytesAccess(
-                                                                stride: 1, elemAlign: 1,
-                                                                witness: .data)))),
+                                                              size: MemoryLayout<Value>.size,
+                                                              align: MemoryLayout<Value>.alignment),
+                                                            access: .dynamic)),
                                                         FieldAccess(
                                                           offset: MemoryLayout<RequestCall>.offset(
                                                             of: \RequestCall.args)!,
@@ -1219,12 +1208,9 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             schema: .concrete(
                                                               SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
-                                                              size: MemoryLayout<Data>.size,
-                                                              align: MemoryLayout<Data>.alignment),
-                                                            access: .bytes(
-                                                              BytesAccess(
-                                                                stride: 1, elemAlign: 1,
-                                                                witness: .data)))),
+                                                              size: MemoryLayout<Value>.size,
+                                                              align: MemoryLayout<Value>.alignment),
+                                                            access: .dynamic)),
                                                         FieldAccess(
                                                           offset: MemoryLayout<RequestResponse>
                                                             .offset(of: \RequestResponse.ret)!,
@@ -1275,12 +1261,9 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             schema: .concrete(
                                                               SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
-                                                              size: MemoryLayout<Data>.size,
-                                                              align: MemoryLayout<Data>.alignment),
-                                                            access: .bytes(
-                                                              BytesAccess(
-                                                                stride: 1, elemAlign: 1,
-                                                                witness: .data))))
+                                                              size: MemoryLayout<Value>.size,
+                                                              align: MemoryLayout<Value>.alignment),
+                                                            access: .dynamic))
                                                       ], construct: .inPlace))))
                                             ], payloadLayout: MemoryLayout<RequestCancel>.phonLayout
                                           ),
@@ -1521,12 +1504,9 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             schema: .concrete(
                                                               SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
-                                                              size: MemoryLayout<Data>.size,
-                                                              align: MemoryLayout<Data>.alignment),
-                                                            access: .bytes(
-                                                              BytesAccess(
-                                                                stride: 1, elemAlign: 1,
-                                                                witness: .data))))
+                                                              size: MemoryLayout<Value>.size,
+                                                              align: MemoryLayout<Value>.alignment),
+                                                            access: .dynamic))
                                                       ], construct: .inPlace))))
                                             ], payloadLayout: MemoryLayout<ChannelClose>.phonLayout),
                                           VariantAccess(
@@ -1550,12 +1530,9 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                                             schema: .concrete(
                                                               SchemaId(0x0dca_89d3_f45e_d3ee)),
                                                             layout: Layout(
-                                                              size: MemoryLayout<Data>.size,
-                                                              align: MemoryLayout<Data>.alignment),
-                                                            access: .bytes(
-                                                              BytesAccess(
-                                                                stride: 1, elemAlign: 1,
-                                                                witness: .data))))
+                                                              size: MemoryLayout<Value>.size,
+                                                              align: MemoryLayout<Value>.alignment),
+                                                            access: .dynamic))
                                                       ], construct: .inPlace))))
                                             ], payloadLayout: MemoryLayout<ChannelReset>.phonLayout),
                                           VariantAccess(

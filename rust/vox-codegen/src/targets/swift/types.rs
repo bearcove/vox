@@ -279,8 +279,19 @@ pub fn swift_scalar_type(scalar: ScalarType) -> String {
     }
 }
 
+/// Whether a shape is the self-describing dynamic `Value` (facet `Def::DynamicValue`
+/// — e.g. vox `Metadata`). Carried on the wire as a phon `Dynamic`; in Swift memory
+/// it is a `PhonSchema.Value`, not opaque `Data`.
+pub fn is_dynamic_value(shape: &'static Shape) -> bool {
+    matches!(shape.def, facet_core::Def::DynamicValue(_))
+}
+
 /// Convert Shape to Swift type string.
 pub fn swift_type_base(shape: &'static Shape) -> String {
+    // A dynamic `Value` field is a `PhonSchema.Value` in memory (not `Data`).
+    if is_dynamic_value(shape) {
+        return "Value".into();
+    }
     // Check for bytes first
     if is_bytes(shape) {
         return "Data".into();

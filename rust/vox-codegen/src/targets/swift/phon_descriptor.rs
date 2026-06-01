@@ -18,7 +18,7 @@ use vox_types::{
     EnumInfo, ShapeKind, StructInfo, VariantKind, classify_shape, classify_variant, is_bytes,
 };
 
-use super::types::{generate_named_types, swift_field_name, swift_type_base};
+use super::types::{generate_named_types, is_dynamic_value, swift_field_name, swift_type_base};
 use crate::render::hex_u64;
 
 /// Assemble the full phon wire module: the type definitions for `types` plus the
@@ -189,6 +189,12 @@ pub fn descriptor_expr(shape: &'static Shape) -> String {
 }
 
 fn access_expr(shape: &'static Shape) -> String {
+    // A self-describing dynamic `Value` field (e.g. `Metadata`): carried as a phon
+    // `Dynamic`. In Swift memory it is a `PhonSchema.Value`; `.dynamic` drives the
+    // self-describing codec at the field offset (NOT opaque `Data`).
+    if is_dynamic_value(shape) {
+        return ".dynamic".to_string();
+    }
     // `Vec<u8>`/`&[u8]` map to Swift `Data` (per `swift_type_base`); the `.data`
     // witness (a vox-runtime extension) reads/builds it.
     if is_bytes(shape) {

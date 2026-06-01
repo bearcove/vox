@@ -19,11 +19,11 @@ public struct Hello: Sendable {
   public var connectionSettings: ConnectionSettings
   public var messagePayloadSchema: Data
   public var resumeKey: ResumeKeyBytes?
-  public var metadata: Data
+  public var metadata: Value
 
   nonisolated public init(
     parity: Parity, connectionSettings: ConnectionSettings, messagePayloadSchema: Data,
-    resumeKey: ResumeKeyBytes?, metadata: Data
+    resumeKey: ResumeKeyBytes?, metadata: Value
   ) {
     self.parity = parity
     self.connectionSettings = connectionSettings
@@ -37,11 +37,11 @@ public struct HelloYourself: Sendable {
   public var connectionSettings: ConnectionSettings
   public var messagePayloadSchema: Data
   public var resumeKey: ResumeKeyBytes?
-  public var metadata: Data
+  public var metadata: Value
 
   nonisolated public init(
     connectionSettings: ConnectionSettings, messagePayloadSchema: Data, resumeKey: ResumeKeyBytes?,
-    metadata: Data
+    metadata: Value
   ) {
     self.connectionSettings = connectionSettings
     self.messagePayloadSchema = messagePayloadSchema
@@ -444,8 +444,8 @@ nonisolated(unsafe) public let HandshakeMessageDescriptor: Descriptor = Descript
                         descriptor: Descriptor(
                           schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                           layout: Layout(
-                            size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
-                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                            size: MemoryLayout<Value>.size, align: MemoryLayout<Value>.alignment),
+                          access: .dynamic)),
                     ], construct: .inPlace))))
           ], payloadLayout: MemoryLayout<Hello>.phonLayout),
         VariantAccess(
@@ -577,8 +577,8 @@ nonisolated(unsafe) public let HandshakeMessageDescriptor: Descriptor = Descript
                         descriptor: Descriptor(
                           schema: .concrete(SchemaId(0x0dca_89d3_f45e_d3ee)),
                           layout: Layout(
-                            size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
-                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                            size: MemoryLayout<Value>.size, align: MemoryLayout<Value>.alignment),
+                          access: .dynamic)),
                     ], construct: .inPlace))))
           ], payloadLayout: MemoryLayout<HelloYourself>.phonLayout),
         VariantAccess(
