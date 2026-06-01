@@ -179,20 +179,22 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         .collect();
     let call = format!("handler.{name}({})", call_args.join(", "));
 
-    // Call + wrap into Result<T, VoxError<E>>.
+    // Call + wrap into the wire `Result<T, VoxError<E>>`. A fallible handler returns
+    // `Result<T, E>` (its `.failure(e)` becomes the wire `User(e)`); an infallible one
+    // returns `T`/`Void`. An unexpected throw maps to `Indeterminate`.
     out.push_str(&format!("        let result: {resp_ty}\n        do {{\n"));
-    if ret_ty == "Void" {
+    if user_err.is_some() {
+        out.push_str(&format!("            let userResult = try await {call}\n"));
+        out.push_str(
+            "            switch userResult {\n            case .success(let v): result = .success(v)\n            case .failure(let e): result = .failure(.user(e))\n            }\n",
+        );
+    } else if ret_ty == "Void" {
         out.push_str(&format!(
             "            try await {call}\n            result = .success(())\n"
         ));
     } else {
         out.push_str(&format!(
             "            let value = try await {call}\n            result = .success(value)\n"
-        ));
-    }
-    if let Some(e) = &user_err {
-        out.push_str(&format!(
-            "        }} catch let e as {e} {{\n            result = .failure(.user(e))\n"
         ));
     }
     out.push_str("        } catch {\n            result = .failure(.indeterminate)\n        }\n");

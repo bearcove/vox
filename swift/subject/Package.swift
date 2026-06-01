@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "subject-swift",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v15)
     ],
     dependencies: [
         .package(path: "../vox-runtime")

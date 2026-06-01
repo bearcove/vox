@@ -4,7 +4,7 @@
 //! unwrap (throw on `Err`). Replaces the postcard `client.rs` bodies.
 
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
-use vox_types::{ServiceDescriptor, is_rx, is_tx};
+use vox_types::{ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
 use super::phon_service::method_global_prefix;
 use super::types::{format_doc, swift_type_base, swift_type_client_arg, swift_type_client_return};
@@ -118,16 +118,29 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, retry: .volatile,\n            timeout: timeout, prepareRetry: nil, finalizeChannels: nil,\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
         ));
 
-        // Decode the Result<T, VoxError<E>> response and unwrap.
+        // Decode the wire `Result<T, VoxError<E>>` response and unwrap into the
+        // method's return type: a fallible method (`Result<T, E>`) maps the wire
+        // `User(E)` arm to the user `.failure(e)` and throws other VoxErrors; an
+        // infallible method returns `T` (or `Void`) and throws on any error.
+        let is_fallible = matches!(
+            classify_shape(method.return_shape),
+            ShapeKind::Result { .. }
+        );
         out.push_str(&format!(
             "        let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{resp_ty}>.size, alignment: MemoryLayout<{resp_ty}>.alignment)\n        defer {{ raw.deallocate() }}\n        try decodeInto({prefix}_ResponseDecodeProgram, response, raw)\n        let result = raw.assumingMemoryBound(to: {resp_ty}.self).move()\n        switch result {{\n"
         ));
-        if ret == "Void" {
+        if is_fallible {
+            out.push_str("        case .success(let value): return .success(value)\n");
+            out.push_str("        case .failure(.user(let e)): return .failure(e)\n");
+            out.push_str("        case .failure(let voxError): throw voxError\n");
+        } else if ret == "Void" {
             out.push_str("        case .success: return\n");
+            out.push_str("        case .failure(let error): throw error\n");
         } else {
             out.push_str("        case .success(let value): return value\n");
+            out.push_str("        case .failure(let error): throw error\n");
         }
-        out.push_str("        case .failure(let error): throw error\n        }\n    }\n\n");
+        out.push_str("        }\n    }\n\n");
     }
 
     out.push_str("}\n\n");

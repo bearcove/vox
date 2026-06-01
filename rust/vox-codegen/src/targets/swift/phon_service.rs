@@ -49,7 +49,7 @@ pub fn generate_wire_error_types() -> String {
     out.push_str("public enum Infallible: Sendable {}\n\n");
     out.push_str("/// The wire error of `Result<T, VoxError<E>>`. Variant order matches the\n");
     out.push_str("/// Rust `VoxError<E>` (User=0 … Indeterminate=7) so wire indices align.\n");
-    out.push_str("public enum VoxError<E>: Error {\n");
+    out.push_str("public enum VoxError<E: Sendable>: Error, Sendable {\n");
     out.push_str("    case user(E)\n");
     out.push_str("    case unknownMethod\n");
     out.push_str("    case invalidPayload(String)\n");
