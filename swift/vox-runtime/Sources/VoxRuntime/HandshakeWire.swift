@@ -73,7 +73,7 @@ public enum HandshakeMessage: Sendable {
 
 // MARK: - HandshakeMessage codec
 
-private let HandshakeMessageSchemaClosure: [UInt8] = [
+public let HandshakeMessageSchemaClosure: [UInt8] = [
   235, 116, 165, 125, 180, 228, 10, 74, 11, 0, 0, 0, 139, 2, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
   109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 235, 116, 165, 125, 180, 228, 10, 74, 11, 0, 0, 0,
   116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,

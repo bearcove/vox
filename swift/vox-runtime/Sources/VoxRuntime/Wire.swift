@@ -230,7 +230,7 @@ public struct Message: Sendable {
 
 // MARK: - Message codec
 
-private let MessageSchemaClosure: [UInt8] = [
+public let MessageSchemaClosure: [UInt8] = [
   242, 185, 244, 88, 47, 123, 168, 57, 27, 0, 0, 0, 101, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
   109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 242, 185, 244, 88, 47, 123, 168, 57, 11, 0, 0, 0,
   116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,

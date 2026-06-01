@@ -64,7 +64,7 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
         // closures and aren't `Sendable`, but are never mutated after init).
         out.push_str(&format!("// MARK: - {name} codec\n\n"));
         out.push_str(&format!(
-            "private let {name}SchemaClosure: [UInt8] = [{bytes}]\n"
+            "public let {name}SchemaClosure: [UInt8] = [{bytes}]\n"
         ));
         out.push_str(&format!(
             "nonisolated(unsafe) public let {name}Registry: Registry = Registry((try! parseSchemaClosure({name}SchemaClosure)).schemas)\n"
