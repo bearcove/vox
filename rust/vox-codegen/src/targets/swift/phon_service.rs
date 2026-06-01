@@ -153,5 +153,39 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     out.push_str(&format!(
         "nonisolated(unsafe) public let {name}Registry: Registry = buildServiceRegistry({name}Methods)\n\n"
     ));
+
+    // Per-method lowered programs (cached, init-once). Encode uses `lowerTyped` (own
+    // schema); decode reconciles writer→reader via `lowerDecode`. The client encodes
+    // args + decodes the response; the server decodes args + encodes the response.
+    out.push_str("// MARK: - per-method lowered programs\n\n");
+    for m in service.methods {
+        let mname = m.method_name.to_lower_camel_case();
+        for (suffix, fn_call) in [
+            ("ArgsEncodeProgram", "lowerTyped"),
+            ("ArgsDecodeProgram", "lowerDecode"),
+            ("ResponseEncodeProgram", "lowerTyped"),
+            ("ResponseDecodeProgram", "lowerDecode"),
+        ] {
+            let desc = if suffix.starts_with("Args") {
+                format!("{name}_{mname}_ArgsDescriptor")
+            } else {
+                format!("{name}_{mname}_ResponseDescriptor")
+            };
+            out.push_str(&format!(
+                "nonisolated(unsafe) let {name}_{mname}_{suffix}: MemProgram = try! {fn_call}({desc}, {name}Registry)\n"
+            ));
+        }
+    }
+    out.push('\n');
     out
+}
+
+/// The name of the Swift descriptor/program globals for a method's args/response.
+pub fn method_global_prefix(service_name: &str, method_name: &str) -> String {
+    use heck::ToLowerCamelCase;
+    format!(
+        "{}_{}",
+        service_name.to_lower_camel_case(),
+        method_name.to_lower_camel_case()
+    )
 }

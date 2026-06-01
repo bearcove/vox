@@ -13282,3 +13282,310 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
 ]
 
 nonisolated(unsafe) public let testbedRegistry: Registry = buildServiceRegistry(testbedMethods)
+
+// MARK: - per-method lowered programs
+
+nonisolated(unsafe) let testbed_echo_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echo_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echo_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echo_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echo_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echo_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echo_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echo_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_reverse_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_reverse_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_reverse_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_reverse_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_reverse_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_reverse_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_reverse_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_reverse_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_divide_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_divide_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_divide_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_divide_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_divide_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_divide_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_divide_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_divide_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_lookup_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_lookup_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_lookup_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_lookup_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_lookup_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_lookup_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_lookup_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_lookup_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sum_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_sum_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sum_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_sum_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generate_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_generate_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generate_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_generate_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_ResponseEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_transform_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_transform_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_transform_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_transform_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_ResponseEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_postReplySum_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_postReplySum_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_postReplySum_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_postReplySum_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoPoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoPoint_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoPoint_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoPoint_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoPoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoPoint_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoPoint_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoPoint_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createPerson_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_createPerson_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createPerson_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_createPerson_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createPerson_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_createPerson_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createPerson_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_createPerson_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_rectangleArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_rectangleArea_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_rectangleArea_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_rectangleArea_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_rectangleArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_rectangleArea_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_rectangleArea_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_rectangleArea_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_parseColor_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_parseColor_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_parseColor_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_parseColor_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_parseColor_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_parseColor_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_parseColor_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_parseColor_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_shapeArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_shapeArea_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_shapeArea_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_shapeArea_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_shapeArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_shapeArea_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_shapeArea_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_shapeArea_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createCanvas_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_createCanvas_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createCanvas_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_createCanvas_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createCanvas_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_createCanvas_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_createCanvas_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_createCanvas_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoGnarly_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoGnarly_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoGnarly_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoGnarly_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoGnarly_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoGnarly_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoGnarly_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoGnarly_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_processMessage_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_processMessage_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_processMessage_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_processMessage_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_processMessage_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_processMessage_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_processMessage_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_processMessage_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_getPoints_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_getPoints_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_getPoints_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_getPoints_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_getPoints_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_getPoints_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_getPoints_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_getPoints_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_swapPair_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_swapPair_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_swapPair_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_swapPair_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_swapPair_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_swapPair_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_swapPair_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_swapPair_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBytes_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoBytes_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBytes_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoBytes_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBytes_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoBytes_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBytes_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoBytes_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBool_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoBool_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBool_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoBool_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBool_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoBool_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoBool_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoBool_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoU64_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoU64_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoU64_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoU64_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoU64_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoU64_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoU64_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoU64_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoOptionString_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoOptionString_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoOptionString_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoOptionString_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoOptionString_ResponseEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_echoOptionString_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoOptionString_ResponseDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_echoOptionString_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sumLarge_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_sumLarge_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sumLarge_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_sumLarge_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generateLarge_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_generateLarge_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generateLarge_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_generateLarge_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_allColors_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_allColors_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_allColors_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_allColors_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_allColors_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_allColors_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_allColors_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_allColors_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_describePoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_describePoint_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_describePoint_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_describePoint_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_describePoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_describePoint_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_describePoint_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_describePoint_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoShape_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoShape_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoShape_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoShape_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoShape_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoShape_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoShape_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoShape_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatusV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoStatusV1_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatusV1_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoStatusV1_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatusV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoStatusV1_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatusV1_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoStatusV1_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTagV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoTagV1_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTagV1_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoTagV1_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTagV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoTagV1_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTagV1_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoTagV1_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoProfile_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoProfile_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoProfile_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoProfile_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoProfile_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoProfile_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoProfile_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoProfile_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoRecord_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoRecord_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoRecord_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoRecord_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoRecord_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoRecord_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoRecord_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoRecord_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatus_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoStatus_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatus_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoStatus_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatus_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoStatus_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoStatus_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoStatus_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTag_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoTag_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTag_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoTag_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTag_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoTag_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoTag_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoTag_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoMeasurement_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoMeasurement_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoMeasurement_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoMeasurement_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoMeasurement_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoMeasurement_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoMeasurement_ResponseDecodeProgram: MemProgram =
+  try! lowerDecode(testbed_echoMeasurement_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoConfig_ArgsEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoConfig_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoConfig_ArgsDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoConfig_ArgsDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoConfig_ResponseEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_echoConfig_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echoConfig_ResponseDecodeProgram: MemProgram = try! lowerDecode(
+  testbed_echoConfig_ResponseDescriptor, testbedRegistry)
