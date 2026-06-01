@@ -7,20 +7,7 @@ import Foundation
 public typealias PostcardEncoder<T> = (T, inout ByteBuffer) -> Void
 public typealias PostcardDecoder<T> = (inout ByteBuffer) throws -> T
 
-// MARK: - Client Schema Info
-
-/// Schema information for a client call. Used to send schema data with outgoing requests.
-public struct ClientSchemaInfo: Sendable {
-    /// Method schema information
-    public let methodInfo: MethodSchemaInfo
-    /// Global schema registry
-    public let schemaRegistry: [SchemaHash: Schema]
-
-    public init(methodInfo: MethodSchemaInfo, schemaRegistry: [SchemaHash: Schema]) {
-        self.methodInfo = methodInfo
-        self.schemaRegistry = schemaRegistry
-    }
-}
+// `ClientSchemaInfo` now lives in SchemaTracker.swift (phon model).
 
 // MARK: - VoxConnection Protocol
 
