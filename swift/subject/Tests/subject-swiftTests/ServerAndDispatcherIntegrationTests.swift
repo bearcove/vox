@@ -80,7 +80,7 @@ private actor TaskMessageRecorder {
                 requestId: let requestId,
                 payload: let payload,
                 methodId: _,
-                schemaPayload: _
+                schemas: _
             ):
                 return (requestId, payload)
             default:
@@ -204,20 +204,20 @@ private struct HandshakeHarness {
             guard let helloBytes = try readRawFrame(connFd) else {
                 return nil
             }
-            let peerHello = try HandshakeMessage.decodeCbor(helloBytes)
+            let peerHello = try decodeHandshakeFrame(helloBytes)
 
             let helloYourself = HandshakeMessage.helloYourself(
-                HandshakeHelloYourself(
-                    connectionSettings: ConnectionSettings(parity: .even, maxConcurrentRequests: 64),
-                    messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                    supportsRetry: true,
+                HelloYourself(
+                    connectionSettings: ConnectionSettings(
+                        parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
                     resumeKey: nil,
-                    metadata: []
+                    metadata: .null
                 )
             )
-            try writeRawFrame(connFd, bytes: helloYourself.encodeCbor())
+            try writeRawFrame(connFd, bytes: encodeHandshakeFrame(helloYourself))
 
-            let letsGo = try readRawFrame(connFd).map(HandshakeMessage.decodeCbor)
+            let letsGo = try readRawFrame(connFd).map(decodeHandshakeFrame)
             return (peerHello, letsGo)
         }
 
@@ -272,7 +272,7 @@ private func writeRawFrame(_ fd: Int32, bytes: [UInt8]) throws {
 }
 
 private func writeFrame(_ fd: Int32, message: VoxRuntime.Message) throws {
-    try writeRawFrame(fd, bytes: message.encode())
+    try writeRawFrame(fd, bytes: encodeMessage(message))
 }
 
 private func readRawFrame(_ fd: Int32) throws -> [UInt8]? {
@@ -290,7 +290,8 @@ private func readFrame(_ fd: Int32) throws -> VoxRuntime.Message? {
     guard let payload = try readRawFrame(fd) else {
         return nil
     }
-    return try VoxRuntime.Message.decode(fromBytes: payload)
+    // Reconcile against our own advertised Message schema (writer ≡ reader here).
+    return try buildMessageDecoder(peerMessageSchema: MessageSchemaClosure)(payload)
 }
 
 private func writeAll(_ fd: Int32, bytes: [UInt8]) throws {
@@ -413,7 +414,7 @@ struct ServerAndDispatcherIntegrationTests {
             return
         }
         #expect(helloPayload.connectionSettings.parity == .odd)
-        #expect(helloPayload.messagePayloadSchemaCbor == wireMessageSchemasCbor)
+        #expect(Array(helloPayload.messagePayloadSchema) == MessageSchemaClosure)
 
         guard case .letsGo = letsGo else {
             Issue.record("expected LetsGo, got \(String(describing: letsGo))")

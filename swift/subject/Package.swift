@@ -28,11 +28,7 @@ let package = Package(
                 .byName(name: "subject-swift"),
                 .product(name: "VoxRuntime", package: "vox-runtime"),
                 .product(name: "PhonEngineTestSupport", package: "phon"),
-            ],
-            // Preserved but not built: a real-socket handshake/frame harness whose
-            // migration to the phon handshake protocol is Stage-4 work (it's the scaffold
-            // Stage 4 will use). Re-include + migrate when wiring the cross-process matrix.
-            exclude: ["ServerAndDispatcherIntegrationTests.swift"]
+            ]
         )
     ]
 )
