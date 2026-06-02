@@ -12,7 +12,7 @@ import VoxRuntime
 
 private func decodeProgram(
     _ methodId: UInt64, _ dir: SchemaBindingDirection, _ closure: [UInt8], _ reader: Descriptor
-) throws -> MemProgram {
+) throws -> Lowered {
     let tracker = SchemaTracker()
     tracker.recordReceived(methodId, dir, closure)
     guard let p = tracker.buildDecodeProgram(methodId, dir, readerDescriptor: reader, local: testbedRegistry)
