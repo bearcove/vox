@@ -388,20 +388,18 @@ fn codegen_swift(
     let testbed = spec_proto::testbed_service_descriptor();
 
     // The full phon Testbed module (types + schemas/descriptors/programs + client +
-    // server). `--swift-client`/`--swift-server` now emit the same full module (the
-    // subject compiles one file); the bindings split is gone with postcard.
-    let _ = (swift_client, swift_server);
+    // server). `--swift`/`--swift-client`/`--swift-server` all emit the same full module
+    // (the subject compiles one file); the bindings split is gone with postcard.
+    let _ = (swift, swift_client, swift_server);
     let code = vox_codegen::targets::swift::generate_service(testbed);
     let out_path = out_dir.join("Testbed.swift");
     write_if_changed(&out_path, fmt_swift(&out_path, code))?;
-    return Ok(());
-
     Ok(())
 }
 
 fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    use vox_codegen::targets::swift::WireType;
     use vox_codegen::targets::swift::phon_descriptor::generate_phon_wire;
-    use vox_codegen::targets::swift::wire::WireType;
     use vox_types as rt;
 
     let out_path = workspace_root
