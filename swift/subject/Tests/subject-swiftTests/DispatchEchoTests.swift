@@ -42,7 +42,7 @@ private final class ResponseBox: @unchecked Sendable {
     let taskTx: @Sendable (TaskMessage) -> Void = { msg in box.set(msg) }
 
     await dispatcher.dispatch(
-        methodId: echoId, payload: argsPayload, requestId: 1,
+        methodId: echoId, payload: argsPayload, requestId: 1, channels: [],
         registry: ChannelRegistry(), schemaSendTracker: sendTracker,
         schemaReceiveTracker: recvTracker, taskTx: taskTx)
 
