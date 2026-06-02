@@ -35,8 +35,6 @@ public final class Driver: @unchecked Sendable {
     let taskQueue: LockedQueue<TaskMessage>
     var pendingTaskMessages: [DriverQueuedTaskMessage] = []
     var pendingCalls: [DriverQueuedCall] = []
-    /// Diagnostic ring buffer of recent message tags (channel-ordering investigation).
-    var recentMessages: [String] = []
 
     // Session resumption support
     let resumable: Bool

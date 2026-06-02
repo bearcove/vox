@@ -1391,6 +1391,13 @@ trait DriverChannelEndpoint {
     ) -> (ChannelId, Arc<CreditSink<DriverChannelSink>>) {
         let shared = self.endpoint_shared();
         let channel_id = shared.channel_ids.lock().alloc();
+        // r[impl rpc.channel.item] Register a CLOSED send-gate for this freshly-opened
+        // outbound channel BEFORE binding its sink, so an application `tx.send` that
+        // wakes when the sink binds parks until the declaring Call is enqueued — the
+        // Call must reach the wire before any item on the channel it opens.
+        self.endpoint_sender()
+            .sess_core
+            .register_channel_gate(channel_id);
         let sink = make_tx_channel_sink(
             self.endpoint_sender(),
             shared,

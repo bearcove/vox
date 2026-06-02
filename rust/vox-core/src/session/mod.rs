@@ -1089,6 +1089,7 @@ impl Session {
             }),
             outbound_tx,
             observer: observer.clone(),
+            channel_gates: std::sync::Mutex::new(HashMap::new()),
         });
         spawn_outbound_worker(outbound_rx);
         let (resume_notifier, _resume_rx) = watch::channel(0_u64);
@@ -2101,10 +2102,24 @@ impl Session {
     }
 }
 
+/// A one-shot open gate for a locally-opened outbound channel. Created CLOSED when
+/// the channel id is allocated during a Call's arg-encode, and opened once that Call
+/// has been pushed to the outbound queue. Channel items wait on it, so a `tx.send`
+/// the application fires concurrently with the call cannot reach the wire before the
+/// Call that declares the channel — the sender upholds the frame-ordering invariant
+/// (`r[impl rpc.channel.item]`).
+struct ChannelGate {
+    opened: std::sync::atomic::AtomicBool,
+    notify: tokio::sync::Notify,
+}
+
 pub(crate) struct SessionCore {
     inner: std::sync::Mutex<SessionCoreInner>,
     outbound_tx: tokio_mpsc::Sender<OutboundBatch>,
     observer: Option<VoxObserverHandle>,
+    /// Open gates for channels the local side opened but whose declaring Call has not
+    /// yet been enqueued. Keyed by channel id; entries removed when opened.
+    channel_gates: std::sync::Mutex<HashMap<vox_types::ChannelId, Arc<ChannelGate>>>,
 }
 
 pub trait OutboundSendFuture: Future<Output = std::io::Result<()>> + MaybeSend + 'static {}
@@ -2132,11 +2147,6 @@ struct OutboundBatch {
 
 async fn run_outbound_worker(mut rx: tokio_mpsc::Receiver<OutboundBatch>) {
     while let Some(batch) = rx.recv().await {
-        vox_types::dlog!(
-            "[outbound-worker] WIRE write payload_kind={} req={:?}",
-            batch.payload_kind,
-            batch.request_id
-        );
         trace!(
             conn_id = %batch.conn_id,
             request_id = ?batch.request_id,
@@ -2291,6 +2301,19 @@ fn get_or_create_send_conn_state(
         .clone()
 }
 
+/// The channel id whose open-gate must be honored before sending `msg`, if `msg` is an
+/// outbound channel item or close. Other messages (Calls, credit, reset, non-channel)
+/// are never gated.
+fn gated_channel_id(msg: &Message<'_>) -> Option<vox_types::ChannelId> {
+    match &msg.payload {
+        MessagePayload::ChannelMessage(ch) => match &ch.body {
+            vox_types::ChannelBody::Item(_) | vox_types::ChannelBody::Close(_) => Some(ch.id),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 impl SessionCore {
     pub(crate) fn outbound_queue_stats(&self) -> (usize, usize) {
         let capacity = self.outbound_tx.max_capacity();
@@ -2298,12 +2321,91 @@ impl SessionCore {
         (capacity.saturating_sub(available), capacity)
     }
 
+    /// Register a CLOSED open-gate for a freshly-allocated outbound channel. Called by
+    /// the channel binder at allocation time (during a Call's arg-encode), BEFORE the
+    /// Tx sink is bound — so a concurrently-parked `tx.send` that wakes on the bind
+    /// finds the gate and waits. Idempotent. (`r[impl rpc.channel.item]`)
+    pub(crate) fn register_channel_gate(&self, channel_id: vox_types::ChannelId) {
+        self.channel_gates
+            .lock()
+            .expect("channel gates mutex poisoned")
+            .entry(channel_id)
+            .or_insert_with(|| {
+                Arc::new(ChannelGate {
+                    opened: std::sync::atomic::AtomicBool::new(false),
+                    notify: tokio::sync::Notify::new(),
+                })
+            });
+    }
+
+    /// Open the gates for `channels` (the channels a just-enqueued Call declared),
+    /// releasing any parked channel-item sends so they reach the wire AFTER the Call.
+    fn open_channel_gates(&self, channels: &[vox_types::ChannelId]) {
+        if channels.is_empty() {
+            return;
+        }
+        let mut gates = self
+            .channel_gates
+            .lock()
+            .expect("channel gates mutex poisoned");
+        for id in channels {
+            if let Some(gate) = gates.remove(id) {
+                gate.opened
+                    .store(true, std::sync::atomic::Ordering::Release);
+                gate.notify.notify_waiters();
+            }
+        }
+    }
+
+    /// Wait until channel `channel_id`'s declaring Call has been enqueued (its gate is
+    /// open), if a gate exists. No gate (or an already-open one) returns immediately —
+    /// so a non-channel item, or an item whose Call already went out, never blocks.
+    async fn await_channel_gate(&self, channel_id: vox_types::ChannelId) {
+        let gate = {
+            let gates = self
+                .channel_gates
+                .lock()
+                .expect("channel gates mutex poisoned");
+            match gates.get(&channel_id) {
+                Some(gate) => Arc::clone(gate),
+                None => return,
+            }
+        };
+        loop {
+            if gate.opened.load(std::sync::atomic::Ordering::Acquire) {
+                return;
+            }
+            let notified = gate.notify.notified();
+            if gate.opened.load(std::sync::atomic::Ordering::Acquire) {
+                return;
+            }
+            notified.await;
+        }
+    }
+
+    /// Whether channel `channel_id` may send now: true if it has no gate (not a
+    /// locally-opened, not-yet-declared channel) or its gate is already open.
+    fn channel_gate_open(&self, channel_id: vox_types::ChannelId) -> bool {
+        self.channel_gates
+            .lock()
+            .expect("channel gates mutex poisoned")
+            .get(&channel_id)
+            .is_none_or(|gate| gate.opened.load(std::sync::atomic::Ordering::Acquire))
+    }
+
     fn prepare_outbound_batch<'a>(
         &self,
         mut msg: Message<'a>,
         binder: Option<&'a dyn vox_types::ChannelBinder>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
-    ) -> Result<(OutboundBatch, tokio_oneshot::Receiver<std::io::Result<()>>), ()> {
+    ) -> Result<
+        (
+            OutboundBatch,
+            tokio_oneshot::Receiver<std::io::Result<()>>,
+            Vec<vox_types::ChannelId>,
+        ),
+        (),
+    > {
         let conn_id = msg.connection_id;
         let (request_id, payload_kind) = match &msg.payload {
             MessagePayload::RequestMessage(req) => {
@@ -2403,6 +2505,9 @@ impl SessionCore {
         // and each handle goes on the wire as a small index. The args then travel
         // as already-encoded bytes — the schema for them was already attached
         // above from the `Value` shape. r[impl rpc.request] r[impl rpc.channel.allocation]
+        // Channels this Call opens, whose send-gates must be opened once the Call has
+        // been enqueued (so a concurrent `tx.send` cannot beat the Call to the wire).
+        let mut gated_channels: Vec<vox_types::ChannelId> = Vec::new();
         let channel_storage: Option<Vec<u8>> = if let MessagePayload::RequestMessage(req) =
             &msg.payload
             && let RequestBody::Call(call) = &req.body
@@ -2410,13 +2515,25 @@ impl SessionCore {
             && vox_types::shape_contains_channel(shape)
         {
             let (ptr, shape) = (*ptr, *shape);
+            // The binder registers a CLOSED gate per channel it allocates here (before
+            // binding the Tx sink), so an app `tx.send` that wakes mid-encode parks.
             let (encoded, channels) = vox_types::collect_channels(|| match binder {
                 Some(b) => {
                     vox_types::with_channel_binder(b, || vox_phon::to_vec_for_shape(ptr, shape))
                 }
                 None => vox_phon::to_vec_for_shape(ptr, shape),
             });
-            let encoded = encoded.map_err(|_| ())?;
+            gated_channels = channels.clone();
+            let encoded = match encoded {
+                Ok(encoded) => encoded,
+                Err(_) => {
+                    // Encode failed after gates were registered: release them so any
+                    // parked `tx.send` unblocks (and then fails on the dead call/conn)
+                    // rather than hanging forever.
+                    self.open_channel_gates(&gated_channels);
+                    return Err(());
+                }
+            };
             if let MessagePayload::RequestMessage(req) = &mut msg.payload
                 && let RequestBody::Call(call) = &mut req.body
             {
@@ -2427,14 +2544,21 @@ impl SessionCore {
             None
         };
 
-        let payload_send = if let Some(bytes) = &channel_storage {
+        let prepared = if let Some(bytes) = &channel_storage {
             // Narrow `msg`'s lifetime to the pre-encoded `bytes` (covariance) and
             // swap the args to the encoded payload, then encode the envelope. The
             // `bytes` outlive `prepare_msg`, which consumes the message synchronously.
             let msg = swap_call_args_to_bytes(msg, bytes);
-            tx.clone().prepare_msg(msg, binder).map_err(|_| ())?
+            tx.clone().prepare_msg(msg, binder)
         } else {
-            tx.clone().prepare_msg(msg, binder).map_err(|_| ())?
+            tx.clone().prepare_msg(msg, binder)
+        };
+        let payload_send = match prepared {
+            Ok(send) => send,
+            Err(_) => {
+                self.open_channel_gates(&gated_channels);
+                return Err(());
+            }
         };
         trace!(
             conn_id = %conn_id,
@@ -2456,6 +2580,7 @@ impl SessionCore {
                 result_tx,
             },
             result_rx,
+            gated_channels,
         ))
     }
 
@@ -2467,8 +2592,19 @@ impl SessionCore {
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
     ) -> Result<(), ()> {
         let connection_id = msg.connection_id;
-        let (batch, result_rx) = self.prepare_outbound_batch(msg, binder, forwarded_schemas)?;
-        if self.outbound_tx.send(batch).await.is_err() {
+        // r[impl rpc.channel.item] Hold an outbound channel item/close until the Call
+        // that opened its channel has been enqueued — the sender upholds frame order.
+        if let Some(channel_id) = gated_channel_id(&msg) {
+            self.await_channel_gate(channel_id).await;
+        }
+        let (batch, result_rx, gated_channels) =
+            self.prepare_outbound_batch(msg, binder, forwarded_schemas)?;
+        let queued = self.outbound_tx.send(batch).await;
+        // This Call is now on the queue (or the queue is gone): release its channels'
+        // gates so parked items follow it — unconditionally, so a failed enqueue never
+        // strands a parked `tx.send`.
+        self.open_channel_gates(&gated_channels);
+        if queued.is_err() {
             if let Some(observer) = &self.observer {
                 observer
                     .driver_event(vox_types::DriverEvent::OutboundQueueClosed { connection_id });
@@ -2504,10 +2640,18 @@ impl SessionCore {
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
     ) -> Result<(), TrySendError<()>> {
         let connection_id = msg.connection_id;
-        let (batch, _result_rx) = self
+        // r[impl rpc.channel.item] A channel item whose declaring Call hasn't been
+        // enqueued yet can't go out (frame order); signal backpressure so the caller
+        // retries — the async `send` path parks instead.
+        if let Some(channel_id) = gated_channel_id(&msg) {
+            if !self.channel_gate_open(channel_id) {
+                return Err(TrySendError::Full(()));
+            }
+        }
+        let (batch, _result_rx, gated_channels) = self
             .prepare_outbound_batch(msg, binder, forwarded_schemas)
             .map_err(|_| TrySendError::Closed(()))?;
-        self.outbound_tx.try_send(batch).map_err(|err| match err {
+        let result = self.outbound_tx.try_send(batch).map_err(|err| match err {
             tokio_mpsc::error::TrySendError::Full(_) => {
                 if let Some(observer) = &self.observer {
                     observer
@@ -2523,7 +2667,10 @@ impl SessionCore {
                 }
                 TrySendError::Closed(())
             }
-        })
+        });
+        // Release this Call's channel gates now that it's been handed to the queue.
+        self.open_channel_gates(&gated_channels);
+        result
     }
 
     /// Record that an incoming call was received, so we can look up the
