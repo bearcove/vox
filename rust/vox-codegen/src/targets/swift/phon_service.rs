@@ -141,8 +141,9 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
                 }
                 first = false;
                 out.push_str(&format!(
-                    "PhonChannelMeta(index: {i}, isTx: {is_tx_dir}, elementRoot: SchemaId({}))",
-                    hex_u64(root_id(element))
+                    "PhonChannelMeta(index: {i}, isTx: {is_tx_dir}, elementRoot: SchemaId({}), elementSchemaClosure: [{}])",
+                    hex_u64(root_id(element)),
+                    closure_bytes(element)
                 ));
             }
         }
@@ -169,7 +170,61 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         ));
     }
     out.push('\n');
+
+    // Per-channel-argument element codec programs (the phon typed path for streamed
+    // items — no hand-rolled bytes). Decode is same-schema (elementRoot → descriptor)
+    // for parity with Rust/TS; advertising + reconciling the writer's element schema is
+    // the deferred follow-up (the only change there is swapping elementRoot for the
+    // peer's advertised writer root at this seam).
+    let mut emitted_elements = false;
+    for m in service.methods {
+        let mname = m.method_name.to_lower_camel_case();
+        for arg in m.args {
+            if !(is_tx(arg.shape) || is_rx(arg.shape)) {
+                continue;
+            }
+            if !emitted_elements {
+                out.push_str("// MARK: - per-channel element codec programs\n\n");
+                emitted_elements = true;
+            }
+            let an = arg.name.to_lower_camel_case();
+            let element = arg
+                .channel_element
+                .expect("Tx/Rx arg must carry its channel element shape");
+            out.push_str(&format!(
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDescriptor: Descriptor = {}\n",
+                descriptor_expr(element)
+            ));
+            out.push_str(&format!(
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_{an}_ElementDescriptor, {name}Registry)\n"
+            ));
+            out.push_str(&format!(
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDecodeProgram: MemProgram = try! lowerDecode(SchemaId({}), {name}_{mname}_{an}_ElementDescriptor, {name}Registry)\n",
+                hex_u64(root_id(element))
+            ));
+        }
+    }
+    if emitted_elements {
+        out.push('\n');
+    }
     out
+}
+
+/// Swift closure literal `(T, inout ByteBuffer) -> Void` that phon-encodes a channel
+/// element via `program` and appends its bytes (a channel Data frame *is* the element).
+/// `elem_ty` annotates the value so the closure type (and thus the `ByteBuffer` buffer
+/// param) is inferable at the call site — keeping NIO out of the generated code.
+pub fn element_encode_closure(elem_ty: &str, program: &str) -> String {
+    format!("{{ (v: {elem_ty}, buf) in buf.writeBytes(encodeTyped(v, {program})) }}")
+}
+
+/// Swift closure literal `(inout ByteBuffer) throws -> T` that reads a channel Data
+/// frame's bytes and phon-decodes the element via `program`. The return annotation pins
+/// the element type so the buffer param infers as `inout ByteBuffer` (no NIO name).
+pub fn element_decode_closure(elem_ty: &str, program: &str) -> String {
+    format!(
+        "{{ (buf) throws -> {elem_ty} in let bytes = buf.readBytes(length: buf.readableBytes) ?? []; return try decodeTyped({program}, bytes) }}"
+    )
 }
 
 /// The name of the Swift descriptor/program globals for a method's args/response.

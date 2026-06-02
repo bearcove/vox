@@ -6,7 +6,7 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use vox_types::{ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
-use super::phon_service::method_global_prefix;
+use super::phon_service::{element_decode_closure, element_encode_closure, method_global_prefix};
 use super::types::{format_doc, swift_type_base, swift_type_client_arg, swift_type_client_return};
 use crate::render::hex_u64;
 
@@ -103,16 +103,30 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         for a in method.args.iter() {
             let an = a.name.to_lower_camel_case();
             if is_rx(a.shape) {
+                // Method wants an `Rx` → caller SENDS via the paired `Tx`: inject the phon
+                // element ENCODE codec.
+                let elem_ty = swift_type_base(a.channel_element.expect("rx element"));
+                let ser = element_encode_closure(
+                    &elem_ty,
+                    &format!("{prefix}_{an}_ElementEncodeProgram"),
+                );
                 out.push_str(&format!("        let {an}WireIndex = channelIds.count\n"));
                 out.push_str(&format!(
-                    "        channelIds.append(await connection.bindClientRxArg({an}))\n"
+                    "        channelIds.append(await connection.bindClientRxArg({an}, serialize: {ser}))\n"
                 ));
                 arg_exprs.push(format!("Data(channelWireIndexBytes({an}WireIndex))"));
                 finalizers.push(format!("finalizeChannel({an})"));
             } else if is_tx(a.shape) {
+                // Method wants a `Tx` → caller RECEIVES via the paired `Rx`: inject the phon
+                // element DECODE codec.
+                let elem_ty = swift_type_base(a.channel_element.expect("tx element"));
+                let de = element_decode_closure(
+                    &elem_ty,
+                    &format!("{prefix}_{an}_ElementDecodeProgram"),
+                );
                 out.push_str(&format!("        let {an}WireIndex = channelIds.count\n"));
                 out.push_str(&format!(
-                    "        channelIds.append(await connection.bindClientTxArg({an}))\n"
+                    "        channelIds.append(await connection.bindClientTxArg({an}, deserialize: {de}))\n"
                 ));
                 arg_exprs.push(format!("Data(channelWireIndexBytes({an}WireIndex))"));
                 finalizers.push(format!("finalizeChannel({an})"));

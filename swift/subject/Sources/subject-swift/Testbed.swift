@@ -9688,8 +9688,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_sum_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991))]
-  ),
+    channels: [
+      PhonChannelMeta(
+        index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0x239e_5b99_b1f8_207a: PhonMethodSchemas(
     argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
     argsSchemaClosure: [
@@ -9773,7 +9776,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generate_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991))]),
+    channels: [
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0x3441_9529_478c_c7b8: PhonMethodSchemas(
     argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
     argsSchemaClosure: [
@@ -9857,7 +9864,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991))]),
+    channels: [
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0xe2d2_7fd9_098c_6ea2: PhonMethodSchemas(
     argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
     argsSchemaClosure: [
@@ -9941,7 +9952,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateRetryIdem_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991))]),
+    channels: [
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0xcb46_9cff_8d79_8feb: PhonMethodSchemas(
     argsRoot: SchemaId(0xb6a6_8f26_51e5_1847),
     argsSchemaClosure: [
@@ -10026,8 +10041,12 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
     ],
     responseDescriptor: testbed_transform_ResponseDescriptor,
     channels: [
-      PhonChannelMeta(index: 0, isTx: false, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8)),
-      PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8)),
+      PhonChannelMeta(
+        index: 0, isTx: false, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
+        elementSchemaClosure: [232, 80, 225, 78, 145, 206, 125, 109, 0, 0, 0, 0]),
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
+        elementSchemaClosure: [232, 80, 225, 78, 145, 206, 125, 109, 0, 0, 0, 0]),
     ]),
   0xec36_e847_51a8_97be: PhonMethodSchemas(
     argsRoot: SchemaId(0xa874_1991_5e12_3842),
@@ -10108,7 +10127,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_postReplyGenerate_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 0, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991))]),
+    channels: [
+      PhonChannelMeta(
+        index: 0, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0xc1ce_3c39_7e4c_a6e7: PhonMethodSchemas(
     argsRoot: SchemaId(0xb6a6_8f26_51e5_1847),
     argsSchemaClosure: [
@@ -10193,8 +10216,12 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
     ],
     responseDescriptor: testbed_postReplySum_ResponseDescriptor,
     channels: [
-      PhonChannelMeta(index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991)),
-      PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0xc6eb_8c46_f1e1_7fba)),
+      PhonChannelMeta(
+        index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0]),
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0xc6eb_8c46_f1e1_7fba),
+        elementSchemaClosure: [186, 127, 225, 241, 70, 140, 235, 198, 0, 0, 0, 0]),
     ]),
   0x81f5_386d_589d_fbe4: PhonMethodSchemas(
     argsRoot: SchemaId(0x7ff8_8e78_869e_c387),
@@ -12177,8 +12204,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_sumLarge_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991))]
-  ),
+    channels: [
+      PhonChannelMeta(
+        index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0x8edf_bd65_d162_f685: PhonMethodSchemas(
     argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
     argsSchemaClosure: [
@@ -12262,7 +12292,11 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateLarge_ResponseDescriptor,
-    channels: [PhonChannelMeta(index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991))]),
+    channels: [
+      PhonChannelMeta(
+        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
+        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
+    ]),
   0xfbfb_05bb_caad_e4a0: PhonMethodSchemas(
     argsRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     argsSchemaClosure: [32, 199, 45, 154, 36, 51, 92, 188, 0, 0, 0, 0],
@@ -13644,6 +13678,110 @@ nonisolated(unsafe) let testbed_echoConfig_ArgsEncodeProgram: MemProgram = try! 
 nonisolated(unsafe) let testbed_echoConfig_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoConfig_ResponseDescriptor, testbedRegistry)
 
+// MARK: - per-channel element codec programs
+
+nonisolated(unsafe) let testbed_sum_numbers_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_sum_numbers_ElementEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sum_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_numbers_ElementDecodeProgram: MemProgram = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_sum_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_output_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_generate_output_ElementEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_generate_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_output_ElementDecodeProgram: MemProgram = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_generate_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+    layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+    access: .scalar)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateRetryNonIdem_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_generateRetryNonIdem_output_ElementDescriptor,
+    testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateRetryIdem_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_generateRetryIdem_output_ElementDescriptor,
+    testbedRegistry)
+nonisolated(unsafe) let testbed_transform_input_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+  layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+  access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))
+nonisolated(unsafe) let testbed_transform_input_ElementEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_transform_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_input_ElementDecodeProgram: MemProgram = try! lowerDecode(
+  SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_output_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+  layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+  access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))
+nonisolated(unsafe) let testbed_transform_output_ElementEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_transform_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_output_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_postReplyGenerate_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_postReplyGenerate_output_ElementDescriptor,
+    testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_input_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_postReplySum_input_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_postReplySum_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_input_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_postReplySum_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_result_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xc6eb_8c46_f1e1_7fba)),
+  layout: Layout(size: MemoryLayout<Int64>.size, align: MemoryLayout<Int64>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_postReplySum_result_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_postReplySum_result_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_result_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0xc6eb_8c46_f1e1_7fba), testbed_postReplySum_result_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementEncodeProgram: MemProgram = try! lowerTyped(
+  testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_output_ElementDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
+  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
+  access: .scalar)
+nonisolated(unsafe) let testbed_generateLarge_output_ElementEncodeProgram: MemProgram =
+  try! lowerTyped(testbed_generateLarge_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generateLarge_output_ElementDecodeProgram: MemProgram =
+  try! lowerDecode(
+    SchemaId(0x361f_4536_eee9_f991), testbed_generateLarge_output_ElementDescriptor, testbedRegistry
+  )
+
 ///  Testbed service for conformance testing.
 ///
 ///  Combines simple RPC, channeling, and complex type methods for comprehensive testing.
@@ -13847,7 +13985,12 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func sum(numbers: UnboundRx<Int32>) async throws -> Int64 {
     var channelIds: [UInt64] = []
     let numbersWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientRxArg(numbers))
+    channelIds.append(
+      await connection.bindClientRxArg(
+        numbers,
+        serialize: { (v: Int32, buf) in
+          buf.writeBytes(encodeTyped(v, testbed_sum_numbers_ElementEncodeProgram))
+        }))
     let payload = encodeTyped(
       Data(channelWireIndexBytes(numbersWireIndex)), testbed_sum_ArgsEncodeProgram)
     let response = try await connection.call(
@@ -13873,7 +14016,13 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func generate(count: UInt32, output: UnboundTx<Int32>) async throws {
     var channelIds: [UInt64] = []
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> Int32 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_generate_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (count, Data(channelWireIndexBytes(outputWireIndex))), testbed_generate_ArgsEncodeProgram)
     let response = try await connection.call(
@@ -13899,7 +14048,13 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
     var channelIds: [UInt64] = []
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> Int32 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_generateRetryNonIdem_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (count, Data(channelWireIndexBytes(outputWireIndex))),
       testbed_generateRetryNonIdem_ArgsEncodeProgram)
@@ -13926,7 +14081,13 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
     var channelIds: [UInt64] = []
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> Int32 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_generateRetryIdem_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (count, Data(channelWireIndexBytes(outputWireIndex))),
       testbed_generateRetryIdem_ArgsEncodeProgram)
@@ -13953,9 +14114,20 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func transform(input: UnboundRx<String>, output: UnboundTx<String>) async throws {
     var channelIds: [UInt64] = []
     let inputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientRxArg(input))
+    channelIds.append(
+      await connection.bindClientRxArg(
+        input,
+        serialize: { (v: String, buf) in
+          buf.writeBytes(encodeTyped(v, testbed_transform_input_ElementEncodeProgram))
+        }))
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> String in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_transform_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (Data(channelWireIndexBytes(inputWireIndex)), Data(channelWireIndexBytes(outputWireIndex))),
       testbed_transform_ArgsEncodeProgram)
@@ -13986,7 +14158,13 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func postReplyGenerate(output: UnboundTx<Int32>) async throws {
     var channelIds: [UInt64] = []
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> Int32 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_postReplyGenerate_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       Data(channelWireIndexBytes(outputWireIndex)), testbed_postReplyGenerate_ArgsEncodeProgram)
     let response = try await connection.call(
@@ -14012,9 +14190,20 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func postReplySum(input: UnboundRx<Int32>, result: UnboundTx<Int64>) async throws {
     var channelIds: [UInt64] = []
     let inputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientRxArg(input))
+    channelIds.append(
+      await connection.bindClientRxArg(
+        input,
+        serialize: { (v: Int32, buf) in
+          buf.writeBytes(encodeTyped(v, testbed_postReplySum_input_ElementEncodeProgram))
+        }))
     let resultWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(result))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        result,
+        deserialize: { (buf) throws -> Int64 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_postReplySum_result_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (Data(channelWireIndexBytes(inputWireIndex)), Data(channelWireIndexBytes(resultWireIndex))),
       testbed_postReplySum_ArgsEncodeProgram)
@@ -14341,7 +14530,12 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func sumLarge(numbers: UnboundRx<Int32>) async throws -> Int64 {
     var channelIds: [UInt64] = []
     let numbersWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientRxArg(numbers))
+    channelIds.append(
+      await connection.bindClientRxArg(
+        numbers,
+        serialize: { (v: Int32, buf) in
+          buf.writeBytes(encodeTyped(v, testbed_sumLarge_numbers_ElementEncodeProgram))
+        }))
     let payload = encodeTyped(
       Data(channelWireIndexBytes(numbersWireIndex)), testbed_sumLarge_ArgsEncodeProgram)
     let response = try await connection.call(
@@ -14367,7 +14561,13 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func generateLarge(count: UInt32, output: UnboundTx<Int32>) async throws {
     var channelIds: [UInt64] = []
     let outputWireIndex = channelIds.count
-    channelIds.append(await connection.bindClientTxArg(output))
+    channelIds.append(
+      await connection.bindClientTxArg(
+        output,
+        deserialize: { (buf) throws -> Int32 in
+          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+          return try decodeTyped(testbed_generateLarge_output_ElementDecodeProgram, bytes)
+        }))
     let payload = encodeTyped(
       (count, Data(channelWireIndexBytes(outputWireIndex))), testbed_generateLarge_ArgsEncodeProgram
     )
@@ -15178,7 +15378,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let numbers = await bindServerRx(
       channelId: channels[numbersWireIndex], registry: registry, taskTx: taskTx,
-      deserialize: { buf in try decodeI32(from: &buf) })
+      deserialize: { (buf) throws -> Int32 in
+        let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+        return try decodeTyped(testbed_sum_numbers_ElementDecodeProgram, bytes)
+      })
     let voxResult: Result<Int64, VoxError<Infallible>>
     do {
       let voxValue = try await handler.sum(numbers: numbers)
@@ -15232,7 +15435,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI32(v, into: &buf) })
+      serialize: { (v: Int32, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_generate_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.generate(count: args.0, output: output)
@@ -15286,7 +15491,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI32(v, into: &buf) })
+      serialize: { (v: Int32, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_generateRetryNonIdem_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.generateRetryNonIdem(count: args.0, output: output)
@@ -15340,7 +15547,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI32(v, into: &buf) })
+      serialize: { (v: Int32, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_generateRetryIdem_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.generateRetryIdem(count: args.0, output: output)
@@ -15394,7 +15603,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let input = await bindServerRx(
       channelId: channels[inputWireIndex], registry: registry, taskTx: taskTx,
-      deserialize: { buf in try decodeString(from: &buf) })
+      deserialize: { (buf) throws -> String in
+        let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+        return try decodeTyped(testbed_transform_input_ElementDecodeProgram, bytes)
+      })
     let outputWireIndex = channelWireIndex(args.1)
     guard outputWireIndex < channels.count else {
       taskTx(
@@ -15406,7 +15618,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeString(v, into: &buf) })
+      serialize: { (v: String, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_transform_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.transform(input: input, output: output)
@@ -15460,7 +15674,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI32(v, into: &buf) })
+      serialize: { (v: Int32, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_postReplyGenerate_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.postReplyGenerate(output: output)
@@ -15514,7 +15730,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let input = await bindServerRx(
       channelId: channels[inputWireIndex], registry: registry, taskTx: taskTx,
-      deserialize: { buf in try decodeI32(from: &buf) })
+      deserialize: { (buf) throws -> Int32 in
+        let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+        return try decodeTyped(testbed_postReplySum_input_ElementDecodeProgram, bytes)
+      })
     let resultWireIndex = channelWireIndex(args.1)
     guard resultWireIndex < channels.count else {
       taskTx(
@@ -15526,7 +15745,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let result = await bindServerTx(
       channelId: channels[resultWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI64(v, into: &buf) })
+      serialize: { (v: Int64, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_postReplySum_result_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.postReplySum(input: input, result: result)
@@ -16155,7 +16376,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let numbers = await bindServerRx(
       channelId: channels[numbersWireIndex], registry: registry, taskTx: taskTx,
-      deserialize: { buf in try decodeI32(from: &buf) })
+      deserialize: { (buf) throws -> Int32 in
+        let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+        return try decodeTyped(testbed_sumLarge_numbers_ElementDecodeProgram, bytes)
+      })
     let voxResult: Result<Int64, VoxError<Infallible>>
     do {
       let voxValue = try await handler.sumLarge(numbers: numbers)
@@ -16209,7 +16433,9 @@ public final class TestbedDispatcher: ServiceDispatcher {
     }
     let output = await bindServerTx(
       channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      serialize: { v, buf in encodeI32(v, into: &buf) })
+      serialize: { (v: Int32, buf) in
+        buf.writeBytes(encodeTyped(v, testbed_generateLarge_output_ElementEncodeProgram))
+      })
     let voxResult: Result<Void, VoxError<Infallible>>
     do {
       try await handler.generateLarge(count: args.0, output: output)

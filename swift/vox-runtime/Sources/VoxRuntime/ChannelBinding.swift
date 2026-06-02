@@ -37,9 +37,14 @@ public func channelWireIndex(_ data: Data) -> Int {
 
 extension VoxConnection {
     /// Bind an `Rx<T>` argument: the method wants an `Rx` (callee receives), so the
-    /// caller passed an `Rx` and keeps the paired `Tx` — the caller SENDS. Allocate a
-    /// channel id, bind the paired `Tx` for outgoing, and return the id.
-    public func bindClientRxArg<T>(_ rx: UnboundRx<T>) async -> UInt64 {
+    /// caller passed an `Rx` and keeps the paired `Tx` — the caller SENDS. Inject the
+    /// phon typed encode codec into the paired `Tx`, allocate a channel id, bind the
+    /// paired `Tx` for outgoing, and return the id.
+    public func bindClientRxArg<T>(
+        _ rx: UnboundRx<T>,
+        serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void
+    ) async -> UInt64 {
+        (rx.pairedTx as? UnboundTx<T>)?.setSerialize(serialize)
         let channelId = channelAllocator.allocate()
         let credit = await incomingChannelRegistry.registerOutgoing(
             channelId, initialCredit: defaultInitialChannelCredit)
@@ -48,9 +53,14 @@ extension VoxConnection {
     }
 
     /// Bind a `Tx<T>` argument: the method wants a `Tx` (callee sends), so the caller
-    /// passed a `Tx` and keeps the paired `Rx` — the caller RECEIVES. Allocate a channel
-    /// id, register an incoming receiver, bind the paired `Rx`, and return the id.
-    public func bindClientTxArg<T>(_ tx: UnboundTx<T>) async -> UInt64 {
+    /// passed a `Tx` and keeps the paired `Rx` — the caller RECEIVES. Inject the phon
+    /// typed decode codec into the paired `Rx`, allocate a channel id, register an
+    /// incoming receiver, bind the paired `Rx`, and return the id.
+    public func bindClientTxArg<T>(
+        _ tx: UnboundTx<T>,
+        deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T
+    ) async -> UInt64 {
+        (tx.pairedRx as? UnboundRx<T>)?.setDeserialize(deserialize)
         let channelId = channelAllocator.allocate()
         let sender = taskSender
         let receiver = await incomingChannelRegistry.register(

@@ -400,10 +400,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("divide_overflow OK")
     case "sum":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let sender = Task {
             try await Task.sleep(nanoseconds: 50_000_000)
@@ -423,10 +420,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("sum result: \(result)")
     case "sum_client_to_server":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let callTask = Task {
             try await client.sum(numbers: rx)
@@ -442,10 +436,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("sum_client_to_server OK")
     case "sum_large":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let n = 100
         let callTask = Task {
@@ -463,10 +454,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("sum_large OK")
     case "generate":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         try await client.generate(count: 5, output: tx)
 
@@ -480,10 +468,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("generate result OK: \(received)")
     case "generate_large":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let count: UInt32 = 100
         async let call: Void = client.generateLarge(count: count, output: tx)
@@ -502,10 +487,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("generate_large OK")
     case "channel_retry_non_idem":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let callTask = Task {
             try await client.generateRetryNonIdem(count: retryProbeItemCount, output: tx)
@@ -535,10 +517,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
     case "channel_retry_idem":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
 
         let callTask = Task {
             try await client.generateRetryIdem(count: retryProbeItemCount, output: tx)
@@ -802,10 +781,7 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("process_message result OK")
     case "post_reply_generate":
-        let (tx, rx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
         try await client.postReplyGenerate(output: tx)
         var received: [Int32] = []
         for try await n in rx {
@@ -818,14 +794,8 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("post_reply_generate OK")
     case "post_reply_sum":
-        let (inputTx, inputRx) = channel(
-            serialize: { val, buf in encodeI32(val, into: &buf) },
-            deserialize: { buf in try decodeI32(from: &buf) }
-        )
-        let (resultTx, resultRx) = channel(
-            serialize: { val, buf in encodeI64(val, into: &buf) },
-            deserialize: { buf in try decodeI64(from: &buf) }
-        )
+        let (inputTx, inputRx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
+        let (resultTx, resultRx): (UnboundTx<Int64>, UnboundRx<Int64>) = channel()
         try await client.postReplySum(input: inputRx, result: resultTx)
         for n in [1, 2, 3, 4, 5] {
             try await inputTx.send(Int32(n))
@@ -846,14 +816,8 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
         }
         log("post_reply_sum OK")
     case "transform_bidi":
-        let (inputTx, inputRx) = channel(
-            serialize: { val, buf in encodeString(val, into: &buf) },
-            deserialize: { buf in try decodeString(from: &buf) }
-        )
-        let (outputTx, outputRx) = channel(
-            serialize: { val, buf in encodeString(val, into: &buf) },
-            deserialize: { buf in try decodeString(from: &buf) }
-        )
+        let (inputTx, inputRx): (UnboundTx<String>, UnboundRx<String>) = channel()
+        let (outputTx, outputRx): (UnboundTx<String>, UnboundRx<String>) = channel()
         let messages = ["alpha", "beta", "gamma"]
         async let call: Void = client.transform(input: inputRx, output: outputTx)
         try await Task.sleep(nanoseconds: 50_000_000)

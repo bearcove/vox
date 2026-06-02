@@ -8,15 +8,20 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
     public private(set) var channelId: ChannelId = 0
     private var taskTx: (@Sendable (TaskMessage) -> Void)?
     private var credit: ChannelCreditController?
-    private let serialize: @Sendable (T, inout ByteBuffer) -> Void
+    // The per-item codec is injected at bind time from the method's phon element program
+    // (mirrors TS: the channel is codec-less until bound). No hand-rolled element bytes.
+    private var serialize: (@Sendable (T, inout ByteBuffer) -> Void)?
     private var bound = false
     private var closed = false
     private let lock = NSLock()
     private var bindingWaiters: [CheckedContinuation<Void, Never>] = []
     weak var pairedRx: AnyObject?
 
-    public init(serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void) {
-        self.serialize = serialize
+    public init() {}
+
+    /// Inject the phon typed element codec (called by the generated bind helpers).
+    func setSerialize(_ serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void) {
+        lock.withLock { self.serialize = serialize }
     }
 
     public var isBound: Bool { bound }
@@ -69,6 +74,9 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
         let (taskTx, credit) = try await waitForSendBinding()
         if lock.withLock({ closed }) {
             throw ChannelError.closed
+        }
+        guard let serialize = lock.withLock({ self.serialize }) else {
+            throw ChannelError.notBound
         }
         try await credit.consume()
         var buf = ByteBufferAllocator().buffer(capacity: 64)
@@ -145,7 +153,8 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
 /// Unbound Rx - created by `channel()`, bound at call time.
 public final class UnboundRx<T: Sendable>: @unchecked Sendable {
     public private(set) var channelId: ChannelId = 0
-    private let deserialize: @Sendable (inout ByteBuffer) throws -> T
+    // Injected at bind time from the method's phon element program (codec-less until then).
+    private var deserialize: (@Sendable (inout ByteBuffer) throws -> T)?
     private var bound = false
     private let lock = NSLock()
     private var bindingWaiters: [CheckedContinuation<Void, Never>] = []
@@ -155,8 +164,11 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
     // Weak reference to paired Tx
     weak var pairedTx: AnyObject?
 
-    public init(deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T) {
-        self.deserialize = deserialize
+    public init() {}
+
+    /// Inject the phon typed element codec (called by the generated bind helpers).
+    func setDeserialize(_ deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T) {
+        lock.withLock { self.deserialize = deserialize }
     }
 
     public var isBound: Bool { bound }
@@ -196,6 +208,9 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
             let receiver = lock.withLock { receivers.first }
             if let receiver {
                 if let bytes = await receiver.recv() {
+                    guard let deserialize = lock.withLock({ self.deserialize }) else {
+                        throw ChannelError.notBound
+                    }
                     var buf = ByteBufferAllocator().buffer(capacity: bytes.count)
                     buf.writeBytes(bytes)
                     return try deserialize(&buf)
@@ -265,13 +280,12 @@ extension UnboundRx: AsyncSequence {
 
 // MARK: - Channel Factory
 
-/// Create paired unbound channels.
-public func channel<T: Sendable>(
-    serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void,
-    deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T
-) -> (UnboundTx<T>, UnboundRx<T>) {
-    let tx = UnboundTx<T>(serialize: serialize)
-    let rx = UnboundRx<T>(deserialize: deserialize)
+/// Create a paired, codec-less unbound channel. The per-item phon element codec is
+/// injected at bind time by the generated client (keyed on the method's `elementRoot`),
+/// so callers never hand-roll element bytes — mirrors the TS `channel()` design.
+public func channel<T: Sendable>() -> (UnboundTx<T>, UnboundRx<T>) {
+    let tx = UnboundTx<T>()
+    let rx = UnboundRx<T>()
     tx.pairedRx = rx
     rx.pairedTx = tx
     return (tx, rx)

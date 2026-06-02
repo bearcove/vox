@@ -19,15 +19,19 @@ public enum SchemaBindingDirection: Sendable, Hashable {
     case response
 }
 
-/// A channel argument's position + direction + element root, emitted by codegen.
+/// A channel argument's position + direction + element root + the element's phon
+/// schema-closure bytes (so the element's `elementRoot` resolves in the service
+/// registry and the typed element codec can be built). Emitted by codegen.
 public struct PhonChannelMeta: Sendable {
     public let index: Int
     public let isTx: Bool
     public let elementRoot: SchemaId
-    public init(index: Int, isTx: Bool, elementRoot: SchemaId) {
+    public let elementSchemaClosure: [UInt8]
+    public init(index: Int, isTx: Bool, elementRoot: SchemaId, elementSchemaClosure: [UInt8] = []) {
         self.index = index
         self.isTx = isTx
         self.elementRoot = elementRoot
+        self.elementSchemaClosure = elementSchemaClosure
     }
 }
 
@@ -90,6 +94,12 @@ public func buildServiceRegistry(_ methods: [UInt64: PhonMethodSchemas]) -> Regi
     for m in methods.values {
         if let a = try? parseSchemaClosure(m.argsSchemaClosure) { schemas += a.schemas }
         if let r = try? parseSchemaClosure(m.responseSchemaClosure) { schemas += r.schemas }
+        // Channel element schemas: the args/response closures don't reference the element
+        // type (a channel arg is a u32 wire index on the wire), so merge them explicitly
+        // — the typed element codec resolves `elementRoot` against this registry.
+        for ch in m.channels {
+            if let e = try? parseSchemaClosure(ch.elementSchemaClosure) { schemas += e.schemas }
+        }
     }
     return Registry(schemas)
 }

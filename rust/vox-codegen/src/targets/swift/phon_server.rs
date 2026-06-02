@@ -7,35 +7,12 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use vox_types::{MethodDescriptor, ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
-use super::phon_service::method_global_prefix;
+use super::phon_service::{element_decode_closure, element_encode_closure, method_global_prefix};
 use super::types::{format_doc, swift_type_base, swift_type_server_arg, swift_type_server_return};
 use crate::render::hex_u64;
 
 fn has_channels(method: &MethodDescriptor) -> bool {
     method.args.iter().any(|a| is_tx(a.shape) || is_rx(a.shape))
-}
-
-/// The `ChannelScalarCodec` (de)serialize closure for a channel element type. The
-/// scalar bridge emits phon-compatible wire bytes (fixed-width LE; `String` = u32 LE
-/// length + UTF-8) for the element types the Testbed channels carry. Codegen panics on
-/// an unsupported element so a gap is loud, not silently mis-encoded.
-/// TODO(phon): replace with the generated phon typed element codec keyed on elementRoot.
-fn channel_element_serialize(element: &'static facet_core::Shape) -> String {
-    match swift_type_base(element).as_str() {
-        "Int32" => "{ v, buf in encodeI32(v, into: &buf) }".to_string(),
-        "Int64" => "{ v, buf in encodeI64(v, into: &buf) }".to_string(),
-        "String" => "{ v, buf in encodeString(v, into: &buf) }".to_string(),
-        other => panic!("unsupported channel element type for serialize: {other}"),
-    }
-}
-
-fn channel_element_deserialize(element: &'static facet_core::Shape) -> String {
-    match swift_type_base(element).as_str() {
-        "Int32" => "{ buf in try decodeI32(from: &buf) }".to_string(),
-        "Int64" => "{ buf in try decodeI64(from: &buf) }".to_string(),
-        "String" => "{ buf in try decodeString(from: &buf) }".to_string(),
-        other => panic!("unsupported channel element type for deserialize: {other}"),
-    }
 }
 
 /// The server-side (handler) Swift type of an argument — channel args become
@@ -219,7 +196,6 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
             continue;
         }
         let an = a.name.to_lower_camel_case();
-        let element = a.channel_element.expect("channel arg element shape");
         let slot = if arity == 1 {
             "args".to_string()
         } else {
@@ -231,13 +207,18 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         out.push_str(&format!(
             "        guard {an}WireIndex < channels.count else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"channel wire index out of range\")), methodId: {id}))\n            return\n        }}\n"
         ));
+        let elem_ty = swift_type_base(a.channel_element.expect("channel arg element shape"));
         if is_tx(a.shape) {
-            let ser = channel_element_serialize(element);
+            // Handler SENDS → phon element ENCODE codec.
+            let ser =
+                element_encode_closure(&elem_ty, &format!("{prefix}_{an}_ElementEncodeProgram"));
             out.push_str(&format!(
                 "        let {an} = await bindServerTx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, serialize: {ser})\n"
             ));
         } else {
-            let de = channel_element_deserialize(element);
+            // Handler RECEIVES → phon element DECODE codec.
+            let de =
+                element_decode_closure(&elem_ty, &format!("{prefix}_{an}_ElementDecodeProgram"));
             out.push_str(&format!(
                 "        let {an} = await bindServerRx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, deserialize: {de})\n"
             ));
