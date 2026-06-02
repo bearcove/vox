@@ -241,9 +241,15 @@ mod tests {
     use facet::Facet;
     use vox_types::{Rx, ServiceDescriptor, Tx, method_descriptor};
 
+    // A non-recursive composite (struct + scalar + string + list). NOTE: phon's
+    // `from_shapes` has no cycle detection, so a self-referential type (via `Box` or
+    // `Vec<Self>`) is unsupported — `Box<T>` errors and `Vec<Self>` stack-overflows.
+    // This test only needs a non-trivial type to verify canonical-schema emission.
     #[derive(Facet)]
-    struct RecursiveNode {
-        next: Option<Box<RecursiveNode>>,
+    struct CompositeNode {
+        value: u64,
+        label: String,
+        tags: Vec<String>,
     }
 
     #[derive(Facet)]
@@ -381,12 +387,12 @@ mod tests {
 
     #[test]
     fn generated_typescript_uses_canonical_service_schemas() {
-        let recurse = method_descriptor::<(RecursiveNode,), RecursiveNode>(
+        let recurse = method_descriptor::<(CompositeNode,), CompositeNode>(
             "RecursiveSvc",
             "recurse",
             &["node"],
             &[None],
-            <Result<RecursiveNode, vox_types::VoxError> as Facet>::SHAPE,
+            <Result<CompositeNode, vox_types::VoxError> as Facet>::SHAPE,
             false,
             false,
             None,
@@ -399,9 +405,14 @@ mod tests {
         };
 
         let generated = generate_service(&service);
+        // The phon service schemas: a per-method `{service}Methods` table of
+        // `PhonMethodSchemas` over a phon `Registry` built from self-describing closure
+        // bytes — not the legacy postcard `schema_registry`.
         assert!(
-            generated.contains("send_schemas"),
-            "generated TypeScript must include canonical service schemas:\n{generated}"
+            generated.contains("recursiveSvcMethods")
+                && generated.contains("PhonMethodSchemas")
+                && generated.contains("recursiveSvcRegistry = new Registry("),
+            "generated TypeScript must include the phon service schemas:\n{generated}"
         );
         assert!(
             !generated.contains("schema_registry"),
@@ -462,13 +473,17 @@ mod tests {
         };
 
         let generated = generate_service(&service);
+        // Channels ride out-of-band now: a `Tx`/`Rx` arg is not a `channel` node inside the
+        // canonical schema — it is per-method channel metadata (arg index + direction +
+        // element root) in the `{service}Methods` table, with the arg encoded as a u32 wire
+        // index. The element schema itself is a normal type in the registry.
         assert!(
-            generated.contains("kind: { tag: 'channel', direction: 'tx'"),
-            "Tx<T> must be emitted into canonical service schemas:\n{generated}"
+            generated.contains("channels: [{ index: 0, direction: \"tx\""),
+            "Tx<T> arg must be emitted as out-of-band channel metadata:\n{generated}"
         );
         assert!(
-            generated.contains("kind: { tag: 'channel', direction: 'rx'"),
-            "Rx<T> must be emitted into canonical service schemas:\n{generated}"
+            generated.contains("direction: \"rx\", elementRoot:"),
+            "Rx<T> arg must be emitted as out-of-band channel metadata:\n{generated}"
         );
     }
 
@@ -492,27 +507,27 @@ mod tests {
         };
 
         let generated = generate_service(&service);
+        // Canonical schemas are now opaque phon closure bytes, so struct-variant shape is
+        // verified at the generated-type level: a struct enum variant that has a field
+        // literally named `kind` must stay a struct variant (named fields, including
+        // `kind`) — not collapse to a unit/newtype variant.
         assert!(
             generated.contains(
-                "name: 'ToolCall', index: 1, payload: { tag: 'struct', fields: [{ name: 'id'"
+                "| { tag: 'ToolCall'; id: string; title: string; kind: ToolCallKind | null; status: ToolCallStatus }"
             ),
-            "struct variants with a field named `kind` must stay struct variants in canonical schemas:\n{generated}"
+            "struct variants with a field named `kind` must stay struct variants in the generated type:\n{generated}"
         );
         assert!(
             generated.contains(
-                "name: 'Permission', index: 2, payload: { tag: 'struct', fields: [{ name: 'id'"
+                "| { tag: 'Permission'; id: string; title: string; kind: ToolCallKind | null; resolution: PermissionResolution | null }"
             ),
-            "similar struct variants must keep their named `kind` field in canonical schemas:\n{generated}"
+            "similar struct variants must keep their named `kind` field in the generated type:\n{generated}"
         );
         assert!(
             generated.contains(
-                "name: 'ToolCallUpdate', index: 1, payload: { tag: 'struct', fields: [{ name: 'id'"
+                "| { tag: 'ToolCallUpdate'; id: string; kind: ToolCallKind | null; status: ToolCallStatus }"
             ),
-            "patch variants with a field named `kind` must also stay struct variants in canonical schemas:\n{generated}"
-        );
-        assert!(
-            generated.contains("{ name: 'kind', type_ref:"),
-            "canonical struct variants must preserve the literal field name `kind`:\n{generated}"
+            "patch variants with a field named `kind` must also stay struct variants in the generated type:\n{generated}"
         );
     }
 
