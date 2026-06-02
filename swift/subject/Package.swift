@@ -7,7 +7,8 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(path: "../vox-runtime")
+        .package(path: "../vox-runtime"),
+        .package(path: "../../../phon"),
     ],
     targets: [
         .executableTarget(
@@ -26,6 +27,7 @@ let package = Package(
             dependencies: [
                 .byName(name: "subject-swift"),
                 .product(name: "VoxRuntime", package: "vox-runtime"),
+                .product(name: "PhonEngineTestSupport", package: "phon"),
             ]
         )
     ]
