@@ -679,43 +679,67 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                 projectPayload: { value, _, scratch in
                   switch value.assumingMemoryBound(to: MessagePayload.self).pointee {
                   case .protocolError(let f0):
-                    scratch.assumingMemoryBound(to: ProtocolError.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ProtocolError.self).initialize(
+                      to: f0)
                   case .connectionOpen(let f0):
-                    scratch.assumingMemoryBound(to: ConnectionOpen.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionOpen.self).initialize(
+                      to: f0)
                   case .connectionAccept(let f0):
-                    scratch.assumingMemoryBound(to: ConnectionAccept.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionAccept.self)
+                      .initialize(to: f0)
                   case .connectionReject(let f0):
-                    scratch.assumingMemoryBound(to: ConnectionReject.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionReject.self)
+                      .initialize(to: f0)
                   case .connectionClose(let f0):
-                    scratch.assumingMemoryBound(to: ConnectionClose.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionClose.self)
+                      .initialize(to: f0)
                   case .requestMessage(let f0):
-                    scratch.assumingMemoryBound(to: RequestMessage.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: RequestMessage.self).initialize(
+                      to: f0)
                   case .schemaMessage(let f0):
-                    scratch.assumingMemoryBound(to: SchemaMessage.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: SchemaMessage.self).initialize(
+                      to: f0)
                   case .channelMessage(let f0):
-                    scratch.assumingMemoryBound(to: ChannelMessage.self).initialize(to: f0)
-                  case .ping(let f0): scratch.assumingMemoryBound(to: Ping.self).initialize(to: f0)
-                  case .pong(let f0): scratch.assumingMemoryBound(to: Pong.self).initialize(to: f0)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ChannelMessage.self).initialize(
+                      to: f0)
+                  case .ping(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: Ping.self).initialize(to: f0)
+                  case .pong(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: Pong.self).initialize(to: f0)
                   }
                 },
                 destroyPayload: { scratch, localIndex in
                   switch localIndex {
-                  case 0: scratch.assumingMemoryBound(to: ProtocolError.self).deinitialize(count: 1)
+                  case 0:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ProtocolError.self)
+                      .deinitialize(count: 1)
                   case 1:
-                    scratch.assumingMemoryBound(to: ConnectionOpen.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionOpen.self)
+                      .deinitialize(count: 1)
                   case 2:
-                    scratch.assumingMemoryBound(to: ConnectionAccept.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionAccept.self)
+                      .deinitialize(count: 1)
                   case 3:
-                    scratch.assumingMemoryBound(to: ConnectionReject.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionReject.self)
+                      .deinitialize(count: 1)
                   case 4:
-                    scratch.assumingMemoryBound(to: ConnectionClose.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionClose.self)
+                      .deinitialize(count: 1)
                   case 5:
-                    scratch.assumingMemoryBound(to: RequestMessage.self).deinitialize(count: 1)
-                  case 6: scratch.assumingMemoryBound(to: SchemaMessage.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: RequestMessage.self)
+                      .deinitialize(count: 1)
+                  case 6:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: SchemaMessage.self)
+                      .deinitialize(count: 1)
                   case 7:
-                    scratch.assumingMemoryBound(to: ChannelMessage.self).deinitialize(count: 1)
-                  case 8: scratch.assumingMemoryBound(to: Ping.self).deinitialize(count: 1)
-                  case 9: scratch.assumingMemoryBound(to: Pong.self).deinitialize(count: 1)
+                    scratch.advanced(by: 0).assumingMemoryBound(to: ChannelMessage.self)
+                      .deinitialize(count: 1)
+                  case 8:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: Ping.self).deinitialize(
+                      count: 1)
+                  case 9:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: Pong.self).deinitialize(
+                      count: 1)
                   default: break
                   }
                 },
@@ -723,26 +747,43 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                   let v: MessagePayload
                   switch localIndex {
                   case 0:
-                    v = .protocolError(scratch.assumingMemoryBound(to: ProtocolError.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ProtocolError.self)
+                      .move()
+                    v = .protocolError(f0)
                   case 1:
-                    v = .connectionOpen(scratch.assumingMemoryBound(to: ConnectionOpen.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionOpen.self)
+                      .move()
+                    v = .connectionOpen(f0)
                   case 2:
-                    v = .connectionAccept(
-                      scratch.assumingMemoryBound(to: ConnectionAccept.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionAccept.self)
+                      .move()
+                    v = .connectionAccept(f0)
                   case 3:
-                    v = .connectionReject(
-                      scratch.assumingMemoryBound(to: ConnectionReject.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionReject.self)
+                      .move()
+                    v = .connectionReject(f0)
                   case 4:
-                    v = .connectionClose(
-                      scratch.assumingMemoryBound(to: ConnectionClose.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ConnectionClose.self)
+                      .move()
+                    v = .connectionClose(f0)
                   case 5:
-                    v = .requestMessage(scratch.assumingMemoryBound(to: RequestMessage.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: RequestMessage.self)
+                      .move()
+                    v = .requestMessage(f0)
                   case 6:
-                    v = .schemaMessage(scratch.assumingMemoryBound(to: SchemaMessage.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: SchemaMessage.self)
+                      .move()
+                    v = .schemaMessage(f0)
                   case 7:
-                    v = .channelMessage(scratch.assumingMemoryBound(to: ChannelMessage.self).move())
-                  case 8: v = .ping(scratch.assumingMemoryBound(to: Ping.self).move())
-                  case 9: v = .pong(scratch.assumingMemoryBound(to: Pong.self).move())
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: ChannelMessage.self)
+                      .move()
+                    v = .channelMessage(f0)
+                  case 8:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Ping.self).move()
+                    v = .ping(f0)
+                  case 9:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Pong.self).move()
+                    v = .pong(f0)
                   default: fatalError("bad variant index")
                   }
                   slot.assumingMemoryBound(to: MessagePayload.self).initialize(to: v)
@@ -1068,27 +1109,33 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                             .pointee
                                           {
                                           case .call(let f0):
-                                            scratch.assumingMemoryBound(to: RequestCall.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCall.self
+                                            ).initialize(to: f0)
                                           case .response(let f0):
-                                            scratch.assumingMemoryBound(to: RequestResponse.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestResponse.self
+                                            ).initialize(to: f0)
                                           case .cancel(let f0):
-                                            scratch.assumingMemoryBound(to: RequestCancel.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCancel.self
+                                            ).initialize(to: f0)
                                           }
                                         },
                                         destroyPayload: { scratch, localIndex in
                                           switch localIndex {
                                           case 0:
-                                            scratch.assumingMemoryBound(to: RequestCall.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCall.self
+                                            ).deinitialize(count: 1)
                                           case 1:
-                                            scratch.assumingMemoryBound(to: RequestResponse.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestResponse.self
+                                            ).deinitialize(count: 1)
                                           case 2:
-                                            scratch.assumingMemoryBound(to: RequestCancel.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCancel.self
+                                            ).deinitialize(count: 1)
                                           default: break
                                           }
                                         },
@@ -1096,17 +1143,20 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                           let v: RequestBody
                                           switch localIndex {
                                           case 0:
-                                            v = .call(
-                                              scratch.assumingMemoryBound(to: RequestCall.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCall.self
+                                            ).move()
+                                            v = .call(f0)
                                           case 1:
-                                            v = .response(
-                                              scratch.assumingMemoryBound(to: RequestResponse.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestResponse.self
+                                            ).move()
+                                            v = .response(f0)
                                           case 2:
-                                            v = .cancel(
-                                              scratch.assumingMemoryBound(to: RequestCancel.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: RequestCancel.self
+                                            ).move()
+                                            v = .cancel(f0)
                                           default: fatalError("bad variant index")
                                           }
                                           slot.assumingMemoryBound(to: RequestBody.self).initialize(
@@ -1403,33 +1453,41 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                             .pointee
                                           {
                                           case .item(let f0):
-                                            scratch.assumingMemoryBound(to: ChannelItem.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelItem.self
+                                            ).initialize(to: f0)
                                           case .close(let f0):
-                                            scratch.assumingMemoryBound(to: ChannelClose.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelClose.self
+                                            ).initialize(to: f0)
                                           case .reset(let f0):
-                                            scratch.assumingMemoryBound(to: ChannelReset.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelReset.self
+                                            ).initialize(to: f0)
                                           case .grantCredit(let f0):
-                                            scratch.assumingMemoryBound(to: ChannelGrantCredit.self)
-                                              .initialize(to: f0)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelGrantCredit.self
+                                            ).initialize(to: f0)
                                           }
                                         },
                                         destroyPayload: { scratch, localIndex in
                                           switch localIndex {
                                           case 0:
-                                            scratch.assumingMemoryBound(to: ChannelItem.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelItem.self
+                                            ).deinitialize(count: 1)
                                           case 1:
-                                            scratch.assumingMemoryBound(to: ChannelClose.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelClose.self
+                                            ).deinitialize(count: 1)
                                           case 2:
-                                            scratch.assumingMemoryBound(to: ChannelReset.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelReset.self
+                                            ).deinitialize(count: 1)
                                           case 3:
-                                            scratch.assumingMemoryBound(to: ChannelGrantCredit.self)
-                                              .deinitialize(count: 1)
+                                            scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelGrantCredit.self
+                                            ).deinitialize(count: 1)
                                           default: break
                                           }
                                         },
@@ -1437,22 +1495,25 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                                           let v: ChannelBody
                                           switch localIndex {
                                           case 0:
-                                            v = .item(
-                                              scratch.assumingMemoryBound(to: ChannelItem.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelItem.self
+                                            ).move()
+                                            v = .item(f0)
                                           case 1:
-                                            v = .close(
-                                              scratch.assumingMemoryBound(to: ChannelClose.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelClose.self
+                                            ).move()
+                                            v = .close(f0)
                                           case 2:
-                                            v = .reset(
-                                              scratch.assumingMemoryBound(to: ChannelReset.self)
-                                                .move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelReset.self
+                                            ).move()
+                                            v = .reset(f0)
                                           case 3:
-                                            v = .grantCredit(
-                                              scratch.assumingMemoryBound(
-                                                to: ChannelGrantCredit.self
-                                              ).move())
+                                            let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                              to: ChannelGrantCredit.self
+                                            ).move()
+                                            v = .grantCredit(f0)
                                           default: fatalError("bad variant index")
                                           }
                                           slot.assumingMemoryBound(to: ChannelBody.self).initialize(
@@ -1619,18 +1680,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
       ], construct: .inPlace)))
 nonisolated(unsafe) private let MessageEncodeProgram: MemProgram = try! lowerTyped(
   MessageDescriptor, MessageRegistry)
-nonisolated(unsafe) private let MessageDecodeProgram: MemProgram = try! lowerDecode(
-  MessageDescriptor, MessageRegistry)
 
 public func encodeMessage(_ value: Message) -> [UInt8] {
   var v = value
   return withUnsafeBytes(of: &v) { encodeWith(MessageEncodeProgram, $0.baseAddress!) }
-}
-
-public func decodeMessage(_ bytes: [UInt8]) throws -> Message {
-  let raw = UnsafeMutableRawPointer.allocate(
-    byteCount: MemoryLayout<Message>.size, alignment: MemoryLayout<Message>.alignment)
-  defer { raw.deallocate() }
-  try decodeInto(MessageDecodeProgram, bytes, raw)
-  return raw.assumingMemoryBound(to: Message.self).move()
 }

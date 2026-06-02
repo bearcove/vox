@@ -109,7 +109,7 @@ func makeDriverAndConnection(
         taskQueue: taskQueue
     )
 
-    return (Connection(handle: handle), driver)
+    return (Connection(handle: handle, schemaReceiveTracker: driver.schemaReceiveTracker), driver)
 }
 
 func makeSessionDriverAndConnection(
@@ -194,5 +194,5 @@ func makeSessionDriverAndConnection(
         sessionResumeKey: sessionResumeKey
     )
 
-    return (Connection(handle: handle), driver, sessionHandle)
+    return (Connection(handle: handle, schemaReceiveTracker: driver.schemaReceiveTracker), driver, sessionHandle)
 }

@@ -154,27 +154,19 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         "nonisolated(unsafe) public let {name}Registry: Registry = buildServiceRegistry({name}Methods)\n\n"
     ));
 
-    // Per-method lowered programs (cached, init-once). Encode uses `lowerTyped` (own
-    // schema); decode reconciles writer→reader via `lowerDecode`. The client encodes
-    // args + decodes the response; the server decodes args + encodes the response.
-    out.push_str("// MARK: - per-method lowered programs\n\n");
+    // Per-method ENCODE programs only (own-schema `lowerTyped`): the client encodes
+    // args, the server encodes the response. There are NO cached decode programs —
+    // every decode reconciles `lowerDecode(writer → reader)` against the peer's
+    // advertised schema, built and cached in the connection's `SchemaTracker`.
+    out.push_str("// MARK: - per-method encode programs\n\n");
     for m in service.methods {
         let mname = m.method_name.to_lower_camel_case();
-        for (suffix, fn_call) in [
-            ("ArgsEncodeProgram", "lowerTyped"),
-            ("ArgsDecodeProgram", "lowerDecode"),
-            ("ResponseEncodeProgram", "lowerTyped"),
-            ("ResponseDecodeProgram", "lowerDecode"),
-        ] {
-            let desc = if suffix.starts_with("Args") {
-                format!("{name}_{mname}_ArgsDescriptor")
-            } else {
-                format!("{name}_{mname}_ResponseDescriptor")
-            };
-            out.push_str(&format!(
-                "nonisolated(unsafe) let {name}_{mname}_{suffix}: MemProgram = try! {fn_call}({desc}, {name}Registry)\n"
-            ));
-        }
+        out.push_str(&format!(
+            "nonisolated(unsafe) let {name}_{mname}_ArgsEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_ArgsDescriptor, {name}Registry)\n"
+        ));
+        out.push_str(&format!(
+            "nonisolated(unsafe) let {name}_{mname}_ResponseEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_ResponseDescriptor, {name}Registry)\n"
+        ));
     }
     out.push('\n');
     out

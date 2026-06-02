@@ -118,6 +118,12 @@ extension Driver {
                     throw ConnectionError.protocolViolation(
                         rule: "call.lifecycle.unknown-request-id")
                 }
+                // The server advertised its (writer) response schema on this binding;
+                // record it so the generated client reconciles the response decode.
+                if !response.schemas.isEmpty {
+                    schemaReceiveTracker.recordReceived(
+                        pending.request.methodId, .response, [UInt8](response.schemas))
+                }
                 pending.timeoutTask?.cancel()
                 pending.responseTx(.success(payload))
             case .cancel:

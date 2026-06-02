@@ -131,16 +131,21 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, retry: .volatile,\n            timeout: timeout, prepareRetry: nil, finalizeChannels: nil,\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
         ));
 
-        // Decode the wire `Result<T, VoxError<E>>` response and unwrap into the
-        // method's return type: a fallible method (`Result<T, E>`) maps the wire
-        // `User(E)` arm to the user `.failure(e)` and throws other VoxErrors; an
+        // Decode the wire `Result<T, VoxError<E>>` response by reconciling the server's
+        // advertised (writer) response schema against this reader — the only decode path,
+        // built/cached in the connection's SchemaTracker (no same-schema program). Then
+        // unwrap into the method's return type: a fallible method (`Result<T, E>`) maps
+        // the wire `User(E)` arm to the user `.failure(e)` and throws other VoxErrors; an
         // infallible method returns `T` (or `Void`) and throws on any error.
         let is_fallible = matches!(
             classify_shape(method.return_shape),
             ShapeKind::Result { .. }
         );
         out.push_str(&format!(
-            "        let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{resp_ty}>.size, alignment: MemoryLayout<{resp_ty}>.alignment)\n        defer {{ raw.deallocate() }}\n        try decodeInto({prefix}_ResponseDecodeProgram, response, raw)\n        let result = raw.assumingMemoryBound(to: {resp_ty}.self).move()\n        switch result {{\n"
+            "        guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
+        ));
+        out.push_str(&format!(
+            "        let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{resp_ty}>.size, alignment: MemoryLayout<{resp_ty}>.alignment)\n        defer {{ raw.deallocate() }}\n        try decodeInto(respProgram, response, raw)\n        let result = raw.assumingMemoryBound(to: {resp_ty}.self).move()\n        switch result {{\n"
         ));
         if is_fallible {
             out.push_str("        case .success(let value): return .success(value)\n");

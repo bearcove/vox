@@ -77,7 +77,7 @@ func connect(
             conduit: conduit,
             timeoutNs: prologueTimeoutNs
         ).nextLink()
-        return BareConduit(link: attachment.link)
+        return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
     }
 
     // .stable used to construct a StableConduit; that conduit shape was
@@ -87,7 +87,7 @@ func connect(
         conduit: conduit,
         timeoutNs: prologueTimeoutNs
     ).nextLink()
-    return BareConduit(link: attachment.link)
+    return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
 }
 
 public func connect(host: String, port: Int, conduit: ConduitKind = .bare) async throws
@@ -114,7 +114,7 @@ func connect(
             conduit: conduit,
             timeoutNs: prologueTimeoutNs
         ).nextLink()
-        return BareConduit(link: attachment.link)
+        return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
     }
 
     // .stable used to construct a StableConduit; that conduit shape was
@@ -124,7 +124,7 @@ func connect(
         conduit: conduit,
         timeoutNs: prologueTimeoutNs
     ).nextLink()
-    return BareConduit(link: attachment.link)
+    return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
 }
 
 private struct TimedTransportedLinkSource<Base: LinkSource>: LinkSource {

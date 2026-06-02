@@ -73,11 +73,12 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
         out.push_str(&format!(
             "nonisolated(unsafe) public let {name}Descriptor: Descriptor = {desc}\n"
         ));
+        // Encode uses the own-schema lowering (`lowerTyped`); there is NO cached
+        // same-schema decode program/function — every decode goes through the runtime's
+        // reconciling `lowerDecode(writer → reader)` built from the peer's advertised
+        // schema (see `buildMessageDecoder` / `decodeHandshakeFrame`).
         out.push_str(&format!(
-            "nonisolated(unsafe) private let {name}EncodeProgram: MemProgram = try! lowerTyped({name}Descriptor, {name}Registry)\n"
-        ));
-        out.push_str(&format!(
-            "nonisolated(unsafe) private let {name}DecodeProgram: MemProgram = try! lowerDecode({name}Descriptor, {name}Registry)\n\n"
+            "nonisolated(unsafe) private let {name}EncodeProgram: MemProgram = try! lowerTyped({name}Descriptor, {name}Registry)\n\n"
         ));
         out.push_str(&format!(
             "public func encode{name}(_ value: {ty}) -> [UInt8] {{\n"
@@ -85,19 +86,6 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
         out.push_str("    var v = value\n");
         out.push_str(&format!(
             "    return withUnsafeBytes(of: &v) {{ encodeWith({name}EncodeProgram, $0.baseAddress!) }}\n}}\n\n"
-        ));
-        out.push_str(&format!(
-            "public func decode{name}(_ bytes: [UInt8]) throws -> {ty} {{\n"
-        ));
-        out.push_str(&format!(
-            "    let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{ty}>.size, alignment: MemoryLayout<{ty}>.alignment)\n"
-        ));
-        out.push_str("    defer { raw.deallocate() }\n");
-        out.push_str(&format!(
-            "    try decodeInto({name}DecodeProgram, bytes, raw)\n"
-        ));
-        out.push_str(&format!(
-            "    return raw.assumingMemoryBound(to: {ty}.self).move()\n}}\n\n"
         ));
     }
     out
@@ -173,8 +161,11 @@ mod tests {
         )]);
         assert!(module.contains("MessageSchemaClosure: [UInt8] = ["));
         assert!(module.contains("public func encodeMessage(_ value: Message)"));
-        assert!(module.contains("public func decodeMessage(_ bytes: [UInt8]) throws -> Message"));
-        assert!(module.contains("lowerDecode(MessageDescriptor, MessageRegistry)"));
+        // The Descriptor + Registry are emitted (the runtime builds the reconciling
+        // decode from them); there is NO cached same-schema decode program/function.
+        assert!(module.contains("MessageDescriptor: Descriptor ="));
+        assert!(!module.contains("decodeMessage"));
+        assert!(!module.contains("MessageDecodeProgram"));
     }
 }
 

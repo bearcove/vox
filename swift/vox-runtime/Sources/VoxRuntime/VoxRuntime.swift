@@ -33,6 +33,10 @@ public protocol VoxConnection: Sendable {
 
     /// Get task sender for outgoing channel messages.
     var taskSender: TaskSender { get }
+
+    /// The peer's advertised (writer) schema closures, by which the generated client
+    /// reconciles its response decode against the server's response type.
+    var schemaReceiveTracker: SchemaTracker { get }
 }
 
 extension VoxConnection {

@@ -103,6 +103,9 @@ private struct BindingKey: Hashable {
 /// programs against local reader descriptors.
 public final class SchemaTracker: @unchecked Sendable {
     private var received: [BindingKey: (root: SchemaId, schemas: [Schema])] = [:]
+    /// Cache of the reconciling programs (planning is amortized: built once per writer,
+    /// reused for every decode). Invalidated when a binding's writer is re-advertised.
+    private var programs: [BindingKey: MemProgram] = [:]
     private let lock = NSLock()
 
     public init() {}
@@ -110,14 +113,17 @@ public final class SchemaTracker: @unchecked Sendable {
     public func reset() {
         lock.lock(); defer { lock.unlock() }
         received.removeAll()
+        programs.removeAll()
     }
 
     /// Record the peer's phon schema-closure bytes for a binding (best-effort,
-    /// idempotent: a later advertisement overwrites).
+    /// idempotent: a later advertisement overwrites and drops the cached program).
     public func recordReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection, _ schemaBytes: [UInt8]) {
         guard !schemaBytes.isEmpty, let bundle = try? parseSchemaClosure(schemaBytes) else { return }
+        let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }
-        received[BindingKey(methodId: methodId, direction: direction)] = (bundle.root, bundle.schemas)
+        received[key] = (bundle.root, bundle.schemas)
+        programs[key] = nil
     }
 
     public func hasReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection) -> Bool {
@@ -125,20 +131,23 @@ public final class SchemaTracker: @unchecked Sendable {
         return received[BindingKey(methodId: methodId, direction: direction)] != nil
     }
 
-    /// Build a compat decode program for `(methodId, direction)` producing the reader
+    /// The reconciling decode program for `(methodId, direction)` producing the reader
     /// type described by `readerDescriptor`, resolved through `local` + the writer's
-    /// exchanged schemas. Returns nil when no writer schema was received (the caller
-    /// then uses its own same-schema program — the degenerate `lowerDecode`).
+    /// exchanged schemas — `lowerDecode(writer → reader)`, the ONLY decode path. Built
+    /// once and cached. Returns nil only when no writer schema was advertised (a
+    /// protocol error for the caller to surface — never a same-schema fallback).
     public func buildDecodeProgram(
         _ methodId: UInt64, _ direction: SchemaBindingDirection,
         readerDescriptor: Descriptor, local: Registry
     ) -> MemProgram? {
-        lock.lock()
-        let writer = received[BindingKey(methodId: methodId, direction: direction)]
-        lock.unlock()
-        guard let writer else { return nil }
-        let reg = local.with(writer.schemas)
-        return try? lowerDecode(writer.root, readerDescriptor, reg)
+        let key = BindingKey(methodId: methodId, direction: direction)
+        lock.lock(); defer { lock.unlock() }
+        if let cached = programs[key] { return cached }
+        guard let writer = received[key],
+            let program = try? lowerDecode(writer.root, readerDescriptor, local.with(writer.schemas))
+        else { return nil }
+        programs[key] = program
+        return program
     }
 }
 

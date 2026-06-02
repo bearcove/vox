@@ -13489,311 +13489,159 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
 
 nonisolated(unsafe) public let testbedRegistry: Registry = buildServiceRegistry(testbedMethods)
 
-// MARK: - per-method lowered programs
+// MARK: - per-method encode programs
 
 nonisolated(unsafe) let testbed_echo_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echo_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echo_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echo_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echo_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echo_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echo_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echo_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_reverse_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_reverse_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_reverse_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_reverse_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_reverse_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_reverse_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_reverse_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_reverse_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_divide_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_divide_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_divide_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_divide_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_divide_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_divide_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_divide_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_divide_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_lookup_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_lookup_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_lookup_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_lookup_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_lookup_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_lookup_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_lookup_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_lookup_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_sum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_sum_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sum_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_sum_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_sum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sum_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sum_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_sum_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_generate_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generate_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_generate_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generate_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generate_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generate_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_generate_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsEncodeProgram: MemProgram =
   try! lowerTyped(testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseEncodeProgram: MemProgram =
   try! lowerTyped(testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateRetryIdem_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateRetryIdem_ResponseEncodeProgram: MemProgram =
   try! lowerTyped(testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_transform_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_transform_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_transform_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_transform_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_transform_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_transform_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_postReplyGenerate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_postReplyGenerate_ResponseEncodeProgram: MemProgram =
   try! lowerTyped(testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_postReplySum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_postReplySum_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_postReplySum_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_postReplySum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_postReplySum_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_postReplySum_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoPoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoPoint_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoPoint_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoPoint_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoPoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoPoint_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoPoint_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoPoint_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_createPerson_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createPerson_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createPerson_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_createPerson_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_createPerson_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_createPerson_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createPerson_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_createPerson_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_rectangleArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_rectangleArea_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_rectangleArea_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_rectangleArea_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_rectangleArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_rectangleArea_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_rectangleArea_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_rectangleArea_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_parseColor_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_parseColor_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_parseColor_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_parseColor_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_parseColor_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_parseColor_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_parseColor_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_parseColor_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_shapeArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_shapeArea_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_shapeArea_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_shapeArea_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_shapeArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_shapeArea_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_shapeArea_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_shapeArea_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_createCanvas_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createCanvas_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createCanvas_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_createCanvas_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_createCanvas_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_createCanvas_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createCanvas_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_createCanvas_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoGnarly_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoGnarly_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoGnarly_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoGnarly_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoGnarly_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoGnarly_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoGnarly_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoGnarly_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_processMessage_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_processMessage_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_processMessage_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_processMessage_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_processMessage_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_processMessage_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_processMessage_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_processMessage_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_getPoints_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_getPoints_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_getPoints_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_getPoints_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_getPoints_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_getPoints_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_getPoints_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_getPoints_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_swapPair_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_swapPair_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_swapPair_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_swapPair_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_swapPair_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_swapPair_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_swapPair_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_swapPair_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoBytes_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBytes_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBytes_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoBytes_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoBytes_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoBytes_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBytes_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoBytes_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoBool_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBool_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBool_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoBool_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoBool_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoBool_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBool_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoBool_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoU64_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoU64_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoU64_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoU64_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoU64_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoU64_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoU64_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoU64_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoOptionString_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoOptionString_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoOptionString_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoOptionString_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoOptionString_ResponseEncodeProgram: MemProgram =
   try! lowerTyped(testbed_echoOptionString_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoOptionString_ResponseDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_echoOptionString_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_sumLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sumLarge_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sumLarge_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_sumLarge_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_sumLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_sumLarge_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sumLarge_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_sumLarge_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generateLarge_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateLarge_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_generateLarge_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_generateLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_generateLarge_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateLarge_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_generateLarge_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_allColors_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_allColors_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_allColors_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_allColors_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_allColors_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_allColors_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_allColors_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_allColors_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_describePoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_describePoint_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_describePoint_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_describePoint_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_describePoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_describePoint_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_describePoint_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_describePoint_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoShape_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoShape_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoShape_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoShape_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoShape_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoShape_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoShape_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoShape_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoStatusV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatusV1_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatusV1_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoStatusV1_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoStatusV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoStatusV1_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatusV1_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoStatusV1_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoTagV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTagV1_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTagV1_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoTagV1_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoTagV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoTagV1_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTagV1_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoTagV1_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoProfile_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoProfile_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoProfile_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoProfile_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoProfile_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoProfile_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoProfile_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoProfile_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoRecord_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoRecord_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoRecord_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoRecord_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoRecord_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoRecord_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoRecord_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoRecord_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoStatus_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatus_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatus_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoStatus_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoStatus_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoStatus_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatus_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoStatus_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoTag_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTag_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTag_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoTag_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoTag_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoTag_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTag_ResponseDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoTag_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoMeasurement_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoMeasurement_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoMeasurement_ArgsDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoMeasurement_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoMeasurement_ResponseEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoMeasurement_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoMeasurement_ResponseDecodeProgram: MemProgram =
-  try! lowerDecode(testbed_echoMeasurement_ResponseDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoConfig_ArgsEncodeProgram: MemProgram = try! lowerTyped(
   testbed_echoConfig_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoConfig_ArgsDecodeProgram: MemProgram = try! lowerDecode(
-  testbed_echoConfig_ArgsDescriptor, testbedRegistry)
 nonisolated(unsafe) let testbed_echoConfig_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoConfig_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoConfig_ResponseDecodeProgram: MemProgram = try! lowerDecode(
   testbed_echoConfig_ResponseDescriptor, testbedRegistry)
 
 ///  Testbed service for conformance testing.
@@ -13920,11 +13768,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x880b_c4ee_e235_74be]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x880b_c4ee_e235_74be, .response, readerDescriptor: testbed_echo_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echo_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -13942,11 +13797,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x1c22_3f30_e180_392a]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x1c22_3f30_e180_392a, .response, readerDescriptor: testbed_reverse_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_reverse_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -13964,11 +13826,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xfb68_d931_8f83_0875]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xfb68_d931_8f83_0875, .response, readerDescriptor: testbed_divide_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Int64, VoxError<MathError>>>.size,
       alignment: MemoryLayout<Result<Int64, VoxError<MathError>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_divide_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Int64, VoxError<MathError>>.self).move()
     switch result {
     case .success(let value): return .success(value)
@@ -13987,11 +13856,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xa15f_f520_9471_2a3b]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xa15f_f520_9471_2a3b, .response, readerDescriptor: testbed_lookup_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Person, VoxError<LookupError>>>.size,
       alignment: MemoryLayout<Result<Person, VoxError<LookupError>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_lookup_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Person, VoxError<LookupError>>.self).move()
     switch result {
     case .success(let value): return .success(value)
@@ -14038,11 +13914,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x81f5_386d_589d_fbe4]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x81f5_386d_589d_fbe4, .response, readerDescriptor: testbed_echoPoint_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Point, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Point, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoPoint_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Point, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14060,11 +13943,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x68ff_a90b_7728_bde7]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x68ff_a90b_7728_bde7, .response, readerDescriptor: testbed_createPerson_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Person, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Person, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_createPerson_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Person, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14082,11 +13972,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x223f_e028_2d26_3107]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x223f_e028_2d26_3107, .response,
+        readerDescriptor: testbed_rectangleArea_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_rectangleArea_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14104,11 +14001,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xd4f1_6ea9_eca1_32e6]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xd4f1_6ea9_eca1_32e6, .response, readerDescriptor: testbed_parseColor_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Color?, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Color?, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_parseColor_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Color?, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14126,11 +14030,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x0438_5a4b_e2a8_82f5]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x0438_5a4b_e2a8_82f5, .response, readerDescriptor: testbed_shapeArea_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_shapeArea_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14149,11 +14060,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xef42_1eb5_b08c_973a]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xef42_1eb5_b08c_973a, .response, readerDescriptor: testbed_createCanvas_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_createCanvas_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Canvas, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14171,11 +14089,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xb6fa_cae6_a7a8_6e99]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xb6fa_cae6_a7a8_6e99, .response, readerDescriptor: testbed_echoGnarly_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoGnarly_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<GnarlyPayload, VoxError<Infallible>>.self)
       .move()
     switch result {
@@ -14194,11 +14119,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xe08f_0f52_54e7_a997]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xe08f_0f52_54e7_a997, .response,
+        readerDescriptor: testbed_processMessage_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Message, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Message, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_processMessage_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Message, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14216,11 +14148,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x5985_1852_3a62_66bf]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x5985_1852_3a62_66bf, .response, readerDescriptor: testbed_getPoints_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<[Point], VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<[Point], VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_getPoints_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<[Point], VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14238,11 +14177,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x7d55_a713_ad61_2bf2]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x7d55_a713_ad61_2bf2, .response, readerDescriptor: testbed_swapPair_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_swapPair_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<(String, Int32), VoxError<Infallible>>.self)
       .move()
     switch result {
@@ -14261,11 +14207,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x4405_6c78_42fa_336c]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x4405_6c78_42fa_336c, .response, readerDescriptor: testbed_echoBytes_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Data, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Data, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoBytes_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Data, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14283,11 +14236,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x5136_d8f0_1a5f_496c]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x5136_d8f0_1a5f_496c, .response, readerDescriptor: testbed_echoBool_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Bool, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Bool, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoBool_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Bool, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14305,11 +14265,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x85e2_380d_bf7f_fe65]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x85e2_380d_bf7f_fe65, .response, readerDescriptor: testbed_echoU64_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoU64_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<UInt64, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14327,11 +14294,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xb1a5_bfd2_05b3_fbfc]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xb1a5_bfd2_05b3_fbfc, .response,
+        readerDescriptor: testbed_echoOptionString_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<String?, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<String?, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoOptionString_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<String?, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14354,11 +14328,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xfbfb_05bb_caad_e4a0]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xfbfb_05bb_caad_e4a0, .response, readerDescriptor: testbed_allColors_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<[Color], VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<[Color], VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_allColors_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<[Color], VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14378,11 +14359,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x62fe_b14a_8fcf_9b6d]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x62fe_b14a_8fcf_9b6d, .response,
+        readerDescriptor: testbed_describePoint_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_describePoint_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<TaggedPoint, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14400,11 +14388,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x4125_b5e6_78b7_b4a5]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x4125_b5e6_78b7_b4a5, .response, readerDescriptor: testbed_echoShape_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Shape, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Shape, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoShape_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Shape, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14422,11 +14417,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xc7c5_aa84_5cfb_8bf6]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xc7c5_aa84_5cfb_8bf6, .response, readerDescriptor: testbed_echoStatusV1_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoStatusV1_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14444,11 +14446,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x6619_071b_e5d5_c259]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x6619_071b_e5d5_c259, .response, readerDescriptor: testbed_echoTagV1_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoTagV1_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14466,11 +14475,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xbd9b_cabd_deeb_eb04]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xbd9b_cabd_deeb_eb04, .response, readerDescriptor: testbed_echoProfile_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Profile, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Profile, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoProfile_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Profile, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14488,11 +14504,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x100b_0e08_da4b_8f1a]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x100b_0e08_da4b_8f1a, .response, readerDescriptor: testbed_echoRecord_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Record, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Record, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoRecord_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Record, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14510,11 +14533,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x6975_90d3_ffc3_6703]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x6975_90d3_ffc3_6703, .response, readerDescriptor: testbed_echoStatus_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoStatus_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14532,11 +14562,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x2bd1_b314_9d73_ce97]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x2bd1_b314_9d73_ce97, .response, readerDescriptor: testbed_echoTag_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoTag_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14554,11 +14591,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x3b3d_22b0_15fa_1a3f]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x3b3d_22b0_15fa_1a3f, .response,
+        readerDescriptor: testbed_echoMeasurement_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoMeasurement_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Measurement, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14576,11 +14620,18 @@ public final class TestbedClient: TestbedCaller, Sendable {
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xe13a_477f_b964_ce28]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xe13a_477f_b964_ce28, .response, readerDescriptor: testbed_echoConfig_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
     let raw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<Result<Config, VoxError<Infallible>>>.size,
       alignment: MemoryLayout<Result<Config, VoxError<Infallible>>>.alignment)
     defer { raw.deallocate() }
-    try decodeInto(testbed_echoConfig_ResponseDecodeProgram, response, raw)
+    try decodeInto(respProgram, response, raw)
     let result = raw.assumingMemoryBound(to: Result<Config, VoxError<Infallible>>.self).move()
     switch result {
     case .success(let value): return value
@@ -14929,10 +14980,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x880b_c4ee_e235_74be, .args, readerDescriptor: testbed_echo_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echo_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x880b_c4ee_e235_74be))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
     defer { argsRaw.deallocate() }
@@ -14968,10 +15027,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x1c22_3f30_e180_392a, .args, readerDescriptor: testbed_reverse_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_reverse_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x1c22_3f30_e180_392a))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15007,10 +15074,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xfb68_d931_8f83_0875, .args, readerDescriptor: testbed_divide_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_divide_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xfb68_d931_8f83_0875))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Int64, Int64)>.size,
       alignment: MemoryLayout<(Int64, Int64)>.alignment)
@@ -15050,10 +15125,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xa15f_f520_9471_2a3b, .args, readerDescriptor: testbed_lookup_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_lookup_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xa15f_f520_9471_2a3b))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(UInt32)>.size, alignment: MemoryLayout<(UInt32)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15176,10 +15259,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x81f5_386d_589d_fbe4, .args, readerDescriptor: testbed_echoPoint_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoPoint_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x81f5_386d_589d_fbe4))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Point)>.size, alignment: MemoryLayout<(Point)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15215,10 +15306,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x68ff_a90b_7728_bde7, .args, readerDescriptor: testbed_createPerson_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_createPerson_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x68ff_a90b_7728_bde7))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String, UInt8, String?)>.size,
       alignment: MemoryLayout<(String, UInt8, String?)>.alignment)
@@ -15255,10 +15354,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x223f_e028_2d26_3107, .args, readerDescriptor: testbed_rectangleArea_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_rectangleArea_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x223f_e028_2d26_3107))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Rectangle)>.size, alignment: MemoryLayout<(Rectangle)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15294,10 +15401,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xd4f1_6ea9_eca1_32e6, .args, readerDescriptor: testbed_parseColor_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_parseColor_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xd4f1_6ea9_eca1_32e6))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15333,10 +15448,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x0438_5a4b_e2a8_82f5, .args, readerDescriptor: testbed_shapeArea_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_shapeArea_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x0438_5a4b_e2a8_82f5))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Shape)>.size, alignment: MemoryLayout<(Shape)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15372,10 +15495,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xef42_1eb5_b08c_973a, .args, readerDescriptor: testbed_createCanvas_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_createCanvas_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xef42_1eb5_b08c_973a))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String, [Shape], Color)>.size,
       alignment: MemoryLayout<(String, [Shape], Color)>.alignment)
@@ -15412,10 +15543,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xb6fa_cae6_a7a8_6e99, .args, readerDescriptor: testbed_echoGnarly_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoGnarly_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xb6fa_cae6_a7a8_6e99))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(GnarlyPayload)>.size,
       alignment: MemoryLayout<(GnarlyPayload)>.alignment)
@@ -15452,10 +15591,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xe08f_0f52_54e7_a997, .args, readerDescriptor: testbed_processMessage_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_processMessage_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xe08f_0f52_54e7_a997))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Message)>.size, alignment: MemoryLayout<(Message)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15491,10 +15638,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x5985_1852_3a62_66bf, .args, readerDescriptor: testbed_getPoints_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_getPoints_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x5985_1852_3a62_66bf))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(UInt32)>.size, alignment: MemoryLayout<(UInt32)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15530,10 +15685,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x7d55_a713_ad61_2bf2, .args, readerDescriptor: testbed_swapPair_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_swapPair_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x7d55_a713_ad61_2bf2))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<((Int32, String))>.size,
       alignment: MemoryLayout<((Int32, String))>.alignment)
@@ -15570,10 +15733,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x4405_6c78_42fa_336c, .args, readerDescriptor: testbed_echoBytes_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoBytes_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x4405_6c78_42fa_336c))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Data)>.size, alignment: MemoryLayout<(Data)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15609,10 +15780,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x5136_d8f0_1a5f_496c, .args, readerDescriptor: testbed_echoBool_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoBool_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x5136_d8f0_1a5f_496c))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Bool)>.size, alignment: MemoryLayout<(Bool)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15648,10 +15827,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x85e2_380d_bf7f_fe65, .args, readerDescriptor: testbed_echoU64_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoU64_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x85e2_380d_bf7f_fe65))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(UInt64)>.size, alignment: MemoryLayout<(UInt64)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15687,10 +15874,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xb1a5_bfd2_05b3_fbfc, .args, readerDescriptor: testbed_echoOptionString_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoOptionString_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xb1a5_bfd2_05b3_fbfc))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String?)>.size, alignment: MemoryLayout<(String?)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15774,10 +15969,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x62fe_b14a_8fcf_9b6d, .args, readerDescriptor: testbed_describePoint_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_describePoint_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x62fe_b14a_8fcf_9b6d))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(String, Int32, Int32, Bool)>.size,
       alignment: MemoryLayout<(String, Int32, Int32, Bool)>.alignment)
@@ -15815,10 +16018,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x4125_b5e6_78b7_b4a5, .args, readerDescriptor: testbed_echoShape_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoShape_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x4125_b5e6_78b7_b4a5))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Shape)>.size, alignment: MemoryLayout<(Shape)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15854,10 +16065,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xc7c5_aa84_5cfb_8bf6, .args, readerDescriptor: testbed_echoStatusV1_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoStatusV1_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xc7c5_aa84_5cfb_8bf6))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Status)>.size, alignment: MemoryLayout<(Status)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15893,10 +16112,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x6619_071b_e5d5_c259, .args, readerDescriptor: testbed_echoTagV1_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoTagV1_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x6619_071b_e5d5_c259))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Tag)>.size, alignment: MemoryLayout<(Tag)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15932,10 +16159,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xbd9b_cabd_deeb_eb04, .args, readerDescriptor: testbed_echoProfile_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoProfile_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xbd9b_cabd_deeb_eb04))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Profile)>.size, alignment: MemoryLayout<(Profile)>.alignment)
     defer { argsRaw.deallocate() }
@@ -15971,10 +16206,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x100b_0e08_da4b_8f1a, .args, readerDescriptor: testbed_echoRecord_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoRecord_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x100b_0e08_da4b_8f1a))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Record)>.size, alignment: MemoryLayout<(Record)>.alignment)
     defer { argsRaw.deallocate() }
@@ -16010,10 +16253,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x6975_90d3_ffc3_6703, .args, readerDescriptor: testbed_echoStatus_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoStatus_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x6975_90d3_ffc3_6703))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Status)>.size, alignment: MemoryLayout<(Status)>.alignment)
     defer { argsRaw.deallocate() }
@@ -16049,10 +16300,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x2bd1_b314_9d73_ce97, .args, readerDescriptor: testbed_echoTag_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoTag_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x2bd1_b314_9d73_ce97))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Tag)>.size, alignment: MemoryLayout<(Tag)>.alignment)
     defer { argsRaw.deallocate() }
@@ -16088,10 +16347,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x3b3d_22b0_15fa_1a3f, .args, readerDescriptor: testbed_echoMeasurement_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoMeasurement_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x3b3d_22b0_15fa_1a3f))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Measurement)>.size, alignment: MemoryLayout<(Measurement)>.alignment)
     defer { argsRaw.deallocate() }
@@ -16127,10 +16394,18 @@ public final class TestbedDispatcher: ServiceDispatcher {
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let argsProgram =
-      schemaReceiveTracker.buildDecodeProgram(
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xe13a_477f_b964_ce28, .args, readerDescriptor: testbed_echoConfig_ArgsDescriptor,
-        local: testbedRegistry) ?? testbed_echoConfig_ArgsDecodeProgram
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xe13a_477f_b964_ce28))
+      return
+    }
     let argsRaw = UnsafeMutableRawPointer.allocate(
       byteCount: MemoryLayout<(Config)>.size, alignment: MemoryLayout<(Config)>.alignment)
     defer { argsRaw.deallocate() }

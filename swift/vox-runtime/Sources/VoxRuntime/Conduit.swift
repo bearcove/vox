@@ -14,7 +14,7 @@ public final class BareConduit: Conduit, @unchecked Sendable {
     public let link: any Link
     private let decode: MessageDecoder
 
-    public init(link: any Link, peerMessageSchema: [UInt8]? = nil) {
+    public init(link: any Link, peerMessageSchema: [UInt8]) {
         self.link = link
         self.decode = buildMessageDecoder(peerMessageSchema: peerMessageSchema)
     }
@@ -38,7 +38,7 @@ public final class BareConduit: Conduit, @unchecked Sendable {
 }
 
 extension Link {
-    public func bareConduit(peerMessageSchema: [UInt8]? = nil) -> BareConduit {
+    public func bareConduit(peerMessageSchema: [UInt8]) -> BareConduit {
         BareConduit(link: self, peerMessageSchema: peerMessageSchema)
     }
 }

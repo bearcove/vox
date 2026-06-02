@@ -248,29 +248,41 @@ nonisolated(unsafe) public let HandshakeMessageDescriptor: Descriptor = Descript
       },
       projectPayload: { value, _, scratch in
         switch value.assumingMemoryBound(to: HandshakeMessage.self).pointee {
-        case .hello(let f0): scratch.assumingMemoryBound(to: Hello.self).initialize(to: f0)
+        case .hello(let f0):
+          scratch.advanced(by: 0).assumingMemoryBound(to: Hello.self).initialize(to: f0)
         case .helloYourself(let f0):
-          scratch.assumingMemoryBound(to: HelloYourself.self).initialize(to: f0)
-        case .letsGo(let f0): scratch.assumingMemoryBound(to: LetsGo.self).initialize(to: f0)
-        case .sorry(let f0): scratch.assumingMemoryBound(to: Sorry.self).initialize(to: f0)
+          scratch.advanced(by: 0).assumingMemoryBound(to: HelloYourself.self).initialize(to: f0)
+        case .letsGo(let f0):
+          scratch.advanced(by: 0).assumingMemoryBound(to: LetsGo.self).initialize(to: f0)
+        case .sorry(let f0):
+          scratch.advanced(by: 0).assumingMemoryBound(to: Sorry.self).initialize(to: f0)
         }
       },
       destroyPayload: { scratch, localIndex in
         switch localIndex {
-        case 0: scratch.assumingMemoryBound(to: Hello.self).deinitialize(count: 1)
-        case 1: scratch.assumingMemoryBound(to: HelloYourself.self).deinitialize(count: 1)
-        case 2: scratch.assumingMemoryBound(to: LetsGo.self).deinitialize(count: 1)
-        case 3: scratch.assumingMemoryBound(to: Sorry.self).deinitialize(count: 1)
+        case 0: scratch.advanced(by: 0).assumingMemoryBound(to: Hello.self).deinitialize(count: 1)
+        case 1:
+          scratch.advanced(by: 0).assumingMemoryBound(to: HelloYourself.self).deinitialize(count: 1)
+        case 2: scratch.advanced(by: 0).assumingMemoryBound(to: LetsGo.self).deinitialize(count: 1)
+        case 3: scratch.advanced(by: 0).assumingMemoryBound(to: Sorry.self).deinitialize(count: 1)
         default: break
         }
       },
       inject: { slot, localIndex, scratch in
         let v: HandshakeMessage
         switch localIndex {
-        case 0: v = .hello(scratch.assumingMemoryBound(to: Hello.self).move())
-        case 1: v = .helloYourself(scratch.assumingMemoryBound(to: HelloYourself.self).move())
-        case 2: v = .letsGo(scratch.assumingMemoryBound(to: LetsGo.self).move())
-        case 3: v = .sorry(scratch.assumingMemoryBound(to: Sorry.self).move())
+        case 0:
+          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Hello.self).move()
+          v = .hello(f0)
+        case 1:
+          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: HelloYourself.self).move()
+          v = .helloYourself(f0)
+        case 2:
+          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: LetsGo.self).move()
+          v = .letsGo(f0)
+        case 3:
+          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Sorry.self).move()
+          v = .sorry(f0)
         default: fatalError("bad variant index")
         }
         slot.assumingMemoryBound(to: HandshakeMessage.self).initialize(to: v)
@@ -616,19 +628,8 @@ nonisolated(unsafe) public let HandshakeMessageDescriptor: Descriptor = Descript
       ])))
 nonisolated(unsafe) private let HandshakeMessageEncodeProgram: MemProgram = try! lowerTyped(
   HandshakeMessageDescriptor, HandshakeMessageRegistry)
-nonisolated(unsafe) private let HandshakeMessageDecodeProgram: MemProgram = try! lowerDecode(
-  HandshakeMessageDescriptor, HandshakeMessageRegistry)
 
 public func encodeHandshakeMessage(_ value: HandshakeMessage) -> [UInt8] {
   var v = value
   return withUnsafeBytes(of: &v) { encodeWith(HandshakeMessageEncodeProgram, $0.baseAddress!) }
-}
-
-public func decodeHandshakeMessage(_ bytes: [UInt8]) throws -> HandshakeMessage {
-  let raw = UnsafeMutableRawPointer.allocate(
-    byteCount: MemoryLayout<HandshakeMessage>.size,
-    alignment: MemoryLayout<HandshakeMessage>.alignment)
-  defer { raw.deallocate() }
-  try decodeInto(HandshakeMessageDecodeProgram, bytes, raw)
-  return raw.assumingMemoryBound(to: HandshakeMessage.self).move()
 }

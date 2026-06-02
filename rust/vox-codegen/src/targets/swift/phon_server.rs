@@ -163,8 +163,11 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     if arity == 0 {
         // No args to decode.
     } else {
+        // Reconcile the caller's advertised (writer) args schema against this reader —
+        // the only decode path. No same-schema fallback: a missing writer schema is a
+        // protocol error (the caller advertises it on the first call).
         out.push_str(&format!(
-            "        let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, local: {svc}Registry) ?? {prefix}_ArgsDecodeProgram\n"
+            "        guard let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}))\n            return\n        }}\n"
         ));
         out.push_str(&format!(
             "        let argsRaw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{args_ty}>.size, alignment: MemoryLayout<{args_ty}>.alignment)\n        defer {{ argsRaw.deallocate() }}\n"
