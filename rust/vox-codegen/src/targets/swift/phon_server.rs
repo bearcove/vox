@@ -112,7 +112,7 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
         _ => "VoxError<Infallible>".to_string(),
     };
     out.push_str(&format!(
-        "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        var r: {resp0} = .failure(wire)\n        return withUnsafeBytes(of: &r) {{ encodeWith({prefix0}_ResponseEncodeProgram, $0.baseAddress!) }}\n    }}\n\n"
+        "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        let r: {resp0} = .failure(wire)\n        return encodeTyped(r, {prefix0}_ResponseEncodeProgram)\n    }}\n\n"
     ));
 
     // preregister — channels (out-of-band binding) deferred.
@@ -170,10 +170,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
             "        guard let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}))\n            return\n        }}\n"
         ));
         out.push_str(&format!(
-            "        let argsRaw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{args_ty}>.size, alignment: MemoryLayout<{args_ty}>.alignment)\n        defer {{ argsRaw.deallocate() }}\n"
-        ));
-        out.push_str(&format!(
-            "        do {{ try decodeInto(argsProgram, payload, argsRaw) }} catch {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"decode args\")), methodId: {id}))\n            return\n        }}\n        let args = argsRaw.assumingMemoryBound(to: {args_ty}.self).move()\n"
+            "        let args: {args_ty}\n        do {{ args = try decodeTyped(argsProgram, payload) }} catch {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"decode args\")), methodId: {id}))\n            return\n        }}\n"
         ));
     }
 
@@ -216,7 +213,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
 
     // Encode the response, advertise its schema (once), and reply.
     out.push_str(&format!(
-        "        var r = result\n        let respPayload = withUnsafeBytes(of: &r) {{ encodeWith({prefix}_ResponseEncodeProgram, $0.baseAddress!) }}\n        let schemas = schemaSendTracker.prepareSchemas({id}, .response, {svc}Methods[{id}]!.responseSchemaClosure)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, schemas: schemas))\n    }}\n\n"
+        "        let respPayload = encodeTyped(result, {prefix}_ResponseEncodeProgram)\n        let schemas = schemaSendTracker.prepareSchemas({id}, .response, {svc}Methods[{id}]!.responseSchemaClosure)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, schemas: schemas))\n    }}\n\n"
     ));
 
     out

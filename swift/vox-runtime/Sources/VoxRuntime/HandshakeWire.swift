@@ -630,6 +630,5 @@ nonisolated(unsafe) private let HandshakeMessageEncodeProgram: MemProgram = try!
   HandshakeMessageDescriptor, HandshakeMessageRegistry)
 
 public func encodeHandshakeMessage(_ value: HandshakeMessage) -> [UInt8] {
-  var v = value
-  return withUnsafeBytes(of: &v) { encodeWith(HandshakeMessageEncodeProgram, $0.baseAddress!) }
+  encodeTyped(value, HandshakeMessageEncodeProgram)
 }

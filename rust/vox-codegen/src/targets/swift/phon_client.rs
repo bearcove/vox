@@ -100,7 +100,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             continue;
         }
 
-        // Encode args via the typed path. 0 args → empty; 1 arg → the bare value;
+        // Encode args via the typed seam. 0 args → empty; 1 arg → the bare value;
         // N args → a Swift tuple (the descriptor is a positional record over it).
         let arg_names: Vec<String> = method
             .args
@@ -109,21 +109,14 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             .collect();
         match arg_names.len() {
             0 => out.push_str("        let payload: [UInt8] = []\n"),
-            1 => {
-                out.push_str(&format!("        var argsValue = {}\n", arg_names[0]));
-                out.push_str(&format!(
-                    "        let payload = withUnsafeBytes(of: &argsValue) {{ encodeWith({prefix}_ArgsEncodeProgram, $0.baseAddress!) }}\n"
-                ));
-            }
-            _ => {
-                out.push_str(&format!(
-                    "        var argsValue = ({})\n",
-                    arg_names.join(", ")
-                ));
-                out.push_str(&format!(
-                    "        let payload = withUnsafeBytes(of: &argsValue) {{ encodeWith({prefix}_ArgsEncodeProgram, $0.baseAddress!) }}\n"
-                ));
-            }
+            1 => out.push_str(&format!(
+                "        let payload = encodeTyped({}, {prefix}_ArgsEncodeProgram)\n",
+                arg_names[0]
+            )),
+            _ => out.push_str(&format!(
+                "        let payload = encodeTyped(({}), {prefix}_ArgsEncodeProgram)\n",
+                arg_names.join(", ")
+            )),
         }
 
         // Call the runtime with this method's schema info (advertises args closure).
@@ -145,7 +138,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             "        guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
         ));
         out.push_str(&format!(
-            "        let raw = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<{resp_ty}>.size, alignment: MemoryLayout<{resp_ty}>.alignment)\n        defer {{ raw.deallocate() }}\n        try decodeInto(respProgram, response, raw)\n        let result = raw.assumingMemoryBound(to: {resp_ty}.self).move()\n        switch result {{\n"
+            "        let result: {resp_ty} = try decodeTyped(respProgram, response)\n        switch result {{\n"
         ));
         if is_fallible {
             out.push_str("        case .success(let value): return .success(value)\n");

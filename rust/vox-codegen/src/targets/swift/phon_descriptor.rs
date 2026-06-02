@@ -81,11 +81,7 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
             "nonisolated(unsafe) private let {name}EncodeProgram: MemProgram = try! lowerTyped({name}Descriptor, {name}Registry)\n\n"
         ));
         out.push_str(&format!(
-            "public func encode{name}(_ value: {ty}) -> [UInt8] {{\n"
-        ));
-        out.push_str("    var v = value\n");
-        out.push_str(&format!(
-            "    return withUnsafeBytes(of: &v) {{ encodeWith({name}EncodeProgram, $0.baseAddress!) }}\n}}\n\n"
+            "public func encode{name}(_ value: {ty}) -> [UInt8] {{ encodeTyped(value, {name}EncodeProgram) }}\n\n"
         ));
     }
     out

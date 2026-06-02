@@ -148,16 +148,7 @@ public func buildMessageDecoder(peerMessageSchema: [UInt8]) -> MessageDecoder {
                 "no peer Message schema to reconcile against (closure missing/unparseable)")
         }
     }
-    return { bytes in try decodeWith(program, bytes, as: Message.self) }
-}
-
-/// Decode `bytes` into `T` through a pre-lowered decode program.
-func decodeWith<T>(_ program: MemProgram, _ bytes: [UInt8], as _: T.Type) throws -> T {
-    let raw = UnsafeMutableRawPointer.allocate(
-        byteCount: MemoryLayout<T>.size, alignment: MemoryLayout<T>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(program, bytes, raw)
-    return raw.assumingMemoryBound(to: T.self).move()
+    return { bytes -> Message in try decodeTyped(program, bytes) }
 }
 
 // MARK: - Handshake self-describing framing
@@ -188,5 +179,5 @@ func decodeHandshakeFrame(_ bytes: [UInt8]) throws -> HandshakeMessage {
     let bundle = try parseSchemaClosure(closure)
     let reg = HandshakeMessageRegistry.with(bundle.schemas)
     let program = try lowerDecode(bundle.root, HandshakeMessageDescriptor, reg)
-    return try decodeWith(program, value, as: HandshakeMessage.self)
+    return try decodeTyped(program, value)
 }

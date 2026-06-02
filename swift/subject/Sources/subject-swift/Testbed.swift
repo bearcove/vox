@@ -13759,10 +13759,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echo(message: String) async throws -> String {
-    var argsValue = message
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echo_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(message, testbed_echo_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x880b_c4ee_e235_74be, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13775,12 +13772,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).move()
+    let result: Result<String, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -13788,10 +13780,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func reverse(message: String) async throws -> String {
-    var argsValue = message
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_reverse_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(message, testbed_reverse_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x1c22_3f30_e180_392a, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13804,12 +13793,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<String, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<String, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<String, VoxError<Infallible>>.self).move()
+    let result: Result<String, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -13817,10 +13801,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func divide(dividend: Int64, divisor: Int64) async throws -> Result<Int64, MathError> {
-    var argsValue = (dividend, divisor)
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_divide_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped((dividend, divisor), testbed_divide_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xfb68_d931_8f83_0875, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13833,12 +13814,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Int64, VoxError<MathError>>>.size,
-      alignment: MemoryLayout<Result<Int64, VoxError<MathError>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Int64, VoxError<MathError>>.self).move()
+    let result: Result<Int64, VoxError<MathError>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return .success(value)
     case .failure(.user(let e)): return .failure(e)
@@ -13847,10 +13823,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func lookup(id: UInt32) async throws -> Result<Person, LookupError> {
-    var argsValue = id
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_lookup_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(id, testbed_lookup_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xa15f_f520_9471_2a3b, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13863,12 +13836,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Person, VoxError<LookupError>>>.size,
-      alignment: MemoryLayout<Result<Person, VoxError<LookupError>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Person, VoxError<LookupError>>.self).move()
+    let result: Result<Person, VoxError<LookupError>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return .success(value)
     case .failure(.user(let e)): return .failure(e)
@@ -13905,10 +13873,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoPoint(point: Point) async throws -> Point {
-    var argsValue = point
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoPoint_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(point, testbed_echoPoint_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x81f5_386d_589d_fbe4, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13921,12 +13886,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Point, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Point, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Point, VoxError<Infallible>>.self).move()
+    let result: Result<Point, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -13934,10 +13894,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func createPerson(name: String, age: UInt8, email: String?) async throws -> Person {
-    var argsValue = (name, age, email)
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_createPerson_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped((name, age, email), testbed_createPerson_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x68ff_a90b_7728_bde7, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13950,12 +13907,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Person, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Person, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Person, VoxError<Infallible>>.self).move()
+    let result: Result<Person, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -13963,10 +13915,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func rectangleArea(rect: Rectangle) async throws -> Double {
-    var argsValue = rect
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_rectangleArea_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(rect, testbed_rectangleArea_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x223f_e028_2d26_3107, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -13979,12 +13928,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).move()
+    let result: Result<Double, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -13992,10 +13936,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func parseColor(name: String) async throws -> Color? {
-    var argsValue = name
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_parseColor_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(name, testbed_parseColor_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xd4f1_6ea9_eca1_32e6, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14008,12 +13949,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Color?, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Color?, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Color?, VoxError<Infallible>>.self).move()
+    let result: Result<Color?, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14021,10 +13957,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func shapeArea(shape: Shape) async throws -> Double {
-    var argsValue = shape
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_shapeArea_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(shape, testbed_shapeArea_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x0438_5a4b_e2a8_82f5, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14037,12 +13970,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Double, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Double, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Double, VoxError<Infallible>>.self).move()
+    let result: Result<Double, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14051,10 +13979,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
 
   public func createCanvas(name: String, shapes: [Shape], background: Color) async throws -> Canvas
   {
-    var argsValue = (name, shapes, background)
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_createCanvas_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped((name, shapes, background), testbed_createCanvas_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xef42_1eb5_b08c_973a, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14067,12 +13992,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Canvas, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Canvas, VoxError<Infallible>>.self).move()
+    let result: Result<Canvas, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14080,10 +14000,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoGnarly(payload: GnarlyPayload) async throws -> GnarlyPayload {
-    var argsValue = payload
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoGnarly_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(payload, testbed_echoGnarly_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xb6fa_cae6_a7a8_6e99, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14096,13 +14013,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<GnarlyPayload, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<GnarlyPayload, VoxError<Infallible>>.self)
-      .move()
+    let result: Result<GnarlyPayload, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14110,10 +14021,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func processMessage(msg: Message) async throws -> Message {
-    var argsValue = msg
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_processMessage_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(msg, testbed_processMessage_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xe08f_0f52_54e7_a997, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14126,12 +14034,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Message, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Message, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Message, VoxError<Infallible>>.self).move()
+    let result: Result<Message, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14139,10 +14042,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func getPoints(count: UInt32) async throws -> [Point] {
-    var argsValue = count
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_getPoints_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(count, testbed_getPoints_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x5985_1852_3a62_66bf, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14155,12 +14055,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<[Point], VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<[Point], VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<[Point], VoxError<Infallible>>.self).move()
+    let result: Result<[Point], VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14168,10 +14063,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func swapPair(pair: (Int32, String)) async throws -> (String, Int32) {
-    var argsValue = pair
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_swapPair_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(pair, testbed_swapPair_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x7d55_a713_ad61_2bf2, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14184,13 +14076,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<(String, Int32), VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<(String, Int32), VoxError<Infallible>>.self)
-      .move()
+    let result: Result<(String, Int32), VoxError<Infallible>> = try decodeTyped(
+      respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14198,10 +14085,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoBytes(data: Data) async throws -> Data {
-    var argsValue = data
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoBytes_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(data, testbed_echoBytes_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x4405_6c78_42fa_336c, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14214,12 +14098,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Data, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Data, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Data, VoxError<Infallible>>.self).move()
+    let result: Result<Data, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14227,10 +14106,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoBool(b: Bool) async throws -> Bool {
-    var argsValue = b
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoBool_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(b, testbed_echoBool_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x5136_d8f0_1a5f_496c, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14243,12 +14119,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Bool, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Bool, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Bool, VoxError<Infallible>>.self).move()
+    let result: Result<Bool, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14256,10 +14127,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoU64(n: UInt64) async throws -> UInt64 {
-    var argsValue = n
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoU64_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(n, testbed_echoU64_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x85e2_380d_bf7f_fe65, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14272,12 +14140,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<UInt64, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<UInt64, VoxError<Infallible>>.self).move()
+    let result: Result<UInt64, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14285,10 +14148,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoOptionString(s: String?) async throws -> String? {
-    var argsValue = s
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoOptionString_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(s, testbed_echoOptionString_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xb1a5_bfd2_05b3_fbfc, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14301,12 +14161,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<String?, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<String?, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<String?, VoxError<Infallible>>.self).move()
+    let result: Result<String?, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14335,12 +14190,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<[Color], VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<[Color], VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<[Color], VoxError<Infallible>>.self).move()
+    let result: Result<[Color], VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14350,10 +14200,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func describePoint(label: String, x: Int32, y: Int32, active: Bool) async throws
     -> TaggedPoint
   {
-    var argsValue = (label, x, y, active)
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_describePoint_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped((label, x, y, active), testbed_describePoint_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x62fe_b14a_8fcf_9b6d, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14366,12 +14213,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<TaggedPoint, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<TaggedPoint, VoxError<Infallible>>.self).move()
+    let result: Result<TaggedPoint, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14379,10 +14221,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoShape(shape: Shape) async throws -> Shape {
-    var argsValue = shape
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoShape_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(shape, testbed_echoShape_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x4125_b5e6_78b7_b4a5, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14395,12 +14234,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Shape, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Shape, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Shape, VoxError<Infallible>>.self).move()
+    let result: Result<Shape, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14408,10 +14242,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoStatusV1(status: Status) async throws -> Status {
-    var argsValue = status
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoStatusV1_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(status, testbed_echoStatusV1_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xc7c5_aa84_5cfb_8bf6, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14424,12 +14255,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).move()
+    let result: Result<Status, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14437,10 +14263,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoTagV1(tag: Tag) async throws -> Tag {
-    var argsValue = tag
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoTagV1_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(tag, testbed_echoTagV1_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x6619_071b_e5d5_c259, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14453,12 +14276,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).move()
+    let result: Result<Tag, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14466,10 +14284,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoProfile(profile: Profile) async throws -> Profile {
-    var argsValue = profile
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoProfile_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(profile, testbed_echoProfile_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xbd9b_cabd_deeb_eb04, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14482,12 +14297,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Profile, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Profile, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Profile, VoxError<Infallible>>.self).move()
+    let result: Result<Profile, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14495,10 +14305,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoRecord(record: Record) async throws -> Record {
-    var argsValue = record
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoRecord_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(record, testbed_echoRecord_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x100b_0e08_da4b_8f1a, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14511,12 +14318,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Record, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Record, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Record, VoxError<Infallible>>.self).move()
+    let result: Result<Record, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14524,10 +14326,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoStatus(status: Status) async throws -> Status {
-    var argsValue = status
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoStatus_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(status, testbed_echoStatus_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x6975_90d3_ffc3_6703, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14540,12 +14339,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Status, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Status, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Status, VoxError<Infallible>>.self).move()
+    let result: Result<Status, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14553,10 +14347,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoTag(tag: Tag) async throws -> Tag {
-    var argsValue = tag
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoTag_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(tag, testbed_echoTag_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x2bd1_b314_9d73_ce97, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14569,12 +14360,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Tag, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Tag, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Tag, VoxError<Infallible>>.self).move()
+    let result: Result<Tag, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14582,10 +14368,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoMeasurement(m: Measurement) async throws -> Measurement {
-    var argsValue = m
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoMeasurement_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(m, testbed_echoMeasurement_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x3b3d_22b0_15fa_1a3f, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14598,12 +14381,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Measurement, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Measurement, VoxError<Infallible>>.self).move()
+    let result: Result<Measurement, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14611,10 +14389,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func echoConfig(c: Config) async throws -> Config {
-    var argsValue = c
-    let payload = withUnsafeBytes(of: &argsValue) {
-      encodeWith(testbed_echoConfig_ArgsEncodeProgram, $0.baseAddress!)
-    }
+    let payload = encodeTyped(c, testbed_echoConfig_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xe13a_477f_b964_ce28, metadata: .null, payload: payload, retry: .volatile,
       timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
@@ -14627,12 +14402,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
-    let raw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<Result<Config, VoxError<Infallible>>>.size,
-      alignment: MemoryLayout<Result<Config, VoxError<Infallible>>>.alignment)
-    defer { raw.deallocate() }
-    try decodeInto(respProgram, response, raw)
-    let result = raw.assumingMemoryBound(to: Result<Config, VoxError<Infallible>>.self).move()
+    let result: Result<Config, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14803,10 +14573,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     case .connectionClosed: wire = .connectionClosed
     case .timeout, .indeterminate: wire = .indeterminate
     }
-    var r: Result<String, VoxError<Infallible>> = .failure(wire)
-    return withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echo_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let r: Result<String, VoxError<Infallible>> = .failure(wire)
+    return encodeTyped(r, testbed_echo_ResponseEncodeProgram)
   }
 
   public func preregister(methodId: UInt64, payload: [UInt8], registry: ChannelRegistry) async {}
@@ -14992,17 +14760,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x880b_c4ee_e235_74be))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x880b_c4ee_e235_74be))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String).self).move()
     let result: Result<String, VoxError<Infallible>>
     do {
       let value = try await handler.echo(message: args)
@@ -15010,10 +14775,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echo_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echo_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x880b_c4ee_e235_74be, .response, testbedMethods[0x880b_c4ee_e235_74be]!.responseSchemaClosure
     )
@@ -15039,17 +14801,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x1c22_3f30_e180_392a))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x1c22_3f30_e180_392a))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String).self).move()
     let result: Result<String, VoxError<Infallible>>
     do {
       let value = try await handler.reverse(message: args)
@@ -15057,10 +14816,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_reverse_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_reverse_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x1c22_3f30_e180_392a, .response, testbedMethods[0x1c22_3f30_e180_392a]!.responseSchemaClosure
     )
@@ -15086,18 +14842,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xfb68_d931_8f83_0875))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Int64, Int64)>.size,
-      alignment: MemoryLayout<(Int64, Int64)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Int64, Int64)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xfb68_d931_8f83_0875))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Int64, Int64).self).move()
     let result: Result<Int64, VoxError<MathError>>
     do {
       let userResult = try await handler.divide(dividend: args.0, divisor: args.1)
@@ -15108,10 +14860,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_divide_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_divide_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xfb68_d931_8f83_0875, .response, testbedMethods[0xfb68_d931_8f83_0875]!.responseSchemaClosure
     )
@@ -15137,17 +14886,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xa15f_f520_9471_2a3b))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(UInt32)>.size, alignment: MemoryLayout<(UInt32)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (UInt32)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xa15f_f520_9471_2a3b))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (UInt32).self).move()
     let result: Result<Person, VoxError<LookupError>>
     do {
       let userResult = try await handler.lookup(id: args)
@@ -15158,10 +14904,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_lookup_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_lookup_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xa15f_f520_9471_2a3b, .response, testbedMethods[0xa15f_f520_9471_2a3b]!.responseSchemaClosure
     )
@@ -15271,17 +15014,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x81f5_386d_589d_fbe4))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Point)>.size, alignment: MemoryLayout<(Point)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Point)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x81f5_386d_589d_fbe4))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Point).self).move()
     let result: Result<Point, VoxError<Infallible>>
     do {
       let value = try await handler.echoPoint(point: args)
@@ -15289,10 +15029,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoPoint_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoPoint_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x81f5_386d_589d_fbe4, .response, testbedMethods[0x81f5_386d_589d_fbe4]!.responseSchemaClosure
     )
@@ -15318,18 +15055,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x68ff_a90b_7728_bde7))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String, UInt8, String?)>.size,
-      alignment: MemoryLayout<(String, UInt8, String?)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String, UInt8, String?)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x68ff_a90b_7728_bde7))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String, UInt8, String?).self).move()
     let result: Result<Person, VoxError<Infallible>>
     do {
       let value = try await handler.createPerson(name: args.0, age: args.1, email: args.2)
@@ -15337,10 +15070,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_createPerson_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_createPerson_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x68ff_a90b_7728_bde7, .response, testbedMethods[0x68ff_a90b_7728_bde7]!.responseSchemaClosure
     )
@@ -15366,17 +15096,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x223f_e028_2d26_3107))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Rectangle)>.size, alignment: MemoryLayout<(Rectangle)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Rectangle)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x223f_e028_2d26_3107))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Rectangle).self).move()
     let result: Result<Double, VoxError<Infallible>>
     do {
       let value = try await handler.rectangleArea(rect: args)
@@ -15384,10 +15111,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_rectangleArea_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_rectangleArea_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x223f_e028_2d26_3107, .response, testbedMethods[0x223f_e028_2d26_3107]!.responseSchemaClosure
     )
@@ -15413,17 +15137,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xd4f1_6ea9_eca1_32e6))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String)>.size, alignment: MemoryLayout<(String)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xd4f1_6ea9_eca1_32e6))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String).self).move()
     let result: Result<Color?, VoxError<Infallible>>
     do {
       let value = try await handler.parseColor(name: args)
@@ -15431,10 +15152,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_parseColor_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_parseColor_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xd4f1_6ea9_eca1_32e6, .response, testbedMethods[0xd4f1_6ea9_eca1_32e6]!.responseSchemaClosure
     )
@@ -15460,17 +15178,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x0438_5a4b_e2a8_82f5))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Shape)>.size, alignment: MemoryLayout<(Shape)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Shape)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x0438_5a4b_e2a8_82f5))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Shape).self).move()
     let result: Result<Double, VoxError<Infallible>>
     do {
       let value = try await handler.shapeArea(shape: args)
@@ -15478,10 +15193,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_shapeArea_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_shapeArea_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x0438_5a4b_e2a8_82f5, .response, testbedMethods[0x0438_5a4b_e2a8_82f5]!.responseSchemaClosure
     )
@@ -15507,18 +15219,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xef42_1eb5_b08c_973a))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String, [Shape], Color)>.size,
-      alignment: MemoryLayout<(String, [Shape], Color)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String, [Shape], Color)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xef42_1eb5_b08c_973a))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String, [Shape], Color).self).move()
     let result: Result<Canvas, VoxError<Infallible>>
     do {
       let value = try await handler.createCanvas(name: args.0, shapes: args.1, background: args.2)
@@ -15526,10 +15234,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_createCanvas_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_createCanvas_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xef42_1eb5_b08c_973a, .response, testbedMethods[0xef42_1eb5_b08c_973a]!.responseSchemaClosure
     )
@@ -15555,18 +15260,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xb6fa_cae6_a7a8_6e99))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(GnarlyPayload)>.size,
-      alignment: MemoryLayout<(GnarlyPayload)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (GnarlyPayload)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xb6fa_cae6_a7a8_6e99))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (GnarlyPayload).self).move()
     let result: Result<GnarlyPayload, VoxError<Infallible>>
     do {
       let value = try await handler.echoGnarly(payload: args)
@@ -15574,10 +15275,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoGnarly_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoGnarly_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xb6fa_cae6_a7a8_6e99, .response, testbedMethods[0xb6fa_cae6_a7a8_6e99]!.responseSchemaClosure
     )
@@ -15603,17 +15301,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xe08f_0f52_54e7_a997))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Message)>.size, alignment: MemoryLayout<(Message)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Message)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xe08f_0f52_54e7_a997))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Message).self).move()
     let result: Result<Message, VoxError<Infallible>>
     do {
       let value = try await handler.processMessage(msg: args)
@@ -15621,10 +15316,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_processMessage_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_processMessage_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xe08f_0f52_54e7_a997, .response, testbedMethods[0xe08f_0f52_54e7_a997]!.responseSchemaClosure
     )
@@ -15650,17 +15342,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x5985_1852_3a62_66bf))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(UInt32)>.size, alignment: MemoryLayout<(UInt32)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (UInt32)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x5985_1852_3a62_66bf))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (UInt32).self).move()
     let result: Result<[Point], VoxError<Infallible>>
     do {
       let value = try await handler.getPoints(count: args)
@@ -15668,10 +15357,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_getPoints_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_getPoints_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x5985_1852_3a62_66bf, .response, testbedMethods[0x5985_1852_3a62_66bf]!.responseSchemaClosure
     )
@@ -15697,18 +15383,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x7d55_a713_ad61_2bf2))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<((Int32, String))>.size,
-      alignment: MemoryLayout<((Int32, String))>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: ((Int32, String))
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x7d55_a713_ad61_2bf2))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: ((Int32, String)).self).move()
     let result: Result<(String, Int32), VoxError<Infallible>>
     do {
       let value = try await handler.swapPair(pair: args)
@@ -15716,10 +15398,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_swapPair_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_swapPair_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x7d55_a713_ad61_2bf2, .response, testbedMethods[0x7d55_a713_ad61_2bf2]!.responseSchemaClosure
     )
@@ -15745,17 +15424,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x4405_6c78_42fa_336c))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Data)>.size, alignment: MemoryLayout<(Data)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x4405_6c78_42fa_336c))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Data).self).move()
     let result: Result<Data, VoxError<Infallible>>
     do {
       let value = try await handler.echoBytes(data: args)
@@ -15763,10 +15439,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoBytes_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoBytes_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x4405_6c78_42fa_336c, .response, testbedMethods[0x4405_6c78_42fa_336c]!.responseSchemaClosure
     )
@@ -15792,17 +15465,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x5136_d8f0_1a5f_496c))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Bool)>.size, alignment: MemoryLayout<(Bool)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Bool)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x5136_d8f0_1a5f_496c))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Bool).self).move()
     let result: Result<Bool, VoxError<Infallible>>
     do {
       let value = try await handler.echoBool(b: args)
@@ -15810,10 +15480,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoBool_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoBool_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x5136_d8f0_1a5f_496c, .response, testbedMethods[0x5136_d8f0_1a5f_496c]!.responseSchemaClosure
     )
@@ -15839,17 +15506,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x85e2_380d_bf7f_fe65))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(UInt64)>.size, alignment: MemoryLayout<(UInt64)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (UInt64)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x85e2_380d_bf7f_fe65))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (UInt64).self).move()
     let result: Result<UInt64, VoxError<Infallible>>
     do {
       let value = try await handler.echoU64(n: args)
@@ -15857,10 +15521,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoU64_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoU64_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x85e2_380d_bf7f_fe65, .response, testbedMethods[0x85e2_380d_bf7f_fe65]!.responseSchemaClosure
     )
@@ -15886,17 +15547,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xb1a5_bfd2_05b3_fbfc))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String?)>.size, alignment: MemoryLayout<(String?)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String?)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xb1a5_bfd2_05b3_fbfc))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String?).self).move()
     let result: Result<String?, VoxError<Infallible>>
     do {
       let value = try await handler.echoOptionString(s: args)
@@ -15904,10 +15562,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoOptionString_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoOptionString_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xb1a5_bfd2_05b3_fbfc, .response, testbedMethods[0xb1a5_bfd2_05b3_fbfc]!.responseSchemaClosure
     )
@@ -15952,10 +15607,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_allColors_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_allColors_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xfbfb_05bb_caad_e4a0, .response, testbedMethods[0xfbfb_05bb_caad_e4a0]!.responseSchemaClosure
     )
@@ -15981,18 +15633,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x62fe_b14a_8fcf_9b6d))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(String, Int32, Int32, Bool)>.size,
-      alignment: MemoryLayout<(String, Int32, Int32, Bool)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (String, Int32, Int32, Bool)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x62fe_b14a_8fcf_9b6d))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (String, Int32, Int32, Bool).self).move()
     let result: Result<TaggedPoint, VoxError<Infallible>>
     do {
       let value = try await handler.describePoint(
@@ -16001,10 +15649,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_describePoint_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_describePoint_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x62fe_b14a_8fcf_9b6d, .response, testbedMethods[0x62fe_b14a_8fcf_9b6d]!.responseSchemaClosure
     )
@@ -16030,17 +15675,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x4125_b5e6_78b7_b4a5))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Shape)>.size, alignment: MemoryLayout<(Shape)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Shape)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x4125_b5e6_78b7_b4a5))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Shape).self).move()
     let result: Result<Shape, VoxError<Infallible>>
     do {
       let value = try await handler.echoShape(shape: args)
@@ -16048,10 +15690,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoShape_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoShape_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x4125_b5e6_78b7_b4a5, .response, testbedMethods[0x4125_b5e6_78b7_b4a5]!.responseSchemaClosure
     )
@@ -16077,17 +15716,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xc7c5_aa84_5cfb_8bf6))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Status)>.size, alignment: MemoryLayout<(Status)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Status)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xc7c5_aa84_5cfb_8bf6))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Status).self).move()
     let result: Result<Status, VoxError<Infallible>>
     do {
       let value = try await handler.echoStatusV1(status: args)
@@ -16095,10 +15731,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoStatusV1_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoStatusV1_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xc7c5_aa84_5cfb_8bf6, .response, testbedMethods[0xc7c5_aa84_5cfb_8bf6]!.responseSchemaClosure
     )
@@ -16124,17 +15757,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x6619_071b_e5d5_c259))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Tag)>.size, alignment: MemoryLayout<(Tag)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Tag)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x6619_071b_e5d5_c259))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Tag).self).move()
     let result: Result<Tag, VoxError<Infallible>>
     do {
       let value = try await handler.echoTagV1(tag: args)
@@ -16142,10 +15772,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoTagV1_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoTagV1_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x6619_071b_e5d5_c259, .response, testbedMethods[0x6619_071b_e5d5_c259]!.responseSchemaClosure
     )
@@ -16171,17 +15798,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xbd9b_cabd_deeb_eb04))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Profile)>.size, alignment: MemoryLayout<(Profile)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Profile)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xbd9b_cabd_deeb_eb04))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Profile).self).move()
     let result: Result<Profile, VoxError<Infallible>>
     do {
       let value = try await handler.echoProfile(profile: args)
@@ -16189,10 +15813,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoProfile_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoProfile_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xbd9b_cabd_deeb_eb04, .response, testbedMethods[0xbd9b_cabd_deeb_eb04]!.responseSchemaClosure
     )
@@ -16218,17 +15839,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x100b_0e08_da4b_8f1a))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Record)>.size, alignment: MemoryLayout<(Record)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Record)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x100b_0e08_da4b_8f1a))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Record).self).move()
     let result: Result<Record, VoxError<Infallible>>
     do {
       let value = try await handler.echoRecord(record: args)
@@ -16236,10 +15854,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoRecord_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoRecord_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x100b_0e08_da4b_8f1a, .response, testbedMethods[0x100b_0e08_da4b_8f1a]!.responseSchemaClosure
     )
@@ -16265,17 +15880,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x6975_90d3_ffc3_6703))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Status)>.size, alignment: MemoryLayout<(Status)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Status)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x6975_90d3_ffc3_6703))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Status).self).move()
     let result: Result<Status, VoxError<Infallible>>
     do {
       let value = try await handler.echoStatus(status: args)
@@ -16283,10 +15895,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoStatus_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoStatus_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x6975_90d3_ffc3_6703, .response, testbedMethods[0x6975_90d3_ffc3_6703]!.responseSchemaClosure
     )
@@ -16312,17 +15921,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x2bd1_b314_9d73_ce97))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Tag)>.size, alignment: MemoryLayout<(Tag)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Tag)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x2bd1_b314_9d73_ce97))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Tag).self).move()
     let result: Result<Tag, VoxError<Infallible>>
     do {
       let value = try await handler.echoTag(tag: args)
@@ -16330,10 +15936,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoTag_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoTag_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x2bd1_b314_9d73_ce97, .response, testbedMethods[0x2bd1_b314_9d73_ce97]!.responseSchemaClosure
     )
@@ -16359,17 +15962,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x3b3d_22b0_15fa_1a3f))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Measurement)>.size, alignment: MemoryLayout<(Measurement)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Measurement)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0x3b3d_22b0_15fa_1a3f))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Measurement).self).move()
     let result: Result<Measurement, VoxError<Infallible>>
     do {
       let value = try await handler.echoMeasurement(m: args)
@@ -16377,10 +15977,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoMeasurement_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoMeasurement_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x3b3d_22b0_15fa_1a3f, .response, testbedMethods[0x3b3d_22b0_15fa_1a3f]!.responseSchemaClosure
     )
@@ -16406,17 +16003,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xe13a_477f_b964_ce28))
       return
     }
-    let argsRaw = UnsafeMutableRawPointer.allocate(
-      byteCount: MemoryLayout<(Config)>.size, alignment: MemoryLayout<(Config)>.alignment)
-    defer { argsRaw.deallocate() }
-    do { try decodeInto(argsProgram, payload, argsRaw) } catch {
+    let args: (Config)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
       taskTx(
         .response(
           requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
           methodId: 0xe13a_477f_b964_ce28))
       return
     }
-    let args = argsRaw.assumingMemoryBound(to: (Config).self).move()
     let result: Result<Config, VoxError<Infallible>>
     do {
       let value = try await handler.echoConfig(c: args)
@@ -16424,10 +16018,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       result = .failure(.indeterminate)
     }
-    var r = result
-    let respPayload = withUnsafeBytes(of: &r) {
-      encodeWith(testbed_echoConfig_ResponseEncodeProgram, $0.baseAddress!)
-    }
+    let respPayload = encodeTyped(result, testbed_echoConfig_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xe13a_477f_b964_ce28, .response, testbedMethods[0xe13a_477f_b964_ce28]!.responseSchemaClosure
     )

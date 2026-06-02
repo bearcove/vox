@@ -1681,7 +1681,4 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
 nonisolated(unsafe) private let MessageEncodeProgram: MemProgram = try! lowerTyped(
   MessageDescriptor, MessageRegistry)
 
-public func encodeMessage(_ value: Message) -> [UInt8] {
-  var v = value
-  return withUnsafeBytes(of: &v) { encodeWith(MessageEncodeProgram, $0.baseAddress!) }
-}
+public func encodeMessage(_ value: Message) -> [UInt8] { encodeTyped(value, MessageEncodeProgram) }
