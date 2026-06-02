@@ -10,9 +10,13 @@ import Foundation
 // `Tx`/`Rx`. Per-item bytes use the channel's own element codec (the caller supplies
 // it via `channel(...)`; the generated server uses the matching element codec).
 
-/// Both peers advertise this initial channel credit window at handshake
-/// (`SessionEstablishment.swift`), so it is the correct grant in either direction.
-public let defaultInitialChannelCredit: UInt32 = 64 * 1024
+/// The initial channel credit window (in items) both peers advertise at handshake
+/// (`SessionEstablishment.swift` `initialChannelCredit`). Credit is per-item: a sender
+/// may send this many items before a grant, and the receiver re-grants as it consumes
+/// (replenishment threshold = window/2). This MUST match the advertised window — using
+/// a larger value here starves the sender (the receiver would only re-grant after
+/// window/2 ≫ advertised items, deadlocking mid-stream).
+public let defaultInitialChannelCredit: UInt32 = 16
 
 /// The 4-byte little-endian phon-compact encoding of a u32 wire index.
 public func channelWireIndexBytes(_ index: Int) -> [UInt8] {
