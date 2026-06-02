@@ -217,7 +217,7 @@ extension Driver {
                         // Drain queues but reject new calls
                         let commands = commandQueue.popAll()
                         for command in commands {
-                            if case .call(_, _, _, _, _, _, _, let responseTx, _) = command {
+                            if case .call(_, _, _, _, _, _, _, _, let responseTx, _) = command {
                                 responseTx(.failure(.connectionClosed))
                             }
                         }

@@ -99,7 +99,7 @@ extension Driver {
     func handleCommand(_ cmd: HandleCommand) async {
         switch cmd {
         case .call(
-            let requestId, let methodId, let metadata, let payload, let retry,
+            let requestId, let methodId, let metadata, let payload, let channels, let retry,
             let timeout, let prepareRetry, let responseTx, let schemaInfo):
             let isClosed = await state.isConnectionClosed()
             guard !isClosed else {
@@ -112,6 +112,7 @@ extension Driver {
                 methodId: methodId,
                 metadata: metadata,
                 payload: payload,
+                channels: channels,
                 retry: retry,
                 timeout: timeout,
                 prepareRetry: prepareRetry,
@@ -143,6 +144,7 @@ extension Driver {
                 methodId: methodId,
                 payload: payload,
                 metadata: metadata,
+                channels: channels,
                 schemas: schemas
             )
             do {
@@ -221,6 +223,7 @@ extension Driver {
                     methodId: call.methodId,
                     metadata: replayMetadata,
                     payload: rebuilt.payload,
+                    channels: rebuilt.channels,
                     retry: call.retry,
                     timeout: call.timeout,
                     prepareRetry: call.prepareRetry,
@@ -244,6 +247,7 @@ extension Driver {
                 methodId: replayCall.methodId,
                 payload: replayCall.payload,
                 metadata: replayCall.metadata,
+                channels: replayCall.channels,
                 schemas: schemas
             )
 

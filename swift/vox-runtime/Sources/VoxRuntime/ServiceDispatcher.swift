@@ -9,20 +9,24 @@ public protocol ServiceDispatcher: Sendable {
     /// descriptor (mirrors TS `encodeVoxError`).
     func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8]
 
-    /// Pre-register any channels in the request payload.
-    /// This is called synchronously BEFORE spawning the handler task,
-    /// ensuring channels are registered before any Data messages arrive.
+    /// Pre-register the call's out-of-band channels synchronously BEFORE spawning the
+    /// handler task, so incoming `Data` on those ids buffers instead of being rejected
+    /// as unknown. `channels` is `RequestCall.channels` (the caller-allocated ids).
     func preregister(
         methodId: UInt64,
         payload: [UInt8],
+        channels: [UInt64],
         registry: ChannelRegistry
     ) async
 
-    /// Dispatch a request. Called in a spawned task after preregister.
+    /// Dispatch a request. Called in a spawned task after preregister. `channels` is
+    /// `RequestCall.channels`; a channel arg in the decoded payload is a u32 wire index
+    /// into this list, which the generated dispatcher binds to a local `Tx`/`Rx`.
     func dispatch(
         methodId: UInt64,
         payload: [UInt8],
         requestId: UInt64,
+        channels: [UInt64],
         registry: ChannelRegistry,
         schemaSendTracker: SchemaSendTracker,
         schemaReceiveTracker: SchemaTracker,

@@ -90,38 +90,61 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         };
         out.push_str(&sig);
 
+        // Encode args via the typed seam. A channel arg (`Tx`/`Rx`) rides out-of-band:
+        // the caller allocates a `ChannelId`, binds the paired handle, and the arg in the
+        // payload is the 4-byte LE wire index into `RequestCall.channels` (a `Data`/bytes
+        // field per the args descriptor). Non-channel args encode by value. 0 args → empty;
+        // 1 arg → the bare value; N args → a Swift tuple (the descriptor is positional).
+        let mut arg_exprs: Vec<String> = Vec::new();
+        let mut finalizers: Vec<String> = Vec::new();
         if has_channels {
-            // Channels ride out-of-band (PhonChannelMeta); the client must allocate
-            // ids, replace the Tx/Rx args with their wire index, and pass channel ids
-            // in the call. Not wired yet — fail loudly (echo + non-channel methods work).
-            out.push_str(&format!(
-                "        fatalError(\"phon Swift client: channel method `{name}` not yet wired\")\n    }}\n\n"
-            ));
-            continue;
+            out.push_str("        var channelIds: [UInt64] = []\n");
         }
-
-        // Encode args via the typed seam. 0 args → empty; 1 arg → the bare value;
-        // N args → a Swift tuple (the descriptor is a positional record over it).
-        let arg_names: Vec<String> = method
-            .args
-            .iter()
-            .map(|a| a.name.to_lower_camel_case())
-            .collect();
-        match arg_names.len() {
+        for a in method.args.iter() {
+            let an = a.name.to_lower_camel_case();
+            if is_rx(a.shape) {
+                out.push_str(&format!("        let {an}WireIndex = channelIds.count\n"));
+                out.push_str(&format!(
+                    "        channelIds.append(await connection.bindClientRxArg({an}))\n"
+                ));
+                arg_exprs.push(format!("Data(channelWireIndexBytes({an}WireIndex))"));
+                finalizers.push(format!("finalizeChannel({an})"));
+            } else if is_tx(a.shape) {
+                out.push_str(&format!("        let {an}WireIndex = channelIds.count\n"));
+                out.push_str(&format!(
+                    "        channelIds.append(await connection.bindClientTxArg({an}))\n"
+                ));
+                arg_exprs.push(format!("Data(channelWireIndexBytes({an}WireIndex))"));
+                finalizers.push(format!("finalizeChannel({an})"));
+            } else {
+                arg_exprs.push(an);
+            }
+        }
+        match arg_exprs.len() {
             0 => out.push_str("        let payload: [UInt8] = []\n"),
             1 => out.push_str(&format!(
                 "        let payload = encodeTyped({}, {prefix}_ArgsEncodeProgram)\n",
-                arg_names[0]
+                arg_exprs[0]
             )),
             _ => out.push_str(&format!(
                 "        let payload = encodeTyped(({}), {prefix}_ArgsEncodeProgram)\n",
-                arg_names.join(", ")
+                arg_exprs.join(", ")
             )),
         }
 
         // Call the runtime with this method's schema info (advertises args closure).
+        let channels_arg = if has_channels {
+            "channels: channelIds, "
+        } else {
+            ""
+        };
+        let finalize_arg = if finalizers.is_empty() {
+            "nil".to_string()
+        } else {
+            format!("{{ {} }}", finalizers.join("; "))
+        };
         out.push_str(&format!(
-            "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, retry: .volatile,\n            timeout: timeout, prepareRetry: nil, finalizeChannels: nil,\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
+            "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, {channels_arg}retry: .volatile,\n            timeout: timeout, prepareRetry: nil, finalizeChannels: {finalize_arg},\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
         ));
 
         // Decode the wire `Result<T, VoxError<E>>` response by reconciling the server's

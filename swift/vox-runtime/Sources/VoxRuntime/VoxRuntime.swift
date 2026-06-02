@@ -13,11 +13,13 @@ public typealias PostcardDecoder<T> = (inout ByteBuffer) throws -> T
 
 /// Protocol for vox connections (used by generated clients).
 public protocol VoxConnection: Sendable {
-    /// Make a raw RPC call.
+    /// Make a raw RPC call. `channels` carries the out-of-band channel ids the caller
+    /// allocated for this call's `Tx`/`Rx` args (empty for non-channel methods).
     func call(
         methodId: UInt64,
         metadata: Metadata,
         payload: [UInt8],
+        channels: [UInt64],
         retry: RetryPolicy,
         timeout: TimeInterval?,
         prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
@@ -40,6 +42,31 @@ public protocol VoxConnection: Sendable {
 }
 
 extension VoxConnection {
+    /// Convenience overload without `channels` — non-channel methods call this; it
+    /// delegates to the primary requirement with an empty channel list.
+    public func call(
+        methodId: UInt64,
+        metadata: Metadata,
+        payload: [UInt8],
+        retry: RetryPolicy,
+        timeout: TimeInterval?,
+        prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
+        finalizeChannels: (@Sendable () -> Void)?,
+        schemaInfo: ClientSchemaInfo?
+    ) async throws -> [UInt8] {
+        try await call(
+            methodId: methodId,
+            metadata: metadata,
+            payload: payload,
+            channels: [],
+            retry: retry,
+            timeout: timeout,
+            prepareRetry: prepareRetry,
+            finalizeChannels: finalizeChannels,
+            schemaInfo: schemaInfo
+        )
+    }
+
     public func call(
         methodId: UInt64,
         metadata: Metadata,
@@ -53,6 +80,7 @@ extension VoxConnection {
             methodId: methodId,
             metadata: metadata,
             payload: payload,
+            channels: [],
             retry: retry,
             timeout: timeout,
             prepareRetry: prepareRetry,

@@ -15,6 +15,29 @@ fn has_channels(method: &MethodDescriptor) -> bool {
     method.args.iter().any(|a| is_tx(a.shape) || is_rx(a.shape))
 }
 
+/// The `ChannelScalarCodec` (de)serialize closure for a channel element type. The
+/// scalar bridge emits phon-compatible wire bytes (fixed-width LE; `String` = u32 LE
+/// length + UTF-8) for the element types the Testbed channels carry. Codegen panics on
+/// an unsupported element so a gap is loud, not silently mis-encoded.
+/// TODO(phon): replace with the generated phon typed element codec keyed on elementRoot.
+fn channel_element_serialize(element: &'static facet_core::Shape) -> String {
+    match swift_type_base(element).as_str() {
+        "Int32" => "{ v, buf in encodeI32(v, into: &buf) }".to_string(),
+        "Int64" => "{ v, buf in encodeI64(v, into: &buf) }".to_string(),
+        "String" => "{ v, buf in encodeString(v, into: &buf) }".to_string(),
+        other => panic!("unsupported channel element type for serialize: {other}"),
+    }
+}
+
+fn channel_element_deserialize(element: &'static facet_core::Shape) -> String {
+    match swift_type_base(element).as_str() {
+        "Int32" => "{ buf in try decodeI32(from: &buf) }".to_string(),
+        "Int64" => "{ buf in try decodeI64(from: &buf) }".to_string(),
+        "String" => "{ buf in try decodeString(from: &buf) }".to_string(),
+        other => panic!("unsupported channel element type for deserialize: {other}"),
+    }
+}
+
 /// The server-side (handler) Swift type of an argument — channel args become
 /// `Tx`/`Rx` over the `channel_element` (the arg `shape` is an opaque adapter).
 fn server_arg_ty(a: &vox_types::ArgDescriptor) -> String {
@@ -123,16 +146,22 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
         }
     }
 
-    // preregister — channels (out-of-band binding) deferred.
-    out.push_str("    public func preregister(methodId: UInt64, payload: [UInt8], registry: ChannelRegistry) async {}\n\n");
+    // preregister — mark the call's out-of-band channel ids known so incoming Data on
+    // them buffers (instead of being rejected as unknown) before dispatch binds them.
+    out.push_str("    public func preregister(methodId: UInt64, payload: [UInt8], channels: [UInt64], registry: ChannelRegistry) async {\n        for id in channels { await registry.markKnown(id) }\n    }\n\n");
 
     // dispatch — route to per-method helpers.
-    out.push_str("    public func dispatch(methodId: UInt64, payload: [UInt8], requestId: UInt64, registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {\n        switch methodId {\n");
+    out.push_str("    public func dispatch(methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {\n        switch methodId {\n");
     for m in service.methods {
         let id = hex_u64(crate::method_id(m));
         let name = m.method_name.to_lower_camel_case();
+        let extra = if has_channels(m) {
+            "channels: channels, registry: registry, "
+        } else {
+            ""
+        };
         out.push_str(&format!(
-            "        case {id}: await dispatch_{name}(payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)\n"
+            "        case {id}: await dispatch_{name}(payload: payload, requestId: requestId, {extra}schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)\n"
         ));
     }
     out.push_str("        default: taskTx(.response(requestId: requestId, payload: encodeVoxError(.unknownMethod), methodId: methodId))\n        }\n    }\n\n");
@@ -154,18 +183,17 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     let (ret_ty, resp_ty, user_err) = method_types(m);
     let args_ty = swift_type_base(m.args_shape);
     let arity = m.args.len();
+    let channels = has_channels(m);
     let mut out = String::new();
 
+    let extra_params = if channels {
+        "channels: [UInt64], registry: ChannelRegistry, "
+    } else {
+        ""
+    };
     out.push_str(&format!(
-        "    private func dispatch_{name}(payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {{\n"
+        "    private func dispatch_{name}(payload: [UInt8], requestId: UInt64, {extra_params}schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {{\n"
     ));
-
-    if has_channels(m) {
-        out.push_str(&format!(
-            "        // Channel method — out-of-band binding not yet wired in the Swift phon server.\n        taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"channel method `{name}` not wired\")), methodId: {id}))\n    }}\n\n"
-        ));
-        return out;
-    }
 
     // Decode args (reconciling the peer's writer schema when advertised).
     if arity == 0 {
@@ -182,14 +210,51 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         ));
     }
 
-    // The handler call expression, with labels.
+    // Bind out-of-band channels: a channel arg in the decoded tuple is the u32 LE wire
+    // index into `channels`; resolve it to a `ChannelId` and create a server-side
+    // `Tx`/`Rx`. A `Tx` arg means the handler SENDS (callee→caller); an `Rx` arg means
+    // the handler RECEIVES (caller→callee). The bound handle replaces the arg slot.
+    for (i, a) in m.args.iter().enumerate() {
+        if !(is_tx(a.shape) || is_rx(a.shape)) {
+            continue;
+        }
+        let an = a.name.to_lower_camel_case();
+        let element = a.channel_element.expect("channel arg element shape");
+        let slot = if arity == 1 {
+            "args".to_string()
+        } else {
+            format!("args.{i}")
+        };
+        out.push_str(&format!(
+            "        let {an}WireIndex = channelWireIndex({slot})\n"
+        ));
+        out.push_str(&format!(
+            "        guard {an}WireIndex < channels.count else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"channel wire index out of range\")), methodId: {id}))\n            return\n        }}\n"
+        ));
+        if is_tx(a.shape) {
+            let ser = channel_element_serialize(element);
+            out.push_str(&format!(
+                "        let {an} = await bindServerTx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, serialize: {ser})\n"
+            ));
+        } else {
+            let de = channel_element_deserialize(element);
+            out.push_str(&format!(
+                "        let {an} = await bindServerRx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, deserialize: {de})\n"
+            ));
+        }
+    }
+
+    // The handler call expression, with labels. Channel args use the bound `Tx`/`Rx`
+    // local just created; other args use the decoded value (`args` or `args.i`).
     let call_args: Vec<String> = m
         .args
         .iter()
         .enumerate()
         .map(|(i, a)| {
             let label = a.name.to_lower_camel_case();
-            let value = if arity == 1 {
+            let value = if is_tx(a.shape) || is_rx(a.shape) {
+                label.clone()
+            } else if arity == 1 {
                 "args".to_string()
             } else {
                 format!("args.{i}")
@@ -202,26 +267,32 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     // Call + wrap into the wire `Result<T, VoxError<E>>`. A fallible handler returns
     // `Result<T, E>` (its `.failure(e)` becomes the wire `User(e)`); an infallible one
     // returns `T`/`Void`. An unexpected throw maps to `Indeterminate`.
-    out.push_str(&format!("        let result: {resp_ty}\n        do {{\n"));
+    // `voxResult`/`voxValue` are namespaced so they never collide with a handler arg
+    // name (e.g. a channel arg literally named `result`, as in `postReplySum`).
+    out.push_str(&format!(
+        "        let voxResult: {resp_ty}\n        do {{\n"
+    ));
     if user_err.is_some() {
-        out.push_str(&format!("            let userResult = try await {call}\n"));
+        out.push_str(&format!("            let voxValue = try await {call}\n"));
         out.push_str(
-            "            switch userResult {\n            case .success(let v): result = .success(v)\n            case .failure(let e): result = .failure(.user(e))\n            }\n",
+            "            switch voxValue {\n            case .success(let v): voxResult = .success(v)\n            case .failure(let e): voxResult = .failure(.user(e))\n            }\n",
         );
     } else if ret_ty == "Void" {
         out.push_str(&format!(
-            "            try await {call}\n            result = .success(())\n"
+            "            try await {call}\n            voxResult = .success(())\n"
         ));
     } else {
         out.push_str(&format!(
-            "            let value = try await {call}\n            result = .success(value)\n"
+            "            let voxValue = try await {call}\n            voxResult = .success(voxValue)\n"
         ));
     }
-    out.push_str("        } catch {\n            result = .failure(.indeterminate)\n        }\n");
+    out.push_str(
+        "        } catch {\n            voxResult = .failure(.indeterminate)\n        }\n",
+    );
 
     // Encode the response, advertise its schema (once), and reply.
     out.push_str(&format!(
-        "        let respPayload = encodeTyped(result, {prefix}_ResponseEncodeProgram)\n        let schemas = schemaSendTracker.prepareSchemas({id}, .response, {svc}Methods[{id}]!.responseSchemaClosure)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, schemas: schemas))\n    }}\n\n"
+        "        let respPayload = encodeTyped(voxResult, {prefix}_ResponseEncodeProgram)\n        let schemas = schemaSendTracker.prepareSchemas({id}, .response, {svc}Methods[{id}]!.responseSchemaClosure)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, schemas: schemas))\n    }}\n\n"
     ));
 
     out

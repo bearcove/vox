@@ -112,7 +112,8 @@ extension Driver {
                     requestId: request.id,
                     methodId: call.methodId,
                     metadata: call.metadata,
-                    payload: argsBytes
+                    payload: argsBytes,
+                    channels: call.channels
                 )
             case .response(let response):
                 let payload = [UInt8](response.ret)
@@ -185,7 +186,8 @@ extension Driver {
         requestId: UInt64,
         methodId: UInt64,
         metadata: Metadata,
-        payload: [UInt8]
+        payload: [UInt8],
+        channels: [UInt64] = []
     ) async throws {
         // Resolve which dispatcher handles this connection.
         let effectiveDispatcher: any ServiceDispatcher
@@ -252,6 +254,7 @@ extension Driver {
         await effectiveDispatcher.preregister(
             methodId: methodId,
             payload: payload,
+            channels: channels,
             registry: serverRegistry
         )
 
@@ -260,6 +263,7 @@ extension Driver {
                 methodId: methodId,
                 payload: payload,
                 requestId: requestId,
+                channels: channels,
                 registry: serverRegistry,
                 schemaSendTracker: schemaSendTracker,
                 schemaReceiveTracker: schemaReceiveTracker,

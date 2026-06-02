@@ -1,0 +1,101 @@
+import Foundation
+@preconcurrency import NIOCore
+
+// Out-of-band channel binding (mirrors TS `channeling/binding.ts` + driver.ts).
+//
+// `Tx`/`Rx` arguments are opaque on the wire: each encodes only a u32 wire index
+// into `RequestCall.channels`, and the allocated channel ids travel out-of-band in
+// that list. The caller allocates ids and binds the *paired* handle (the one it
+// keeps); the callee resolves each wire index to a channel id and binds a local
+// `Tx`/`Rx`. Per-item bytes use the channel's own element codec (the caller supplies
+// it via `channel(...)`; the generated server uses the matching element codec).
+
+/// Both peers advertise this initial channel credit window at handshake
+/// (`SessionEstablishment.swift`), so it is the correct grant in either direction.
+public let defaultInitialChannelCredit: UInt32 = 64 * 1024
+
+/// The 4-byte little-endian phon-compact encoding of a u32 wire index.
+public func channelWireIndexBytes(_ index: Int) -> [UInt8] {
+    let v = UInt32(index).littleEndian
+    return withUnsafeBytes(of: v) { Array($0) }
+}
+
+/// Read a u32 LE wire index from a channel arg's decoded bytes.
+public func channelWireIndex(_ data: Data) -> Int {
+    var v: UInt32 = 0
+    for (i, byte) in data.prefix(4).enumerated() {
+        v |= UInt32(byte) << (8 * UInt32(i))
+    }
+    return Int(v)
+}
+
+// MARK: - Client-side binding (the caller keeps the paired handle)
+
+extension VoxConnection {
+    /// Bind an `Rx<T>` argument: the method wants an `Rx` (callee receives), so the
+    /// caller passed an `Rx` and keeps the paired `Tx` — the caller SENDS. Allocate a
+    /// channel id, bind the paired `Tx` for outgoing, and return the id.
+    public func bindClientRxArg<T>(_ rx: UnboundRx<T>) async -> UInt64 {
+        let channelId = channelAllocator.allocate()
+        let credit = await incomingChannelRegistry.registerOutgoing(
+            channelId, initialCredit: defaultInitialChannelCredit)
+        rx.bindForSchema(channelId: channelId, taskSender: taskSender, credit: credit)
+        return channelId
+    }
+
+    /// Bind a `Tx<T>` argument: the method wants a `Tx` (callee sends), so the caller
+    /// passed a `Tx` and keeps the paired `Rx` — the caller RECEIVES. Allocate a channel
+    /// id, register an incoming receiver, bind the paired `Rx`, and return the id.
+    public func bindClientTxArg<T>(_ tx: UnboundTx<T>) async -> UInt64 {
+        let channelId = channelAllocator.allocate()
+        let sender = taskSender
+        let receiver = await incomingChannelRegistry.register(
+            channelId, initialCredit: defaultInitialChannelCredit,
+            onConsumed: { additional in
+                sender(.grantCredit(channelId: channelId, bytes: additional))
+            })
+        tx.bindForSchema(channelId: channelId, receiver: receiver)
+        return channelId
+    }
+}
+
+/// Finalize a bound channel handle when its call settles (mirrors TS `finalize`):
+/// completes any retry binding so the paired `Rx`'s receive loop terminates instead
+/// of blocking for a retry that will never come.
+public func finalizeChannel<T>(_ tx: UnboundTx<T>) { tx.finishRetryBinding() }
+public func finalizeChannel<T>(_ rx: UnboundRx<T>) { rx.finishRetryBinding() }
+
+// MARK: - Server-side binding (the dispatcher creates the local handle)
+
+/// Bind a server `Rx<T>` (the handler RECEIVES). Registers an incoming receiver on the
+/// server registry (so buffered/early data is delivered) and returns a bound `Rx`.
+public func bindServerRx<T: Sendable>(
+    channelId: UInt64,
+    registry: ChannelRegistry,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void,
+    deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T
+) async -> Rx<T> {
+    let receiver = await registry.register(
+        channelId, initialCredit: defaultInitialChannelCredit,
+        onConsumed: { additional in
+            taskTx(.grantCredit(channelId: channelId, bytes: additional))
+        })
+    let rx = Rx<T>(deserialize: deserialize)
+    rx.bind(channelId: channelId, receiver: receiver)
+    return rx
+}
+
+/// Bind a server `Tx<T>` (the handler SENDS). Registers an outgoing credit controller
+/// on the server registry and returns a bound `Tx`.
+public func bindServerTx<T: Sendable>(
+    channelId: UInt64,
+    registry: ChannelRegistry,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void,
+    serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void
+) async -> Tx<T> {
+    let credit = await registry.registerOutgoing(
+        channelId, initialCredit: defaultInitialChannelCredit)
+    let tx = Tx<T>(serialize: serialize)
+    tx.bind(channelId: channelId, taskTx: taskTx, credit: credit)
+    return tx
+}

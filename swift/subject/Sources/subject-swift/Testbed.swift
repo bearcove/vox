@@ -13845,31 +13845,201 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func sum(numbers: UnboundRx<Int32>) async throws -> Int64 {
-    fatalError("phon Swift client: channel method `sum` not yet wired")
+    var channelIds: [UInt64] = []
+    let numbersWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientRxArg(numbers))
+    let payload = encodeTyped(
+      Data(channelWireIndexBytes(numbersWireIndex)), testbed_sum_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0x51f9_cfd8_e865_77c9, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(numbers) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x51f9_cfd8_e865_77c9]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x51f9_cfd8_e865_77c9, .response, readerDescriptor: testbed_sum_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Int64, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
   }
 
   public func generate(count: UInt32, output: UnboundTx<Int32>) async throws {
-    fatalError("phon Swift client: channel method `generate` not yet wired")
+    var channelIds: [UInt64] = []
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      (count, Data(channelWireIndexBytes(outputWireIndex))), testbed_generate_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0x239e_5b99_b1f8_207a, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x239e_5b99_b1f8_207a]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x239e_5b99_b1f8_207a, .response, readerDescriptor: testbed_generate_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
-    fatalError("phon Swift client: channel method `generateRetryNonIdem` not yet wired")
+    var channelIds: [UInt64] = []
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      (count, Data(channelWireIndexBytes(outputWireIndex))),
+      testbed_generateRetryNonIdem_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0x3441_9529_478c_c7b8, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x3441_9529_478c_c7b8]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x3441_9529_478c_c7b8, .response,
+        readerDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
-    fatalError("phon Swift client: channel method `generateRetryIdem` not yet wired")
+    var channelIds: [UInt64] = []
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      (count, Data(channelWireIndexBytes(outputWireIndex))),
+      testbed_generateRetryIdem_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0xe2d2_7fd9_098c_6ea2, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xe2d2_7fd9_098c_6ea2]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xe2d2_7fd9_098c_6ea2, .response,
+        readerDescriptor: testbed_generateRetryIdem_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func transform(input: UnboundRx<String>, output: UnboundTx<String>) async throws {
-    fatalError("phon Swift client: channel method `transform` not yet wired")
+    var channelIds: [UInt64] = []
+    let inputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientRxArg(input))
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      (Data(channelWireIndexBytes(inputWireIndex)), Data(channelWireIndexBytes(outputWireIndex))),
+      testbed_transform_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0xcb46_9cff_8d79_8feb, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil,
+      finalizeChannels: {
+        finalizeChannel(input)
+        finalizeChannel(output)
+      },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xcb46_9cff_8d79_8feb]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xcb46_9cff_8d79_8feb, .response, readerDescriptor: testbed_transform_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func postReplyGenerate(output: UnboundTx<Int32>) async throws {
-    fatalError("phon Swift client: channel method `postReplyGenerate` not yet wired")
+    var channelIds: [UInt64] = []
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      Data(channelWireIndexBytes(outputWireIndex)), testbed_postReplyGenerate_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0xec36_e847_51a8_97be, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xec36_e847_51a8_97be]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xec36_e847_51a8_97be, .response,
+        readerDescriptor: testbed_postReplyGenerate_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func postReplySum(input: UnboundRx<Int32>, result: UnboundTx<Int64>) async throws {
-    fatalError("phon Swift client: channel method `postReplySum` not yet wired")
+    var channelIds: [UInt64] = []
+    let inputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientRxArg(input))
+    let resultWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(result))
+    let payload = encodeTyped(
+      (Data(channelWireIndexBytes(inputWireIndex)), Data(channelWireIndexBytes(resultWireIndex))),
+      testbed_postReplySum_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0xc1ce_3c39_7e4c_a6e7, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil,
+      finalizeChannels: {
+        finalizeChannel(input)
+        finalizeChannel(result)
+      },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xc1ce_3c39_7e4c_a6e7]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xc1ce_3c39_7e4c_a6e7, .response, readerDescriptor: testbed_postReplySum_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func echoPoint(point: Point) async throws -> Point {
@@ -14169,11 +14339,56 @@ public final class TestbedClient: TestbedCaller, Sendable {
   }
 
   public func sumLarge(numbers: UnboundRx<Int32>) async throws -> Int64 {
-    fatalError("phon Swift client: channel method `sumLarge` not yet wired")
+    var channelIds: [UInt64] = []
+    let numbersWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientRxArg(numbers))
+    let payload = encodeTyped(
+      Data(channelWireIndexBytes(numbersWireIndex)), testbed_sumLarge_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0x9a7b_ed54_5e08_8054, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(numbers) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x9a7b_ed54_5e08_8054]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x9a7b_ed54_5e08_8054, .response, readerDescriptor: testbed_sumLarge_ResponseDescriptor,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Int64, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
   }
 
   public func generateLarge(count: UInt32, output: UnboundTx<Int32>) async throws {
-    fatalError("phon Swift client: channel method `generateLarge` not yet wired")
+    var channelIds: [UInt64] = []
+    let outputWireIndex = channelIds.count
+    channelIds.append(await connection.bindClientTxArg(output))
+    let payload = encodeTyped(
+      (count, Data(channelWireIndexBytes(outputWireIndex))), testbed_generateLarge_ArgsEncodeProgram
+    )
+    let response = try await connection.call(
+      methodId: 0x8edf_bd65_d162_f685, metadata: .null, payload: payload, channels: channelIds,
+      retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x8edf_bd65_d162_f685]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0x8edf_bd65_d162_f685, .response,
+        readerDescriptor: testbed_generateLarge_ResponseDescriptor, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
   }
 
   public func allColors() async throws -> [Color] {
@@ -14577,12 +14792,16 @@ public final class TestbedDispatcher: ServiceDispatcher {
     return encodeTyped(r, testbed_echo_ResponseEncodeProgram)
   }
 
-  public func preregister(methodId: UInt64, payload: [UInt8], registry: ChannelRegistry) async {}
+  public func preregister(
+    methodId: UInt64, payload: [UInt8], channels: [UInt64], registry: ChannelRegistry
+  ) async {
+    for id in channels { await registry.markKnown(id) }
+  }
 
   public func dispatch(
-    methodId: UInt64, payload: [UInt8], requestId: UInt64, registry: ChannelRegistry,
-    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
-    taskTx: @escaping @Sendable (TaskMessage) -> Void
+    methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64],
+    registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
     switch methodId {
     case 0x880b_c4ee_e235_74be:
@@ -14603,32 +14822,39 @@ public final class TestbedDispatcher: ServiceDispatcher {
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0x51f9_cfd8_e865_77c9:
       await dispatch_sum(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0x239e_5b99_b1f8_207a:
       await dispatch_generate(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0x3441_9529_478c_c7b8:
       await dispatch_generateRetryNonIdem(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0xe2d2_7fd9_098c_6ea2:
       await dispatch_generateRetryIdem(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0xcb46_9cff_8d79_8feb:
       await dispatch_transform(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0xec36_e847_51a8_97be:
       await dispatch_postReplyGenerate(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0xc1ce_3c39_7e4c_a6e7:
       await dispatch_postReplySum(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0x81f5_386d_589d_fbe4:
       await dispatch_echoPoint(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
@@ -14687,12 +14913,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0x9a7b_ed54_5e08_8054:
       await dispatch_sumLarge(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0x8edf_bd65_d162_f685:
       await dispatch_generateLarge(
-        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
-        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+        payload: payload, requestId: requestId, channels: channels, registry: registry,
+        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
+        taskTx: taskTx)
     case 0xfbfb_05bb_caad_e4a0:
       await dispatch_allColors(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
@@ -14768,14 +14996,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x880b_c4ee_e235_74be))
       return
     }
-    let result: Result<String, VoxError<Infallible>>
+    let voxResult: Result<String, VoxError<Infallible>>
     do {
-      let value = try await handler.echo(message: args)
-      result = .success(value)
+      let voxValue = try await handler.echo(message: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echo_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echo_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x880b_c4ee_e235_74be, .response, testbedMethods[0x880b_c4ee_e235_74be]!.responseSchemaClosure
     )
@@ -14809,14 +15037,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x1c22_3f30_e180_392a))
       return
     }
-    let result: Result<String, VoxError<Infallible>>
+    let voxResult: Result<String, VoxError<Infallible>>
     do {
-      let value = try await handler.reverse(message: args)
-      result = .success(value)
+      let voxValue = try await handler.reverse(message: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_reverse_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_reverse_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x1c22_3f30_e180_392a, .response, testbedMethods[0x1c22_3f30_e180_392a]!.responseSchemaClosure
     )
@@ -14850,17 +15078,17 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xfb68_d931_8f83_0875))
       return
     }
-    let result: Result<Int64, VoxError<MathError>>
+    let voxResult: Result<Int64, VoxError<MathError>>
     do {
-      let userResult = try await handler.divide(dividend: args.0, divisor: args.1)
-      switch userResult {
-      case .success(let v): result = .success(v)
-      case .failure(let e): result = .failure(.user(e))
+      let voxValue = try await handler.divide(dividend: args.0, divisor: args.1)
+      switch voxValue {
+      case .success(let v): voxResult = .success(v)
+      case .failure(let e): voxResult = .failure(.user(e))
       }
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_divide_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_divide_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xfb68_d931_8f83_0875, .response, testbedMethods[0xfb68_d931_8f83_0875]!.responseSchemaClosure
     )
@@ -14894,17 +15122,17 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xa15f_f520_9471_2a3b))
       return
     }
-    let result: Result<Person, VoxError<LookupError>>
+    let voxResult: Result<Person, VoxError<LookupError>>
     do {
-      let userResult = try await handler.lookup(id: args)
-      switch userResult {
-      case .success(let v): result = .success(v)
-      case .failure(let e): result = .failure(.user(e))
+      let voxValue = try await handler.lookup(id: args)
+      switch voxValue {
+      case .success(let v): voxResult = .success(v)
+      case .failure(let e): voxResult = .failure(.user(e))
       }
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_lookup_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_lookup_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xa15f_f520_9471_2a3b, .response, testbedMethods[0xa15f_f520_9471_2a3b]!.responseSchemaClosure
     )
@@ -14915,87 +15143,405 @@ public final class TestbedDispatcher: ServiceDispatcher {
   }
 
   private func dispatch_sum(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0x51f9_cfd8_e865_77c9, .args, readerDescriptor: testbed_sum_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x51f9_cfd8_e865_77c9))
+      return
+    }
+    let args: (Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x51f9_cfd8_e865_77c9))
+      return
+    }
+    let numbersWireIndex = channelWireIndex(args)
+    guard numbersWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0x51f9_cfd8_e865_77c9))
+      return
+    }
+    let numbers = await bindServerRx(
+      channelId: channels[numbersWireIndex], registry: registry, taskTx: taskTx,
+      deserialize: { buf in try decodeI32(from: &buf) })
+    let voxResult: Result<Int64, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.sum(numbers: numbers)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_sum_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0x51f9_cfd8_e865_77c9, .response, testbedMethods[0x51f9_cfd8_e865_77c9]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `sum` not wired")),
-        methodId: 0x51f9_cfd8_e865_77c9))
+        requestId: requestId, payload: respPayload, methodId: 0x51f9_cfd8_e865_77c9,
+        schemas: schemas))
   }
 
   private func dispatch_generate(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0x239e_5b99_b1f8_207a, .args, readerDescriptor: testbed_generate_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x239e_5b99_b1f8_207a))
+      return
+    }
+    let args: (UInt32, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x239e_5b99_b1f8_207a))
+      return
+    }
+    let outputWireIndex = channelWireIndex(args.1)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0x239e_5b99_b1f8_207a))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI32(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.generate(count: args.0, output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_generate_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0x239e_5b99_b1f8_207a, .response, testbedMethods[0x239e_5b99_b1f8_207a]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `generate` not wired")),
-        methodId: 0x239e_5b99_b1f8_207a))
+        requestId: requestId, payload: respPayload, methodId: 0x239e_5b99_b1f8_207a,
+        schemas: schemas))
   }
 
   private func dispatch_generateRetryNonIdem(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0x3441_9529_478c_c7b8, .args, readerDescriptor: testbed_generateRetryNonIdem_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x3441_9529_478c_c7b8))
+      return
+    }
+    let args: (UInt32, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x3441_9529_478c_c7b8))
+      return
+    }
+    let outputWireIndex = channelWireIndex(args.1)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0x3441_9529_478c_c7b8))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI32(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.generateRetryNonIdem(count: args.0, output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_generateRetryNonIdem_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0x3441_9529_478c_c7b8, .response, testbedMethods[0x3441_9529_478c_c7b8]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `generateRetryNonIdem` not wired")),
-        methodId: 0x3441_9529_478c_c7b8))
+        requestId: requestId, payload: respPayload, methodId: 0x3441_9529_478c_c7b8,
+        schemas: schemas))
   }
 
   private func dispatch_generateRetryIdem(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0xe2d2_7fd9_098c_6ea2, .args, readerDescriptor: testbed_generateRetryIdem_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xe2d2_7fd9_098c_6ea2))
+      return
+    }
+    let args: (UInt32, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xe2d2_7fd9_098c_6ea2))
+      return
+    }
+    let outputWireIndex = channelWireIndex(args.1)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xe2d2_7fd9_098c_6ea2))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI32(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.generateRetryIdem(count: args.0, output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_generateRetryIdem_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0xe2d2_7fd9_098c_6ea2, .response, testbedMethods[0xe2d2_7fd9_098c_6ea2]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `generateRetryIdem` not wired")),
-        methodId: 0xe2d2_7fd9_098c_6ea2))
+        requestId: requestId, payload: respPayload, methodId: 0xe2d2_7fd9_098c_6ea2,
+        schemas: schemas))
   }
 
   private func dispatch_transform(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0xcb46_9cff_8d79_8feb, .args, readerDescriptor: testbed_transform_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xcb46_9cff_8d79_8feb))
+      return
+    }
+    let args: (Data, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xcb46_9cff_8d79_8feb))
+      return
+    }
+    let inputWireIndex = channelWireIndex(args.0)
+    guard inputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xcb46_9cff_8d79_8feb))
+      return
+    }
+    let input = await bindServerRx(
+      channelId: channels[inputWireIndex], registry: registry, taskTx: taskTx,
+      deserialize: { buf in try decodeString(from: &buf) })
+    let outputWireIndex = channelWireIndex(args.1)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xcb46_9cff_8d79_8feb))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeString(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.transform(input: input, output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_transform_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0xcb46_9cff_8d79_8feb, .response, testbedMethods[0xcb46_9cff_8d79_8feb]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `transform` not wired")),
-        methodId: 0xcb46_9cff_8d79_8feb))
+        requestId: requestId, payload: respPayload, methodId: 0xcb46_9cff_8d79_8feb,
+        schemas: schemas))
   }
 
   private func dispatch_postReplyGenerate(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0xec36_e847_51a8_97be, .args, readerDescriptor: testbed_postReplyGenerate_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xec36_e847_51a8_97be))
+      return
+    }
+    let args: (Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xec36_e847_51a8_97be))
+      return
+    }
+    let outputWireIndex = channelWireIndex(args)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xec36_e847_51a8_97be))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI32(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.postReplyGenerate(output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_postReplyGenerate_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0xec36_e847_51a8_97be, .response, testbedMethods[0xec36_e847_51a8_97be]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `postReplyGenerate` not wired")),
-        methodId: 0xec36_e847_51a8_97be))
+        requestId: requestId, payload: respPayload, methodId: 0xec36_e847_51a8_97be,
+        schemas: schemas))
   }
 
   private func dispatch_postReplySum(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0xc1ce_3c39_7e4c_a6e7, .args, readerDescriptor: testbed_postReplySum_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xc1ce_3c39_7e4c_a6e7))
+      return
+    }
+    let args: (Data, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xc1ce_3c39_7e4c_a6e7))
+      return
+    }
+    let inputWireIndex = channelWireIndex(args.0)
+    guard inputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xc1ce_3c39_7e4c_a6e7))
+      return
+    }
+    let input = await bindServerRx(
+      channelId: channels[inputWireIndex], registry: registry, taskTx: taskTx,
+      deserialize: { buf in try decodeI32(from: &buf) })
+    let resultWireIndex = channelWireIndex(args.1)
+    guard resultWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0xc1ce_3c39_7e4c_a6e7))
+      return
+    }
+    let result = await bindServerTx(
+      channelId: channels[resultWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI64(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.postReplySum(input: input, result: result)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_postReplySum_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0xc1ce_3c39_7e4c_a6e7, .response, testbedMethods[0xc1ce_3c39_7e4c_a6e7]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `postReplySum` not wired")),
-        methodId: 0xc1ce_3c39_7e4c_a6e7))
+        requestId: requestId, payload: respPayload, methodId: 0xc1ce_3c39_7e4c_a6e7,
+        schemas: schemas))
   }
 
   private func dispatch_echoPoint(
@@ -15022,14 +15568,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x81f5_386d_589d_fbe4))
       return
     }
-    let result: Result<Point, VoxError<Infallible>>
+    let voxResult: Result<Point, VoxError<Infallible>>
     do {
-      let value = try await handler.echoPoint(point: args)
-      result = .success(value)
+      let voxValue = try await handler.echoPoint(point: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoPoint_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoPoint_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x81f5_386d_589d_fbe4, .response, testbedMethods[0x81f5_386d_589d_fbe4]!.responseSchemaClosure
     )
@@ -15063,14 +15609,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x68ff_a90b_7728_bde7))
       return
     }
-    let result: Result<Person, VoxError<Infallible>>
+    let voxResult: Result<Person, VoxError<Infallible>>
     do {
-      let value = try await handler.createPerson(name: args.0, age: args.1, email: args.2)
-      result = .success(value)
+      let voxValue = try await handler.createPerson(name: args.0, age: args.1, email: args.2)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_createPerson_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_createPerson_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x68ff_a90b_7728_bde7, .response, testbedMethods[0x68ff_a90b_7728_bde7]!.responseSchemaClosure
     )
@@ -15104,14 +15650,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x223f_e028_2d26_3107))
       return
     }
-    let result: Result<Double, VoxError<Infallible>>
+    let voxResult: Result<Double, VoxError<Infallible>>
     do {
-      let value = try await handler.rectangleArea(rect: args)
-      result = .success(value)
+      let voxValue = try await handler.rectangleArea(rect: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_rectangleArea_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_rectangleArea_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x223f_e028_2d26_3107, .response, testbedMethods[0x223f_e028_2d26_3107]!.responseSchemaClosure
     )
@@ -15145,14 +15691,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xd4f1_6ea9_eca1_32e6))
       return
     }
-    let result: Result<Color?, VoxError<Infallible>>
+    let voxResult: Result<Color?, VoxError<Infallible>>
     do {
-      let value = try await handler.parseColor(name: args)
-      result = .success(value)
+      let voxValue = try await handler.parseColor(name: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_parseColor_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_parseColor_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xd4f1_6ea9_eca1_32e6, .response, testbedMethods[0xd4f1_6ea9_eca1_32e6]!.responseSchemaClosure
     )
@@ -15186,14 +15732,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x0438_5a4b_e2a8_82f5))
       return
     }
-    let result: Result<Double, VoxError<Infallible>>
+    let voxResult: Result<Double, VoxError<Infallible>>
     do {
-      let value = try await handler.shapeArea(shape: args)
-      result = .success(value)
+      let voxValue = try await handler.shapeArea(shape: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_shapeArea_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_shapeArea_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x0438_5a4b_e2a8_82f5, .response, testbedMethods[0x0438_5a4b_e2a8_82f5]!.responseSchemaClosure
     )
@@ -15227,14 +15773,15 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xef42_1eb5_b08c_973a))
       return
     }
-    let result: Result<Canvas, VoxError<Infallible>>
+    let voxResult: Result<Canvas, VoxError<Infallible>>
     do {
-      let value = try await handler.createCanvas(name: args.0, shapes: args.1, background: args.2)
-      result = .success(value)
+      let voxValue = try await handler.createCanvas(
+        name: args.0, shapes: args.1, background: args.2)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_createCanvas_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_createCanvas_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xef42_1eb5_b08c_973a, .response, testbedMethods[0xef42_1eb5_b08c_973a]!.responseSchemaClosure
     )
@@ -15268,14 +15815,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xb6fa_cae6_a7a8_6e99))
       return
     }
-    let result: Result<GnarlyPayload, VoxError<Infallible>>
+    let voxResult: Result<GnarlyPayload, VoxError<Infallible>>
     do {
-      let value = try await handler.echoGnarly(payload: args)
-      result = .success(value)
+      let voxValue = try await handler.echoGnarly(payload: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoGnarly_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoGnarly_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xb6fa_cae6_a7a8_6e99, .response, testbedMethods[0xb6fa_cae6_a7a8_6e99]!.responseSchemaClosure
     )
@@ -15309,14 +15856,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xe08f_0f52_54e7_a997))
       return
     }
-    let result: Result<Message, VoxError<Infallible>>
+    let voxResult: Result<Message, VoxError<Infallible>>
     do {
-      let value = try await handler.processMessage(msg: args)
-      result = .success(value)
+      let voxValue = try await handler.processMessage(msg: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_processMessage_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_processMessage_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xe08f_0f52_54e7_a997, .response, testbedMethods[0xe08f_0f52_54e7_a997]!.responseSchemaClosure
     )
@@ -15350,14 +15897,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x5985_1852_3a62_66bf))
       return
     }
-    let result: Result<[Point], VoxError<Infallible>>
+    let voxResult: Result<[Point], VoxError<Infallible>>
     do {
-      let value = try await handler.getPoints(count: args)
-      result = .success(value)
+      let voxValue = try await handler.getPoints(count: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_getPoints_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_getPoints_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x5985_1852_3a62_66bf, .response, testbedMethods[0x5985_1852_3a62_66bf]!.responseSchemaClosure
     )
@@ -15391,14 +15938,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x7d55_a713_ad61_2bf2))
       return
     }
-    let result: Result<(String, Int32), VoxError<Infallible>>
+    let voxResult: Result<(String, Int32), VoxError<Infallible>>
     do {
-      let value = try await handler.swapPair(pair: args)
-      result = .success(value)
+      let voxValue = try await handler.swapPair(pair: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_swapPair_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_swapPair_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x7d55_a713_ad61_2bf2, .response, testbedMethods[0x7d55_a713_ad61_2bf2]!.responseSchemaClosure
     )
@@ -15432,14 +15979,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x4405_6c78_42fa_336c))
       return
     }
-    let result: Result<Data, VoxError<Infallible>>
+    let voxResult: Result<Data, VoxError<Infallible>>
     do {
-      let value = try await handler.echoBytes(data: args)
-      result = .success(value)
+      let voxValue = try await handler.echoBytes(data: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoBytes_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoBytes_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x4405_6c78_42fa_336c, .response, testbedMethods[0x4405_6c78_42fa_336c]!.responseSchemaClosure
     )
@@ -15473,14 +16020,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x5136_d8f0_1a5f_496c))
       return
     }
-    let result: Result<Bool, VoxError<Infallible>>
+    let voxResult: Result<Bool, VoxError<Infallible>>
     do {
-      let value = try await handler.echoBool(b: args)
-      result = .success(value)
+      let voxValue = try await handler.echoBool(b: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoBool_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoBool_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x5136_d8f0_1a5f_496c, .response, testbedMethods[0x5136_d8f0_1a5f_496c]!.responseSchemaClosure
     )
@@ -15514,14 +16061,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x85e2_380d_bf7f_fe65))
       return
     }
-    let result: Result<UInt64, VoxError<Infallible>>
+    let voxResult: Result<UInt64, VoxError<Infallible>>
     do {
-      let value = try await handler.echoU64(n: args)
-      result = .success(value)
+      let voxValue = try await handler.echoU64(n: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoU64_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoU64_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x85e2_380d_bf7f_fe65, .response, testbedMethods[0x85e2_380d_bf7f_fe65]!.responseSchemaClosure
     )
@@ -15555,14 +16102,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xb1a5_bfd2_05b3_fbfc))
       return
     }
-    let result: Result<String?, VoxError<Infallible>>
+    let voxResult: Result<String?, VoxError<Infallible>>
     do {
-      let value = try await handler.echoOptionString(s: args)
-      result = .success(value)
+      let voxValue = try await handler.echoOptionString(s: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoOptionString_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoOptionString_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xb1a5_bfd2_05b3_fbfc, .response, testbedMethods[0xb1a5_bfd2_05b3_fbfc]!.responseSchemaClosure
     )
@@ -15573,41 +16120,125 @@ public final class TestbedDispatcher: ServiceDispatcher {
   }
 
   private func dispatch_sumLarge(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0x9a7b_ed54_5e08_8054, .args, readerDescriptor: testbed_sumLarge_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x9a7b_ed54_5e08_8054))
+      return
+    }
+    let args: (Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x9a7b_ed54_5e08_8054))
+      return
+    }
+    let numbersWireIndex = channelWireIndex(args)
+    guard numbersWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0x9a7b_ed54_5e08_8054))
+      return
+    }
+    let numbers = await bindServerRx(
+      channelId: channels[numbersWireIndex], registry: registry, taskTx: taskTx,
+      deserialize: { buf in try decodeI32(from: &buf) })
+    let voxResult: Result<Int64, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.sumLarge(numbers: numbers)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_sumLarge_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0x9a7b_ed54_5e08_8054, .response, testbedMethods[0x9a7b_ed54_5e08_8054]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `sumLarge` not wired")),
-        methodId: 0x9a7b_ed54_5e08_8054))
+        requestId: requestId, payload: respPayload, methodId: 0x9a7b_ed54_5e08_8054,
+        schemas: schemas))
   }
 
   private func dispatch_generateLarge(
-    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
+    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    // Channel method — out-of-band binding not yet wired in the Swift phon server.
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0x8edf_bd65_d162_f685, .args, readerDescriptor: testbed_generateLarge_ArgsDescriptor,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x8edf_bd65_d162_f685))
+      return
+    }
+    let args: (UInt32, Data)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x8edf_bd65_d162_f685))
+      return
+    }
+    let outputWireIndex = channelWireIndex(args.1)
+    guard outputWireIndex < channels.count else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
+          methodId: 0x8edf_bd65_d162_f685))
+      return
+    }
+    let output = await bindServerTx(
+      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
+      serialize: { v, buf in encodeI32(v, into: &buf) })
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.generateLarge(count: args.0, output: output)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_generateLarge_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0x8edf_bd65_d162_f685, .response, testbedMethods[0x8edf_bd65_d162_f685]!.responseSchemaClosure
+    )
     taskTx(
       .response(
-        requestId: requestId,
-        payload: encodeVoxError(.invalidPayload("channel method `generateLarge` not wired")),
-        methodId: 0x8edf_bd65_d162_f685))
+        requestId: requestId, payload: respPayload, methodId: 0x8edf_bd65_d162_f685,
+        schemas: schemas))
   }
 
   private func dispatch_allColors(
     payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
     schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
-    let result: Result<[Color], VoxError<Infallible>>
+    let voxResult: Result<[Color], VoxError<Infallible>>
     do {
-      let value = try await handler.allColors()
-      result = .success(value)
+      let voxValue = try await handler.allColors()
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_allColors_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_allColors_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xfbfb_05bb_caad_e4a0, .response, testbedMethods[0xfbfb_05bb_caad_e4a0]!.responseSchemaClosure
     )
@@ -15641,15 +16272,15 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x62fe_b14a_8fcf_9b6d))
       return
     }
-    let result: Result<TaggedPoint, VoxError<Infallible>>
+    let voxResult: Result<TaggedPoint, VoxError<Infallible>>
     do {
-      let value = try await handler.describePoint(
+      let voxValue = try await handler.describePoint(
         label: args.0, x: args.1, y: args.2, active: args.3)
-      result = .success(value)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_describePoint_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_describePoint_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x62fe_b14a_8fcf_9b6d, .response, testbedMethods[0x62fe_b14a_8fcf_9b6d]!.responseSchemaClosure
     )
@@ -15683,14 +16314,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x4125_b5e6_78b7_b4a5))
       return
     }
-    let result: Result<Shape, VoxError<Infallible>>
+    let voxResult: Result<Shape, VoxError<Infallible>>
     do {
-      let value = try await handler.echoShape(shape: args)
-      result = .success(value)
+      let voxValue = try await handler.echoShape(shape: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoShape_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoShape_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x4125_b5e6_78b7_b4a5, .response, testbedMethods[0x4125_b5e6_78b7_b4a5]!.responseSchemaClosure
     )
@@ -15724,14 +16355,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xc7c5_aa84_5cfb_8bf6))
       return
     }
-    let result: Result<Status, VoxError<Infallible>>
+    let voxResult: Result<Status, VoxError<Infallible>>
     do {
-      let value = try await handler.echoStatusV1(status: args)
-      result = .success(value)
+      let voxValue = try await handler.echoStatusV1(status: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoStatusV1_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoStatusV1_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xc7c5_aa84_5cfb_8bf6, .response, testbedMethods[0xc7c5_aa84_5cfb_8bf6]!.responseSchemaClosure
     )
@@ -15765,14 +16396,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x6619_071b_e5d5_c259))
       return
     }
-    let result: Result<Tag, VoxError<Infallible>>
+    let voxResult: Result<Tag, VoxError<Infallible>>
     do {
-      let value = try await handler.echoTagV1(tag: args)
-      result = .success(value)
+      let voxValue = try await handler.echoTagV1(tag: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoTagV1_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoTagV1_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x6619_071b_e5d5_c259, .response, testbedMethods[0x6619_071b_e5d5_c259]!.responseSchemaClosure
     )
@@ -15806,14 +16437,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xbd9b_cabd_deeb_eb04))
       return
     }
-    let result: Result<Profile, VoxError<Infallible>>
+    let voxResult: Result<Profile, VoxError<Infallible>>
     do {
-      let value = try await handler.echoProfile(profile: args)
-      result = .success(value)
+      let voxValue = try await handler.echoProfile(profile: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoProfile_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoProfile_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xbd9b_cabd_deeb_eb04, .response, testbedMethods[0xbd9b_cabd_deeb_eb04]!.responseSchemaClosure
     )
@@ -15847,14 +16478,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x100b_0e08_da4b_8f1a))
       return
     }
-    let result: Result<Record, VoxError<Infallible>>
+    let voxResult: Result<Record, VoxError<Infallible>>
     do {
-      let value = try await handler.echoRecord(record: args)
-      result = .success(value)
+      let voxValue = try await handler.echoRecord(record: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoRecord_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoRecord_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x100b_0e08_da4b_8f1a, .response, testbedMethods[0x100b_0e08_da4b_8f1a]!.responseSchemaClosure
     )
@@ -15888,14 +16519,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x6975_90d3_ffc3_6703))
       return
     }
-    let result: Result<Status, VoxError<Infallible>>
+    let voxResult: Result<Status, VoxError<Infallible>>
     do {
-      let value = try await handler.echoStatus(status: args)
-      result = .success(value)
+      let voxValue = try await handler.echoStatus(status: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoStatus_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoStatus_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x6975_90d3_ffc3_6703, .response, testbedMethods[0x6975_90d3_ffc3_6703]!.responseSchemaClosure
     )
@@ -15929,14 +16560,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x2bd1_b314_9d73_ce97))
       return
     }
-    let result: Result<Tag, VoxError<Infallible>>
+    let voxResult: Result<Tag, VoxError<Infallible>>
     do {
-      let value = try await handler.echoTag(tag: args)
-      result = .success(value)
+      let voxValue = try await handler.echoTag(tag: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoTag_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoTag_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x2bd1_b314_9d73_ce97, .response, testbedMethods[0x2bd1_b314_9d73_ce97]!.responseSchemaClosure
     )
@@ -15970,14 +16601,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0x3b3d_22b0_15fa_1a3f))
       return
     }
-    let result: Result<Measurement, VoxError<Infallible>>
+    let voxResult: Result<Measurement, VoxError<Infallible>>
     do {
-      let value = try await handler.echoMeasurement(m: args)
-      result = .success(value)
+      let voxValue = try await handler.echoMeasurement(m: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoMeasurement_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoMeasurement_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0x3b3d_22b0_15fa_1a3f, .response, testbedMethods[0x3b3d_22b0_15fa_1a3f]!.responseSchemaClosure
     )
@@ -16011,14 +16642,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
           methodId: 0xe13a_477f_b964_ce28))
       return
     }
-    let result: Result<Config, VoxError<Infallible>>
+    let voxResult: Result<Config, VoxError<Infallible>>
     do {
-      let value = try await handler.echoConfig(c: args)
-      result = .success(value)
+      let voxValue = try await handler.echoConfig(c: args)
+      voxResult = .success(voxValue)
     } catch {
-      result = .failure(.indeterminate)
+      voxResult = .failure(.indeterminate)
     }
-    let respPayload = encodeTyped(result, testbed_echoConfig_ResponseEncodeProgram)
+    let respPayload = encodeTyped(voxResult, testbed_echoConfig_ResponseEncodeProgram)
     let schemas = schemaSendTracker.prepareSchemas(
       0xe13a_477f_b964_ce28, .response, testbedMethods[0xe13a_477f_b964_ce28]!.responseSchemaClosure
     )
