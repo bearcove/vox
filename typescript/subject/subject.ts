@@ -22,6 +22,7 @@ import type {
   Config,
   TaggedPoint,
   GnarlyPayload,
+  Tree,
 } from "@bearcove/vox-generated/testbed.generated.ts";
 import { TestbedClient, TestbedDispatcher } from "@bearcove/vox-generated/testbed.generated.ts";
 import { tcpConnector, acceptTcp } from "@bearcove/vox-tcp";
@@ -289,6 +290,10 @@ class TestbedService implements TestbedHandler {
 
   echoConfig(c: Config): Config {
     return c;
+  }
+
+  echoTree(tree: Tree): Tree {
+    return tree;
   }
 }
 
@@ -650,6 +655,21 @@ async function runClient() {
         if (result.tag !== shape.tag) throw new Error(`echo_shape ${shape.tag}: got ${JSON.stringify(result)}`);
       }
       console.error(`echo_shape OK (all 3 variants)`);
+      break;
+    }
+    case "echo_tree": {
+      const tree: Tree = {
+        value: 1,
+        children: [
+          { value: 2, children: [] },
+          { value: 3, children: [{ value: 4, children: [] }] },
+        ],
+      };
+      const result = await client.echoTree(tree);
+      if (JSON.stringify(result) !== JSON.stringify(tree)) {
+        throw new Error(`echo_tree: got ${JSON.stringify(result)}`);
+      }
+      console.error(`echo_tree OK`);
       break;
     }
     case "pipelining": {

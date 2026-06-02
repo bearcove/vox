@@ -168,6 +168,10 @@ pub trait Testbed {
 
     /// Echo a config back. Tests missing required field.
     async fn echo_config(&self, c: Config) -> Config;
+
+    /// Echo a recursive tree back unchanged. Tests typed-VM recursion
+    /// (`Access::Recurse` / `CallBlock`) end to end across the wire.
+    async fn echo_tree(&self, tree: Tree) -> Tree;
 }
 
 // ============================================================================
@@ -189,6 +193,15 @@ pub struct TaggedPoint {
 pub struct Point {
     pub x: i32,
     pub y: i32,
+}
+
+/// A self-recursive tree: a value plus child trees of the same type. Exercises
+/// typed-VM recursion (`Access::Recurse` lowered to `MemOp::CallBlock`) end to end
+/// — encode, the reconciling decode, and the cross-language matrix.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct Tree {
+    pub value: u32,
+    pub children: Vec<Tree>,
 }
 
 /// A struct with various field types.

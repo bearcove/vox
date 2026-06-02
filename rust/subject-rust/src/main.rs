@@ -721,6 +721,32 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
         }
+        "echo_tree" => {
+            let tree = spec_proto::Tree {
+                value: 1,
+                children: vec![
+                    spec_proto::Tree {
+                        value: 2,
+                        children: vec![],
+                    },
+                    spec_proto::Tree {
+                        value: 3,
+                        children: vec![spec_proto::Tree {
+                            value: 4,
+                            children: vec![],
+                        }],
+                    },
+                ],
+            };
+            let result = client
+                .echo_tree(tree.clone())
+                .await
+                .map_err(|e| format!("echo_tree failed: {e:?}"))?;
+            if result != tree {
+                return Err(format!("echo_tree: expected {tree:?}, got {result:?}"));
+            }
+            info!("echo_tree OK");
+        }
         other => return Err(format!("unknown CLIENT_SCENARIO: {other}")),
     }
 

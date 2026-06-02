@@ -6,7 +6,7 @@
 
 use spec_proto::{
     Canvas, Color, Config, GnarlyPayload, LookupError, MathError, Measurement, Message, Person,
-    Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint,
+    Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint, Tree,
 };
 use spec_proto::{Testbed, TestbedClient, TestbedDispatcher};
 use std::env;
@@ -266,6 +266,10 @@ impl Testbed for TestbedService {
 
     async fn echo_gnarly(&self, payload: GnarlyPayload) -> GnarlyPayload {
         payload
+    }
+
+    async fn echo_tree(&self, tree: Tree) -> Tree {
+        tree
     }
 }
 

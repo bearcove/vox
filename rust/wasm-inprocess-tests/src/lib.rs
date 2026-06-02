@@ -10,7 +10,7 @@
 use spec_proto::{
     Canvas, Color, Config, GnarlyPayload, LookupError, MathError, Measurement, Message, Person,
     Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint, Testbed, TestbedClient,
-    TestbedDispatcher,
+    TestbedDispatcher, Tree,
 };
 use vox_core::acceptor_on;
 use vox_inprocess::JsInProcessLink;
@@ -261,6 +261,10 @@ impl Testbed for TestbedService {
 
     async fn echo_gnarly(&self, payload: GnarlyPayload) -> GnarlyPayload {
         payload
+    }
+
+    async fn echo_tree(&self, tree: Tree) -> Tree {
+        tree
     }
 }
 

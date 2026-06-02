@@ -1678,7 +1678,8 @@ nonisolated(unsafe) public let MessageDescriptor: Descriptor = Descriptor(
                     ], payloadLayout: MemoryLayout<Pong>.phonLayout),
                 ])))),
       ], construct: .inPlace)))
-nonisolated(unsafe) private let MessageEncodeProgram: MemProgram = try! lowerTyped(
-  MessageDescriptor, MessageRegistry)
+nonisolated(unsafe) public let MessageDescriptorBlocks: [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) private let MessageEncodeProgram: Lowered = try! lowerTyped(
+  MessageDescriptor, MessageRegistry, MessageDescriptorBlocks)
 
 public func encodeMessage(_ value: Message) -> [UInt8] { encodeTyped(value, MessageEncodeProgram) }

@@ -62,6 +62,21 @@ pub fn schema_id_for_shape(shape: &'static Shape) -> Result<SchemaId, Error> {
     Ok(d.root)
 }
 
+/// The phon schema ids reachable from `shape`'s root that are part of a reference
+/// cycle — the schemas a typed-path codegen must emit as recursion blocks
+/// (`Access::Recurse` / `CallBlock`) rather than inlining. Exactly the keys of the
+/// derive's `descriptor_blocks` (which the Rust derive already collected via the
+/// SCC pass). Returns raw `u64` ids to match a codegen working in content ids.
+///
+/// # Errors
+/// [`Error`] if the shape cannot be lowered to a phon schema.
+pub fn recursive_schema_ids_for_shape(
+    shape: &'static Shape,
+) -> Result<std::collections::BTreeSet<u64>, Error> {
+    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    Ok(d.descriptor_blocks.keys().map(|id| id.0).collect())
+}
+
 /// Encode a `(root, schemas)` closure to self-describing bytes.
 fn encode_bundle(root: SchemaId, schemas: &[Schema]) -> Vec<u8> {
     let mut out = Vec::new();
@@ -142,8 +157,13 @@ pub fn build_decode_program<'a, T: Facet<'a>>(
         }
     }
     let reg = Registry::new(schemas);
-    let program = typed::lower_decode(writer.root, &reader.descriptor, &reg)
-        .map_err(|e| Error(format!("lower_decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+    let program = typed::lower_decode(
+        writer.root,
+        &reader.descriptor,
+        &reader.descriptor_blocks,
+        &reg,
+    )
+    .map_err(|e| Error(format!("lower_decode {}: {e:?}", T::SHAPE.type_identifier)))?;
     Ok(DecodeProgram(program))
 }
 

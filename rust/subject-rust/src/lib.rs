@@ -3,7 +3,7 @@
 
 use spec_proto::{
     Canvas, Color, Config, GnarlyPayload, LookupError, MathError, Measurement, Message, Person,
-    Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint, Testbed,
+    Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint, Testbed, Tree,
 };
 use tracing::{debug, error, info, instrument};
 use vox::{Rx, Tx};
@@ -291,5 +291,9 @@ impl Testbed for TestbedService {
 
     async fn echo_config(&self, c: Config) -> Config {
         c
+    }
+
+    async fn echo_tree(&self, tree: Tree) -> Tree {
+        tree
     }
 }

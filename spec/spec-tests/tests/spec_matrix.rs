@@ -118,6 +118,10 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_echo_shape(SPEC);
         }
         #[test]
+        fn rpc_echo_tree() {
+            testbed::run_rpc_echo_tree(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -259,6 +263,10 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_echo_shape() {
             testbed::run_subject_calls_echo_shape(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_tree() {
+            testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
         fn subject_calls_pipelining() {
@@ -399,6 +407,10 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_echo_shape(SPEC);
         }
         #[test]
+        fn rpc_echo_tree() {
+            testbed::run_rpc_echo_tree(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -540,6 +552,10 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_echo_shape() {
             testbed::run_subject_calls_echo_shape(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_tree() {
+            testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
         fn subject_calls_pipelining() {
@@ -680,6 +696,10 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_echo_shape(SPEC);
         }
         #[test]
+        fn rpc_echo_tree() {
+            testbed::run_rpc_echo_tree(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -821,6 +841,10 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_echo_shape() {
             testbed::run_subject_calls_echo_shape(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_tree() {
+            testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
         fn subject_calls_pipelining() {
@@ -961,6 +985,10 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_echo_shape(SPEC);
         }
         #[test]
+        fn rpc_echo_tree() {
+            testbed::run_rpc_echo_tree(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -1104,6 +1132,10 @@ mod lang_swift_transport_tcp {
             testbed::run_subject_calls_echo_shape(SPEC);
         }
         #[test]
+        fn subject_calls_echo_tree() {
+            testbed::run_subject_calls_echo_tree(SPEC);
+        }
+        #[test]
         fn subject_calls_pipelining() {
             testbed::run_subject_calls_pipelining(SPEC);
         }
@@ -1237,6 +1269,10 @@ mod lang_rust_server_typescript_client_tcp {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
     }
     #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
+    }
+    #[test]
     fn create_canvas() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "create_canvas");
     }
@@ -1360,6 +1396,10 @@ mod lang_typescript_server_rust_client_tcp {
     #[test]
     fn shape_area() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
+    }
+    #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
     }
     #[test]
     fn create_canvas() {
@@ -1487,6 +1527,10 @@ mod lang_typescript_server_typescript_client_tcp {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
     }
     #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
+    }
+    #[test]
     fn create_canvas() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "create_canvas");
     }
@@ -1610,6 +1654,10 @@ mod lang_rust_server_swift_client_tcp {
     #[test]
     fn shape_area() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
+    }
+    #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
     }
     #[test]
     fn create_canvas() {
@@ -1737,6 +1785,10 @@ mod lang_swift_server_rust_client_tcp {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
     }
     #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
+    }
+    #[test]
     fn create_canvas() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "create_canvas");
     }
@@ -1862,6 +1914,10 @@ mod lang_typescript_server_swift_client_tcp {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
     }
     #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
+    }
+    #[test]
     fn create_canvas() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "create_canvas");
     }
@@ -1985,6 +2041,10 @@ mod lang_swift_server_typescript_client_tcp {
     #[test]
     fn shape_area() {
         spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "shape_area");
+    }
+    #[test]
+    fn echo_tree() {
+        spec_tests::harness::run_cross_language_scenario(SERVER, CLIENT, "echo_tree");
     }
     #[test]
     fn create_canvas() {

@@ -180,7 +180,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         // the only decode path. No same-schema fallback: a missing writer schema is a
         // protocol error (the caller advertises it on the first call).
         out.push_str(&format!(
-            "        guard let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}))\n            return\n        }}\n"
+            "        guard let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, readerBlocks: {prefix}_ArgsDescriptorBlocks, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}))\n            return\n        }}\n"
         ));
         out.push_str(&format!(
             "        let args: {args_ty}\n        do {{ args = try decodeTyped(argsProgram, payload) }} catch {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"decode args\")), methodId: {id}))\n            return\n        }}\n"

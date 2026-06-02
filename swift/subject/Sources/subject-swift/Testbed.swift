@@ -211,6 +211,16 @@ public struct Config: Sendable {
   }
 }
 
+public struct Tree: Sendable {
+  public var value: UInt32
+  public var children: [Tree]
+
+  nonisolated public init(value: UInt32, children: [Tree]) {
+    self.value = value
+    self.children = children
+  }
+}
+
 // MARK: - wire error type
 
 public enum Infallible: Sendable {}
@@ -243,6 +253,7 @@ nonisolated(unsafe) let testbed_echo_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echo_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa40b_e1c5_eb24_4dd8)),
   layout: Layout(
@@ -401,6 +412,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echo_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_reverse_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5de8_e650_cc7a_124f)),
   layout: Layout(size: MemoryLayout<(String)>.size, align: MemoryLayout<(String)>.alignment),
@@ -414,6 +426,7 @@ nonisolated(unsafe) let testbed_reverse_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_reverse_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa40b_e1c5_eb24_4dd8)),
   layout: Layout(
@@ -572,6 +585,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_reverse_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_divide_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4e34_9a94_88f6_7103)),
   layout: Layout(
@@ -592,6 +606,7 @@ nonisolated(unsafe) let testbed_divide_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<Int64>.size, align: MemoryLayout<Int64>.alignment),
             access: .scalar)),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_divide_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6f0b_1a12_0e48_a192)),
   layout: Layout(
@@ -785,6 +800,7 @@ nonisolated(unsafe) let testbed_divide_ResponseDescriptor: Descriptor = Descript
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<MathError>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_divide_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_lookup_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1f74_dcfd_1f8a_321e)),
   layout: Layout(size: MemoryLayout<(UInt32)>.size, align: MemoryLayout<(UInt32)>.alignment),
@@ -798,6 +814,7 @@ nonisolated(unsafe) let testbed_lookup_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
             access: .scalar))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_lookup_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9860_7d9d_3144_cfae)),
   layout: Layout(
@@ -1025,6 +1042,7 @@ nonisolated(unsafe) let testbed_lookup_ResponseDescriptor: Descriptor = Descript
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<LookupError>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_lookup_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_sum_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
   layout: Layout(size: MemoryLayout<(Data)>.size, align: MemoryLayout<(Data)>.alignment),
@@ -1038,6 +1056,7 @@ nonisolated(unsafe) let testbed_sum_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_sum_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xe7a0_d782_b8cf_c829)),
   layout: Layout(
@@ -1196,6 +1215,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_sum_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generate_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
   layout: Layout(
@@ -1216,6 +1236,7 @@ nonisolated(unsafe) let testbed_generate_ArgsDescriptor: Descriptor = Descriptor
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_generate_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -1373,6 +1394,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_generate_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
   layout: Layout(
@@ -1393,6 +1415,8 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptor: Descriptor 
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -1550,6 +1574,8 @@ nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descrip
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
   layout: Layout(
@@ -1570,6 +1596,7 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptor: Descriptor = D
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -1727,6 +1754,8 @@ nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_transform_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb6a6_8f26_51e5_1847)),
   layout: Layout(
@@ -1747,6 +1776,7 @@ nonisolated(unsafe) let testbed_transform_ArgsDescriptor: Descriptor = Descripto
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_transform_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -1904,6 +1934,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_transform_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
   layout: Layout(size: MemoryLayout<(Data)>.size, align: MemoryLayout<(Data)>.alignment),
@@ -1917,6 +1948,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDescriptor: Descriptor = D
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_postReplyGenerate_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -2074,6 +2106,8 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_postReplySum_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb6a6_8f26_51e5_1847)),
   layout: Layout(
@@ -2094,6 +2128,7 @@ nonisolated(unsafe) let testbed_postReplySum_ArgsDescriptor: Descriptor = Descri
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_postReplySum_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -2251,6 +2286,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoPoint_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x7ff8_8e78_869e_c387)),
   layout: Layout(size: MemoryLayout<(Point)>.size, align: MemoryLayout<(Point)>.alignment),
@@ -2281,6 +2317,7 @@ nonisolated(unsafe) let testbed_echoPoint_ArgsDescriptor: Descriptor = Descripto
                       access: .scalar)),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoPoint_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9c32_6659_5237_5af5)),
   layout: Layout(
@@ -2456,6 +2493,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_createPerson_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xdad1_25d8_13de_759d)),
   layout: Layout(
@@ -2491,6 +2529,7 @@ nonisolated(unsafe) let testbed_createPerson_ArgsDescriptor: Descriptor = Descri
                     size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
                   access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_createPerson_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0cd4_8b48_c7f2_0221)),
   layout: Layout(
@@ -2683,6 +2722,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_createPerson_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_rectangleArea_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xaab3_a8ad_add2_7279)),
   layout: Layout(size: MemoryLayout<(Rectangle)>.size, align: MemoryLayout<(Rectangle)>.alignment),
@@ -2764,6 +2804,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ArgsDescriptor: Descriptor = Descr
                       ))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_rectangleArea_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x36c9_dacd_c09f_0c17)),
   layout: Layout(
@@ -2922,6 +2963,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_parseColor_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5de8_e650_cc7a_124f)),
   layout: Layout(size: MemoryLayout<(String)>.size, align: MemoryLayout<(String)>.alignment),
@@ -2935,6 +2977,7 @@ nonisolated(unsafe) let testbed_parseColor_ArgsDescriptor: Descriptor = Descript
             layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_parseColor_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8491_f02e_2f36_1a92)),
   layout: Layout(
@@ -3141,6 +3184,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_parseColor_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_shapeArea_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x191a_fdc0_4fd3_2d16)),
   layout: Layout(size: MemoryLayout<(Shape)>.size, align: MemoryLayout<(Shape)>.alignment),
@@ -3237,6 +3281,7 @@ nonisolated(unsafe) let testbed_shapeArea_ArgsDescriptor: Descriptor = Descripto
                     wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                 ]))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_shapeArea_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x36c9_dacd_c09f_0c17)),
   layout: Layout(
@@ -3395,6 +3440,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_createCanvas_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x53cc_f1af_fbbc_c42d)),
   layout: Layout(
@@ -3555,6 +3601,7 @@ nonisolated(unsafe) let testbed_createCanvas_ArgsDescriptor: Descriptor = Descri
                     wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                 ])))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_createCanvas_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1d10_69b5_f959_89fd)),
   layout: Layout(
@@ -3885,6 +3932,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoGnarly_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x403a_1e92_5952_6407)),
   layout: Layout(
@@ -4324,6 +4372,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ArgsDescriptor: Descriptor = Descript
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoGnarly_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x442d_b813_0bbe_8cf3)),
   layout: Layout(
@@ -4924,6 +4973,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_processMessage_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc194_4d95_92b9_cc2c)),
   layout: Layout(size: MemoryLayout<(Message)>.size, align: MemoryLayout<(Message)>.alignment),
@@ -5021,6 +5071,7 @@ nonisolated(unsafe) let testbed_processMessage_ArgsDescriptor: Descriptor = Desc
                     ], payloadLayout: MemoryLayout<Data>.phonLayout),
                 ]))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_processMessage_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xea8b_7645_9b7d_fba0)),
   layout: Layout(
@@ -5267,6 +5318,8 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_processMessage_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_getPoints_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1f74_dcfd_1f8a_321e)),
   layout: Layout(size: MemoryLayout<(UInt32)>.size, align: MemoryLayout<(UInt32)>.alignment),
@@ -5280,6 +5333,7 @@ nonisolated(unsafe) let testbed_getPoints_ArgsDescriptor: Descriptor = Descripto
             layout: Layout(size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
             access: .scalar))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_getPoints_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x5d26_cffd_4e85_1c85)),
   layout: Layout(
@@ -5462,6 +5516,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_getPoints_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_swapPair_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x61ff_33d8_9cfe_8490)),
   layout: Layout(
@@ -5495,6 +5550,7 @@ nonisolated(unsafe) let testbed_swapPair_ArgsDescriptor: Descriptor = Descriptor
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_swapPair_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8f14_292d_cb9b_e55b)),
   layout: Layout(
@@ -5677,6 +5733,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_swapPair_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoBytes_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x78f2_65ad_9f57_691e)),
   layout: Layout(size: MemoryLayout<(Data)>.size, align: MemoryLayout<(Data)>.alignment),
@@ -5690,6 +5747,7 @@ nonisolated(unsafe) let testbed_echoBytes_ArgsDescriptor: Descriptor = Descripto
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoBytes_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef05_bb23_1efe_35be)),
   layout: Layout(
@@ -5847,6 +5905,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoBool_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xead4_0bc4_96a5_38f5)),
   layout: Layout(size: MemoryLayout<(Bool)>.size, align: MemoryLayout<(Bool)>.alignment),
@@ -5860,6 +5919,7 @@ nonisolated(unsafe) let testbed_echoBool_ArgsDescriptor: Descriptor = Descriptor
             layout: Layout(size: MemoryLayout<Bool>.size, align: MemoryLayout<Bool>.alignment),
             access: .scalar))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoBool_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x05e5_08ed_abe6_1a65)),
   layout: Layout(
@@ -6017,6 +6077,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoBool_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoU64_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc167_9e74_6a3c_4865)),
   layout: Layout(size: MemoryLayout<(UInt64)>.size, align: MemoryLayout<(UInt64)>.alignment),
@@ -6030,6 +6091,7 @@ nonisolated(unsafe) let testbed_echoU64_ArgsDescriptor: Descriptor = Descriptor(
             layout: Layout(size: MemoryLayout<UInt64>.size, align: MemoryLayout<UInt64>.alignment),
             access: .scalar))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoU64_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9e68_ea22_35d9_3672)),
   layout: Layout(
@@ -6188,6 +6250,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoU64_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoOptionString_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xd5e9_4240_5ce8_f027)),
   layout: Layout(size: MemoryLayout<(String?)>.size, align: MemoryLayout<(String?)>.alignment),
@@ -6209,6 +6272,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ArgsDescriptor: Descriptor = De
                     size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
                   access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoOptionString_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xd0db_9b65_fa9b_8844)),
   layout: Layout(
@@ -6374,6 +6438,8 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_sumLarge_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xa874_1991_5e12_3842)),
   layout: Layout(size: MemoryLayout<(Data)>.size, align: MemoryLayout<(Data)>.alignment),
@@ -6387,6 +6453,7 @@ nonisolated(unsafe) let testbed_sumLarge_ArgsDescriptor: Descriptor = Descriptor
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_sumLarge_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xe7a0_d782_b8cf_c829)),
   layout: Layout(
@@ -6545,6 +6612,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generateLarge_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
   layout: Layout(
@@ -6565,6 +6633,7 @@ nonisolated(unsafe) let testbed_generateLarge_ArgsDescriptor: Descriptor = Descr
             layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
             access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_generateLarge_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
   layout: Layout(
@@ -6722,10 +6791,12 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_allColors_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
   layout: Layout(size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
   access: .scalar)
+nonisolated(unsafe) let testbed_allColors_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc176_4926_08a1_c63f)),
   layout: Layout(
@@ -6932,6 +7003,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_allColors_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_describePoint_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb532_0808_0224_fc2f)),
   layout: Layout(
@@ -6965,6 +7037,7 @@ nonisolated(unsafe) let testbed_describePoint_ArgsDescriptor: Descriptor = Descr
             layout: Layout(size: MemoryLayout<Bool>.size, align: MemoryLayout<Bool>.alignment),
             access: .scalar)),
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_describePoint_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xee6c_127c_6bb3_53e3)),
   layout: Layout(
@@ -7156,6 +7229,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_describePoint_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoShape_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x191a_fdc0_4fd3_2d16)),
   layout: Layout(size: MemoryLayout<(Shape)>.size, align: MemoryLayout<(Shape)>.alignment),
@@ -7252,6 +7326,7 @@ nonisolated(unsafe) let testbed_echoShape_ArgsDescriptor: Descriptor = Descripto
                     wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                 ]))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoShape_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x1780_b3a5_e062_b2a7)),
   layout: Layout(
@@ -7496,6 +7571,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoShape_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoStatusV1_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0429_8c79_019a_0e71)),
   layout: Layout(size: MemoryLayout<(Status)>.size, align: MemoryLayout<(Status)>.alignment),
@@ -7542,6 +7618,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ArgsDescriptor: Descriptor = Descri
                     wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                 ]))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoStatusV1_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef48_b0f8_1fce_aad5)),
   layout: Layout(
@@ -7733,6 +7810,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoTagV1_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x56bf_b591_1622_a4e8)),
   layout: Layout(size: MemoryLayout<(Tag)>.size, align: MemoryLayout<(Tag)>.alignment),
@@ -7770,6 +7848,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ArgsDescriptor: Descriptor = Descripto
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoTagV1_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9234_7142_0d12_ed66)),
   layout: Layout(
@@ -7951,6 +8030,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoProfile_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6b04_d781_087b_195b)),
   layout: Layout(size: MemoryLayout<(Profile)>.size, align: MemoryLayout<(Profile)>.alignment),
@@ -7982,6 +8062,7 @@ nonisolated(unsafe) let testbed_echoProfile_ArgsDescriptor: Descriptor = Descrip
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoProfile_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb846_cefd_aa87_0e66)),
   layout: Layout(
@@ -8157,6 +8238,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoRecord_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x03ba_2164_48a2_9bdb)),
   layout: Layout(size: MemoryLayout<(Record)>.size, align: MemoryLayout<(Record)>.alignment),
@@ -8194,6 +8276,7 @@ nonisolated(unsafe) let testbed_echoRecord_ArgsDescriptor: Descriptor = Descript
                       access: .scalar)),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoRecord_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x57e7_05b3_5162_4c54)),
   layout: Layout(
@@ -8376,6 +8459,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoStatus_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0429_8c79_019a_0e71)),
   layout: Layout(size: MemoryLayout<(Status)>.size, align: MemoryLayout<(Status)>.alignment),
@@ -8422,6 +8506,7 @@ nonisolated(unsafe) let testbed_echoStatus_ArgsDescriptor: Descriptor = Descript
                     wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
                 ]))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoStatus_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xef48_b0f8_1fce_aad5)),
   layout: Layout(
@@ -8613,6 +8698,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoTag_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x56bf_b591_1622_a4e8)),
   layout: Layout(size: MemoryLayout<(Tag)>.size, align: MemoryLayout<(Tag)>.alignment),
@@ -8650,6 +8736,7 @@ nonisolated(unsafe) let testbed_echoTag_ArgsDescriptor: Descriptor = Descriptor(
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoTag_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9234_7142_0d12_ed66)),
   layout: Layout(
@@ -8831,6 +8918,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoTag_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoMeasurement_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x9682_cd83_92fb_e56a)),
   layout: Layout(
@@ -8863,6 +8951,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ArgsDescriptor: Descriptor = Des
                       access: .scalar)),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoMeasurement_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x8df1_0dc3_2f6b_fae7)),
   layout: Layout(
@@ -9040,6 +9129,8 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
 nonisolated(unsafe) let testbed_echoConfig_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x11e0_1a6d_10db_566f)),
   layout: Layout(size: MemoryLayout<(Config)>.size, align: MemoryLayout<(Config)>.alignment),
@@ -9070,6 +9161,7 @@ nonisolated(unsafe) let testbed_echoConfig_ArgsDescriptor: Descriptor = Descript
                       access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
                 ], construct: .inPlace))))
       ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoConfig_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc54e_add5_d706_4851)),
   layout: Layout(
@@ -9245,6 +9337,261 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                     ]))))
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
+nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_echoTree_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x035a_98f5_da81_ba57)),
+  layout: Layout(size: MemoryLayout<(Tree)>.size, align: MemoryLayout<(Tree)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+            layout: Layout(size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+            access: .recurse))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoTree_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [
+  SchemaId(0x92c9_3c64_3ea2_ec14): Descriptor(
+    schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+    layout: Layout(size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+    access: .record(
+      RecordAccess(
+        fields: [
+          FieldAccess(
+            offset: MemoryLayout<Tree>.offset(of: \Tree.value)!,
+            descriptor: Descriptor(
+              schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+              layout: Layout(
+                size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
+              access: .scalar)),
+          FieldAccess(
+            offset: MemoryLayout<Tree>.offset(of: \Tree.children)!,
+            descriptor: Descriptor(
+              schema: .concrete(SchemaId(0x1ad6_c901_d92a_428e)),
+              layout: Layout(
+                size: MemoryLayout<[Tree]>.size, align: MemoryLayout<[Tree]>.alignment),
+              access: .sequence(
+                SequenceAccess(
+                  element: Descriptor(
+                    schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+                    layout: Layout(
+                      size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+                    access: .recurse), stride: MemoryLayout<Tree>.stride,
+                  elemAlign: MemoryLayout<Tree>.alignment, witness: .of(Tree.self))))),
+        ], construct: .inPlace)))
+]
+nonisolated(unsafe) let testbed_echoTree_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xb773_14f1_2fef_ea68)),
+  layout: Layout(
+    size: MemoryLayout<Result<Tree, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<Tree, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<Tree, VoxError<Infallible>>.self).pointee {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<Tree, VoxError<Infallible>>.self).pointee {
+        case .success(let f0): scratch.assumingMemoryBound(to: Tree.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: Tree.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<Tree, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: Tree.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<Tree, VoxError<Infallible>>.self).initialize(to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x65dc_03e4_b239_fe5c)),
+                layout: Layout(size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+                access: .record(
+                  RecordAccess(
+                    fields: [
+                      FieldAccess(
+                        offset: MemoryLayout<Tree>.offset(of: \Tree.value)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                          layout: Layout(
+                            size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
+                          access: .scalar)),
+                      FieldAccess(
+                        offset: MemoryLayout<Tree>.offset(of: \Tree.children)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x1ad6_c901_d92a_428e)),
+                          layout: Layout(
+                            size: MemoryLayout<[Tree]>.size, align: MemoryLayout<[Tree]>.alignment),
+                          access: .sequence(
+                            SequenceAccess(
+                              element: Descriptor(
+                                schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+                                layout: Layout(
+                                  size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment
+                                ), access: .recurse), stride: MemoryLayout<Tree>.stride,
+                              elemAlign: MemoryLayout<Tree>.alignment, witness: .of(Tree.self))))),
+                    ], construct: .inPlace))))
+          ], payloadLayout: MemoryLayout<Tree>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
+                          to: f0)
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
+                          .deinitialize(count: 1)
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
+                          .move()
+                        v = .user(f0)
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_echoTree_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [
+  SchemaId(0x92c9_3c64_3ea2_ec14): Descriptor(
+    schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+    layout: Layout(size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+    access: .record(
+      RecordAccess(
+        fields: [
+          FieldAccess(
+            offset: MemoryLayout<Tree>.offset(of: \Tree.value)!,
+            descriptor: Descriptor(
+              schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+              layout: Layout(
+                size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
+              access: .scalar)),
+          FieldAccess(
+            offset: MemoryLayout<Tree>.offset(of: \Tree.children)!,
+            descriptor: Descriptor(
+              schema: .concrete(SchemaId(0x1ad6_c901_d92a_428e)),
+              layout: Layout(
+                size: MemoryLayout<[Tree]>.size, align: MemoryLayout<[Tree]>.alignment),
+              access: .sequence(
+                SequenceAccess(
+                  element: Descriptor(
+                    schema: .concrete(SchemaId(0x92c9_3c64_3ea2_ec14)),
+                    layout: Layout(
+                      size: MemoryLayout<Tree>.size, align: MemoryLayout<Tree>.alignment),
+                    access: .recurse), stride: MemoryLayout<Tree>.stride,
+                  elemAlign: MemoryLayout<Tree>.alignment, witness: .of(Tree.self))))),
+        ], construct: .inPlace)))
+]
 
 public let testbedMethods: [UInt64: PhonMethodSchemas] = [
   0x880b_c4ee_e235_74be: PhonMethodSchemas(
@@ -9263,6 +9610,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_echo_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echo_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
     responseRoot: SchemaId(0xa40b_e1c5_eb24_4dd8),
     responseSchemaClosure: [
@@ -9326,6 +9674,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echo_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echo_ResponseDescriptorBlocks,
     channels: []),
   0x1c22_3f30_e180_392a: PhonMethodSchemas(
     argsRoot: SchemaId(0x5de8_e650_cc7a_124f),
@@ -9343,6 +9692,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_reverse_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_reverse_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
     responseRoot: SchemaId(0xa40b_e1c5_eb24_4dd8),
     responseSchemaClosure: [
@@ -9406,6 +9756,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_reverse_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_reverse_ResponseDescriptorBlocks,
     channels: []),
   0xfb68_d931_8f83_0875: PhonMethodSchemas(
     argsRoot: SchemaId(0x4e34_9a94_88f6_7103),
@@ -9427,6 +9778,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_divide_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_divide_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xc6eb_8c46_f1e1_7fba),
     responseRoot: SchemaId(0x6f0b_1a12_0e48_a192),
     responseSchemaClosure: [
@@ -9496,6 +9848,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 116, 0,
     ],
     responseDescriptor: testbed_divide_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_divide_ResponseDescriptorBlocks,
     channels: []),
   0xa15f_f520_9471_2a3b: PhonMethodSchemas(
     argsRoot: SchemaId(0x1f74_dcfd_1f8a_321e),
@@ -9513,6 +9866,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_lookup_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_lookup_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x59fe_6eda_092a_980c),
     responseRoot: SchemaId(0x9860_7d9d_3144_cfae),
     responseSchemaClosure: [
@@ -9608,6 +9962,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     responseDescriptor: testbed_lookup_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_lookup_ResponseDescriptorBlocks,
     channels: []),
   0x51f9_cfd8_e865_77c9: PhonMethodSchemas(
     argsRoot: SchemaId(0xa874_1991_5e12_3842),
@@ -9625,6 +9980,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       1,
     ],
     argsDescriptor: testbed_sum_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_sum_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xc6eb_8c46_f1e1_7fba),
     responseRoot: SchemaId(0xe7a0_d782_b8cf_c829),
     responseSchemaClosure: [
@@ -9688,6 +10044,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_sum_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_sum_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -9713,6 +10070,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_generate_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_generate_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -9776,6 +10134,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generate_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_generate_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -9801,6 +10160,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_generateRetryNonIdem_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_generateRetryNonIdem_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -9864,6 +10224,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_generateRetryNonIdem_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -9889,6 +10250,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_generateRetryIdem_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_generateRetryIdem_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -9952,6 +10314,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateRetryIdem_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_generateRetryIdem_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -9977,6 +10340,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_transform_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_transform_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -10040,6 +10404,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_transform_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_transform_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 0, isTx: false, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
@@ -10064,6 +10429,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       1,
     ],
     argsDescriptor: testbed_postReplyGenerate_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_postReplyGenerate_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -10127,6 +10493,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_postReplyGenerate_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_postReplyGenerate_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 0, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -10152,6 +10519,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_postReplySum_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_postReplySum_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -10215,6 +10583,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_postReplySum_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_postReplySum_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -10253,6 +10622,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoPoint_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoPoint_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x938f_9f43_baeb_7b81),
     responseRoot: SchemaId(0x9c32_6659_5237_5af5),
     responseSchemaClosure: [
@@ -10330,6 +10700,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoPoint_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoPoint_ResponseDescriptorBlocks,
     channels: []),
   0x68ff_a90b_7728_bde7: PhonMethodSchemas(
     argsRoot: SchemaId(0xdad1_25d8_13de_759d),
@@ -10362,6 +10733,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_createPerson_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_createPerson_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x59fe_6eda_092a_980c),
     responseRoot: SchemaId(0x0cd4_8b48_c7f2_0221),
     responseSchemaClosure: [
@@ -10451,6 +10823,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_createPerson_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_createPerson_ResponseDescriptorBlocks,
     channels: []),
   0x223f_e028_2d26_3107: PhonMethodSchemas(
     argsRoot: SchemaId(0xaab3_a8ad_add2_7279),
@@ -10509,6 +10882,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_rectangleArea_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_rectangleArea_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x3f2e_589d_b81e_95bf),
     responseRoot: SchemaId(0x36c9_dacd_c09f_0c17),
     responseSchemaClosure: [
@@ -10572,6 +10946,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_rectangleArea_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_rectangleArea_ResponseDescriptorBlocks,
     channels: []),
   0xd4f1_6ea9_eca1_32e6: PhonMethodSchemas(
     argsRoot: SchemaId(0x5de8_e650_cc7a_124f),
@@ -10589,6 +10964,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_parseColor_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_parseColor_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xed7d_574e_e3bf_ad95),
     responseRoot: SchemaId(0x8491_f02e_2f36_1a92),
     responseSchemaClosure: [
@@ -10672,6 +11048,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_parseColor_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_parseColor_ResponseDescriptorBlocks,
     channels: []),
   0x0438_5a4b_e2a8_82f5: PhonMethodSchemas(
     argsRoot: SchemaId(0x191a_fdc0_4fd3_2d16),
@@ -10717,6 +11094,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     argsDescriptor: testbed_shapeArea_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_shapeArea_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x3f2e_589d_b81e_95bf),
     responseRoot: SchemaId(0x36c9_dacd_c09f_0c17),
     responseSchemaClosure: [
@@ -10780,6 +11158,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_shapeArea_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_shapeArea_ResponseDescriptorBlocks,
     channels: []),
   0xef42_1eb5_b08c_973a: PhonMethodSchemas(
     argsRoot: SchemaId(0x53cc_f1af_fbbc_c42d),
@@ -10854,6 +11233,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     argsDescriptor: testbed_createCanvas_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_createCanvas_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xb48f_0681_3294_888c),
     responseRoot: SchemaId(0x1d10_69b5_f959_89fd),
     responseSchemaClosure: [
@@ -10985,6 +11365,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_createCanvas_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_createCanvas_ResponseDescriptorBlocks,
     channels: []),
   0xb6fa_cae6_a7a8_6e99: PhonMethodSchemas(
     argsRoot: SchemaId(0x403a_1e92_5952_6407),
@@ -11187,6 +11568,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_echoGnarly_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoGnarly_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x8fd3_a2a9_28d9_729f),
     responseRoot: SchemaId(0x442d_b813_0bbe_8cf3),
     responseSchemaClosure: [
@@ -11436,6 +11818,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_echoGnarly_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoGnarly_ResponseDescriptorBlocks,
     channels: []),
   0xe08f_0f52_54e7_a997: PhonMethodSchemas(
     argsRoot: SchemaId(0xc194_4d95_92b9_cc2c),
@@ -11480,6 +11863,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       242, 84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_processMessage_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_processMessage_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xc5d7_b515_5a05_7226),
     responseRoot: SchemaId(0xea8b_7645_9b7d_fba0),
     responseSchemaClosure: [
@@ -11570,6 +11954,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_processMessage_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_processMessage_ResponseDescriptorBlocks,
     channels: []),
   0x5985_1852_3a62_66bf: PhonMethodSchemas(
     argsRoot: SchemaId(0x1f74_dcfd_1f8a_321e),
@@ -11587,6 +11972,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_getPoints_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_getPoints_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x7990_ee82_531e_2c77),
     responseRoot: SchemaId(0x5d26_cffd_4e85_1c85),
     responseSchemaClosure: [
@@ -11671,6 +12057,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_getPoints_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_getPoints_ResponseDescriptorBlocks,
     channels: []),
   0x7d55_a713_ad61_2bf2: PhonMethodSchemas(
     argsRoot: SchemaId(0x61ff_33d8_9cfe_8490),
@@ -11702,6 +12089,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_swapPair_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_swapPair_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x705a_52fc_4e66_12b6),
     responseRoot: SchemaId(0x8f14_292d_cb9b_e55b),
     responseSchemaClosure: [
@@ -11779,6 +12167,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_swapPair_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_swapPair_ResponseDescriptorBlocks,
     channels: []),
   0x4405_6c78_42fa_336c: PhonMethodSchemas(
     argsRoot: SchemaId(0x78f2_65ad_9f57_691e),
@@ -11802,6 +12191,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_echoBytes_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoBytes_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xaa06_67df_4299_d151),
     responseRoot: SchemaId(0xef05_bb23_1efe_35be),
     responseSchemaClosure: [
@@ -11871,6 +12261,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoBytes_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoBytes_ResponseDescriptorBlocks,
     channels: []),
   0x5136_d8f0_1a5f_496c: PhonMethodSchemas(
     argsRoot: SchemaId(0xead4_0bc4_96a5_38f5),
@@ -11888,6 +12279,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_echoBool_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoBool_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x1783_67a8_7f66_fb46),
     responseRoot: SchemaId(0x05e5_08ed_abe6_1a65),
     responseSchemaClosure: [
@@ -11951,6 +12343,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_echoBool_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoBool_ResponseDescriptorBlocks,
     channels: []),
   0x85e2_380d_bf7f_fe65: PhonMethodSchemas(
     argsRoot: SchemaId(0xc167_9e74_6a3c_4865),
@@ -11968,6 +12361,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_echoU64_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoU64_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xd935_6298_b816_39ac),
     responseRoot: SchemaId(0x9e68_ea22_35d9_3672),
     responseSchemaClosure: [
@@ -12031,6 +12425,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_echoU64_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoU64_ResponseDescriptorBlocks,
     channels: []),
   0xb1a5_bfd2_05b3_fbfc: PhonMethodSchemas(
     argsRoot: SchemaId(0xd5e9_4240_5ce8_f027),
@@ -12054,6 +12449,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
     ],
     argsDescriptor: testbed_echoOptionString_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoOptionString_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x6a00_95b8_e9d4_8792),
     responseRoot: SchemaId(0xd0db_9b65_fa9b_8844),
     responseSchemaClosure: [
@@ -12124,6 +12520,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_echoOptionString_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoOptionString_ResponseDescriptorBlocks,
     channels: []),
   0x9a7b_ed54_5e08_8054: PhonMethodSchemas(
     argsRoot: SchemaId(0xa874_1991_5e12_3842),
@@ -12141,6 +12538,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       1,
     ],
     argsDescriptor: testbed_sumLarge_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_sumLarge_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xc6eb_8c46_f1e1_7fba),
     responseRoot: SchemaId(0xe7a0_d782_b8cf_c829),
     responseSchemaClosure: [
@@ -12204,6 +12602,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_sumLarge_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_sumLarge_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 0, isTx: false, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -12229,6 +12628,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_generateLarge_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_generateLarge_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
     responseSchemaClosure: [
@@ -12292,6 +12692,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0,
     ],
     responseDescriptor: testbed_generateLarge_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_generateLarge_ResponseDescriptorBlocks,
     channels: [
       PhonChannelMeta(
         index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
@@ -12301,6 +12702,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
     argsRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     argsSchemaClosure: [32, 199, 45, 154, 36, 51, 92, 188, 0, 0, 0, 0],
     argsDescriptor: testbed_allColors_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_allColors_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xf227_732d_dc87_879f),
     responseRoot: SchemaId(0xc176_4926_08a1_c63f),
     responseSchemaClosure: [
@@ -12383,6 +12785,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_allColors_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_allColors_ResponseDescriptorBlocks,
     channels: []),
   0x62fe_b14a_8fcf_9b6d: PhonMethodSchemas(
     argsRoot: SchemaId(0xb532_0808_0224_fc2f),
@@ -12413,6 +12816,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_describePoint_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_describePoint_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xc00c_7990_6c37_1943),
     responseRoot: SchemaId(0xee6c_127c_6bb3_53e3),
     responseSchemaClosure: [
@@ -12500,6 +12904,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_describePoint_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_describePoint_ResponseDescriptorBlocks,
     channels: []),
   0x4125_b5e6_78b7_b4a5: PhonMethodSchemas(
     argsRoot: SchemaId(0x191a_fdc0_4fd3_2d16),
@@ -12545,6 +12950,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     argsDescriptor: testbed_echoShape_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoShape_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xa663_a63c_12e3_6ddd),
     responseRoot: SchemaId(0x1780_b3a5_e062_b2a7),
     responseSchemaClosure: [
@@ -12636,6 +13042,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoShape_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoShape_ResponseDescriptorBlocks,
     channels: []),
   0xc7c5_aa84_5cfb_8bf6: PhonMethodSchemas(
     argsRoot: SchemaId(0x0429_8c79_019a_0e71),
@@ -12663,6 +13070,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     argsDescriptor: testbed_echoStatusV1_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoStatusV1_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xa7ea_3a24_3944_03ca),
     responseRoot: SchemaId(0xef48_b0f8_1fce_aad5),
     responseSchemaClosure: [
@@ -12737,6 +13145,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_echoStatusV1_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoStatusV1_ResponseDescriptorBlocks,
     channels: []),
   0x6619_071b_e5d5_c259: PhonMethodSchemas(
     argsRoot: SchemaId(0x56bf_b591_1622_a4e8),
@@ -12773,6 +13182,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoTagV1_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoTagV1_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xabcc_7d47_c87c_6b88),
     responseRoot: SchemaId(0x9234_7142_0d12_ed66),
     responseSchemaClosure: [
@@ -12855,6 +13265,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoTagV1_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoTagV1_ResponseDescriptorBlocks,
     channels: []),
   0xbd9b_cabd_deeb_eb04: PhonMethodSchemas(
     argsRoot: SchemaId(0x6b04_d781_087b_195b),
@@ -12886,6 +13297,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoProfile_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoProfile_ArgsDescriptorBlocks,
     okRoot: SchemaId(0x1175_3b64_49f3_3152),
     responseRoot: SchemaId(0xb846_cefd_aa87_0e66),
     responseSchemaClosure: [
@@ -12963,6 +13375,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoProfile_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoProfile_ResponseDescriptorBlocks,
     channels: []),
   0x100b_0e08_da4b_8f1a: PhonMethodSchemas(
     argsRoot: SchemaId(0x03ba_2164_48a2_9bdb),
@@ -12999,6 +13412,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoRecord_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoRecord_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xac8e_3430_b7bd_47f2),
     responseRoot: SchemaId(0x57e7_05b3_5162_4c54),
     responseSchemaClosure: [
@@ -13081,6 +13495,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoRecord_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoRecord_ResponseDescriptorBlocks,
     channels: []),
   0x6975_90d3_ffc3_6703: PhonMethodSchemas(
     argsRoot: SchemaId(0x0429_8c79_019a_0e71),
@@ -13108,6 +13523,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
     ],
     argsDescriptor: testbed_echoStatus_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoStatus_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xa7ea_3a24_3944_03ca),
     responseRoot: SchemaId(0xef48_b0f8_1fce_aad5),
     responseSchemaClosure: [
@@ -13182,6 +13598,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0,
     ],
     responseDescriptor: testbed_echoStatus_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoStatus_ResponseDescriptorBlocks,
     channels: []),
   0x2bd1_b314_9d73_ce97: PhonMethodSchemas(
     argsRoot: SchemaId(0x56bf_b591_1622_a4e8),
@@ -13218,6 +13635,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoTag_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoTag_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xabcc_7d47_c87c_6b88),
     responseRoot: SchemaId(0x9234_7142_0d12_ed66),
     responseSchemaClosure: [
@@ -13300,6 +13718,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoTag_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoTag_ResponseDescriptorBlocks,
     channels: []),
   0x3b3d_22b0_15fa_1a3f: PhonMethodSchemas(
     argsRoot: SchemaId(0x9682_cd83_92fb_e56a),
@@ -13332,6 +13751,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       100, 1, 1,
     ],
     argsDescriptor: testbed_echoMeasurement_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoMeasurement_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xa6b4_e33c_6611_71a9),
     responseRoot: SchemaId(0x8df1_0dc3_2f6b_fae7),
     responseSchemaClosure: [
@@ -13410,6 +13830,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoMeasurement_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoMeasurement_ResponseDescriptorBlocks,
     channels: []),
   0xe13a_477f_b964_ce28: PhonMethodSchemas(
     argsRoot: SchemaId(0x11e0_1a6d_10db_566f),
@@ -13441,6 +13862,7 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
     ],
     argsDescriptor: testbed_echoConfig_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoConfig_ArgsDescriptorBlocks,
     okRoot: SchemaId(0xb6c4_63ab_ba40_157e),
     responseRoot: SchemaId(0xc54e_add5_d706_4851),
     responseSchemaClosure: [
@@ -13518,6 +13940,152 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
       0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
     ],
     responseDescriptor: testbed_echoConfig_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoConfig_ResponseDescriptorBlocks,
+    channels: []),
+  0xa142_60aa_6471_15b4: PhonMethodSchemas(
+    argsRoot: SchemaId(0x035a_98f5_da81_ba57),
+    argsSchemaClosure: [
+      87, 186, 129, 218, 245, 152, 90, 3, 3, 0, 0, 0, 226, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 87, 186, 129, 218, 245, 152, 90, 3, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117,
+      99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 40, 95, 44, 41, 6, 0, 0,
+      0, 102, 105, 101, 108, 100, 115, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 1, 0, 0, 0, 48, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 20, 236, 162, 62, 100, 60, 201, 146,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 91, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 20, 236, 162, 62, 100, 60, 201, 146, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112,
+      97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83,
+      116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 4, 0, 0, 0, 84, 114, 101, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100,
+      115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 5, 0, 0, 0, 118, 97, 108, 117, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0,
+      97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
+      22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0,
+      0, 0, 99, 104, 105, 108, 100, 114, 101, 110, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 14, 97, 102, 254, 60, 36, 179, 94, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 149,
+      0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 14,
+      97, 102, 254, 60, 36, 179, 94, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4,
+      0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 20, 236, 162, 62, 100, 60, 201, 146, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_echoTree_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoTree_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x65dc_03e4_b239_fe5c),
+    responseRoot: SchemaId(0xb773_14f1_2fef_ea68),
+    responseSchemaClosure: [
+      104, 234, 239, 47, 241, 20, 115, 183, 7, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 104, 234, 239, 47, 241, 20, 115, 183, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 92,
+      254, 57, 178, 228, 3, 220, 101, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 91, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 92, 254, 57, 178, 228, 3, 220, 101, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114,
+      117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 4, 0, 0, 0, 84, 114, 101, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 2,
+      0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 5, 0, 0, 0, 118, 97, 108, 117, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114,
+      103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0,
+      0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 99,
+      104, 105, 108, 100, 114, 101, 110, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 142, 66, 42, 217, 1, 201, 214, 26, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 91, 1, 0, 0,
+      22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 20, 236, 162,
+      62, 100, 60, 201, 146, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0,
+      0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0,
+      0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0,
+      84, 114, 101, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 118, 97,
+      108, 117, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101,
+      108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 99, 104, 105, 108, 100,
+      114, 101, 110, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 14, 97, 102, 254, 60, 36, 179, 94, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83,
+      99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 14, 97, 102, 254, 60, 36, 179, 94,
+      11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0,
+      107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1,
+      0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 20, 236, 162, 62, 100, 60, 201, 146, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 142, 66, 42, 217, 1, 201, 214, 26, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 20, 236, 162, 62, 100, 60, 201, 146, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109,
+      97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241,
+      100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0,
+      85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0,
+      0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23,
+      7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7,
+      0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0,
+      0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16,
+      0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0,
+      0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4,
+      0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117,
+      116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110,
+      100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73,
+      110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102,
+      105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_echoTree_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoTree_ResponseDescriptorBlocks,
     channels: []),
 ]
 
@@ -13525,158 +14093,188 @@ nonisolated(unsafe) public let testbedRegistry: Registry = buildServiceRegistry(
 
 // MARK: - per-method encode programs
 
-nonisolated(unsafe) let testbed_echo_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echo_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echo_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echo_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_reverse_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_reverse_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_reverse_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_reverse_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_divide_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_divide_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_divide_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_divide_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_lookup_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_lookup_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_lookup_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_lookup_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sum_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sum_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generate_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generate_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generate_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryIdem_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryIdem_ResponseEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_transform_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_transform_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplyGenerate_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplyGenerate_ResponseEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_postReplySum_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_postReplySum_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoPoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoPoint_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoPoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoPoint_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createPerson_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createPerson_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createPerson_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createPerson_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_rectangleArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_rectangleArea_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_rectangleArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_rectangleArea_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_parseColor_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_parseColor_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_parseColor_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_parseColor_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_shapeArea_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_shapeArea_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_shapeArea_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_shapeArea_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createCanvas_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createCanvas_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_createCanvas_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_createCanvas_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoGnarly_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoGnarly_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoGnarly_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoGnarly_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_processMessage_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_processMessage_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_processMessage_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_processMessage_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_getPoints_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_getPoints_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_getPoints_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_getPoints_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_swapPair_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_swapPair_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_swapPair_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_swapPair_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBytes_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBytes_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBytes_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBytes_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBool_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBool_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoBool_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoBool_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoU64_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoU64_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoU64_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoU64_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoOptionString_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoOptionString_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoOptionString_ResponseEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_echoOptionString_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sumLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sumLarge_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sumLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sumLarge_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateLarge_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generateLarge_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateLarge_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generateLarge_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_allColors_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_allColors_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_allColors_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_allColors_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_describePoint_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_describePoint_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_describePoint_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_describePoint_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoShape_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoShape_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoShape_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoShape_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatusV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatusV1_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatusV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatusV1_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTagV1_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTagV1_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTagV1_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTagV1_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoProfile_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoProfile_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoProfile_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoProfile_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoRecord_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoRecord_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoRecord_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoRecord_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatus_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatus_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoStatus_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoStatus_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTag_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTag_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoTag_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoTag_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoMeasurement_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoMeasurement_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoMeasurement_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoMeasurement_ResponseDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoConfig_ArgsEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoConfig_ArgsDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_echoConfig_ResponseEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_echoConfig_ResponseDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_echo_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echo_ArgsDescriptor, testbedRegistry, testbed_echo_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echo_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echo_ResponseDescriptor, testbedRegistry, testbed_echo_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_reverse_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_reverse_ArgsDescriptor, testbedRegistry, testbed_reverse_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_reverse_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_reverse_ResponseDescriptor, testbedRegistry, testbed_reverse_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_divide_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_divide_ArgsDescriptor, testbedRegistry, testbed_divide_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_divide_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_divide_ResponseDescriptor, testbedRegistry, testbed_divide_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_lookup_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_lookup_ArgsDescriptor, testbedRegistry, testbed_lookup_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_lookup_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_lookup_ResponseDescriptor, testbedRegistry, testbed_lookup_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_sum_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sum_ArgsDescriptor, testbedRegistry, testbed_sum_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_sum_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sum_ResponseDescriptor, testbedRegistry, testbed_sum_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_generate_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generate_ArgsDescriptor, testbedRegistry, testbed_generate_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_generate_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generate_ResponseDescriptor, testbedRegistry, testbed_generate_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry,
+  testbed_generateRetryNonIdem_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry,
+    testbed_generateRetryNonIdem_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryIdem_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry,
+  testbed_generateRetryIdem_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryIdem_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry,
+  testbed_generateRetryIdem_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_transform_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_transform_ArgsDescriptor, testbedRegistry, testbed_transform_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_transform_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_transform_ResponseDescriptor, testbedRegistry, testbed_transform_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplyGenerate_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplyGenerate_ArgsDescriptor, testbedRegistry,
+  testbed_postReplyGenerate_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplyGenerate_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplyGenerate_ResponseDescriptor, testbedRegistry,
+  testbed_postReplyGenerate_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplySum_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplySum_ArgsDescriptor, testbedRegistry, testbed_postReplySum_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplySum_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplySum_ResponseDescriptor, testbedRegistry,
+  testbed_postReplySum_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoPoint_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoPoint_ArgsDescriptor, testbedRegistry, testbed_echoPoint_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoPoint_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoPoint_ResponseDescriptor, testbedRegistry, testbed_echoPoint_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_createPerson_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_createPerson_ArgsDescriptor, testbedRegistry, testbed_createPerson_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_createPerson_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_createPerson_ResponseDescriptor, testbedRegistry,
+  testbed_createPerson_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_rectangleArea_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_rectangleArea_ArgsDescriptor, testbedRegistry, testbed_rectangleArea_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_rectangleArea_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_rectangleArea_ResponseDescriptor, testbedRegistry,
+  testbed_rectangleArea_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_parseColor_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_parseColor_ArgsDescriptor, testbedRegistry, testbed_parseColor_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_parseColor_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_parseColor_ResponseDescriptor, testbedRegistry,
+  testbed_parseColor_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_shapeArea_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_shapeArea_ArgsDescriptor, testbedRegistry, testbed_shapeArea_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_shapeArea_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_shapeArea_ResponseDescriptor, testbedRegistry, testbed_shapeArea_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_createCanvas_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_createCanvas_ArgsDescriptor, testbedRegistry, testbed_createCanvas_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_createCanvas_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_createCanvas_ResponseDescriptor, testbedRegistry,
+  testbed_createCanvas_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoGnarly_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoGnarly_ArgsDescriptor, testbedRegistry, testbed_echoGnarly_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoGnarly_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoGnarly_ResponseDescriptor, testbedRegistry,
+  testbed_echoGnarly_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_processMessage_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_processMessage_ArgsDescriptor, testbedRegistry,
+  testbed_processMessage_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_processMessage_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_processMessage_ResponseDescriptor, testbedRegistry,
+  testbed_processMessage_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_getPoints_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_getPoints_ArgsDescriptor, testbedRegistry, testbed_getPoints_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_getPoints_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_getPoints_ResponseDescriptor, testbedRegistry, testbed_getPoints_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_swapPair_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_swapPair_ArgsDescriptor, testbedRegistry, testbed_swapPair_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_swapPair_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_swapPair_ResponseDescriptor, testbedRegistry, testbed_swapPair_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoBytes_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoBytes_ArgsDescriptor, testbedRegistry, testbed_echoBytes_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoBytes_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoBytes_ResponseDescriptor, testbedRegistry, testbed_echoBytes_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoBool_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoBool_ArgsDescriptor, testbedRegistry, testbed_echoBool_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoBool_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoBool_ResponseDescriptor, testbedRegistry, testbed_echoBool_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoU64_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoU64_ArgsDescriptor, testbedRegistry, testbed_echoU64_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoU64_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoU64_ResponseDescriptor, testbedRegistry, testbed_echoU64_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoOptionString_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoOptionString_ArgsDescriptor, testbedRegistry,
+  testbed_echoOptionString_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoOptionString_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoOptionString_ResponseDescriptor, testbedRegistry,
+  testbed_echoOptionString_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_sumLarge_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sumLarge_ArgsDescriptor, testbedRegistry, testbed_sumLarge_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_sumLarge_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sumLarge_ResponseDescriptor, testbedRegistry, testbed_sumLarge_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateLarge_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generateLarge_ArgsDescriptor, testbedRegistry, testbed_generateLarge_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateLarge_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generateLarge_ResponseDescriptor, testbedRegistry,
+  testbed_generateLarge_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_allColors_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_allColors_ArgsDescriptor, testbedRegistry, testbed_allColors_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_allColors_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_allColors_ResponseDescriptor, testbedRegistry, testbed_allColors_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_describePoint_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_describePoint_ArgsDescriptor, testbedRegistry, testbed_describePoint_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_describePoint_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_describePoint_ResponseDescriptor, testbedRegistry,
+  testbed_describePoint_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoShape_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoShape_ArgsDescriptor, testbedRegistry, testbed_echoShape_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoShape_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoShape_ResponseDescriptor, testbedRegistry, testbed_echoShape_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoStatusV1_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoStatusV1_ArgsDescriptor, testbedRegistry, testbed_echoStatusV1_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoStatusV1_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoStatusV1_ResponseDescriptor, testbedRegistry,
+  testbed_echoStatusV1_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTagV1_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTagV1_ArgsDescriptor, testbedRegistry, testbed_echoTagV1_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTagV1_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTagV1_ResponseDescriptor, testbedRegistry, testbed_echoTagV1_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoProfile_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoProfile_ArgsDescriptor, testbedRegistry, testbed_echoProfile_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoProfile_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoProfile_ResponseDescriptor, testbedRegistry,
+  testbed_echoProfile_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoRecord_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoRecord_ArgsDescriptor, testbedRegistry, testbed_echoRecord_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoRecord_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoRecord_ResponseDescriptor, testbedRegistry,
+  testbed_echoRecord_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoStatus_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoStatus_ArgsDescriptor, testbedRegistry, testbed_echoStatus_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoStatus_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoStatus_ResponseDescriptor, testbedRegistry,
+  testbed_echoStatus_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTag_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTag_ArgsDescriptor, testbedRegistry, testbed_echoTag_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTag_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTag_ResponseDescriptor, testbedRegistry, testbed_echoTag_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoMeasurement_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoMeasurement_ArgsDescriptor, testbedRegistry,
+  testbed_echoMeasurement_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoMeasurement_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoMeasurement_ResponseDescriptor, testbedRegistry,
+  testbed_echoMeasurement_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoConfig_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoConfig_ArgsDescriptor, testbedRegistry, testbed_echoConfig_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoConfig_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoConfig_ResponseDescriptor, testbedRegistry,
+  testbed_echoConfig_ResponseDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTree_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTree_ArgsDescriptor, testbedRegistry, testbed_echoTree_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoTree_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_echoTree_ResponseDescriptor, testbedRegistry, testbed_echoTree_ResponseDescriptorBlocks)
 
 // MARK: - per-channel element codec programs
 
@@ -13684,103 +14282,143 @@ nonisolated(unsafe) let testbed_sum_numbers_ElementDescriptor: Descriptor = Desc
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_sum_numbers_ElementEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sum_numbers_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sum_numbers_ElementDecodeProgram: MemProgram = try! lowerDecode(
-  SchemaId(0x361f_4536_eee9_f991), testbed_sum_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sum_numbers_ElementDescriptorBlocks: [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_sum_numbers_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sum_numbers_ElementDescriptor, testbedRegistry,
+  testbed_sum_numbers_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_sum_numbers_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_sum_numbers_ElementDescriptor, testbedRegistry,
+  testbed_sum_numbers_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_generate_output_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_generate_output_ElementEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_generate_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generate_output_ElementDecodeProgram: MemProgram = try! lowerDecode(
-  SchemaId(0x361f_4536_eee9_f991), testbed_generate_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_generate_output_ElementDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_generate_output_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_generate_output_ElementDescriptor, testbedRegistry,
+  testbed_generate_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_generate_output_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_generate_output_ElementDescriptor, testbedRegistry,
+  testbed_generate_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDescriptor: Descriptor =
   Descriptor(
     schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
     layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
     access: .scalar)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateRetryNonIdem_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDecodeProgram: MemProgram =
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_generateRetryNonIdem_output_ElementDescriptor, testbedRegistry,
+    testbed_generateRetryNonIdem_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDecodeProgram: Lowered =
   try! lowerDecode(
     SchemaId(0x361f_4536_eee9_f991), testbed_generateRetryNonIdem_output_ElementDescriptor,
-    testbedRegistry)
+    testbedRegistry, testbed_generateRetryNonIdem_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateRetryIdem_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDecodeProgram: MemProgram =
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_generateRetryIdem_output_ElementDescriptor, testbedRegistry,
+    testbed_generateRetryIdem_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDecodeProgram: Lowered =
   try! lowerDecode(
     SchemaId(0x361f_4536_eee9_f991), testbed_generateRetryIdem_output_ElementDescriptor,
-    testbedRegistry)
+    testbedRegistry, testbed_generateRetryIdem_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_transform_input_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
   layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
   access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))
-nonisolated(unsafe) let testbed_transform_input_ElementEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_transform_input_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_input_ElementDecodeProgram: MemProgram = try! lowerDecode(
-  SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_input_ElementDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_transform_input_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_transform_input_ElementDescriptor, testbedRegistry,
+  testbed_transform_input_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_transform_input_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_input_ElementDescriptor, testbedRegistry,
+  testbed_transform_input_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_transform_output_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
   layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
   access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))
-nonisolated(unsafe) let testbed_transform_output_ElementEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_transform_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_transform_output_ElementDecodeProgram: MemProgram =
-  try! lowerDecode(
-    SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_output_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_transform_output_ElementDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_transform_output_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_transform_output_ElementDescriptor, testbedRegistry,
+  testbed_transform_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_transform_output_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x6d7d_ce91_4ee1_50e8), testbed_transform_output_ElementDescriptor, testbedRegistry,
+  testbed_transform_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_postReplyGenerate_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDecodeProgram: MemProgram =
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_postReplyGenerate_output_ElementDescriptor, testbedRegistry,
+    testbed_postReplyGenerate_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplyGenerate_output_ElementDecodeProgram: Lowered =
   try! lowerDecode(
     SchemaId(0x361f_4536_eee9_f991), testbed_postReplyGenerate_output_ElementDescriptor,
-    testbedRegistry)
+    testbedRegistry, testbed_postReplyGenerate_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_postReplySum_input_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_postReplySum_input_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_postReplySum_input_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_input_ElementDecodeProgram: MemProgram =
-  try! lowerDecode(
-    SchemaId(0x361f_4536_eee9_f991), testbed_postReplySum_input_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_postReplySum_input_ElementDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_postReplySum_input_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplySum_input_ElementDescriptor, testbedRegistry,
+  testbed_postReplySum_input_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplySum_input_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_postReplySum_input_ElementDescriptor, testbedRegistry,
+  testbed_postReplySum_input_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_postReplySum_result_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xc6eb_8c46_f1e1_7fba)),
   layout: Layout(size: MemoryLayout<Int64>.size, align: MemoryLayout<Int64>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_postReplySum_result_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_postReplySum_result_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_postReplySum_result_ElementDecodeProgram: MemProgram =
+nonisolated(unsafe) let testbed_postReplySum_result_ElementDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_postReplySum_result_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_postReplySum_result_ElementDescriptor, testbedRegistry,
+  testbed_postReplySum_result_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_postReplySum_result_ElementDecodeProgram: Lowered =
   try! lowerDecode(
-    SchemaId(0xc6eb_8c46_f1e1_7fba), testbed_postReplySum_result_ElementDescriptor, testbedRegistry)
+    SchemaId(0xc6eb_8c46_f1e1_7fba), testbed_postReplySum_result_ElementDescriptor, testbedRegistry,
+    testbed_postReplySum_result_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_sumLarge_numbers_ElementEncodeProgram: MemProgram = try! lowerTyped(
-  testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDecodeProgram: MemProgram =
-  try! lowerDecode(
-    SchemaId(0x361f_4536_eee9_f991), testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry)
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementEncodeProgram: Lowered = try! lowerTyped(
+  testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry,
+  testbed_sumLarge_numbers_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_sumLarge_numbers_ElementDecodeProgram: Lowered = try! lowerDecode(
+  SchemaId(0x361f_4536_eee9_f991), testbed_sumLarge_numbers_ElementDescriptor, testbedRegistry,
+  testbed_sumLarge_numbers_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_generateLarge_output_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
   layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
   access: .scalar)
-nonisolated(unsafe) let testbed_generateLarge_output_ElementEncodeProgram: MemProgram =
-  try! lowerTyped(testbed_generateLarge_output_ElementDescriptor, testbedRegistry)
-nonisolated(unsafe) let testbed_generateLarge_output_ElementDecodeProgram: MemProgram =
+nonisolated(unsafe) let testbed_generateLarge_output_ElementDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_generateLarge_output_ElementEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_generateLarge_output_ElementDescriptor, testbedRegistry,
+    testbed_generateLarge_output_ElementDescriptorBlocks)
+nonisolated(unsafe) let testbed_generateLarge_output_ElementDecodeProgram: Lowered =
   try! lowerDecode(
-    SchemaId(0x361f_4536_eee9_f991), testbed_generateLarge_output_ElementDescriptor, testbedRegistry
-  )
+    SchemaId(0x361f_4536_eee9_f991), testbed_generateLarge_output_ElementDescriptor,
+    testbedRegistry, testbed_generateLarge_output_ElementDescriptorBlocks)
 
 ///  Testbed service for conformance testing.
 ///
@@ -13885,6 +14523,9 @@ public protocol TestbedCaller: Sendable {
   func echoMeasurement(m: Measurement) async throws -> Measurement
   ///  Echo a config back. Tests missing required field.
   func echoConfig(c: Config) async throws -> Config
+  ///  Echo a recursive tree back unchanged. Tests typed-VM recursion
+  ///  (`Access::Recurse` / `CallBlock`) end to end across the wire.
+  func echoTree(tree: Tree) async throws -> Tree
 }
 
 public final class TestbedClient: TestbedCaller, Sendable {
@@ -13906,7 +14547,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x880b_c4ee_e235_74be, .response, readerDescriptor: testbed_echo_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echo_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -13927,7 +14568,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x1c22_3f30_e180_392a, .response, readerDescriptor: testbed_reverse_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_reverse_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -13948,7 +14589,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xfb68_d931_8f83_0875, .response, readerDescriptor: testbed_divide_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_divide_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -13970,7 +14611,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xa15f_f520_9471_2a3b, .response, readerDescriptor: testbed_lookup_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_lookup_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14002,7 +14643,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x51f9_cfd8_e865_77c9, .response, readerDescriptor: testbed_sum_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_sum_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14034,7 +14675,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x239e_5b99_b1f8_207a, .response, readerDescriptor: testbed_generate_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_generate_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14067,7 +14708,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x3441_9529_478c_c7b8, .response,
-        readerDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor,
+        readerBlocks: testbed_generateRetryNonIdem_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14100,7 +14742,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xe2d2_7fd9_098c_6ea2, .response,
-        readerDescriptor: testbed_generateRetryIdem_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_generateRetryIdem_ResponseDescriptor,
+        readerBlocks: testbed_generateRetryIdem_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14144,7 +14787,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xcb46_9cff_8d79_8feb, .response, readerDescriptor: testbed_transform_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_transform_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14176,7 +14819,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xec36_e847_51a8_97be, .response,
-        readerDescriptor: testbed_postReplyGenerate_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_postReplyGenerate_ResponseDescriptor,
+        readerBlocks: testbed_postReplyGenerate_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14220,7 +14864,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xc1ce_3c39_7e4c_a6e7, .response, readerDescriptor: testbed_postReplySum_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_postReplySum_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14241,7 +14885,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x81f5_386d_589d_fbe4, .response, readerDescriptor: testbed_echoPoint_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoPoint_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14262,7 +14906,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x68ff_a90b_7728_bde7, .response, readerDescriptor: testbed_createPerson_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_createPerson_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14283,7 +14927,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x223f_e028_2d26_3107, .response,
-        readerDescriptor: testbed_rectangleArea_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_rectangleArea_ResponseDescriptor,
+        readerBlocks: testbed_rectangleArea_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14304,7 +14949,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xd4f1_6ea9_eca1_32e6, .response, readerDescriptor: testbed_parseColor_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_parseColor_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14325,7 +14970,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x0438_5a4b_e2a8_82f5, .response, readerDescriptor: testbed_shapeArea_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_shapeArea_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14347,7 +14992,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xef42_1eb5_b08c_973a, .response, readerDescriptor: testbed_createCanvas_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_createCanvas_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14368,7 +15013,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xb6fa_cae6_a7a8_6e99, .response, readerDescriptor: testbed_echoGnarly_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoGnarly_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14389,7 +15034,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xe08f_0f52_54e7_a997, .response,
-        readerDescriptor: testbed_processMessage_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_processMessage_ResponseDescriptor,
+        readerBlocks: testbed_processMessage_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14410,7 +15056,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x5985_1852_3a62_66bf, .response, readerDescriptor: testbed_getPoints_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_getPoints_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14431,7 +15077,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x7d55_a713_ad61_2bf2, .response, readerDescriptor: testbed_swapPair_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_swapPair_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14453,7 +15099,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x4405_6c78_42fa_336c, .response, readerDescriptor: testbed_echoBytes_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoBytes_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14474,7 +15120,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x5136_d8f0_1a5f_496c, .response, readerDescriptor: testbed_echoBool_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoBool_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14495,7 +15141,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x85e2_380d_bf7f_fe65, .response, readerDescriptor: testbed_echoU64_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoU64_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14516,7 +15162,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xb1a5_bfd2_05b3_fbfc, .response,
-        readerDescriptor: testbed_echoOptionString_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_echoOptionString_ResponseDescriptor,
+        readerBlocks: testbed_echoOptionString_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14547,7 +15194,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x9a7b_ed54_5e08_8054, .response, readerDescriptor: testbed_sumLarge_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_sumLarge_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14580,7 +15227,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x8edf_bd65_d162_f685, .response,
-        readerDescriptor: testbed_generateLarge_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_generateLarge_ResponseDescriptor,
+        readerBlocks: testbed_generateLarge_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14601,7 +15249,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xfbfb_05bb_caad_e4a0, .response, readerDescriptor: testbed_allColors_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_allColors_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14624,7 +15272,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x62fe_b14a_8fcf_9b6d, .response,
-        readerDescriptor: testbed_describePoint_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_describePoint_ResponseDescriptor,
+        readerBlocks: testbed_describePoint_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14645,7 +15294,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x4125_b5e6_78b7_b4a5, .response, readerDescriptor: testbed_echoShape_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoShape_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14666,7 +15315,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xc7c5_aa84_5cfb_8bf6, .response, readerDescriptor: testbed_echoStatusV1_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoStatusV1_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14687,7 +15336,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x6619_071b_e5d5_c259, .response, readerDescriptor: testbed_echoTagV1_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoTagV1_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14708,7 +15357,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xbd9b_cabd_deeb_eb04, .response, readerDescriptor: testbed_echoProfile_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoProfile_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14729,7 +15378,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x100b_0e08_da4b_8f1a, .response, readerDescriptor: testbed_echoRecord_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoRecord_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14750,7 +15399,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x6975_90d3_ffc3_6703, .response, readerDescriptor: testbed_echoStatus_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoStatus_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14771,7 +15420,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x2bd1_b314_9d73_ce97, .response, readerDescriptor: testbed_echoTag_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoTag_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14792,7 +15441,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x3b3d_22b0_15fa_1a3f, .response,
-        readerDescriptor: testbed_echoMeasurement_ResponseDescriptor, local: testbedRegistry)
+        readerDescriptor: testbed_echoMeasurement_ResponseDescriptor,
+        readerBlocks: testbed_echoMeasurement_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14813,11 +15463,32 @@ public final class TestbedClient: TestbedCaller, Sendable {
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0xe13a_477f_b964_ce28, .response, readerDescriptor: testbed_echoConfig_ResponseDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoConfig_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
     let result: Result<Config, VoxError<Infallible>> = try decodeTyped(respProgram, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func echoTree(tree: Tree) async throws -> Tree {
+    let payload = encodeTyped(tree, testbed_echoTree_ArgsEncodeProgram)
+    let response = try await connection.call(
+      methodId: 0xa142_60aa_6471_15b4, metadata: .null, payload: payload, retry: .volatile,
+      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xa142_60aa_6471_15b4]!, registry: testbedRegistry))
+    guard
+      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
+        0xa142_60aa_6471_15b4, .response, readerDescriptor: testbed_echoTree_ResponseDescriptor,
+        readerBlocks: testbed_echoTree_ResponseDescriptorBlocks, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Tree, VoxError<Infallible>> = try decodeTyped(respProgram, response)
     switch result {
     case .success(let value): return value
     case .failure(let error): throw error
@@ -14929,6 +15600,9 @@ public protocol TestbedHandler: Sendable {
   func echoMeasurement(m: Measurement) async throws -> Measurement
   ///  Echo a config back. Tests missing required field.
   func echoConfig(c: Config) async throws -> Config
+  ///  Echo a recursive tree back unchanged. Tests typed-VM recursion
+  ///  (`Access::Recurse` / `CallBlock`) end to end across the wire.
+  func echoTree(tree: Tree) async throws -> Tree
 }
 
 public final class TestbedDispatcher: ServiceDispatcher {
@@ -14975,6 +15649,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     case 0x2bd1_b314_9d73_ce97: return RetryPolicy(persist: false, idem: false)
     case 0x3b3d_22b0_15fa_1a3f: return RetryPolicy(persist: false, idem: false)
     case 0xe13a_477f_b964_ce28: return RetryPolicy(persist: false, idem: false)
+    case 0xa142_60aa_6471_15b4: return RetryPolicy(persist: false, idem: false)
     default: return .volatile
     }
   }
@@ -15165,6 +15840,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       await dispatch_echoConfig(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0xa142_60aa_6471_15b4:
+      await dispatch_echoTree(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     default:
       taskTx(
         .response(requestId: requestId, payload: encodeVoxError(.unknownMethod), methodId: methodId)
@@ -15179,7 +15858,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x880b_c4ee_e235_74be, .args, readerDescriptor: testbed_echo_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echo_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15220,7 +15899,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x1c22_3f30_e180_392a, .args, readerDescriptor: testbed_reverse_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_reverse_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15261,7 +15940,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xfb68_d931_8f83_0875, .args, readerDescriptor: testbed_divide_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_divide_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15305,7 +15984,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xa15f_f520_9471_2a3b, .args, readerDescriptor: testbed_lookup_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_lookup_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15350,7 +16029,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x51f9_cfd8_e865_77c9, .args, readerDescriptor: testbed_sum_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_sum_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15407,7 +16086,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x239e_5b99_b1f8_207a, .args, readerDescriptor: testbed_generate_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_generate_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15463,7 +16142,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x3441_9529_478c_c7b8, .args, readerDescriptor: testbed_generateRetryNonIdem_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_generateRetryNonIdem_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15519,7 +16198,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xe2d2_7fd9_098c_6ea2, .args, readerDescriptor: testbed_generateRetryIdem_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_generateRetryIdem_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15575,7 +16254,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xcb46_9cff_8d79_8feb, .args, readerDescriptor: testbed_transform_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_transform_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15646,7 +16325,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xec36_e847_51a8_97be, .args, readerDescriptor: testbed_postReplyGenerate_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_postReplyGenerate_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15702,7 +16381,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xc1ce_3c39_7e4c_a6e7, .args, readerDescriptor: testbed_postReplySum_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_postReplySum_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15772,7 +16451,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x81f5_386d_589d_fbe4, .args, readerDescriptor: testbed_echoPoint_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoPoint_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15813,7 +16492,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x68ff_a90b_7728_bde7, .args, readerDescriptor: testbed_createPerson_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_createPerson_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15854,7 +16533,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x223f_e028_2d26_3107, .args, readerDescriptor: testbed_rectangleArea_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_rectangleArea_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15895,7 +16574,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xd4f1_6ea9_eca1_32e6, .args, readerDescriptor: testbed_parseColor_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_parseColor_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15936,7 +16615,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x0438_5a4b_e2a8_82f5, .args, readerDescriptor: testbed_shapeArea_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_shapeArea_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -15977,7 +16656,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xef42_1eb5_b08c_973a, .args, readerDescriptor: testbed_createCanvas_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_createCanvas_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16019,7 +16698,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xb6fa_cae6_a7a8_6e99, .args, readerDescriptor: testbed_echoGnarly_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoGnarly_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16060,7 +16739,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xe08f_0f52_54e7_a997, .args, readerDescriptor: testbed_processMessage_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_processMessage_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16101,7 +16780,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x5985_1852_3a62_66bf, .args, readerDescriptor: testbed_getPoints_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_getPoints_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16142,7 +16821,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x7d55_a713_ad61_2bf2, .args, readerDescriptor: testbed_swapPair_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_swapPair_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16183,7 +16862,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x4405_6c78_42fa_336c, .args, readerDescriptor: testbed_echoBytes_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoBytes_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16224,7 +16903,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x5136_d8f0_1a5f_496c, .args, readerDescriptor: testbed_echoBool_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoBool_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16265,7 +16944,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x85e2_380d_bf7f_fe65, .args, readerDescriptor: testbed_echoU64_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoU64_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16306,7 +16985,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xb1a5_bfd2_05b3_fbfc, .args, readerDescriptor: testbed_echoOptionString_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoOptionString_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16348,7 +17027,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x9a7b_ed54_5e08_8054, .args, readerDescriptor: testbed_sumLarge_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_sumLarge_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16405,7 +17084,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x8edf_bd65_d162_f685, .args, readerDescriptor: testbed_generateLarge_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_generateLarge_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16481,7 +17160,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x62fe_b14a_8fcf_9b6d, .args, readerDescriptor: testbed_describePoint_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_describePoint_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16523,7 +17202,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x4125_b5e6_78b7_b4a5, .args, readerDescriptor: testbed_echoShape_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoShape_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16564,7 +17243,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xc7c5_aa84_5cfb_8bf6, .args, readerDescriptor: testbed_echoStatusV1_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoStatusV1_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16605,7 +17284,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x6619_071b_e5d5_c259, .args, readerDescriptor: testbed_echoTagV1_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoTagV1_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16646,7 +17325,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xbd9b_cabd_deeb_eb04, .args, readerDescriptor: testbed_echoProfile_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoProfile_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16687,7 +17366,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x100b_0e08_da4b_8f1a, .args, readerDescriptor: testbed_echoRecord_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoRecord_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16728,7 +17407,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x6975_90d3_ffc3_6703, .args, readerDescriptor: testbed_echoStatus_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoStatus_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16769,7 +17448,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x2bd1_b314_9d73_ce97, .args, readerDescriptor: testbed_echoTag_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoTag_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16810,7 +17489,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0x3b3d_22b0_15fa_1a3f, .args, readerDescriptor: testbed_echoMeasurement_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoMeasurement_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16851,7 +17530,7 @@ public final class TestbedDispatcher: ServiceDispatcher {
     guard
       let argsProgram = schemaReceiveTracker.buildDecodeProgram(
         0xe13a_477f_b964_ce28, .args, readerDescriptor: testbed_echoConfig_ArgsDescriptor,
-        local: testbedRegistry)
+        readerBlocks: testbed_echoConfig_ArgsDescriptorBlocks, local: testbedRegistry)
     else {
       taskTx(
         .response(
@@ -16882,6 +17561,47 @@ public final class TestbedDispatcher: ServiceDispatcher {
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xe13a_477f_b964_ce28,
+        schemas: schemas))
+  }
+
+  private func dispatch_echoTree(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
+        0xa142_60aa_6471_15b4, .args, readerDescriptor: testbed_echoTree_ArgsDescriptor,
+        readerBlocks: testbed_echoTree_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xa142_60aa_6471_15b4))
+      return
+    }
+    let args: (Tree)
+    do { args = try decodeTyped(argsProgram, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xa142_60aa_6471_15b4))
+      return
+    }
+    let voxResult: Result<Tree, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.echoTree(tree: args)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeTyped(voxResult, testbed_echoTree_ResponseEncodeProgram)
+    let schemas = schemaSendTracker.prepareSchemas(
+      0xa142_60aa_6471_15b4, .response, testbedMethods[0xa142_60aa_6471_15b4]!.responseSchemaClosure
+    )
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0xa142_60aa_6471_15b4,
         schemas: schemas))
   }
 

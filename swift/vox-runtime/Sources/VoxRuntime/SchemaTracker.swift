@@ -42,25 +42,34 @@ public struct PhonMethodSchemas: @unchecked Sendable {
     public let argsRoot: SchemaId
     public let argsSchemaClosure: [UInt8]
     public let argsDescriptor: Descriptor
+    /// Recursion blocks for the args descriptor's cyclic schemas (`[:]` when none) —
+    /// the `Access.recurse` stand-ins resolve into these via `CallBlock`.
+    public let argsDescriptorBlocks: [SchemaId: Descriptor]
     public let okRoot: SchemaId
     /// Root of the response wire type `Result<T, VoxError<E>>` (server encode).
     public let responseRoot: SchemaId
     public let responseSchemaClosure: [UInt8]
     public let responseDescriptor: Descriptor
+    /// Recursion blocks for the response descriptor's cyclic schemas (`[:]` when none).
+    public let responseDescriptorBlocks: [SchemaId: Descriptor]
     public let channels: [PhonChannelMeta]
 
     public init(
         argsRoot: SchemaId, argsSchemaClosure: [UInt8], argsDescriptor: Descriptor,
+        argsDescriptorBlocks: [SchemaId: Descriptor] = [:],
         okRoot: SchemaId, responseRoot: SchemaId, responseSchemaClosure: [UInt8],
-        responseDescriptor: Descriptor, channels: [PhonChannelMeta] = []
+        responseDescriptor: Descriptor, responseDescriptorBlocks: [SchemaId: Descriptor] = [:],
+        channels: [PhonChannelMeta] = []
     ) {
         self.argsRoot = argsRoot
         self.argsSchemaClosure = argsSchemaClosure
         self.argsDescriptor = argsDescriptor
+        self.argsDescriptorBlocks = argsDescriptorBlocks
         self.okRoot = okRoot
         self.responseRoot = responseRoot
         self.responseSchemaClosure = responseSchemaClosure
         self.responseDescriptor = responseDescriptor
+        self.responseDescriptorBlocks = responseDescriptorBlocks
         self.channels = channels
     }
 }
@@ -115,7 +124,7 @@ public final class SchemaTracker: @unchecked Sendable {
     private var received: [BindingKey: (root: SchemaId, schemas: [Schema])] = [:]
     /// Cache of the reconciling programs (planning is amortized: built once per writer,
     /// reused for every decode). Invalidated when a binding's writer is re-advertised.
-    private var programs: [BindingKey: MemProgram] = [:]
+    private var programs: [BindingKey: Lowered] = [:]
     private let lock = NSLock()
 
     public init() {}
@@ -148,13 +157,14 @@ public final class SchemaTracker: @unchecked Sendable {
     /// protocol error for the caller to surface — never a same-schema fallback).
     public func buildDecodeProgram(
         _ methodId: UInt64, _ direction: SchemaBindingDirection,
-        readerDescriptor: Descriptor, local: Registry
-    ) -> MemProgram? {
+        readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
+    ) -> Lowered? {
         let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }
         if let cached = programs[key] { return cached }
         guard let writer = received[key],
-            let program = try? lowerDecode(writer.root, readerDescriptor, local.with(writer.schemas))
+            let program = try? lowerDecode(
+                writer.root, readerDescriptor, local.with(writer.schemas), readerBlocks)
         else { return nil }
         programs[key] = program
         return program

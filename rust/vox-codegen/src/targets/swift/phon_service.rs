@@ -10,7 +10,7 @@ use facet_core::Shape;
 use heck::ToLowerCamelCase;
 use vox_types::{ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
-use super::phon_descriptor::descriptor_expr;
+use super::phon_descriptor::{blocks_literal, descriptor_with_blocks};
 use crate::render::hex_u64;
 
 /// The ok (success) type behind a method's declared return type.
@@ -76,13 +76,21 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     // wire type). Built once; immutable — `nonisolated(unsafe)` like the envelope.
     for m in service.methods {
         let mname = m.method_name.to_lower_camel_case();
+        let (args_desc, args_blocks) = descriptor_with_blocks(m.args_shape);
+        let (resp_desc, resp_blocks) = descriptor_with_blocks(m.response_wire_shape);
         out.push_str(&format!(
-            "nonisolated(unsafe) let {name}_{mname}_ArgsDescriptor: Descriptor = {}\n",
-            descriptor_expr(m.args_shape)
+            "nonisolated(unsafe) let {name}_{mname}_ArgsDescriptor: Descriptor = {args_desc}\n"
         ));
         out.push_str(&format!(
-            "nonisolated(unsafe) let {name}_{mname}_ResponseDescriptor: Descriptor = {}\n",
-            descriptor_expr(m.response_wire_shape)
+            "nonisolated(unsafe) let {name}_{mname}_ArgsDescriptorBlocks: [SchemaId: Descriptor] = {}\n",
+            blocks_literal(&args_blocks)
+        ));
+        out.push_str(&format!(
+            "nonisolated(unsafe) let {name}_{mname}_ResponseDescriptor: Descriptor = {resp_desc}\n"
+        ));
+        out.push_str(&format!(
+            "nonisolated(unsafe) let {name}_{mname}_ResponseDescriptorBlocks: [SchemaId: Descriptor] = {}\n",
+            blocks_literal(&resp_blocks)
         ));
     }
     out.push('\n');
@@ -109,6 +117,9 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
             "        argsDescriptor: {name}_{mname}_ArgsDescriptor,\n"
         ));
         out.push_str(&format!(
+            "        argsDescriptorBlocks: {name}_{mname}_ArgsDescriptorBlocks,\n"
+        ));
+        out.push_str(&format!(
             "        okRoot: SchemaId({}),\n",
             hex_u64(ok_root)
         ));
@@ -121,6 +132,9 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         ));
         out.push_str(&format!(
             "        responseDescriptor: {name}_{mname}_ResponseDescriptor,\n"
+        ));
+        out.push_str(&format!(
+            "        responseDescriptorBlocks: {name}_{mname}_ResponseDescriptorBlocks,\n"
         ));
         out.push_str("        channels: [");
         let mut first = true;
@@ -163,10 +177,10 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     for m in service.methods {
         let mname = m.method_name.to_lower_camel_case();
         out.push_str(&format!(
-            "nonisolated(unsafe) let {name}_{mname}_ArgsEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_ArgsDescriptor, {name}Registry)\n"
+            "nonisolated(unsafe) let {name}_{mname}_ArgsEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_ArgsDescriptor, {name}Registry, {name}_{mname}_ArgsDescriptorBlocks)\n"
         ));
         out.push_str(&format!(
-            "nonisolated(unsafe) let {name}_{mname}_ResponseEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_ResponseDescriptor, {name}Registry)\n"
+            "nonisolated(unsafe) let {name}_{mname}_ResponseEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_ResponseDescriptor, {name}Registry, {name}_{mname}_ResponseDescriptorBlocks)\n"
         ));
     }
     out.push('\n');
@@ -191,15 +205,19 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
             let element = arg
                 .channel_element
                 .expect("Tx/Rx arg must carry its channel element shape");
+            let (elem_desc, elem_blocks) = descriptor_with_blocks(element);
+            let elem_blocks_lit = blocks_literal(&elem_blocks);
             out.push_str(&format!(
-                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDescriptor: Descriptor = {}\n",
-                descriptor_expr(element)
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDescriptor: Descriptor = {elem_desc}\n"
             ));
             out.push_str(&format!(
-                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementEncodeProgram: MemProgram = try! lowerTyped({name}_{mname}_{an}_ElementDescriptor, {name}Registry)\n"
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDescriptorBlocks: [SchemaId: Descriptor] = {elem_blocks_lit}\n"
             ));
             out.push_str(&format!(
-                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDecodeProgram: MemProgram = try! lowerDecode(SchemaId({}), {name}_{mname}_{an}_ElementDescriptor, {name}Registry)\n",
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_{an}_ElementDescriptor, {name}Registry, {name}_{mname}_{an}_ElementDescriptorBlocks)\n"
+            ));
+            out.push_str(&format!(
+                "nonisolated(unsafe) let {name}_{mname}_{an}_ElementDecodeProgram: Lowered = try! lowerDecode(SchemaId({}), {name}_{mname}_{an}_ElementDescriptor, {name}Registry, {name}_{mname}_{an}_ElementDescriptorBlocks)\n",
                 hex_u64(root_id(element))
             ));
         }

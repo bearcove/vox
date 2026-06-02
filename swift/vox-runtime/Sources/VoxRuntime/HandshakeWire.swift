@@ -626,8 +626,9 @@ nonisolated(unsafe) public let HandshakeMessageDescriptor: Descriptor = Descript
                     ], construct: .inPlace))))
           ], payloadLayout: MemoryLayout<Sorry>.phonLayout),
       ])))
-nonisolated(unsafe) private let HandshakeMessageEncodeProgram: MemProgram = try! lowerTyped(
-  HandshakeMessageDescriptor, HandshakeMessageRegistry)
+nonisolated(unsafe) public let HandshakeMessageDescriptorBlocks: [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) private let HandshakeMessageEncodeProgram: Lowered = try! lowerTyped(
+  HandshakeMessageDescriptor, HandshakeMessageRegistry, HandshakeMessageDescriptorBlocks)
 
 public func encodeHandshakeMessage(_ value: HandshakeMessage) -> [UInt8] {
   encodeTyped(value, HandshakeMessageEncodeProgram)

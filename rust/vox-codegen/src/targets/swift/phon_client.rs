@@ -172,7 +172,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             ShapeKind::Result { .. }
         );
         out.push_str(&format!(
-            "        guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
+            "        guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, readerBlocks: {prefix}_ResponseDescriptorBlocks, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
         ));
         out.push_str(&format!(
             "        let result: {resp_ty} = try decodeTyped(respProgram, response)\n        switch result {{\n"

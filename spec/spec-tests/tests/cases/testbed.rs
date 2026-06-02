@@ -1,4 +1,4 @@
-use spec_proto::{Color, LookupError, MathError, Message, Point, Rectangle, Shape, Tag};
+use spec_proto::{Color, LookupError, MathError, Message, Point, Rectangle, Shape, Tag, Tree};
 use spec_tests::harness::{
     SubjectSpec, accept_subject_spec, run_async, run_subject_client_scenario,
 };
@@ -631,6 +631,45 @@ pub fn run_rpc_echo_shape(spec: SubjectSpec) {
     .unwrap();
 }
 
+/// A canonical recursive tree, shared by the harness-side echo_tree check and the
+/// subject scenario drivers so the round-trip assertion is identical everywhere.
+fn sample_tree() -> Tree {
+    Tree {
+        value: 1,
+        children: vec![
+            Tree {
+                value: 2,
+                children: vec![],
+            },
+            Tree {
+                value: 3,
+                children: vec![Tree {
+                    value: 4,
+                    children: vec![],
+                }],
+            },
+        ],
+    }
+}
+
+// r[verify encoding.struct.recursive]
+pub fn run_rpc_echo_tree(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let tree = sample_tree();
+        let result = client
+            .echo_tree(tree.clone())
+            .await
+            .map_err(|e| format!("echo_tree: {e:?}"))?;
+        if result != tree {
+            return Err(format!("echo_tree: expected {tree:?}, got {result:?}"));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
 // r[verify encoding.enum.unit-variants]
 pub fn run_rpc_echo_status(spec: SubjectSpec) {
     run_async(async {
@@ -870,6 +909,11 @@ pub fn run_subject_calls_all_colors(spec: SubjectSpec) {
 // r[verify encoding.enum.struct-variants]
 pub fn run_subject_calls_echo_shape(spec: SubjectSpec) {
     run_subject_client_scenario(spec, "echo_shape");
+}
+
+// r[verify encoding.struct.recursive]
+pub fn run_subject_calls_echo_tree(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "echo_tree");
 }
 
 // r[verify call.pipelining.allowed]

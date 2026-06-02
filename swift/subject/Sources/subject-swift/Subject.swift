@@ -271,6 +271,10 @@ struct TestbedService: TestbedHandler {
     func echoConfig(c: Config) async throws -> Config {
         c
     }
+
+    func echoTree(tree: Tree) async throws -> Tree {
+        tree
+    }
 }
 
 // MARK: - Logging
@@ -297,6 +301,13 @@ func sameShape(_ lhs: Shape, _ rhs: Shape) -> Bool {
     default:
         false
     }
+}
+
+/// Structural equality for the recursive `Tree` (generated as `Sendable`, not
+/// `Equatable`) — value + same children in order.
+func sameTree(_ lhs: Tree, _ rhs: Tree) -> Bool {
+    lhs.value == rhs.value && lhs.children.count == rhs.children.count
+        && zip(lhs.children, rhs.children).allSatisfy { sameTree($0, $1) }
 }
 
 // MARK: - Server Mode
@@ -732,6 +743,19 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             }
         }
         log("echo_shape OK")
+    case "echo_tree":
+        let tree = Tree(
+            value: 1,
+            children: [
+                Tree(value: 2, children: []),
+                Tree(value: 3, children: [Tree(value: 4, children: [])]),
+            ])
+        let result = try await client.echoTree(tree: tree)
+        guard sameTree(result, tree) else {
+            log("echo_tree expected \(tree), got \(result)")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_tree OK")
     case "create_canvas":
         let result = try await client.createCanvas(
             name: "enum-canvas",

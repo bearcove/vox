@@ -58,7 +58,8 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
             .join(", ");
 
         let id_hex = hex_u64(id);
-        let desc = descriptor_expr(shape);
+        let (desc, blocks) = descriptor_with_blocks(shape);
+        let blocks_lit = blocks_literal(&blocks);
         // These globals are immutable and initialized once; mark them
         // `nonisolated(unsafe)` (the descriptor/registry/program types carry
         // closures and aren't `Sendable`, but are never mutated after init).
@@ -73,12 +74,18 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
         out.push_str(&format!(
             "nonisolated(unsafe) public let {name}Descriptor: Descriptor = {desc}\n"
         ));
+        // Recursion blocks for any cyclic schema in this root (`[:]` when none) — the
+        // `Access.recurse` stand-ins in `{name}Descriptor` resolve into these via
+        // `CallBlock`.
+        out.push_str(&format!(
+            "nonisolated(unsafe) public let {name}DescriptorBlocks: [SchemaId: Descriptor] = {blocks_lit}\n"
+        ));
         // Encode uses the own-schema lowering (`lowerTyped`); there is NO cached
         // same-schema decode program/function — every decode goes through the runtime's
         // reconciling `lowerDecode(writer → reader)` built from the peer's advertised
         // schema (see `buildMessageDecoder` / `decodeHandshakeFrame`).
         out.push_str(&format!(
-            "nonisolated(unsafe) private let {name}EncodeProgram: MemProgram = try! lowerTyped({name}Descriptor, {name}Registry)\n\n"
+            "nonisolated(unsafe) private let {name}EncodeProgram: Lowered = try! lowerTyped({name}Descriptor, {name}Registry, {name}DescriptorBlocks)\n\n"
         ));
         out.push_str(&format!(
             "public func encode{name}(_ value: {ty}) -> [UInt8] {{ encodeTyped(value, {name}EncodeProgram) }}\n\n"
@@ -134,8 +141,9 @@ mod tests {
 
     #[test]
     fn scalar_and_string() {
-        assert_eq!(access_expr(<u32 as Facet>::SHAPE), ".scalar");
-        assert!(access_expr(<String as Facet>::SHAPE).contains("witness: .string"));
+        // A scalar / string has no recursion, so `descriptor_expr` exercises `access_expr`.
+        assert!(descriptor_expr(<u32 as Facet>::SHAPE).contains("access: .scalar"));
+        assert!(descriptor_expr(<String as Facet>::SHAPE).contains("witness: .string"));
     }
 
     #[test]
@@ -165,17 +173,93 @@ mod tests {
     }
 }
 
-/// The full `Descriptor(...)` expression for a shape.
+/// Recursion context for descriptor emission: which schema ids are cyclic (lower to
+/// callable blocks, not inline), the block-body expressions built so far (keyed by
+/// schema id), and the ids currently being built (to break a back-edge). Mirrors the
+/// Rust derive's `RecCtx` over `build_descriptor`.
+struct RecCtx {
+    rec_ids: std::collections::BTreeSet<u64>,
+    building: std::collections::HashSet<u64>,
+    blocks: std::collections::BTreeMap<u64, String>,
+}
+
+/// The full `Descriptor(...)` expression for a (non-recursive) shape. For a possibly
+/// recursive shape use [`descriptor_with_blocks`], which also returns the block bodies.
 pub fn descriptor_expr(shape: &'static Shape) -> String {
+    descriptor_with_blocks(shape).0
+}
+
+/// The root `Descriptor(...)` expression plus the recursion block bodies (keyed by
+/// schema id) for every cyclic schema reachable from `shape`. A cyclic position emits
+/// an `Access.recurse` stand-in and its full body is collected as a block, so the
+/// emitted descriptor tree stays finite (`r[ir.recursion]`). The blocks map is empty
+/// for a non-recursive shape.
+pub fn descriptor_with_blocks(
+    shape: &'static Shape,
+) -> (String, std::collections::BTreeMap<u64, String>) {
+    let mut ctx = RecCtx {
+        rec_ids: vox_phon::recursive_schema_ids_for_shape(shape).unwrap_or_default(),
+        building: std::collections::HashSet::new(),
+        blocks: std::collections::BTreeMap::new(),
+    };
+    let desc = descriptor_node(shape, &mut ctx);
+    (desc, ctx.blocks)
+}
+
+/// A Swift `[SchemaId: Descriptor]` literal from collected block bodies (`[:]` when
+/// empty) — what codegen passes as `descriptorBlocks` to `lowerTyped`/`lowerDecode`.
+pub fn blocks_literal(blocks: &std::collections::BTreeMap<u64, String>) -> String {
+    if blocks.is_empty() {
+        return "[:]".to_string();
+    }
+    let entries: Vec<String> = blocks
+        .iter()
+        .map(|(id, body)| format!("SchemaId({}): {body}", hex_u64(*id)))
+        .collect();
+    format!("[{}]", entries.join(", "))
+}
+
+/// One descriptor node, with recursion handling. A cyclic schema's first occurrence
+/// builds its body once into `ctx.blocks` and returns the `.recurse` stand-in; every
+/// later occurrence (a back-edge) returns the stand-in directly.
+fn descriptor_node(shape: &'static Shape, ctx: &mut RecCtx) -> String {
+    let id = phon_schema_id(shape);
+    if ctx.rec_ids.contains(&id) {
+        // Already built, or in progress (a back-edge): splice in the stand-in.
+        if ctx.blocks.contains_key(&id) || ctx.building.contains(&id) {
+            return recurse_descriptor(shape);
+        }
+        // First occurrence: build the body once (recursing), then file it as a block.
+        ctx.building.insert(id);
+        let body = format!(
+            "Descriptor(schema: {}, layout: {}, access: {})",
+            schema_ref(shape),
+            layout_expr(shape),
+            access_expr(shape, ctx)
+        );
+        ctx.building.remove(&id);
+        ctx.blocks.insert(id, body);
+        return recurse_descriptor(shape);
+    }
     format!(
         "Descriptor(schema: {}, layout: {}, access: {})",
         schema_ref(shape),
         layout_expr(shape),
-        access_expr(shape)
+        access_expr(shape, ctx)
     )
 }
 
-fn access_expr(shape: &'static Shape) -> String {
+/// The `Access.recurse` stand-in descriptor for a cyclic position: schema + layout,
+/// no inlined body (the body lives in the block registry, reached by `CallBlock`).
+fn recurse_descriptor(shape: &'static Shape) -> String {
+    format!(
+        "Descriptor(schema: {}, layout: {}, access: .recurse)",
+        schema_ref(shape),
+        layout_expr(shape)
+    )
+}
+
+fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
     // A self-describing dynamic `Value` field (e.g. `Metadata`): carried as a phon
     // `Dynamic`. In Swift memory it is a `PhonSchema.Value`; `.dynamic` drives the
     // self-describing codec at the field offset (NOT opaque `Data`).
@@ -196,13 +280,13 @@ fn access_expr(shape: &'static Shape) -> String {
             let inner_ty = swift_type_base(inner);
             format!(
                 ".option(OptionAccess(witness: .of({inner_ty}.self), some: {}))",
-                descriptor_expr(inner)
+                descriptor_node(inner, ctx)
             )
         }
         ShapeKind::List { element }
         | ShapeKind::Slice { element }
         | ShapeKind::Array { element, .. }
-        | ShapeKind::Set { element } => sequence_or_bulk(element),
+        | ShapeKind::Set { element } => sequence_or_bulk(element, ctx),
         ShapeKind::Map { key, value } => {
             assert!(
                 matches!(
@@ -214,8 +298,8 @@ fn access_expr(shape: &'static Shape) -> String {
             let v_ty = swift_type_base(value);
             format!(
                 ".map(MapAccess(key: {}, value: {}, keyStride: MemoryLayout<String>.stride, keyAlign: MemoryLayout<String>.alignment, valueStride: MemoryLayout<{v_ty}>.stride, valueAlign: MemoryLayout<{v_ty}>.alignment, witness: .stringKeyed({v_ty}.self)))",
-                descriptor_expr(key),
-                descriptor_expr(value)
+                descriptor_node(key, ctx),
+                descriptor_node(value, ctx)
             )
         }
         ShapeKind::Struct(StructInfo {
@@ -229,7 +313,7 @@ fn access_expr(shape: &'static Shape) -> String {
                     format!(
                         "FieldAccess(offset: MemoryLayout<{type_name}>.offset(of: \\{type_name}.{})!, descriptor: {})",
                         swift_field_name(f.name),
-                        descriptor_expr(f.shape())
+                        descriptor_node(f.shape(), ctx)
                     )
                 })
                 .collect();
@@ -241,20 +325,20 @@ fn access_expr(shape: &'static Shape) -> String {
         ShapeKind::Enum(EnumInfo {
             name: Some(_),
             variants,
-        }) => enum_access(shape, variants),
+        }) => enum_access(shape, variants, ctx),
         // A tuple — chiefly a method's args (the phon schema is a positional struct
         // `(_,…)`; the record's fields zip with it by index). A 1-tuple collapses to
         // its element in Swift (no `.0` keypath), so its single field is at offset 0;
         // a 0-tuple is unit (0 bytes); N≥2 use the Swift tuple's element offsets.
         ShapeKind::Tuple { elements } => {
             let shapes: Vec<&'static Shape> = elements.iter().map(|p| p.shape).collect();
-            tuple_access(shape, &shapes)
+            tuple_access(shape, &shapes, ctx)
         }
         ShapeKind::TupleStruct { fields } => {
             let shapes: Vec<&'static Shape> = fields.iter().map(|f| f.shape()).collect();
-            tuple_access(shape, &shapes)
+            tuple_access(shape, &shapes, ctx)
         }
-        ShapeKind::Result { ok, err } => result_access(ok, err),
+        ShapeKind::Result { ok, err } => result_access(ok, err, ctx),
         // An opaque field (the already-phon-encoded method payload) rides the wire
         // as a length-prefixed byte run — a `Primitive::Bytes`. In memory it is a
         // Swift `Data`.
@@ -268,12 +352,12 @@ fn access_expr(shape: &'static Shape) -> String {
 /// A tuple as a positional `.record`. The Swift type is `swift_type_base(shape)`:
 /// `Void` for 0 elements, the bare element type for 1 (a Swift 1-tuple collapses —
 /// its field is at offset 0), or `(A, B, …)` for N≥2 (element offsets via keypath).
-fn tuple_access(shape: &'static Shape, elements: &[&'static Shape]) -> String {
+fn tuple_access(shape: &'static Shape, elements: &[&'static Shape], ctx: &mut RecCtx) -> String {
     match elements.len() {
         0 => ".scalar".to_string(), // unit: 0 bytes
         1 => format!(
             ".record(RecordAccess(fields: [FieldAccess(offset: 0, descriptor: {})], construct: .inPlace))",
-            descriptor_expr(elements[0])
+            descriptor_node(elements[0], ctx)
         ),
         _ => {
             let ty = swift_type_base(shape);
@@ -283,7 +367,7 @@ fn tuple_access(shape: &'static Shape, elements: &[&'static Shape]) -> String {
                 .map(|(i, e)| {
                     format!(
                         "FieldAccess(offset: MemoryLayout<{ty}>.offset(of: \\.{i})!, descriptor: {})",
-                        descriptor_expr(e)
+                        descriptor_node(e, ctx)
                     )
                 })
                 .collect();
@@ -296,7 +380,7 @@ fn tuple_access(shape: &'static Shape, elements: &[&'static Shape]) -> String {
 }
 
 /// A `[T]`: bulk byte run when `T` is a fixed scalar, else a per-element sequence.
-fn sequence_or_bulk(element: &'static Shape) -> String {
+fn sequence_or_bulk(element: &'static Shape, ctx: &mut RecCtx) -> String {
     let ty = swift_type_base(element);
     if is_fixed_scalar(element) {
         format!(
@@ -305,7 +389,7 @@ fn sequence_or_bulk(element: &'static Shape) -> String {
     } else {
         format!(
             ".sequence(SequenceAccess(element: {}, stride: MemoryLayout<{ty}>.stride, elemAlign: MemoryLayout<{ty}>.alignment, witness: .of({ty}.self)))",
-            descriptor_expr(element)
+            descriptor_node(element, ctx)
         )
     }
 }
@@ -331,7 +415,11 @@ fn variant_payload_fields(variant: &facet_core::Variant) -> Vec<(Option<String>,
     }
 }
 
-fn enum_access(shape: &'static Shape, variants: &[facet_core::Variant]) -> String {
+fn enum_access(
+    shape: &'static Shape,
+    variants: &[facet_core::Variant],
+    ctx: &mut RecCtx,
+) -> String {
     let ty = swift_type_base(shape);
     let mut tag_cases = String::new();
     let mut project_cases = String::new();
@@ -414,7 +502,7 @@ fn enum_access(shape: &'static Shape, variants: &[facet_core::Variant]) -> Strin
                 format!(
                     "FieldAccess(offset: {}, descriptor: {})",
                     offset(k),
-                    descriptor_expr(s)
+                    descriptor_node(s, ctx)
                 )
             })
             .collect();
@@ -431,13 +519,13 @@ fn enum_access(shape: &'static Shape, variants: &[facet_core::Variant]) -> Strin
 }
 
 /// `Result<Ok, Err>` as a 2-variant enum (`.success`=0, `.failure`=1).
-fn result_access(ok: &'static Shape, err: &'static Shape) -> String {
+fn result_access(ok: &'static Shape, err: &'static Shape, ctx: &mut RecCtx) -> String {
     let ok_ty = swift_type_base(ok);
     let err_ty = swift_type_base(err);
     let res_ty = format!("Result<{ok_ty}, {err_ty}>");
     format!(
         ".enumeration(EnumAccess(\n            tag: {{ ptr in switch ptr.assumingMemoryBound(to: {res_ty}.self).pointee {{ case .success: return 0; case .failure: return 1 }} }},\n            projectPayload: {{ value, _, scratch in switch value.assumingMemoryBound(to: {res_ty}.self).pointee {{ case .success(let f0): scratch.assumingMemoryBound(to: {ok_ty}.self).initialize(to: f0); case .failure(let f0): scratch.assumingMemoryBound(to: {err_ty}.self).initialize(to: f0) }} }},\n            destroyPayload: {{ scratch, localIndex in if localIndex == 0 {{ scratch.assumingMemoryBound(to: {ok_ty}.self).deinitialize(count: 1) }} else {{ scratch.assumingMemoryBound(to: {err_ty}.self).deinitialize(count: 1) }} }},\n            inject: {{ slot, localIndex, scratch in\n            let v: {res_ty} = localIndex == 0 ? .success(scratch.assumingMemoryBound(to: {ok_ty}.self).move()) : .failure(scratch.assumingMemoryBound(to: {err_ty}.self).move())\n            slot.assumingMemoryBound(to: {res_ty}.self).initialize(to: v) }},\n            variants: [VariantAccess(wireIndex: 0, payloadFields: [FieldAccess(offset: 0, descriptor: {})], payloadLayout: MemoryLayout<{ok_ty}>.phonLayout), VariantAccess(wireIndex: 1, payloadFields: [FieldAccess(offset: 0, descriptor: {})], payloadLayout: MemoryLayout<{err_ty}>.phonLayout)]))",
-        descriptor_expr(ok),
-        descriptor_expr(err)
+        descriptor_node(ok, ctx),
+        descriptor_node(err, ctx)
     )
 }

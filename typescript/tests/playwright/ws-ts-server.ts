@@ -14,6 +14,7 @@ import type {
   Color,
   Config,
   GnarlyPayload,
+  Tree,
   LookupError,
   MathError,
   Measurement,
@@ -279,6 +280,10 @@ class TestbedService implements TestbedHandler {
 
   echoGnarly(payload: GnarlyPayload): GnarlyPayload {
     return payload;
+  }
+
+  echoTree(tree: Tree): Tree {
+    return tree;
   }
 
   echoBytes(data: Uint8Array): Uint8Array {

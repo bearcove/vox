@@ -626,6 +626,10 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_shape",
         },
         TestCase {
+            name: "rpc_echo_tree",
+            call: "testbed::run_rpc_echo_tree",
+        },
+        TestCase {
             name: "rpc_echo_status",
             call: "testbed::run_rpc_echo_status",
         },
@@ -768,6 +772,10 @@ fn generate_spec_matrix(
             call: "testbed::run_subject_calls_echo_shape",
         },
         TestCase {
+            name: "subject_calls_echo_tree",
+            call: "testbed::run_subject_calls_echo_tree",
+        },
+        TestCase {
             name: "subject_calls_pipelining",
             call: "testbed::run_subject_calls_pipelining",
         },
@@ -897,6 +905,8 @@ fn generate_spec_matrix(
         ("all_colors", "r[verify encoding.enum.unit-variants]"),
         ("echo_shape", "r[verify encoding.enum.struct-variants]"),
         ("shape_area", "r[verify encoding.enum.struct-variants]"),
+        // Recursive type — typed-VM recursion (Access::Recurse / CallBlock)
+        ("echo_tree", "r[verify encoding.struct.recursive]"),
         // Complex nested + Vec<enum>
         ("create_canvas", "r[verify encoding.struct.nested]"),
         // Enum with newtype variants
