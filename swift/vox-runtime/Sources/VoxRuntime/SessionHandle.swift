@@ -10,6 +10,9 @@ public final class SessionHandle: @unchecked Sendable {
     private let role: Role
     private let localRootSettings: ConnectionSettings
     private let peerRootSettings: ConnectionSettings
+    /// The peer's advertised Message schema closure, persisted so a resume rebuild
+    /// reconciles the envelope against it.
+    private let peerMessageSchema: [UInt8]
     private let transport: ConduitKind
     let sessionResumeKey: [UInt8]?
 
@@ -18,6 +21,7 @@ public final class SessionHandle: @unchecked Sendable {
         role: Role,
         localRootSettings: ConnectionSettings,
         peerRootSettings: ConnectionSettings,
+        peerMessageSchema: [UInt8],
         transport: ConduitKind,
         sessionResumeKey: [UInt8]?
     ) {
@@ -25,6 +29,7 @@ public final class SessionHandle: @unchecked Sendable {
         self.role = role
         self.localRootSettings = localRootSettings
         self.peerRootSettings = peerRootSettings
+        self.peerMessageSchema = peerMessageSchema
         self.transport = transport
         self.sessionResumeKey = sessionResumeKey
     }
@@ -138,7 +143,7 @@ public final class SessionHandle: @unchecked Sendable {
             role: role,
             transport: transport,
             attachment: readyAttachment,
-            peerMessageSchema: [],
+            peerMessageSchema: peerMessageSchema,
             recoverAttachment: nil
         )
     }

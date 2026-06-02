@@ -66,8 +66,11 @@ extension Driver {
             if payload.count > Int(negotiated.maxPayloadSize) {
                 debugLog(
                     "outgoing response for request \(requestId) exceeds max_payload_size "
-                        + "(\(payload.count) > \(negotiated.maxPayloadSize)), payload dropped")
-                checkedPayload = []
+                        + "(\(payload.count) > \(negotiated.maxPayloadSize)), sending Cancelled")
+                // Replace the over-sized payload with a typed `Cancelled` VoxError (its
+                // Err arm is T-independent on the wire, so any method's response program
+                // encodes it).
+                checkedPayload = dispatcher.encodeVoxError(.cancelled)
             } else {
                 checkedPayload = payload
             }
@@ -315,10 +318,10 @@ extension Driver {
                     continue
                 }
                 pending.timeoutTask?.cancel()
-                // TODO(phon): deliver a typed Result.Err(VoxError.Indeterminate) — needs
-                // precomputed error bytes from the method's response descriptor (the runtime
-                // can't construct a typed Result<T,VoxError<E>> generically). Resume-only path.
-                pending.responseTx(.failure(.transportError("indeterminate after resume")))
+                // Deliver a typed Result.Err(VoxError.Indeterminate): the dispatcher
+                // encodes it through a response program (Err is T/E-independent on the
+                // wire), and the generated client decodes it back to .indeterminate.
+                pending.responseTx(.success(dispatcher.encodeVoxError(.indeterminate)))
                 continue
             }
             traceLog(.resume, "replayPendingCallsAfterResume: queueing requestId=\(call.requestId) methodId=\(call.methodId)")

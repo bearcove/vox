@@ -124,6 +124,7 @@ func makeSessionDriverAndConnection(
     sessionResumeKey: [UInt8]?,
     localRootSettings: ConnectionSettings,
     peerRootSettings: ConnectionSettings,
+    peerMessageSchema: [UInt8],
     transport: ConduitKind,
     recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil
 ) -> (Connection, Driver, SessionHandle) {
@@ -180,6 +181,7 @@ func makeSessionDriverAndConnection(
         resumable: resumable,
         localRootSettings: localRootSettings,
         peerRootSettings: peerRootSettings,
+        peerMessageSchema: peerMessageSchema,
         transport: transport,
         recoverAttachment: recoverAttachment,
         sessionResumeKey: sessionResumeKey
@@ -190,6 +192,7 @@ func makeSessionDriverAndConnection(
         role: role,
         localRootSettings: localRootSettings,
         peerRootSettings: peerRootSettings,
+        peerMessageSchema: peerMessageSchema,
         transport: transport,
         sessionResumeKey: sessionResumeKey
     )

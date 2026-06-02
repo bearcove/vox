@@ -102,18 +102,26 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
     }
     out.push_str("        default: return .volatile\n        }\n    }\n\n");
 
-    // encodeVoxError — encode a runtime error through any method's response type
-    // (the non-User Err arms are independent of `E`). Use the first method.
-    let m0 = &service.methods[0];
-    let prefix0 = method_global_prefix(service.service_name, m0.method_name);
-    let resp0 = swift_type_base(m0.response_wire_shape);
-    let wire0 = match classify_shape(m0.response_wire_shape) {
-        ShapeKind::Result { err, .. } => swift_type_base(err),
-        _ => "VoxError<Infallible>".to_string(),
-    };
-    out.push_str(&format!(
-        "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        let r: {resp0} = .failure(wire)\n        return encodeTyped(r, {prefix0}_ResponseEncodeProgram)\n    }}\n\n"
-    ));
+    // encodeVoxError — encode a runtime error through any method's response type (the
+    // non-User Err arms are independent of `T`/`E` on the wire, so the first method's
+    // response program suffices). A method-less service has no response program, so it
+    // returns empty bytes.
+    match service.methods.first() {
+        None => out.push_str(
+            "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] { [] }\n\n",
+        ),
+        Some(m0) => {
+            let prefix0 = method_global_prefix(service.service_name, m0.method_name);
+            let resp0 = swift_type_base(m0.response_wire_shape);
+            let wire0 = match classify_shape(m0.response_wire_shape) {
+                ShapeKind::Result { err, .. } => swift_type_base(err),
+                _ => "VoxError<Infallible>".to_string(),
+            };
+            out.push_str(&format!(
+                "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        let r: {resp0} = .failure(wire)\n        return encodeTyped(r, {prefix0}_ResponseEncodeProgram)\n    }}\n\n"
+            ));
+        }
+    }
 
     // preregister — channels (out-of-band binding) deferred.
     out.push_str("    public func preregister(methodId: UInt64, payload: [UInt8], registry: ChannelRegistry) async {}\n\n");

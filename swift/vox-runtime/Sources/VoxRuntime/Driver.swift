@@ -40,6 +40,9 @@ public final class Driver: @unchecked Sendable {
     let resumable: Bool
     let localRootSettings: ConnectionSettings?
     let peerRootSettings: ConnectionSettings?
+    /// The peer's advertised Message schema closure (from the handshake), persisted so a
+    /// resume rebuild reconciles the envelope against it — never a same-schema fallback.
+    let peerMessageSchema: [UInt8]
     let transport: ConduitKind?
     let recoverAttachment: (@Sendable () async throws -> LinkAttachment)?
     let sessionResumeKey: [UInt8]?
@@ -71,6 +74,7 @@ public final class Driver: @unchecked Sendable {
         self.resumable = false
         self.localRootSettings = nil
         self.peerRootSettings = nil
+        self.peerMessageSchema = []
         self.transport = nil
         self.recoverAttachment = nil
         self.sessionResumeKey = nil
@@ -101,6 +105,7 @@ public final class Driver: @unchecked Sendable {
         resumable: Bool = false,
         localRootSettings: ConnectionSettings? = nil,
         peerRootSettings: ConnectionSettings? = nil,
+        peerMessageSchema: [UInt8] = [],
         transport: ConduitKind? = nil,
         recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil,
         sessionResumeKey: [UInt8]? = nil
@@ -124,6 +129,7 @@ public final class Driver: @unchecked Sendable {
         self.resumable = resumable
         self.localRootSettings = localRootSettings
         self.peerRootSettings = peerRootSettings
+        self.peerMessageSchema = peerMessageSchema
         self.transport = transport
         self.recoverAttachment = recoverAttachment
         self.sessionResumeKey = sessionResumeKey

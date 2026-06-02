@@ -258,6 +258,7 @@ func establishInitiator(
         sessionResumeKey: handshake.sessionResumeKey,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
+        peerMessageSchema: handshake.peerMessageSchema,
         transport: transport,
         recoverAttachment: recoverAttachment
     )
@@ -373,6 +374,7 @@ func establishAcceptor(
         sessionResumeKey: handshake.sessionResumeKey,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
+        peerMessageSchema: handshake.peerMessageSchema,
         transport: transport,
         recoverAttachment: nil
     )
