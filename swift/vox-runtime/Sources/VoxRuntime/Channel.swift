@@ -368,8 +368,8 @@ extension Rx: AsyncSequence {
 
 /// Registry for incoming channels.
 ///
-/// r[impl rpc.metadata.unknown] - Unknown channel IDs cause Goodbye.
-/// r[impl rpc.channel.item] - Data messages routed by channel_id.
+/// r[impl rpc.channel.item] - Data messages routed by channel_id; items for a
+/// not-yet-bound channel are buffered and drained when the channel binds.
 /// r[impl rpc.channel.lifecycle] - Channels may outlive the response.
 /// r[impl rpc.channel.lifecycle] - Call completion independent of channel lifecycle.
 public actor ChannelRegistry {
@@ -469,6 +469,25 @@ public actor ChannelRegistry {
     /// Check if a channel is known.
     public func isKnown(_ channelId: ChannelId) -> Bool {
         knownChannels.contains(channelId) || receivers[channelId] != nil
+    }
+
+    /// Buffer an item for a channel that isn't bound yet — its declaring Call hasn't
+    /// been processed. Under load a channel `Data` frame can reach the driver before
+    /// the `Call` whose `preregister` would `markKnown` the channel; rejecting it would
+    /// wrongly tear down the connection. Instead mark it known and buffer, so `register`
+    /// (when the handler binds the Rx) drains it. Mirrors the Rust/TS servers, which
+    /// lazily create the inbound mailbox on first item (`r[impl rpc.channel.item]`).
+    public func bufferEarlyData(channelId: ChannelId, payload: [UInt8]) {
+        if pendingClose.contains(channelId) { return }
+        knownChannels.insert(channelId)
+        pendingData[channelId, default: []].append(payload)
+    }
+
+    /// Buffer a close for a not-yet-bound channel (the close raced ahead of the Call /
+    /// the bind). `register` delivers it after any buffered data.
+    public func bufferEarlyClose(channelId: ChannelId) {
+        knownChannels.insert(channelId)
+        pendingClose.insert(channelId)
     }
 
     /// Deliver reset to a channel.

@@ -251,12 +251,14 @@ extension Driver {
             }
         }
 
+        traceLog(.driver, "handleRequest method=\(methodId) req=\(requestId) channels=\(channels)")
         await effectiveDispatcher.preregister(
             methodId: methodId,
             payload: payload,
             channels: channels,
             registry: serverRegistry
         )
+        traceLog(.driver, "preregistered req=\(requestId) channels=\(channels)")
 
         Task {
             await effectiveDispatcher.dispatch(
@@ -273,8 +275,8 @@ extension Driver {
     }
 
     /// r[impl rpc.channel.allocation] - Channel ID 0 is reserved.
-    /// r[impl rpc.metadata.unknown] - Unknown channel IDs cause Goodbye.
-    /// r[impl rpc.channel.item] - Data messages routed by channel_id.
+    /// r[impl rpc.channel.item] - Data messages routed by channel_id; an item for a
+    /// not-yet-bound channel is buffered (its declaring Call may not be processed yet).
     func handleData(channelId: UInt64, payload: [UInt8]) async throws {
         if channelId == 0 {
             try await sendProtocolError("rpc.channel.allocation")
@@ -289,14 +291,17 @@ extension Driver {
         }
 
         if !delivered {
-            traceLog(.driver, "handleData: unknown channelId=\(channelId)")
-            try await sendProtocolError("rpc.metadata.unknown")
-            throw ConnectionError.protocolViolation(rule: "rpc.metadata.unknown")
+            // The channel's declaring Call hasn't been processed yet (under load a Data
+            // frame can reach the driver before its Call). Buffer it on the server
+            // registry — where server-incoming channels bind — to be drained when the
+            // handler binds the Rx. The Rust/TS servers do the same (lazy inbound
+            // mailbox). r[impl rpc.channel.item]
+            traceLog(.driver, "handleData: buffering early item for channelId=\(channelId)")
+            await serverRegistry.bufferEarlyData(channelId: channelId, payload: payload)
         }
     }
 
     /// r[impl rpc.channel.allocation] - Channel ID 0 is reserved.
-    /// r[impl rpc.metadata.unknown] - Unknown channel IDs cause Goodbye.
     /// r[impl rpc.channel.close] - Close terminates the channel.
     func handleClose(channelId: UInt64) async throws {
         if channelId == 0 {
@@ -310,8 +315,10 @@ extension Driver {
         }
 
         if !delivered {
-            try await sendProtocolError("rpc.metadata.unknown")
-            throw ConnectionError.protocolViolation(rule: "rpc.metadata.unknown")
+            // The close raced ahead of the channel's Call / bind — buffer it so the
+            // bind sees the channel already closed (after any buffered data). Mirrors
+            // the early-data path. r[impl rpc.channel.close]
+            await serverRegistry.bufferEarlyClose(channelId: channelId)
         }
     }
 
