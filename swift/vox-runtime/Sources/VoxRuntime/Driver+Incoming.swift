@@ -19,8 +19,24 @@ extension Driver {
         keepaliveRuntime: inout DriverKeepaliveRuntime?
     ) async throws {
         switch msg.payload {
-        case .schemaMessage:
-            break
+        case .schemaMessage(let schema):
+            // The peer advertises a binding's (writer) schema closure out-of-band, as a
+            // standalone message sent before the payload it describes (mirrors the Rust
+            // session: rust/vox-core/src/session/mod.rs SchemaMessage send/recv). Record it
+            // into the same receive tracker the dispatcher reconciles against. Messages are
+            // delivered in order, so the schema is recorded before the Call/Response that
+            // needs it is handled.
+            let dir: SchemaBindingDirection
+            switch schema.direction {
+            case .args: dir = .args
+            case .response: dir = .response
+            }
+            debugLog(
+                "recv SchemaMessage method=\(schema.methodId) dir=\(dir) "
+                    + "schemasLen=\(schema.schemas.count)")
+            if !schema.schemas.isEmpty {
+                schemaReceiveTracker.recordReceived(schema.methodId, dir, [UInt8](schema.schemas))
+            }
         case .ping(let ping):
             do {
                 try await conduit.send(messagePong(nonce: ping.nonce))
@@ -83,6 +99,9 @@ extension Driver {
         case .requestMessage(let request):
             switch request.body {
             case .call(let call):
+                debugLog(
+                    "recv Call req=\(request.id) method=\(call.methodId) "
+                        + "argsLen=\(call.args.count) schemasLen=\(call.schemas.count)")
                 // The peer advertised its args (writer) schema closure on this binding.
                 if !call.schemas.isEmpty {
                     schemaReceiveTracker.recordReceived(call.methodId, .args, [UInt8](call.schemas))

@@ -62,6 +62,9 @@ extension Driver {
         case .grantCredit(let channelId, let bytes):
             wireMsg = messageCredit(channelId: channelId, additional: bytes)
         case .response(let requestId, let payload, _, let schemas):
+            debugLog(
+                "send Response req=\(requestId) payloadLen=\(payload.count) "
+                    + "schemasLen=\(schemas.count)")
             let checkedPayload: [UInt8]
             if payload.count > Int(negotiated.maxPayloadSize) {
                 debugLog(
