@@ -2132,6 +2132,11 @@ struct OutboundBatch {
 
 async fn run_outbound_worker(mut rx: tokio_mpsc::Receiver<OutboundBatch>) {
     while let Some(batch) = rx.recv().await {
+        vox_types::dlog!(
+            "[outbound-worker] WIRE write payload_kind={} req={:?}",
+            batch.payload_kind,
+            batch.request_id
+        );
         trace!(
             conn_id = %batch.conn_id,
             request_id = ?batch.request_id,

@@ -18,6 +18,7 @@ extension Driver {
         _ msg: Message,
         keepaliveRuntime: inout DriverKeepaliveRuntime?
     ) async throws {
+        recordRecentMessage(msg)
         switch msg.payload {
         case .schemaMessage(let schema):
             // The peer advertises a binding's (writer) schema closure out-of-band, as a
@@ -277,6 +278,29 @@ extension Driver {
     /// r[impl rpc.channel.allocation] - Channel ID 0 is reserved.
     /// r[impl rpc.channel.item] - Data messages routed by channel_id; an item for a
     /// not-yet-bound channel is buffered (its declaring Call may not be processed yet).
+    func recordRecentMessage(_ msg: Message) {
+        let tag: String
+        switch msg.payload {
+        case .requestMessage(let r):
+            switch r.body {
+            case .call(let c): tag = "Call(req=\(r.id),ch=\(c.channels))"
+            case .response: tag = "Response(req=\(r.id))"
+            case .cancel: tag = "Cancel(req=\(r.id))"
+            }
+        case .channelMessage(let ch):
+            switch ch.body {
+            case .item: tag = "Data(ch=\(ch.id))"
+            case .close: tag = "Close(ch=\(ch.id))"
+            case .reset: tag = "Reset(ch=\(ch.id))"
+            case .grantCredit: tag = "Credit(ch=\(ch.id))"
+            }
+        case .schemaMessage(let s): tag = "Schema(m=\(s.methodId))"
+        default: tag = "other"
+        }
+        recentMessages.append(tag)
+        if recentMessages.count > 24 { recentMessages.removeFirst(recentMessages.count - 24) }
+    }
+
     func handleData(channelId: UInt64, payload: [UInt8]) async throws {
         if channelId == 0 {
             try await sendProtocolError("rpc.channel.allocation")
@@ -291,13 +315,14 @@ extension Driver {
         }
 
         if !delivered {
-            // The channel's declaring Call hasn't been processed yet (under load a Data
-            // frame can reach the driver before its Call). Buffer it on the server
-            // registry — where server-incoming channels bind — to be drained when the
-            // handler binds the Rx. The Rust/TS servers do the same (lazy inbound
-            // mailbox). r[impl rpc.channel.item]
-            traceLog(.driver, "handleData: buffering early item for channelId=\(channelId)")
-            await serverRegistry.bufferEarlyData(channelId: channelId, payload: payload)
+            // A channel item for a channel that hasn't been opened by a preceding Call
+            // is a sender ordering violation — frames on the connection are ordered, so
+            // the Call that declares a channel MUST precede any item on it. Reject hard
+            // (do not buffer): the sender is responsible for ordering, not the receiver.
+            writeStderr(
+                "[CHANNEL-BUG] handleData unopened channelId=\(channelId) recent=\(recentMessages)")
+            try await sendProtocolError("rpc.channel.item")
+            throw ConnectionError.protocolViolation(rule: "rpc.channel.item")
         }
     }
 
@@ -315,10 +340,8 @@ extension Driver {
         }
 
         if !delivered {
-            // The close raced ahead of the channel's Call / bind — buffer it so the
-            // bind sees the channel already closed (after any buffered data). Mirrors
-            // the early-data path. r[impl rpc.channel.close]
-            await serverRegistry.bufferEarlyClose(channelId: channelId)
+            try await sendProtocolError("rpc.channel.item")
+            throw ConnectionError.protocolViolation(rule: "rpc.channel.item")
         }
     }
 
