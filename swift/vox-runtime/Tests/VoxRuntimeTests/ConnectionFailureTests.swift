@@ -1,7 +1,51 @@
 import Foundation
+import PhonSchema
 import Testing
 
 @testable import VoxRuntime
+
+// Test shims for the removed CBOR-era `Message` static factories + encode/decode: map
+// them onto the phon `message*` free functions + the phon envelope codec, so the
+// scripted-transport tests read unchanged. (Metadata is now a phon `Value`.)
+extension Message {
+    static func request(
+        connId: UInt64, requestId: UInt64, methodId: UInt64, metadata: Metadata, payload: [UInt8]
+    ) -> Message {
+        messageRequest(
+            requestId: requestId, methodId: methodId, payload: payload, metadata: metadata,
+            connectionId: connId)
+    }
+    static func response(
+        connId: UInt64, requestId: UInt64, metadata: Metadata, payload: [UInt8]
+    ) -> Message {
+        messageResponse(
+            requestId: requestId, payload: payload, metadata: metadata, connectionId: connId)
+    }
+    static func data(connId: UInt64, channelId: UInt64, payload: [UInt8]) -> Message {
+        messageData(channelId: channelId, item: payload, connectionId: connId)
+    }
+    static func pong(_ pong: Pong) -> Message { messagePong(nonce: pong.nonce) }
+
+    func encode() -> [UInt8] { encodeMessage(self) }
+    // Decode reconciles against our own advertised Message schema (writer ≡ reader here).
+    static func decode(fromBytes bytes: [UInt8]) throws -> Message {
+        try buildMessageDecoder(peerMessageSchema: MessageSchemaClosure)(bytes)
+    }
+}
+
+/// Build a `Metadata` (phon `Value`) from key/value string pairs — the test analog of
+/// the old `[MetadataEntry]` arrays.
+private func meta(_ pairs: [(String, String)]) -> Metadata {
+    var m: Metadata = .null
+    for (k, v) in pairs { m.metaSet(k, .string(v)) }
+    return m
+}
+
+// The stub dispatchers below never originate a runtime error, so a no-op encoder
+// satisfies the protocol requirement without a method/response context.
+extension ServiceDispatcher {
+    func encodeVoxError(_: VoxRuntimeError) -> [UInt8] { [] }
+}
 
 private enum TestTransportError: Error {
     case sendFailed
@@ -45,12 +89,11 @@ private actor ScriptedTransport: Link {
         dropAfterRequestCount: Int? = nil,
         autoRespondPing: Bool = false,
         initialHandshake: HandshakeMessage? = .helloYourself(
-            HandshakeHelloYourself(
-                connectionSettings: ConnectionSettings(parity: .even, maxConcurrentRequests: 64),
-                messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                supportsRetry: true,
+            HelloYourself(
+                connectionSettings: ConnectionSettings(parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                messagePayloadSchema: Data(MessageSchemaClosure),
                 resumeKey: nil,
-                metadata: []
+                metadata: appendRetrySupportMetadata(.null)
             ))
     ) {
         self.autoRespondRequestCount = autoRespondRequestCount
@@ -60,9 +103,9 @@ private actor ScriptedTransport: Link {
             if case .hello = initialHandshake {
                 inboundQueue.append(.frame(encodeTransportHello(.bare)))
             }
-            inboundQueue.append(.frame(initialHandshake.encodeCbor()))
+            inboundQueue.append(.frame(encodeHandshakeFrame(initialHandshake)))
             if case .hello = initialHandshake {
-                inboundQueue.append(.frame(HandshakeMessage.letsGo(HandshakeLetsGo()).encodeCbor()))
+                inboundQueue.append(.frame(encodeHandshakeFrame(.letsGo(LetsGo()))))
             }
         }
     }
@@ -80,7 +123,7 @@ private actor ScriptedTransport: Link {
     }
 
     func enqueueHandshake(_ handshake: HandshakeMessage) {
-        enqueueInbound(.frame(handshake.encodeCbor()))
+        enqueueInbound(.frame(encodeHandshakeFrame(handshake)))
     }
 
     func sent() -> [Message] {
@@ -112,7 +155,7 @@ private actor ScriptedTransport: Link {
             return
         }
 
-        if let handshake = try? HandshakeMessage.decodeCbor(bytes) {
+        if let handshake = try? decodeHandshakeFrame(bytes) {
             sentFrames.append(.handshake(handshake))
             sentHandshakes.append(handshake)
             return
@@ -146,7 +189,7 @@ private actor ScriptedTransport: Link {
                         Message.response(
                             connId: 0,
                             requestId: requestId,
-                            metadata: [],
+                            metadata: .null,
                             payload: [0]
                         ).encode()
                     )
@@ -206,6 +249,7 @@ private struct NoopDispatcher: ServiceDispatcher {
     func preregister(
         methodId _: UInt64,
         payload _: [UInt8],
+        channels _: [UInt64],
         registry _: ChannelRegistry
     ) async {}
 
@@ -213,24 +257,22 @@ private struct NoopDispatcher: ServiceDispatcher {
         methodId _: UInt64,
         payload _: [UInt8],
         requestId _: UInt64,
+        channels _: [UInt64],
         registry _: ChannelRegistry,
         schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
         taskTx _: @escaping @Sendable (TaskMessage) -> Void
     ) async {}
 }
 
 @Test func acceptorSessionExposesPeerHandshakeMetadata() async throws {
-    let metadata = [
-        MetadataEntry(key: "vox-service", value: .string("Noop"), flags: 0),
-        MetadataEntry(key: "vixenfs-sid", value: .string("abc123"), flags: 0),
-    ]
+    let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
     let link = ScriptedTransport(
         initialHandshake: .hello(
-            HandshakeHello(
+            Hello(
                 parity: .odd,
-                connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64),
-                messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                supportsRetry: true,
+                connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                messagePayloadSchema: Data(MessageSchemaClosure),
                 resumeKey: nil,
                 metadata: metadata
             ))
@@ -242,24 +284,20 @@ private struct NoopDispatcher: ServiceDispatcher {
 }
 
 @Test func acceptorSessionConsumesTransportPrologueBeforeHandshake() async throws {
-    let metadata = [
-        MetadataEntry(key: "vox-service", value: .string("Noop"), flags: 0),
-        MetadataEntry(key: "vixenfs-sid", value: .string("abc123"), flags: 0),
-    ]
+    let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
     let link = ScriptedTransport(initialHandshake: nil)
     await link.enqueueRaw(encodeTransportHello(.bare))
     await link.enqueueHandshake(
         .hello(
-            HandshakeHello(
+            Hello(
                 parity: .odd,
-                connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64),
-                messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                supportsRetry: true,
+                connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                messagePayloadSchema: Data(MessageSchemaClosure),
                 resumeKey: nil,
                 metadata: metadata
             ))
     )
-    await link.enqueueHandshake(.letsGo(HandshakeLetsGo()))
+    await link.enqueueHandshake(.letsGo(LetsGo()))
 
     let session = try await Session.acceptFreshLink(link, dispatcher: NoopDispatcher())
 
@@ -270,6 +308,7 @@ private struct ImmediateResponseDispatcher: ServiceDispatcher {
     func preregister(
         methodId _: UInt64,
         payload _: [UInt8],
+        channels _: [UInt64],
         registry _: ChannelRegistry
     ) async {}
 
@@ -277,8 +316,10 @@ private struct ImmediateResponseDispatcher: ServiceDispatcher {
         methodId _: UInt64,
         payload _: [UInt8],
         requestId: UInt64,
+        channels _: [UInt64],
         registry _: ChannelRegistry,
         schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
         taskTx: @escaping @Sendable (TaskMessage) -> Void
     ) async {
         taskTx(.response(requestId: requestId, payload: [0x01]))
@@ -324,6 +365,7 @@ private struct BlockingResponseDispatcher: ServiceDispatcher {
     func preregister(
         methodId _: UInt64,
         payload _: [UInt8],
+        channels _: [UInt64],
         registry _: ChannelRegistry
     ) async {}
 
@@ -331,8 +373,10 @@ private struct BlockingResponseDispatcher: ServiceDispatcher {
         methodId _: UInt64,
         payload _: [UInt8],
         requestId: UInt64,
+        channels _: [UInt64],
         registry _: ChannelRegistry,
         schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
         taskTx: @escaping @Sendable (TaskMessage) -> Void
     ) async {
         await probe.waitForRelease()
@@ -340,13 +384,8 @@ private struct BlockingResponseDispatcher: ServiceDispatcher {
     }
 }
 
-private func metadataString(_ metadata: [MetadataEntry], key: String) -> String? {
-    for entry in metadata where entry.key == key {
-        if case .string(let value) = entry.value {
-            return value
-        }
-    }
-    return nil
+private func metadataString(_ metadata: Metadata, key: String) -> String? {
+    metadata.metaStr(key)
 }
 
 private func awaitHasCancel(
@@ -421,8 +460,7 @@ private func awaitResponsePayload(
                 case .response(let response) = request.body,
                 request.id == requestId
             {
-                var retBuf = response.ret.bytes
-                return retBuf.readBytes(length: retBuf.readableBytes) ?? []
+                return Array(response.ret)
             }
         }
         try? await Task.sleep(nanoseconds: 5_000_000)
@@ -526,21 +564,20 @@ struct ConnectionFailureTests {
             Issue.record("expected first sent message to be hello")
             return
         }
-        #expect(hello.supportsRetry)
-        #expect(hello.messagePayloadSchemaCbor == wireMessageSchemasCbor)
+        #expect(metadataSupportsRetry(hello.metadata))
+        #expect(Array(hello.messagePayloadSchema) == MessageSchemaClosure)
     }
 
     @Test func callerInjectsOperationIdWhenPeerSupportsRetry() async throws {
         let transport = ScriptedTransport(
             autoRespondRequestCount: 1,
             initialHandshake: .helloYourself(
-                HandshakeHelloYourself(
+                HelloYourself(
                     connectionSettings: ConnectionSettings(
-                        parity: .even, maxConcurrentRequests: 64),
-                    messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                    supportsRetry: true,
+                        parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
                     resumeKey: nil,
-                    metadata: []
+                    metadata: appendRetrySupportMetadata(.null)
                 )))
         let (handle, driver, _, _, _) = try await establishInitiator(
             conduit: transport,
@@ -584,13 +621,12 @@ struct ConnectionFailureTests {
     @Test func duplicateOperationIdAttachesLiveAndReplaysSealedOutcome() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(
-                HandshakeHello(
+                Hello(
                     parity: .odd,
-                    connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64),
-                    messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                    supportsRetry: true,
+                    connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
                     resumeKey: nil,
-                    metadata: []
+                    metadata: appendRetrySupportMetadata(.null)
                 )))
         let probe = BlockingDispatchProbe()
         let (_, driver, _, _, _) = try await establishAcceptor(
@@ -604,7 +640,7 @@ struct ConnectionFailureTests {
             try? await transport.close()
             await cancelAndDrain(driverTask)
         }) {
-            let operationMetadata = ensureOperationId([], operationId: 99)
+            let operationMetadata = ensureOperationId(.null, operationId: 99)
 
             await transport.enqueueMessage(
                 .request(
@@ -661,13 +697,12 @@ struct ConnectionFailureTests {
     @Test func serverResponsePreservesPeepsRequestMetadata() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(
-                HandshakeHello(
+                Hello(
                     parity: .odd,
-                    connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64),
-                    messagePayloadSchemaCbor: wireMessageSchemasCbor,
-                    supportsRetry: true,
+                    connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
                     resumeKey: nil,
-                    metadata: []
+                    metadata: appendRetrySupportMetadata(.null)
                 )))
         let (_, driver, _, _, _) = try await establishAcceptor(
             conduit: transport,
@@ -685,26 +720,18 @@ struct ConnectionFailureTests {
                     connId: 0,
                     requestId: 77,
                     methodId: 42,
-                    metadata: [
-                        MetadataEntry(
-                            key: peepsMethodNameMetadataKey,
-                            value: .string("DemoRpc.test"),
-                            flags: 0
-                        ),
-                        MetadataEntry(
-                            key: peepsRequestEntityIdMetadataKey,
-                            value: .string("request:abc"),
-                            flags: 0
-                        ),
-                        MetadataEntry(key: "unrelated", value: .string("keep_out"), flags: 0),
-                    ],
+                    metadata: meta([
+                        (peepsMethodNameMetadataKey, "DemoRpc.test"),
+                        (peepsRequestEntityIdMetadataKey, "request:abc"),
+                        ("unrelated", "keep_out"),
+                    ]),
                     payload: []
                 )
             )
 
             let start = ContinuousClock.now
             let timeout = Duration.milliseconds(1_000)
-            var responseMetadata: [MetadataEntry]? = nil
+            var responseMetadata: Metadata? = nil
             while ContinuousClock.now - start < timeout {
                 let sent = await transport.sent()
                 for message in sent {
@@ -863,7 +890,7 @@ struct ConnectionFailureTests {
         let requestId = await awaitRequestId(transport, index: 0)
         #expect(requestId != nil)
         await transport.enqueueMessage(
-            .response(connId: 0, requestId: 999, metadata: [], payload: [7, 7, 7])
+            .response(connId: 0, requestId: 999, metadata: .null, payload: [7, 7, 7])
         )
 
         do {
@@ -913,7 +940,7 @@ struct ConnectionFailureTests {
             .response(
                 connId: 0,
                 requestId: timedOutRequestId,
-                metadata: [],
+                metadata: .null,
                 payload: [0xAA]
             )
         )
@@ -930,7 +957,7 @@ struct ConnectionFailureTests {
             .response(
                 connId: 0,
                 requestId: followupRequestId,
-                metadata: [],
+                metadata: .null,
                 payload: [0xBB]
             )
         )
@@ -965,7 +992,7 @@ struct ConnectionFailureTests {
             .response(
                 connId: 0,
                 requestId: firstRequestId,
-                metadata: [],
+                metadata: .null,
                 payload: [0x01]
             )
         )
@@ -977,7 +1004,7 @@ struct ConnectionFailureTests {
             .response(
                 connId: 0,
                 requestId: firstRequestId,
-                metadata: [],
+                metadata: .null,
                 payload: [0x02]
             )
         )
@@ -994,7 +1021,7 @@ struct ConnectionFailureTests {
             .response(
                 connId: 0,
                 requestId: secondRequestId,
-                metadata: [],
+                metadata: .null,
                 payload: [0x03]
             )
         )
@@ -1128,7 +1155,7 @@ struct ConnectionFailureTests {
                 return
             }
             await transport.enqueueMessage(
-                .response(connId: 0, requestId: requestId, metadata: [], payload: [0x42])
+                .response(connId: 0, requestId: requestId, metadata: .null, payload: [0x42])
             )
 
             let response = try await awaitTaskResult(callTask, timeoutMs: 1_000)

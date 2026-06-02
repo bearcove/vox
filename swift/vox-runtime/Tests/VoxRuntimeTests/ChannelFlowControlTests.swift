@@ -4,6 +4,19 @@ import Testing
 
 @testable import VoxRuntime
 
+// Local little-endian i32 codec — this suite tests channel credit/flow-control, not the
+// element codec, so it just needs to put/read i32 values in channel payloads.
+private enum TestCodecError: Error { case shortRead }
+private func encI32(_ v: Int32, into buf: inout ByteBuffer) {
+    buf.writeInteger(v, endianness: .little)
+}
+private func decI32(from buf: inout ByteBuffer) throws -> Int32 {
+    guard let v = buf.readInteger(endianness: .little, as: Int32.self) else {
+        throw TestCodecError.shortRead
+    }
+    return v
+}
+
 private final class GrantInbox: @unchecked Sendable {
     private let lock = NSLock()
     private var grants: [UInt32] = []
@@ -44,7 +57,7 @@ struct ChannelFlowControlTests {
         let registry = ChannelRegistry()
         let payloads = PayloadInbox()
         let credit = await registry.registerOutgoing(1, initialCredit: 1)
-        let tx = Tx<Int32>(serialize: { val, buf in encodeI32(val, into: &buf) })
+        let tx = Tx<Int32>(serialize: { val, buf in encI32(val, into: &buf) })
         tx.bind(
             channelId: 1,
             taskTx: { message in
@@ -67,7 +80,7 @@ struct ChannelFlowControlTests {
         let beforeGrant = payloads.snapshot()
         #expect(beforeGrant.count == 1)
         var beforeBuf = ByteBufferAllocator().buffer(bytes: beforeGrant[0])
-        #expect(try decodeI32(from: &beforeBuf) == 1)
+        #expect(try decI32(from: &beforeBuf) == 1)
 
         await registry.deliverCredit(channelId: 1, bytes: 1)
         try await secondSend.value
@@ -75,7 +88,7 @@ struct ChannelFlowControlTests {
         let afterGrant = payloads.snapshot()
         #expect(afterGrant.count == 2)
         var afterBuf = ByteBufferAllocator().buffer(bytes: afterGrant[1])
-        #expect(try decodeI32(from: &afterBuf) == 2)
+        #expect(try decI32(from: &afterBuf) == 2)
     }
 
     @Test func receiverBatchesGrantCreditAtHalfWindow() async throws {
@@ -87,7 +100,7 @@ struct ChannelFlowControlTests {
 
         for i in 0..<8 {
             var buf = ByteBufferAllocator().buffer(capacity: 4)
-            encodeI32(Int32(i), into: &buf)
+            encI32(Int32(i), into: &buf)
             receiver.deliver(buf.readBytes(length: buf.readableBytes) ?? [])
         }
 
@@ -95,7 +108,7 @@ struct ChannelFlowControlTests {
             let bytes = await receiver.recv()
             #expect(bytes != nil)
             var itemBuf = ByteBufferAllocator().buffer(bytes: bytes!)
-            let value = try decodeI32(from: &itemBuf)
+            let value = try decI32(from: &itemBuf)
             #expect(value == Int32(i))
         }
 
