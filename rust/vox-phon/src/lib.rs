@@ -55,8 +55,15 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
         of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
     let reg = Registry::new(derived.schemas);
     // Safety: `value` is a live `T`; `derived.descriptor` describes `T`'s layout.
-    unsafe { typed::encode((value as *const T).cast::<u8>(), &derived.descriptor, &reg) }
-        .map_err(|e| Error(format!("encode {}: {e:?}", T::SHAPE.type_identifier)))
+    unsafe {
+        typed::encode(
+            (value as *const T).cast::<u8>(),
+            &derived.descriptor,
+            &derived.descriptor_blocks,
+            &reg,
+        )
+    }
+    .map_err(|e| Error(format!("encode {}: {e:?}", T::SHAPE.type_identifier)))
 }
 
 /// Encode a type-erased value `(ptr, shape)` to phon-compact bytes via its
@@ -76,8 +83,15 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
     let reg = Registry::new(derived.schemas);
     // Safety: `ptr` points to a live value of `shape`; `derived.descriptor`
     // describes `shape`'s layout.
-    unsafe { typed::encode(ptr.as_byte_ptr(), &derived.descriptor, &reg) }
-        .map_err(|e| Error(format!("encode {}: {e:?}", shape.type_identifier)))
+    unsafe {
+        typed::encode(
+            ptr.as_byte_ptr(),
+            &derived.descriptor,
+            &derived.descriptor_blocks,
+            &reg,
+        )
+    }
+    .map_err(|e| Error(format!("encode {}: {e:?}", shape.type_identifier)))
 }
 
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes` (zero-copy): `&str`,
@@ -101,6 +115,7 @@ pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error
         typed::decode(
             bytes,
             &derived.descriptor,
+            &derived.descriptor_blocks,
             &reg,
             slot.as_mut_ptr().cast::<u8>(),
         )
@@ -125,6 +140,7 @@ pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
         typed::decode(
             bytes,
             &derived.descriptor,
+            &derived.descriptor_blocks,
             &reg,
             slot.as_mut_ptr().cast::<u8>(),
         )

@@ -16,7 +16,7 @@ use std::mem::MaybeUninit;
 use facet::{Facet, Shape};
 use phon::derive::{of, of_shape};
 use phon_engine::{Registry, typed};
-use phon_ir::MemProgram;
+use phon_ir::Lowered;
 use phon_schema::bytes::Reader;
 use phon_schema::{Schema, SchemaId, schema_from_bytes, schema_to_bytes};
 
@@ -112,7 +112,7 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
 /// reader type `T`'s descriptor, lowered once. Build it per `(writer root, T)` and
 /// reuse it for every message — the reconciliation cost is paid here, not per decode.
 #[derive(Clone)]
-pub struct DecodeProgram(MemProgram);
+pub struct DecodeProgram(Lowered);
 
 // A built program is immutable, and its thunk `ctx` pointers are all `&'static`
 // references (facet defs / adapter defs) cast to `*const ()` — morally `Send + Sync`,
