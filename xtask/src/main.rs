@@ -524,7 +524,7 @@ fn generate_spec_matrix(
         Combo {
             mod_name: "lang_swift_transport_tcp",
             spec_const: "SUBJECT_SWIFT_TCP",
-            ignore: true,
+            ignore: false,
         },
     ];
 
@@ -836,14 +836,14 @@ fn generate_spec_matrix(
             mod_name: "lang_rust_server_swift_client_tcp",
             server_const: "SUBJECT_RUST_TCP",
             client_const: "SUBJECT_SWIFT_TCP",
-            ignore: true,
+            ignore: false,
         },
         // Swift server ↔ Rust client
         CrossLangCombo {
             mod_name: "lang_swift_server_rust_client_tcp",
             server_const: "SUBJECT_SWIFT_TCP",
             client_const: "SUBJECT_RUST_TCP",
-            ignore: true,
+            ignore: false,
         },
         // TypeScript server ↔ Swift client
         CrossLangCombo {
