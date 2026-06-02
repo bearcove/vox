@@ -271,9 +271,12 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         "        } catch {\n            voxResult = .failure(.indeterminate)\n        }\n",
     );
 
-    // Encode the response, advertise its schema (once), and reply.
+    // Encode the response and reply, carrying the method's response schema closure.
+    // The driver advertises it idempotently at the sequential send point, so the first
+    // response written for this method carries the schema even under pipelining (the
+    // schema decision must NOT be made here in the concurrent dispatch task).
     out.push_str(&format!(
-        "        let respPayload = encodeTyped(voxResult, {prefix}_ResponseEncodeProgram)\n        let schemas = schemaSendTracker.prepareSchemas({id}, .response, {svc}Methods[{id}]!.responseSchemaClosure)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, schemas: schemas))\n    }}\n\n"
+        "        let respPayload = encodeTyped(voxResult, {prefix}_ResponseEncodeProgram)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, responseSchemaClosure: {svc}Methods[{id}]!.responseSchemaClosure))\n    }}\n\n"
     ));
 
     out

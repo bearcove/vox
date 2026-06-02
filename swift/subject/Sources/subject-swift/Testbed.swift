@@ -15883,13 +15883,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echo_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x880b_c4ee_e235_74be, .response, testbedMethods[0x880b_c4ee_e235_74be]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x880b_c4ee_e235_74be,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x880b_c4ee_e235_74be]!.responseSchemaClosure))
   }
 
   private func dispatch_reverse(
@@ -15924,13 +15921,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_reverse_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x1c22_3f30_e180_392a, .response, testbedMethods[0x1c22_3f30_e180_392a]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x1c22_3f30_e180_392a,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x1c22_3f30_e180_392a]!.responseSchemaClosure))
   }
 
   private func dispatch_divide(
@@ -15968,13 +15962,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_divide_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xfb68_d931_8f83_0875, .response, testbedMethods[0xfb68_d931_8f83_0875]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xfb68_d931_8f83_0875,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xfb68_d931_8f83_0875]!.responseSchemaClosure))
   }
 
   private func dispatch_lookup(
@@ -16012,13 +16003,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_lookup_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xa15f_f520_9471_2a3b, .response, testbedMethods[0xa15f_f520_9471_2a3b]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xa15f_f520_9471_2a3b,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xa15f_f520_9471_2a3b]!.responseSchemaClosure))
   }
 
   private func dispatch_sum(
@@ -16069,13 +16057,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_sum_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x51f9_cfd8_e865_77c9, .response, testbedMethods[0x51f9_cfd8_e865_77c9]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x51f9_cfd8_e865_77c9,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x51f9_cfd8_e865_77c9]!.responseSchemaClosure))
   }
 
   private func dispatch_generate(
@@ -16125,13 +16110,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_generate_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x239e_5b99_b1f8_207a, .response, testbedMethods[0x239e_5b99_b1f8_207a]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x239e_5b99_b1f8_207a,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x239e_5b99_b1f8_207a]!.responseSchemaClosure))
   }
 
   private func dispatch_generateRetryNonIdem(
@@ -16181,13 +16163,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_generateRetryNonIdem_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x3441_9529_478c_c7b8, .response, testbedMethods[0x3441_9529_478c_c7b8]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x3441_9529_478c_c7b8,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x3441_9529_478c_c7b8]!.responseSchemaClosure))
   }
 
   private func dispatch_generateRetryIdem(
@@ -16237,13 +16216,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_generateRetryIdem_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xe2d2_7fd9_098c_6ea2, .response, testbedMethods[0xe2d2_7fd9_098c_6ea2]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xe2d2_7fd9_098c_6ea2,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xe2d2_7fd9_098c_6ea2]!.responseSchemaClosure))
   }
 
   private func dispatch_transform(
@@ -16308,13 +16284,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_transform_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xcb46_9cff_8d79_8feb, .response, testbedMethods[0xcb46_9cff_8d79_8feb]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xcb46_9cff_8d79_8feb,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xcb46_9cff_8d79_8feb]!.responseSchemaClosure))
   }
 
   private func dispatch_postReplyGenerate(
@@ -16364,13 +16337,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_postReplyGenerate_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xec36_e847_51a8_97be, .response, testbedMethods[0xec36_e847_51a8_97be]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xec36_e847_51a8_97be,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xec36_e847_51a8_97be]!.responseSchemaClosure))
   }
 
   private func dispatch_postReplySum(
@@ -16435,13 +16405,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_postReplySum_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xc1ce_3c39_7e4c_a6e7, .response, testbedMethods[0xc1ce_3c39_7e4c_a6e7]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xc1ce_3c39_7e4c_a6e7,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xc1ce_3c39_7e4c_a6e7]!.responseSchemaClosure))
   }
 
   private func dispatch_echoPoint(
@@ -16476,13 +16443,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoPoint_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x81f5_386d_589d_fbe4, .response, testbedMethods[0x81f5_386d_589d_fbe4]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x81f5_386d_589d_fbe4,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x81f5_386d_589d_fbe4]!.responseSchemaClosure))
   }
 
   private func dispatch_createPerson(
@@ -16517,13 +16481,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_createPerson_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x68ff_a90b_7728_bde7, .response, testbedMethods[0x68ff_a90b_7728_bde7]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x68ff_a90b_7728_bde7,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x68ff_a90b_7728_bde7]!.responseSchemaClosure))
   }
 
   private func dispatch_rectangleArea(
@@ -16558,13 +16519,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_rectangleArea_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x223f_e028_2d26_3107, .response, testbedMethods[0x223f_e028_2d26_3107]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x223f_e028_2d26_3107,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x223f_e028_2d26_3107]!.responseSchemaClosure))
   }
 
   private func dispatch_parseColor(
@@ -16599,13 +16557,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_parseColor_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xd4f1_6ea9_eca1_32e6, .response, testbedMethods[0xd4f1_6ea9_eca1_32e6]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xd4f1_6ea9_eca1_32e6,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xd4f1_6ea9_eca1_32e6]!.responseSchemaClosure))
   }
 
   private func dispatch_shapeArea(
@@ -16640,13 +16595,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_shapeArea_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x0438_5a4b_e2a8_82f5, .response, testbedMethods[0x0438_5a4b_e2a8_82f5]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x0438_5a4b_e2a8_82f5,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x0438_5a4b_e2a8_82f5]!.responseSchemaClosure))
   }
 
   private func dispatch_createCanvas(
@@ -16682,13 +16634,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_createCanvas_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xef42_1eb5_b08c_973a, .response, testbedMethods[0xef42_1eb5_b08c_973a]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xef42_1eb5_b08c_973a,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xef42_1eb5_b08c_973a]!.responseSchemaClosure))
   }
 
   private func dispatch_echoGnarly(
@@ -16723,13 +16672,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoGnarly_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xb6fa_cae6_a7a8_6e99, .response, testbedMethods[0xb6fa_cae6_a7a8_6e99]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xb6fa_cae6_a7a8_6e99,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xb6fa_cae6_a7a8_6e99]!.responseSchemaClosure))
   }
 
   private func dispatch_processMessage(
@@ -16764,13 +16710,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_processMessage_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xe08f_0f52_54e7_a997, .response, testbedMethods[0xe08f_0f52_54e7_a997]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xe08f_0f52_54e7_a997,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xe08f_0f52_54e7_a997]!.responseSchemaClosure))
   }
 
   private func dispatch_getPoints(
@@ -16805,13 +16748,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_getPoints_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x5985_1852_3a62_66bf, .response, testbedMethods[0x5985_1852_3a62_66bf]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x5985_1852_3a62_66bf,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x5985_1852_3a62_66bf]!.responseSchemaClosure))
   }
 
   private func dispatch_swapPair(
@@ -16846,13 +16786,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_swapPair_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x7d55_a713_ad61_2bf2, .response, testbedMethods[0x7d55_a713_ad61_2bf2]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x7d55_a713_ad61_2bf2,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x7d55_a713_ad61_2bf2]!.responseSchemaClosure))
   }
 
   private func dispatch_echoBytes(
@@ -16887,13 +16824,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoBytes_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x4405_6c78_42fa_336c, .response, testbedMethods[0x4405_6c78_42fa_336c]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x4405_6c78_42fa_336c,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x4405_6c78_42fa_336c]!.responseSchemaClosure))
   }
 
   private func dispatch_echoBool(
@@ -16928,13 +16862,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoBool_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x5136_d8f0_1a5f_496c, .response, testbedMethods[0x5136_d8f0_1a5f_496c]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x5136_d8f0_1a5f_496c,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x5136_d8f0_1a5f_496c]!.responseSchemaClosure))
   }
 
   private func dispatch_echoU64(
@@ -16969,13 +16900,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoU64_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x85e2_380d_bf7f_fe65, .response, testbedMethods[0x85e2_380d_bf7f_fe65]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x85e2_380d_bf7f_fe65,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x85e2_380d_bf7f_fe65]!.responseSchemaClosure))
   }
 
   private func dispatch_echoOptionString(
@@ -17010,13 +16938,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoOptionString_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xb1a5_bfd2_05b3_fbfc, .response, testbedMethods[0xb1a5_bfd2_05b3_fbfc]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xb1a5_bfd2_05b3_fbfc,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xb1a5_bfd2_05b3_fbfc]!.responseSchemaClosure))
   }
 
   private func dispatch_sumLarge(
@@ -17067,13 +16992,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_sumLarge_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x9a7b_ed54_5e08_8054, .response, testbedMethods[0x9a7b_ed54_5e08_8054]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x9a7b_ed54_5e08_8054,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x9a7b_ed54_5e08_8054]!.responseSchemaClosure))
   }
 
   private func dispatch_generateLarge(
@@ -17123,13 +17045,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_generateLarge_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x8edf_bd65_d162_f685, .response, testbedMethods[0x8edf_bd65_d162_f685]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x8edf_bd65_d162_f685,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x8edf_bd65_d162_f685]!.responseSchemaClosure))
   }
 
   private func dispatch_allColors(
@@ -17144,13 +17063,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_allColors_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xfbfb_05bb_caad_e4a0, .response, testbedMethods[0xfbfb_05bb_caad_e4a0]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xfbfb_05bb_caad_e4a0,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xfbfb_05bb_caad_e4a0]!.responseSchemaClosure))
   }
 
   private func dispatch_describePoint(
@@ -17186,13 +17102,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_describePoint_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x62fe_b14a_8fcf_9b6d, .response, testbedMethods[0x62fe_b14a_8fcf_9b6d]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x62fe_b14a_8fcf_9b6d,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x62fe_b14a_8fcf_9b6d]!.responseSchemaClosure))
   }
 
   private func dispatch_echoShape(
@@ -17227,13 +17140,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoShape_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x4125_b5e6_78b7_b4a5, .response, testbedMethods[0x4125_b5e6_78b7_b4a5]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x4125_b5e6_78b7_b4a5,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x4125_b5e6_78b7_b4a5]!.responseSchemaClosure))
   }
 
   private func dispatch_echoStatusV1(
@@ -17268,13 +17178,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoStatusV1_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xc7c5_aa84_5cfb_8bf6, .response, testbedMethods[0xc7c5_aa84_5cfb_8bf6]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xc7c5_aa84_5cfb_8bf6,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xc7c5_aa84_5cfb_8bf6]!.responseSchemaClosure))
   }
 
   private func dispatch_echoTagV1(
@@ -17309,13 +17216,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoTagV1_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x6619_071b_e5d5_c259, .response, testbedMethods[0x6619_071b_e5d5_c259]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x6619_071b_e5d5_c259,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x6619_071b_e5d5_c259]!.responseSchemaClosure))
   }
 
   private func dispatch_echoProfile(
@@ -17350,13 +17254,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoProfile_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xbd9b_cabd_deeb_eb04, .response, testbedMethods[0xbd9b_cabd_deeb_eb04]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xbd9b_cabd_deeb_eb04,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xbd9b_cabd_deeb_eb04]!.responseSchemaClosure))
   }
 
   private func dispatch_echoRecord(
@@ -17391,13 +17292,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoRecord_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x100b_0e08_da4b_8f1a, .response, testbedMethods[0x100b_0e08_da4b_8f1a]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x100b_0e08_da4b_8f1a,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x100b_0e08_da4b_8f1a]!.responseSchemaClosure))
   }
 
   private func dispatch_echoStatus(
@@ -17432,13 +17330,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoStatus_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x6975_90d3_ffc3_6703, .response, testbedMethods[0x6975_90d3_ffc3_6703]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x6975_90d3_ffc3_6703,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x6975_90d3_ffc3_6703]!.responseSchemaClosure))
   }
 
   private func dispatch_echoTag(
@@ -17473,13 +17368,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoTag_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x2bd1_b314_9d73_ce97, .response, testbedMethods[0x2bd1_b314_9d73_ce97]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x2bd1_b314_9d73_ce97,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x2bd1_b314_9d73_ce97]!.responseSchemaClosure))
   }
 
   private func dispatch_echoMeasurement(
@@ -17514,13 +17406,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoMeasurement_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0x3b3d_22b0_15fa_1a3f, .response, testbedMethods[0x3b3d_22b0_15fa_1a3f]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x3b3d_22b0_15fa_1a3f,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0x3b3d_22b0_15fa_1a3f]!.responseSchemaClosure))
   }
 
   private func dispatch_echoConfig(
@@ -17555,13 +17444,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoConfig_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xe13a_477f_b964_ce28, .response, testbedMethods[0xe13a_477f_b964_ce28]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xe13a_477f_b964_ce28,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xe13a_477f_b964_ce28]!.responseSchemaClosure))
   }
 
   private func dispatch_echoTree(
@@ -17596,13 +17482,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
       voxResult = .failure(.indeterminate)
     }
     let respPayload = encodeTyped(voxResult, testbed_echoTree_ResponseEncodeProgram)
-    let schemas = schemaSendTracker.prepareSchemas(
-      0xa142_60aa_6471_15b4, .response, testbedMethods[0xa142_60aa_6471_15b4]!.responseSchemaClosure
-    )
     taskTx(
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xa142_60aa_6471_15b4,
-        schemas: schemas))
+        responseSchemaClosure: testbedMethods[0xa142_60aa_6471_15b4]!.responseSchemaClosure))
   }
 
 }

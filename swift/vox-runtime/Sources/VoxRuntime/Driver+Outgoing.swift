@@ -61,7 +61,20 @@ extension Driver {
             wireMsg = messageChannelClose(channelId: channelId)
         case .grantCredit(let channelId, let bytes):
             wireMsg = messageCredit(channelId: channelId, additional: bytes)
-        case .response(let requestId, let payload, _, let schemas):
+        case .response(let requestId, let payload, let methodId, let responseSchemaClosure):
+            // Advertise the response schema at THIS sequential send point (not in the
+            // concurrent dispatch task): under pipelining many responses for a method
+            // are written here in order, and the first one MUST carry the schema. A
+            // dispatch-time decision races — a schema-less response could be written
+            // first. prepareSchemas is idempotent, so only the first send advertises.
+            // r[impl schema.exchange.required]
+            let schemas: [UInt8]
+            if let methodId, !responseSchemaClosure.isEmpty {
+                schemas = schemaSendTracker.prepareSchemas(
+                    methodId, .response, responseSchemaClosure)
+            } else {
+                schemas = []
+            }
             debugLog(
                 "send Response req=\(requestId) payloadLen=\(payload.count) "
                     + "schemasLen=\(schemas.count)")

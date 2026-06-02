@@ -51,7 +51,12 @@ public enum TaskMessage: Sendable {
         requestId: UInt64,
         payload: [UInt8],
         methodId: UInt64? = nil,
-        schemas: [UInt8] = []
+        // The method's FULL response schema closure (not a pre-resolved advertisement).
+        // The driver advertises it idempotently at the sequential send point, so the
+        // first response actually written for a method carries the schema — concurrent
+        // dispatch tasks must not decide who carries it (the responses can be written
+        // in a different order). r[impl schema.exchange.required]
+        responseSchemaClosure: [UInt8] = []
     )
 }
 

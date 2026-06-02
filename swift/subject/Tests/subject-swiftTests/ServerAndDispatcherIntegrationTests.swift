@@ -80,7 +80,7 @@ private actor TaskMessageRecorder {
                 requestId: let requestId,
                 payload: let payload,
                 methodId: _,
-                schemas: _
+                responseSchemaClosure: _
             ):
                 return (requestId, payload)
             default:
