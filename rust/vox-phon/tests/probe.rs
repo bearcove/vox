@@ -24,6 +24,8 @@ fn probe_vox_wire_types() {
 /// through phon: encode the envelope (opaque payload sub-encoded inline), then
 /// borrowed-decode it back. The payload becomes a zero-copy span pointing INTO the
 /// wire, metadata strings borrow the wire, and the span re-decodes to the args.
+// r[verify zerocopy.framing.value]
+// r[verify zerocopy.framing.value.opaque.length-prefix]
 #[test]
 fn message_with_value_payload_roundtrips() {
     let args: u32 = 42;
@@ -74,6 +76,15 @@ fn message_with_value_payload_roundtrips() {
         (wire_start..wire_start + bytes.len()).contains(&(span.as_ptr() as usize)),
         "payload span must point into the wire buffer (zero-copy)"
     );
+    let span_offset = (span.as_ptr() as usize) - wire_start;
+    assert!(
+        span_offset >= 4,
+        "opaque payload span must follow its u32 length prefix"
+    );
+    let prefix: [u8; 4] = bytes[span_offset - 4..span_offset]
+        .try_into()
+        .expect("length prefix slice");
+    assert_eq!(u32::from_le_bytes(prefix), span.len() as u32);
 
     // And the span re-decodes to the original args.
     let back: u32 = vox_phon::from_slice(span).expect("decode payload span");

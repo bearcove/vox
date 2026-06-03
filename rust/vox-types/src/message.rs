@@ -342,6 +342,7 @@ unsafe impl<'payload> Send for Payload<'payload> {}
 
 /// Adapter that bridges [`Payload`] through the opaque field contract.
 // r[impl zerocopy.framing.value.opaque]
+// r[impl zerocopy.framing.value.opaque.length-prefix]
 pub struct PayloadAdapter;
 
 impl FacetOpaqueAdapter for PayloadAdapter {

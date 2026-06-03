@@ -87,6 +87,7 @@ unsafe fn decode_lowered(
 /// # Errors
 /// [`Error`] if `T` cannot be lowered to a phon schema or the value does not
 /// match it.
+// r[impl zerocopy.framing.value]
 pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
     let type_name = T::SHAPE.type_identifier;
     let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
@@ -106,6 +107,7 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
 /// # Errors
 /// [`Error`] if `shape` cannot be lowered to a phon schema or the value does not
 /// match it.
+// r[impl zerocopy.framing.value]
 pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>, Error> {
     let type_name = shape.type_identifier;
     let derived = of_shape(shape).map_err(|e| Error(format!("derive {type_name}: {e}")))?;
@@ -124,6 +126,7 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
+// r[impl zerocopy.framing.value]
 pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
     let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
@@ -143,6 +146,7 @@ pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
+// r[impl zerocopy.framing.value]
 pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
     let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
