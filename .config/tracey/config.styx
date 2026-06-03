@@ -29,6 +29,7 @@ specs (
                     rust/vox-codegen/src/schema_compat.rs
                     rust/vox-codegen/src/targets/typescript/**/*.rs
                     typescript/packages/vox-core/src/session.ts
+                    typescript/packages/vox-core/src/session.test.ts
                     typescript/packages/vox-core/src/conduit.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts

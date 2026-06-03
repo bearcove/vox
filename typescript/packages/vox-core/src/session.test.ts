@@ -7,6 +7,7 @@ import {
   messageRequest,
   messageResponse,
 } from "@bearcove/vox-wire";
+import { hexToBytes } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
 import { handshakeAsAcceptor, handshakeAsInitiator } from "./handshake.ts";
 import {
@@ -129,6 +130,53 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("session", () => {
+  // r[verify schema.exchange.caller]
+  it("advertises caller args schemas with the first request on a connection", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      0n,
+      settings,
+      settings,
+    );
+
+    const request = () =>
+      connection.caller().call({
+        method: "Test.echo",
+        args: { value: 55 },
+        descriptor: ECHO_METHOD,
+        methodSchemas: ECHO_METHOD_SCHEMAS,
+        registry: sessionEchoRegistry,
+        timeoutMs: 1,
+      });
+
+    await Promise.allSettled([request(), request()]);
+
+    const schemas = sent.map((message) => {
+      expect(message.payload.tag).toBe("RequestMessage");
+      const body = message.payload.tag === "RequestMessage"
+        ? message.payload.value.body
+        : undefined;
+      expect(body?.tag).toBe("Call");
+      return body?.tag === "Call" ? body.value.schemas : [];
+    });
+
+    expect(schemas).toEqual([
+      Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.argsSchemaClosure)),
+      [],
+    ]);
+  });
+
   // r[verify schema.exchange.required]
   it("tears down when a call arrives without an args schema binding", async () => {
     const [clientLink, serverLink] = memoryLinkPair();

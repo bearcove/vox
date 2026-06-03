@@ -69,4 +69,16 @@ describe("SchemaTracker", () => {
     expect(tracker.auxiliaryRoot(7n, "args", "channel.arg.0.rx.element")).toBe(2n);
     expect(tracker.auxiliaryRoot(7n, "args", "channel.arg.1.rx.element")).toBeNull();
   });
+
+  // r[verify schema.type-id.per-connection]
+  it("does not share received bindings across tracker instances", () => {
+    const bytes = new Uint8Array([...leU64(1n), ...leU32(0)]);
+    const firstConnection = new SchemaTracker();
+    const secondConnection = new SchemaTracker();
+
+    firstConnection.recordReceived(7n, "args", bytes);
+
+    expect(firstConnection.hasReceived(7n, "args")).toBe(true);
+    expect(secondConnection.hasReceived(7n, "args")).toBe(false);
+  });
 });

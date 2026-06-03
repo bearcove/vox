@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Registry } from "@bearcove/phon-schema";
+import { emptyMetadata } from "@bearcove/vox-wire";
+import { hexToBytes, type Registry } from "@bearcove/phon-schema";
 import { Driver } from "./driver.ts";
 import {
   SchemaSendTracker,
@@ -8,6 +9,11 @@ import {
   type SchemaTracker,
 } from "./schema_tracker.ts";
 import type { MethodDescriptor, TaskMessage } from "./channeling/index.ts";
+import {
+  sessionEchoRegistry,
+  sessionEchoMethods,
+  SESSION_ECHO_METHOD_ID,
+} from "./session_echo.fixture.ts";
 
 const METHOD: MethodDescriptor = {
   name: "stream",
@@ -23,7 +29,73 @@ const METHOD_SCHEMAS: PhonMethodSchemas = {
   channels: [{ index: 0, direction: "tx", elementRoot: 9n }],
 };
 
+const ECHO_METHOD_KEY = `0x${SESSION_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
+const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
+const ECHO_METHOD: MethodDescriptor = {
+  name: "echo",
+  id: SESSION_ECHO_METHOD_ID,
+};
+
 describe("Driver channel schema exchange", () => {
+  // r[verify schema.exchange.callee]
+  it("advertises response schemas with the first callee response", async () => {
+    const sent: Array<{ requestId: bigint; schemas: number[] }> = [];
+    const schemaSendTracker = new SchemaSendTracker();
+    const driver = new Driver(
+      {
+        currentEpoch: () => 0,
+        getSchemaSendTracker: () => schemaSendTracker,
+        getSchemaTracker: () => ({
+          requireReceived() {},
+        }),
+        sendResponse: async (
+          requestId: bigint,
+          _payload: Uint8Array,
+          _metadata: unknown,
+          _channels: bigint[],
+          schemas: number[],
+        ) => {
+          sent.push({ requestId, schemas });
+        },
+      } as never,
+      {
+        getDescriptor: () => ({
+          service_name: "Test",
+          send_schemas: { [ECHO_METHOD_KEY]: ECHO_METHOD_SCHEMAS },
+          registry: sessionEchoRegistry,
+          methods: new Map([[ECHO_METHOD.id, ECHO_METHOD]]),
+        }),
+        dispatch: async (_context, _method, _args, call) => {
+          call.reply(123);
+        },
+      },
+    ) as unknown as {
+      handleCall(call: {
+        requestId: bigint;
+        methodId: bigint;
+        args: Uint8Array;
+        channels: bigint[];
+        metadata: ReturnType<typeof emptyMetadata>;
+        connectionEpoch: number;
+      }): Promise<void>;
+    };
+
+    await driver.handleCall({
+      requestId: 9n,
+      methodId: ECHO_METHOD.id,
+      args: new Uint8Array(),
+      channels: [],
+      metadata: emptyMetadata(),
+      connectionEpoch: 0,
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toEqual({
+      requestId: 9n,
+      schemas: Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.responseSchemaClosure)),
+    });
+  });
+
   // r[verify schema.exchange.channels.tx-args]
   it("advertises args schemas before the first server-written channel item", () => {
     const sent: TaskMessage[] = [];
