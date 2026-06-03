@@ -144,10 +144,9 @@ weight = 11
 > r[transport.prologue.requested-mode]
 >
 > The requested conduit mode is an exact request, not a preference list. This
-> spec defines two conduit modes:
+> spec defines one conduit mode:
 >
 >   * `bare`
->   * `stable`
 
 > r[transport.prologue.accept]
 >
@@ -192,15 +191,6 @@ weight = 11
 > `BareConduit` does not provide any feature on top of
 > serialization/deserialization. It begins immediately after the transport
 > prologue has accepted `bare`.
-
-> r[conduit.stable]
->
-> `StableConduit` provides automatic reconnection (over fresh links) and replay of
-> missed messages. It comes with its own Packet framing.
-
-`StableConduit` begins only after the transport prologue has accepted `stable`.
-Its own stable-conduit handshake is separate from, and ordered after, the
-transport prologue.
 
 > r[conduit.split]
 >
@@ -359,9 +349,8 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.protocol-schema.session-scoped]
 >
 > Protocol schemas are exchanged once per session during the handshake. They
-> are immutable for the session lifetime. Transparent reconnection (via
-> `StableConduit`) does not re-exchange protocol schemas. Session resumption
-> (new handshake) does.
+> are immutable for the session lifetime. Session resumption (new handshake)
+> re-exchanges protocol schemas.
 
 > r[session.handshake.unversioned]
 >

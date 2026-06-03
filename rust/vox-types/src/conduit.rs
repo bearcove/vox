@@ -28,10 +28,8 @@ pub trait MsgFamily: 'static {
 /// - Send: `MsgFamily::Msg<'a>` for any `'a` (borrowed data serialized in place)
 /// - Recv: `MsgFamily::Msg<'static>` (owned, via `SelfRef`)
 ///
-/// Two implementations:
-/// - `BareConduit`: Link + postcard. If the link dies, it's dead.
-/// - `StableConduit`: Link + postcard + seq/ack/replay. Handles reconnect
-///   transparently. Replay buffer stores encoded bytes (no clone needed).
+/// The current implementation is `BareConduit`: Link + phon serialization.
+/// If the link dies, the conduit is dead.
 // r[impl conduit]
 pub trait Conduit {
     type Msg: MsgFamily;

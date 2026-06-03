@@ -205,30 +205,15 @@ insert_anchor_links = "left"
 
 > r[zerocopy.framing.conduit]
 >
-> The conduit wraps the serialized value bytes depending on the conduit
-> type:
+> The conduit serializes the value and passes the resulting bytes to the
+> link. The current conduit layer does not add an additional reliability or
+> replay frame.
 
 > r[zerocopy.framing.conduit.bare]
 >
 > **BareConduit** — no additional framing. The serialized value bytes are
-> passed directly to the link. Suitable for transports where reliability
-> is inherent or unnecessary (in-process, memory).
-
-> r[zerocopy.framing.conduit.stable]
->
-> **StableConduit** — serializes a `Frame<T>` instead of a bare `T`. The
-> Frame struct contains:
->
-> - `seq: u32` — monotonically increasing sequence number
-> - `ack: Option<u32>` — highest sequence number received from the peer
-> - `item: T` — the actual value
->
-> The entire `Frame<T>` is serialized in one phon pass — there is no
-> separate header serialization step. The conduit framing fields are just
-> the first fields of the serialized output. The conduit maintains a
-> replay buffer of serialized frame bytes for retransmission after
-> reconnection. Required for transports that may drop the underlying
-> connection (TCP, WebSocket).
+> passed directly to the link. Link implementations provide message
+> boundaries; the conduit layer does not provide reconnect or replay.
 
 ### Layer 3: Link framing
 
@@ -265,12 +250,10 @@ insert_anchor_links = "left"
 >
 > | Conduit       | Stream | WebSocket | InProcess | SHM  | Memory |
 > |---------------|--------|-----------|-----------|------|--------|
-> | BareConduit   | —      | —         | yes       | yes  | yes    |
-> | StableConduit | yes    | yes       | —         | —    | —      |
+> | BareConduit   | yes    | yes       | yes       | yes  | yes    |
 >
-> BareConduit is used with links that don't lose connections (SHM, memory, InProcess).
-> StableConduit is used with links that may disconnect (TCP, WebSocket) and
-> need seq/ack for replay on reconnect.
+> BareConduit is the current conduit shape for every link. Recovery from a
+> failed attachment is session-level behavior, not conduit-level replay.
 
 ### End-to-end pipeline and lifetimes
 
@@ -279,7 +262,7 @@ insert_anchor_links = "left"
 > The runtime pipeline is:
 >
 > 1. **Link layer** receives/sends framed transport bytes.
-> 2. **Conduit layer** removes/applies conduit framing (`T` vs `Frame<T>`).
+> 2. **Conduit layer** serializes/deserializes the value.
 > 3. **Value layer** decodes/encodes `Message<'payload>` fields, including
 >    opaque payload handling.
 
@@ -299,8 +282,8 @@ insert_anchor_links = "left"
 >
 > 1. Driver builds `Message<'call>` borrowing from call scope as needed.
 > 2. Opaque payload mapping happens during value serialization.
-> 3. Conduit applies its framing (`T` or `Frame<T>`), then link applies
->    transport framing at commit/send time.
+> 3. Conduit serializes the value, then link applies transport framing at
+>    commit/send time.
 
 ### Serialization timing
 
@@ -308,22 +291,17 @@ insert_anchor_links = "left"
 >
 > Despite the three logical layers, serialization of the payload happens
 > exactly once.
-> The conduit is generic over the value type `T`, so:
->
-> - **BareConduit** serializes `T` into one owned outbound buffer.
-> - **StableConduit** serializes `Frame<T>` into one owned outbound buffer.
->
-> In both cases, phon writes the output into the prepared buffer owned by
-> the conduit. There is no intermediate re-serialization between layers —
-> value encoding and conduit framing are a single serialization pass, and the
-> link applies transport framing (length prefix, WebSocket frame boundary,
-> etc.) when sending those bytes.
+> **BareConduit** serializes `T` into one owned outbound buffer. phon writes
+> the output into the prepared buffer owned by the conduit. There is no
+> intermediate re-serialization between layers, and the link applies
+> transport framing (length prefix, WebSocket frame boundary, etc.) when
+> sending those bytes.
 
 > r[zerocopy.framing.no-double-serialize]
 >
 > The conduit MUST NOT serialize the value into a temporary buffer and
 > then re-serialize it into another buffer. The conduit serializes the value
-> (or `Frame<T>`) into its prepared outbound buffer in one pass.
+> into its prepared outbound buffer in one pass.
 
 ### Scatter/gather serialization
 
@@ -377,15 +355,6 @@ insert_anchor_links = "left"
 > the conduit's `send` method builds the plan and writes it within the
 > same call, while the caller's `.await` keeps all borrows alive (see
 > `zerocopy.send.lifetime`).
-
-> r[zerocopy.scatter.replay]
->
-> For StableConduit, the replay buffer needs an owned copy of the
-> serialized frame bytes. After writing the scatter plan into the write
-> slot, the conduit copies the slot's byte range into the replay buffer.
-> This is one additional `memcpy` (slot → replay buffer) that is
-> unavoidable for reliability — but there is no intermediate `Vec`
-> between serialization and the write slot.
 
 ## Payload representation
 

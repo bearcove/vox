@@ -68,9 +68,8 @@ pub trait Link {
 
     /// Whether this link supports the requested transport mode.
     ///
-    /// Most links support both `bare` and `stable`. Special transports may
-    /// override this to reject unsupported modes during the transport
-    /// prologue.
+    /// The current spec defines only `bare`. Special transports may override
+    /// this to reject unsupported modes during the transport prologue.
     fn supports_transport_mode(mode: TransportMode) -> bool
     where
         Self: Sized,
