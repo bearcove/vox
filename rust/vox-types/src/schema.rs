@@ -14,7 +14,7 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
-use crate::{MethodId, RequestCall, RequestResponse, is_rx, is_tx};
+use crate::{MethodDescriptor, MethodId, RequestCall, RequestResponse, is_rx, is_tx};
 
 // ============================================================================
 // Schema extraction
@@ -148,6 +148,45 @@ impl SchemaSendTracker {
     pub fn plan_for_shape(shape: &'static Shape) -> Result<PreparedSchemaPlan, SchemaExtractError> {
         let bytes = vox_phon::schema_bytes_for_shape(shape)
             .map_err(|e| SchemaExtractError::Phon(e.to_string()))?;
+        Ok(PreparedSchemaPlan { bytes })
+    }
+
+    /// The phon schema binding for a method's argument tuple, including channel
+    /// element auxiliary roots for `Tx<T>`/`Rx<T>` args whose `T` is opaque to
+    /// reflection.
+    pub fn plan_for_method_args(
+        method: &MethodDescriptor,
+    ) -> Result<PreparedSchemaPlan, SchemaExtractError> {
+        let roles_and_shapes: Vec<(String, &'static Shape)> = method
+            .args
+            .iter()
+            .enumerate()
+            .filter_map(|(index, arg)| {
+                let direction = if is_tx(arg.shape) {
+                    "tx"
+                } else if is_rx(arg.shape) {
+                    "rx"
+                } else {
+                    return None;
+                };
+                let element = arg.channel_element?;
+                Some((format!("channel.arg.{index}.{direction}.element"), element))
+            })
+            .collect();
+
+        if roles_and_shapes.is_empty() {
+            return Self::plan_for_shape(method.args_shape);
+        }
+
+        let auxiliary_roots: Vec<(&str, &'static Shape)> = roles_and_shapes
+            .iter()
+            .map(|(role, shape)| (role.as_str(), *shape))
+            .collect();
+        let bytes = vox_phon::schema_bytes_for_shape_with_auxiliary_roots(
+            method.args_shape,
+            &auxiliary_roots,
+        )
+        .map_err(|e| SchemaExtractError::Phon(e.to_string()))?;
         Ok(PreparedSchemaPlan { bytes })
     }
 
@@ -1547,6 +1586,44 @@ mod tests {
             "second prepare_send for same method should return empty"
         );
         assert!(schematic.attached.is_empty());
+    }
+
+    #[test]
+    fn method_args_plan_includes_channel_element_auxiliary_roots() {
+        #[derive(Facet)]
+        struct Element {
+            value: String,
+        }
+
+        #[derive(Facet)]
+        struct Args {
+            stream: crate::Tx<Element>,
+        }
+
+        let method = crate::method_descriptor::<Args, ()>(
+            "StreamService",
+            "send",
+            &["stream"],
+            &[Some(Element::SHAPE)],
+            crate::MethodDescriptorOptions {
+                response_wire_shape: <() as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
+        );
+
+        let prepared = SchemaSendTracker::plan_for_method_args(method).expect("schema plan");
+        let parsed = vox_phon::parse_schema_bytes(&prepared.bytes).expect("parse schema binding");
+        let element = vox_phon::schema_id_for_shape(Element::SHAPE).expect("element schema id");
+
+        assert_eq!(
+            parsed.auxiliary_roots,
+            vec![vox_phon::AuxiliaryRoot {
+                role: "channel.arg.0.tx.element".to_string(),
+                root: element,
+            }]
+        );
     }
 
     // r[verify schema.tracking.transitive]

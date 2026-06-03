@@ -850,7 +850,7 @@ fn generate_client(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream2 {
             /// Create a new client wrapping the given caller.
             pub fn new(caller: #vox::Caller) -> Self {
                 Self {
-                    caller,
+                    caller: caller.with_service(#descriptor_fn_name()),
                     session: None,
                 }
             }
@@ -876,7 +876,7 @@ fn generate_client(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream2 {
                 session: Option<#vox::SessionHandle>,
             ) -> Self {
                 Self {
-                    caller,
+                    caller: caller.with_service(#descriptor_fn_name()),
                     session,
                 }
             }

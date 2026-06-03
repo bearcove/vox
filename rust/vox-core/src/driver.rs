@@ -1161,20 +1161,26 @@ impl Caller {
         &self.inner
     }
 
+    /// Attach a generated service descriptor to this caller.
+    pub fn with_service(mut self, service: &'static vox_types::ServiceDescriptor) -> Self {
+        if let Some(existing_service) = self.service {
+            assert_eq!(
+                existing_service.service_name, service.service_name,
+                "Caller service mismatch"
+            );
+        } else {
+            self.service = Some(service);
+        }
+        self
+    }
+
     /// Append a client middleware to this caller's chain.
     pub fn with_middleware(
         mut self,
         service: &'static vox_types::ServiceDescriptor,
         middleware: impl vox_types::ClientMiddleware,
     ) -> Self {
-        if let Some(existing_service) = self.service {
-            assert_eq!(
-                existing_service.service_name, service.service_name,
-                "Caller middleware service mismatch"
-            );
-        } else {
-            self.service = Some(service);
-        }
+        self = self.with_service(service);
         self.middlewares.push(Arc::new(middleware));
         self
     }
@@ -1190,6 +1196,17 @@ impl Caller {
 
         let extensions = Extensions::new();
         let method = service.by_id(call.method_id);
+        if call.schemas.is_empty()
+            && let Some(method) = method
+        {
+            match vox_types::SchemaSendTracker::plan_for_method_args(method) {
+                Ok(prepared) => call.schemas = prepared.to_payload(),
+                Err(error) => tracing::error!(
+                    method_id = ?call.method_id,
+                    "schema attachment failed: {error}"
+                ),
+            }
+        }
         let context = ClientContext::new(method, call.method_id, &extensions);
 
         if !self.middlewares.is_empty() {
@@ -1720,10 +1737,11 @@ impl DriverCaller {
             RequestDebugState::WaitingForResponse,
         );
 
-        // r[impl schema.exchange.caller]
         // r[depends schema.exchange.channels]
-        // Schemas are attached by SessionCore::send() when it sees a Call
-        // with Payload::Value — no separate prepare step needed.
+        // Generated clients attach their service descriptor to the caller so
+        // channel element roots can be advertised before middleware observes
+        // the call. SessionCore::send() still decides whether this peer has
+        // already seen the per-method binding.
         //
         // Channel binding happens during serialization via the thread-local
         // ChannelBinder. Channel element schemas are recorded in method

@@ -359,7 +359,7 @@ impl WordLabClient {
     #[doc = r" Create a new client wrapping the given caller."]
     pub fn new(caller: ::vox::Caller) -> Self {
         Self {
-            caller,
+            caller: caller.with_service(word_lab_service_descriptor()),
             session: None,
         }
     }
@@ -602,6 +602,9 @@ impl WordLabClient {
 impl ::vox::FromVoxSession for WordLabClient {
     const SERVICE_NAME: &'static str = "WordLab";
     fn from_vox_session(caller: ::vox::Caller, session: Option<::vox::SessionHandle>) -> Self {
-        Self { caller, session }
+        Self {
+            caller: caller.with_service(word_lab_service_descriptor()),
+            session,
+        }
     }
 }

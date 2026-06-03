@@ -272,7 +272,7 @@ impl AuditClient {
     #[doc = r" Create a new client wrapping the given caller."]
     pub fn new(caller: ::vox::Caller) -> Self {
         Self {
-            caller,
+            caller: caller.with_service(audit_service_descriptor()),
             session: None,
         }
     }
@@ -435,6 +435,9 @@ impl AuditClient {
 impl ::vox::FromVoxSession for AuditClient {
     const SERVICE_NAME: &'static str = "Audit";
     fn from_vox_session(caller: ::vox::Caller, session: Option<::vox::SessionHandle>) -> Self {
-        Self { caller, session }
+        Self {
+            caller: caller.with_service(audit_service_descriptor()),
+            session,
+        }
     }
 }
