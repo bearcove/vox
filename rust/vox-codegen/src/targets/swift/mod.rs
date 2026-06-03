@@ -78,8 +78,6 @@ mod tests {
             ],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );

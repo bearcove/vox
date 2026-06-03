@@ -1,7 +1,6 @@
 //! Rust subject binary for the vox compliance suite.
 
 use spec_proto::{Color, MathError, TestbedClient, TestbedDispatcher};
-use std::time::Duration;
 use subject_rust::TestbedService;
 use tracing::info;
 use vox_core::{TransportMode, initiator};
@@ -107,8 +106,6 @@ async fn connect_and_serve() -> Result<(), String> {
 }
 
 async fn run_client() -> Result<(), String> {
-    const ITEM_COUNT: u32 = 40;
-
     let addr = std::env::var("PEER_ADDR").map_err(|_| "PEER_ADDR env var not set".to_string())?;
     let scenario = std::env::var("CLIENT_SCENARIO").unwrap_or_else(|_| "echo".to_string());
     info!("client mode: connecting to {addr}, scenario={scenario}");
@@ -615,111 +612,6 @@ async fn run_client() -> Result<(), String> {
                 }
             }
             info!("process_message result OK");
-        }
-        "channel_retry_non_idem" => {
-            let (tx, mut rx) = vox::channel::<i32>();
-            let call = tokio::spawn({
-                let client = client.clone();
-                async move {
-                    info!("starting channel_retry_non_idem call");
-                    client.generate_retry_non_idem(ITEM_COUNT, tx).await
-                }
-            });
-            let recv = tokio::spawn(async move {
-                let mut received = Vec::new();
-                loop {
-                    match rx.recv().await {
-                        Ok(Some(n)) => {
-                            let n = n.get();
-                            info!(value = *n, "channel_retry_idem recv");
-                            received.push(*n);
-                        }
-                        Ok(None) => {
-                            info!("channel_retry_idem recv reached close");
-                            break;
-                        }
-                        Err(err) => {
-                            info!("channel_retry_idem recv error: {err}");
-                            break;
-                        }
-                    }
-                }
-                received
-            });
-
-            let result = tokio::time::timeout(Duration::from_secs(5), call)
-                .await
-                .map_err(|_| "timed out waiting for non-idem call".to_string())?
-                .map_err(|e| format!("non-idem call task: {e}"))?;
-            let received = tokio::time::timeout(Duration::from_secs(5), recv)
-                .await
-                .map_err(|_| "timed out draining non-idem channel".to_string())?
-                .map_err(|e| format!("non-idem recv task: {e}"))?;
-
-            if !matches!(result, Err(vox::VoxError::Indeterminate)) {
-                return Err(format!(
-                    "expected non-idem channel retry to fail with Indeterminate, got {result:?}"
-                ));
-            }
-
-            let expected: Vec<i32> = (0..received.len() as i32).collect();
-            if received != expected {
-                return Err(format!(
-                    "expected sequential non-idem prefix {expected:?}, got {received:?}"
-                ));
-            }
-        }
-        "channel_retry_idem" => {
-            let (tx, mut rx) = vox::channel::<i32>();
-            let call = tokio::spawn({
-                let client = client.clone();
-                async move {
-                    info!("starting channel_retry_idem call");
-                    client.generate_retry_idem(ITEM_COUNT, tx).await
-                }
-            });
-            let recv = tokio::spawn(async move {
-                let mut received = Vec::new();
-                while let Ok(Some(n)) = rx.recv().await {
-                    let n = n.get();
-                    received.push(*n);
-                }
-                received
-            });
-
-            tokio::time::timeout(Duration::from_secs(5), call)
-                .await
-                .map_err(|_| "timed out waiting for idem call".to_string())?
-                .map_err(|e| format!("idem call task: {e}"))?
-                .map_err(|e| format!("idem retry call failed: {e:?}"))?;
-
-            let received = tokio::time::timeout(Duration::from_secs(5), recv)
-                .await
-                .map_err(|_| "timed out draining idem channel".to_string())?
-                .map_err(|e| format!("idem recv task: {e}"))?;
-
-            let restart = received
-                .iter()
-                .enumerate()
-                .skip(1)
-                .find_map(|(idx, value)| (*value == 0).then_some(idx))
-                .ok_or_else(|| format!("expected retry stream restart, got {received:?}"))?;
-
-            let expected_prefix: Vec<i32> = (0..restart as i32).collect();
-            if received[..restart] != expected_prefix {
-                return Err(format!(
-                    "expected first attempt prefix {expected_prefix:?}, got {:?}",
-                    &received[..restart]
-                ));
-            }
-
-            let expected_rerun: Vec<i32> = (0..ITEM_COUNT as i32).collect();
-            if received[restart..] != expected_rerun {
-                return Err(format!(
-                    "expected rerun suffix {expected_rerun:?}, got {:?}",
-                    &received[restart..]
-                ));
-            }
         }
         "echo_tree" => {
             let tree = spec_proto::Tree {

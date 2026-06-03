@@ -13,13 +13,6 @@ import type { PhonMethodSchemas } from "../schema_tracker.ts";
 // descriptor until that runtime lands.
 export type ServiceSendSchemas = Record<string, PhonMethodSchemas>;
 
-export interface RetryPolicy {
-  /** Whether an admitted operation must persist once started. */
-  persist: boolean;
-  /** Whether re-executing the same logical operation is semantically safe. */
-  idem: boolean;
-}
-
 /**
  * Describes a single RPC method at runtime.
  *
@@ -31,8 +24,6 @@ export interface MethodDescriptor {
   name: string;
   /** Method ID hash for wire protocol routing. */
   id: bigint;
-  /** Static retry policy declared for this method. */
-  retry: RetryPolicy;
 }
 
 /** Describes a service at runtime (collection of method descriptors). */

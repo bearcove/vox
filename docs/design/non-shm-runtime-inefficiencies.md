@@ -192,27 +192,6 @@ Architectural conclusion:
   byte-ownership mismatch.
 - This is a targeted tax, not a systemic one.
 
-### 6. Rust persistent operation storage adds another serialization pass
-
-When a response is persisted for replay, the driver strips schemas and
-reserializes the response payload for the operation store:
-
-- [rust/vox-core/src/driver.rs](/Users/amos/bearcove/vox/rust/vox-core/src/driver.rs#L445)
-
-This means a successful persistent response may be:
-
-- prepared for wire send
-- serialized again for storage
-- later reconstructed for replay
-
-This is not inherently wrong, but it is a meaningful steady-state cost for
-persistent retry semantics.
-
-Architectural conclusion:
-
-- Rust persistence overhead exists, but it is feature-driven and explicit.
-- It is not the same class of waste as Swift's everyday request path.
-
 ## Highest-ROI Direction
 
 If the goal is to remove the most waste without discussing SHM, the ranking is:

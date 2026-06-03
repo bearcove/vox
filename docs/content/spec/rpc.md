@@ -235,16 +235,16 @@ registered on the session builder; otherwise they are rejected.
 >   * `InvalidPayload` — the arguments could not be deserialized
 >   * `Cancelled` — the call was cancelled before completion
 >   * `Indeterminate` — recovery completed, but the runtime could not safely
->     continue, replay, or re-execute the logical operation
+>     determine whether the request attempt reached a terminal outcome
 
 > r[rpc.fallible.vox-error.retryable]
 >
 > `VoxError` variants differ in retryability:
 >
->   * **Retryable** — the failure is transient; retrying the same operation on a
+>   * **Retryable** — the failure is transient; issuing a new call on a
 >     fresh connection may succeed: `ConnectionClosed`, `SessionShutdown`,
 >     `SendFailed`
->   * **Non-retryable** — the failure is permanent; retrying the same operation
+>   * **Non-retryable** — the failure is permanent; issuing the same call
 >     against the same peer will reproduce the same outcome: `User`,
 >     `UnknownMethod`, `InvalidPayload`, `Cancelled`, `Indeterminate`
 >
@@ -374,10 +374,9 @@ registered on the session builder; otherwise they are rejected.
 
 > r[rpc.flow-control.max-concurrent-requests.counting]
 >
-> `max_concurrent_requests` counts live request attempts, not logical
-> operations. A retransmission for the same operation still consumes one
-> unit of request concurrency while that retransmitted request attempt is
-> live.
+> `max_concurrent_requests` counts live request attempts. A later call issued
+> after recovery consumes its own unit of request concurrency while that
+> request attempt is live.
 
 > r[rpc.flow-control.max-concurrent-requests.attachment-loss]
 >

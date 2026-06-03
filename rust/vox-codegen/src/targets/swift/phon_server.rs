@@ -92,18 +92,6 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
         "    public init(handler: {service_name}Handler) {{ self.handler = handler }}\n\n"
     ));
 
-    // retryPolicy
-    out.push_str("    public func retryPolicy(methodId: UInt64) -> RetryPolicy {\n        switch methodId {\n");
-    for m in service.methods {
-        out.push_str(&format!(
-            "        case {}: return RetryPolicy(persist: {}, idem: {})\n",
-            hex_u64(crate::method_id(m)),
-            m.retry_persist,
-            m.retry_idem
-        ));
-    }
-    out.push_str("        default: return .volatile\n        }\n    }\n\n");
-
     // encodeVoxError — encode a runtime error through any method's response type (the
     // non-User Err arms are independent of `T`/`E` on the wire, so the first method's
     // response program suffices). A method-less service has no response program, so it

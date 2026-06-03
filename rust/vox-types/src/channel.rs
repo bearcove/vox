@@ -2835,8 +2835,6 @@ mod tests {
             &[Some(Writer::SHAPE)],
             crate::MethodDescriptorOptions {
                 response_wire_shape: <() as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -2847,8 +2845,6 @@ mod tests {
             &[Some(Reader::SHAPE)],
             crate::MethodDescriptorOptions {
                 response_wire_shape: <() as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );

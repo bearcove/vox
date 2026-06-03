@@ -30,7 +30,6 @@ import { createServer as createTcpServer, type AddressInfo } from "net";
 import { wsConnector } from "@bearcove/vox-ws";
 import {
   Driver,
-  RpcErrorCode,
   SessionError,
   channel,
   session,
@@ -48,7 +47,7 @@ setVoxLogger({
 
 // Service implementation
 class TestbedService implements TestbedHandler {
-  private async streamRetryProbeValues(count: number, output: Tx<number>): Promise<void> {
+  private async streamValues(count: number, output: Tx<number>): Promise<void> {
     for (let i = 0; i < count; i++) {
       await output.send(i);
     }
@@ -106,15 +105,7 @@ class TestbedService implements TestbedHandler {
   }
 
   async generate(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
-  }
-
-  async generateRetryNonIdem(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
-  }
-
-  async generateRetryIdem(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
+    await this.streamValues(count, output);
   }
 
   async transform(input: Rx<string>, output: Tx<string>): Promise<void> {
@@ -244,7 +235,7 @@ class TestbedService implements TestbedHandler {
   }
 
   async generateLarge(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
+    await this.streamValues(count, output);
   }
 
   allColors(): Color[] {
@@ -296,16 +287,6 @@ class TestbedService implements TestbedHandler {
     return tree;
   }
 }
-
-const RETRY_PROBE_ITEM_COUNT = 40;
-
-function expectSequentialPrefix(received: number[], label: string): void {
-  const expected = Array.from({ length: received.length }, (_, idx) => idx);
-  if (received.length !== expected.length || received.some((value, idx) => value !== expected[idx])) {
-    throw new Error(`${label} expected sequential prefix [${expected.join(", ")}], got [${received.join(", ")}]`);
-  }
-}
-
 
 function makeConnector(addr: string) {
   if (addr.startsWith("ws://") || addr.startsWith("wss://")) {
@@ -409,53 +390,6 @@ async function runClient() {
         received.push(n);
       }
       console.error(`generate received: [${received.join(", ")}]`);
-      break;
-    }
-    case "channel_retry_non_idem": {
-      const [tx, rx] = channel<number>();
-      const callPromise = client.generateRetryNonIdem(RETRY_PROBE_ITEM_COUNT, tx);
-      const receiveTask = (async () => {
-        const received: number[] = [];
-        for await (const n of rx) {
-          received.push(n);
-        }
-        return received;
-      })();
-
-      let result: unknown;
-      try {
-        await callPromise;
-      } catch (error) {
-        result = error;
-      }
-
-      const received = await receiveTask;
-      if (!(result instanceof Error) || !("code" in result) || result.code !== RpcErrorCode.INDETERMINATE) {
-        throw new Error(`expected indeterminate error, got ${String(result)}`);
-      }
-      expectSequentialPrefix(received, "non-idem retry");
-      break;
-    }
-    case "channel_retry_idem": {
-      const [tx, rx] = channel<number>();
-      const callPromise = client.generateRetryIdem(RETRY_PROBE_ITEM_COUNT, tx);
-      const receiveTask = (async () => {
-        const received: number[] = [];
-        for await (const n of rx) {
-          received.push(n);
-        }
-        return received;
-      })();
-
-      await callPromise;
-      const received = await receiveTask;
-      const restart = received.findIndex((value, idx) => idx > 0 && value === 0);
-      expectSequentialPrefix(received.slice(0, restart), "idem retry first attempt");
-      const rerun = Array.from({ length: RETRY_PROBE_ITEM_COUNT }, (_, idx) => idx);
-      const suffix = received.slice(restart);
-      if (suffix.length !== rerun.length || suffix.some((value, idx) => value !== rerun[idx])) {
-        throw new Error(`expected rerun suffix [${rerun.join(", ")}], got [${suffix.join(", ")}]`);
-      }
       break;
     }
     case "shape_area": {

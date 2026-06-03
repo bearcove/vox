@@ -12,7 +12,6 @@ import type { MethodDescriptor, TaskMessage } from "./channeling/index.ts";
 const METHOD: MethodDescriptor = {
   name: "stream",
   id: 77n,
-  retry: { persist: false, idem: false },
 };
 
 const METHOD_SCHEMAS: PhonMethodSchemas = {

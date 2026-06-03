@@ -121,7 +121,7 @@ function rawDataToUint8Array(data: RawData): Uint8Array {
 }
 
 class TestbedService implements TestbedHandler {
-  private async streamRetryProbeValues(count: number, output: Tx<number>): Promise<void> {
+  private async streamValues(count: number, output: Tx<number>): Promise<void> {
     for (let i = 0; i < count; i++) {
       await output.send(i);
     }
@@ -171,15 +171,7 @@ class TestbedService implements TestbedHandler {
   }
 
   async generate(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
-  }
-
-  async generateRetryNonIdem(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
-  }
-
-  async generateRetryIdem(count: number, output: Tx<number>): Promise<void> {
-    await this.streamRetryProbeValues(count, output);
+    await this.streamValues(count, output);
   }
 
   async transform(input: Rx<string>, output: Tx<string>): Promise<void> {

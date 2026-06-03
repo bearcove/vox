@@ -17,7 +17,6 @@ public final class Driver: @unchecked Sendable {
     let role: Role
     let negotiated: Negotiated
     let handle: ConnectionHandle
-    let operations: OperationRegistry
     let connectionAcceptor: (any ConnectionAcceptor)?
     let keepalive: SessionKeepaliveConfig?
 
@@ -53,7 +52,6 @@ public final class Driver: @unchecked Sendable {
         role: Role,
         negotiated: Negotiated,
         handle: ConnectionHandle,
-        operations: OperationRegistry,
         connectionAcceptor: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil
     ) {
@@ -62,7 +60,6 @@ public final class Driver: @unchecked Sendable {
         self.role = role
         self.negotiated = negotiated
         self.handle = handle
-        self.operations = operations
         self.connectionAcceptor = connectionAcceptor
         self.keepalive = keepalive
         self.serverRegistry = ChannelRegistry()
@@ -94,7 +91,6 @@ public final class Driver: @unchecked Sendable {
         role: Role,
         negotiated: Negotiated,
         handle: ConnectionHandle,
-        operations: OperationRegistry,
         connectionAcceptor: (any ConnectionAcceptor)?,
         keepalive: SessionKeepaliveConfig?,
         eventStream: AsyncStream<DriverEvent>,
@@ -115,7 +111,6 @@ public final class Driver: @unchecked Sendable {
         self.role = role
         self.negotiated = negotiated
         self.handle = handle
-        self.operations = operations
         self.connectionAcceptor = connectionAcceptor
         self.keepalive = keepalive
         self.serverRegistry = ChannelRegistry()

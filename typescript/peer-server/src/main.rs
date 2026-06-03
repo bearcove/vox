@@ -20,7 +20,7 @@ use vox_websocket::WsLink;
 #[derive(Clone)]
 struct TestbedService;
 
-async fn stream_retry_probe_values(count: u32, output: Tx<i32>) {
+async fn stream_values(count: u32, output: Tx<i32>) {
     for i in 0..count as i32 {
         let _ = output.send(i).await;
     }
@@ -102,15 +102,7 @@ impl Testbed for TestbedService {
     }
 
     async fn generate(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
-    }
-
-    async fn generate_retry_non_idem(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
-    }
-
-    async fn generate_retry_idem(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     async fn transform(&self, mut input: Rx<String>, output: Tx<String>) {
@@ -236,7 +228,7 @@ impl Testbed for TestbedService {
     }
 
     async fn generate_large(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     async fn all_colors(&self) -> Vec<Color> {

@@ -13,16 +13,11 @@ import VoxRuntime
 struct TestbedService: TestbedHandler {
     private func streamValues(
         count: UInt32,
-        output: Tx<Int32>,
-        pauseAfter: Int32? = nil,
-        pauseNanoseconds: UInt64 = 0
+        output: Tx<Int32>
     ) async throws {
         for i in 0..<Int32(count) {
             log("  sending: \(i)")
             try await output.send(i)
-            if let pauseAfter, i + 1 == pauseAfter, count > UInt32(pauseAfter), pauseNanoseconds > 0 {
-                try await Task.sleep(nanoseconds: pauseNanoseconds)
-            }
         }
     }
 
@@ -77,28 +72,6 @@ struct TestbedService: TestbedHandler {
         log("generate called: count=\(count)")
         try await streamValues(count: count, output: output)
         log("generate complete, about to return (close will be sent by dispatcher)")
-    }
-
-    func generateRetryNonIdem(count: UInt32, output: Tx<Int32>) async throws {
-        log("generateRetryNonIdem called: count=\(count)")
-        try await streamValues(
-            count: count,
-            output: output,
-            pauseAfter: min(3, Int32(count)),
-            pauseNanoseconds: 5_000_000_000
-        )
-        log("generateRetryNonIdem complete, about to return (close will be sent by dispatcher)")
-    }
-
-    func generateRetryIdem(count: UInt32, output: Tx<Int32>) async throws {
-        log("generateRetryIdem called: count=\(count)")
-        try await streamValues(
-            count: count,
-            output: output,
-            pauseAfter: min(3, Int32(count)),
-            pauseNanoseconds: 5_000_000_000
-        )
-        log("generateRetryIdem complete, about to return (close will be sent by dispatcher)")
     }
 
     func transform(input: Rx<String>, output: Tx<String>) async throws {
@@ -287,8 +260,6 @@ func log(_ message: String) {
 func subjectConduit() -> ConduitKind {
     ProcessInfo.processInfo.environment["SPEC_CONDUIT"] == "stable" ? .stable : .bare
 }
-
-let retryProbeItemCount: UInt32 = 40
 
 func sameShape(_ lhs: Shape, _ rhs: Shape) -> Bool {
     switch (lhs, rhs) {
@@ -497,73 +468,6 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("generate_large OK")
-    case "channel_retry_non_idem":
-        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
-
-        let callTask = Task {
-            try await client.generateRetryNonIdem(count: retryProbeItemCount, output: tx)
-        }
-        let receiveTask = Task { () throws -> [Int32] in
-            var received: [Int32] = []
-            for try await n in rx {
-                received.append(n)
-            }
-            return received
-        }
-
-        do {
-            try await callTask.value
-            log("channel_retry_non_idem expected indeterminate")
-            throw SubjectError.invalidResponse
-        } catch VoxError<Infallible>.indeterminate {
-        } catch {
-            log("channel_retry_non_idem unexpected error: \(error)")
-            throw error
-        }
-
-        let received = try await receiveTask.value
-        let expected = (0..<Int32(received.count)).map { $0 }
-        guard received == expected else {
-            log("channel_retry_non_idem expected prefix \(expected), got \(received)")
-            throw SubjectError.invalidResponse
-        }
-    case "channel_retry_idem":
-        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
-
-        let callTask = Task {
-            try await client.generateRetryIdem(count: retryProbeItemCount, output: tx)
-        }
-        let receiveTask = Task { () throws -> [Int32] in
-            var received: [Int32] = []
-            for try await n in rx {
-                received.append(n)
-            }
-            return received
-        }
-
-        try await callTask.value
-        let received = try await receiveTask.value
-        guard
-            let restart = received.enumerated().dropFirst().first(where: { $0.element == 0 })?
-                .offset
-        else {
-            log("channel_retry_idem expected retry restart, got \(received)")
-            throw SubjectError.invalidResponse
-        }
-        let expectedPrefix = (0..<Int32(restart)).map { $0 }
-        guard Array(received[..<restart]) == expectedPrefix else {
-            log(
-                "channel_retry_idem expected prefix \(expectedPrefix), got \(Array(received[..<restart]))"
-            )
-            throw SubjectError.invalidResponse
-        }
-        let expectedRerun = (0..<Int32(retryProbeItemCount)).map { $0 }
-        guard Array(received[restart...]) == expectedRerun else {
-            log(
-                "channel_retry_idem expected rerun \(expectedRerun), got \(Array(received[restart...]))"
-            )
-            throw SubjectError.invalidResponse
-        }
     case "divide_error":
         let result = try await client.divide(dividend: 10, divisor: 0)
         guard case .failure(.divisionByZero) = result else {

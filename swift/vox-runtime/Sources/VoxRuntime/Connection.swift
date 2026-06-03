@@ -31,9 +31,7 @@ public final class Connection: @unchecked Sendable {
         metadata: Metadata,
         payload: [UInt8],
         channels: [UInt64] = [],
-        retry: RetryPolicy = .volatile,
         timeout: TimeInterval?,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)? = nil,
         finalizeChannels: (@Sendable () -> Void)? = nil,
         schemaInfo: ClientSchemaInfo? = nil
     ) async throws -> [UInt8] {
@@ -42,9 +40,7 @@ public final class Connection: @unchecked Sendable {
             metadata: metadata,
             payload: payload,
             channels: channels,
-            retry: retry,
             timeout: timeout,
-            prepareRetry: prepareRetry,
             finalizeChannels: finalizeChannels,
             schemaInfo: schemaInfo
         )
@@ -55,9 +51,7 @@ public final class Connection: @unchecked Sendable {
         metadata: Metadata = .null,
         payload: [UInt8],
         channels: [UInt64] = [],
-        retry: RetryPolicy = .volatile,
         timeout: TimeInterval? = nil,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)? = nil,
         finalizeChannels: (@Sendable () -> Void)? = nil,
         schemaInfo: ClientSchemaInfo? = nil
     ) async throws -> [UInt8] {
@@ -66,9 +60,7 @@ public final class Connection: @unchecked Sendable {
             metadata: metadata,
             payload: payload,
             channels: channels,
-            retry: retry,
             timeout: timeout,
-            prepareRetry: prepareRetry,
             finalizeChannels: finalizeChannels,
             schemaInfo: schemaInfo
         )

@@ -87,10 +87,9 @@ mod unix {
     /// or borrow it with [`Fd::as_raw_fd`].
     ///
     /// Serializing an `Fd` *duplicates* its descriptor into the transport's
-    /// `SCM_RIGHTS` batch (the source `Fd` keeps ownership), so a response
-    /// may be encoded more than once — the operation store's replay-seal
-    /// pass and the wire pass — and the encoder's size/write double-call is
-    /// deduped by the `Fd` value's address.
+    /// `SCM_RIGHTS` batch (the source `Fd` keeps ownership). If the encoder
+    /// performs a size/write double-call, collection is deduped by the `Fd`
+    /// value's address.
     #[derive(Facet)]
     #[facet(opaque = FdAdapter, traits(Debug))]
     pub struct Fd {
@@ -170,8 +169,8 @@ mod unix {
     /// `f` produced together with the descriptors it gathered.
     ///
     /// Descriptors are *duplicated* into the collector, so the source `Fd`
-    /// keeps ownership and the same response can be encoded more than once
-    /// (the operation store's replay-seal pass and the wire pass).
+    /// keeps ownership and a value can survive the encoder's size/write
+    /// double-call without duplicating the descriptor twice.
     pub fn collect_fds<R>(f: impl FnOnce() -> R) -> (R, FrameFds) {
         struct Restore(Option<FdCollector>);
         impl Drop for Restore {
@@ -215,10 +214,9 @@ mod unix {
     /// `key` is the source `Fd`'s value address: repeated calls for the same
     /// value within one collector (size pass then write pass) return the
     /// same index and duplicate the descriptor only once. Returns
-    /// `NOT_COLLECTED` — never panics — when no collector is installed (e.g.
-    /// the operation store's seal pre-encode: an fd response is inherently
-    /// non-replayable) or if `dup` fails; a panic here would abort the
-    /// process across the `extern "C"` encoder trampolines.
+    /// `NOT_COLLECTED` — never panics — when no collector is installed or if
+    /// `dup` fails; a panic here would abort the process across the `extern "C"`
+    /// encoder trampolines.
     fn collect_fd(key: usize, fd: BorrowedFd<'_>) -> u32 {
         FD_COLLECTOR.with(|c| {
             let mut slot = c.borrow_mut();

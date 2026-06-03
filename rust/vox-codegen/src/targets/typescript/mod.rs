@@ -354,8 +354,6 @@ mod tests {
             &[None],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<String, vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -366,8 +364,6 @@ mod tests {
             &[None, None],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -398,8 +394,6 @@ mod tests {
             &[None],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<CompositeNode, vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -435,8 +429,6 @@ mod tests {
             &[None],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<SessionSummary, vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -471,8 +463,6 @@ mod tests {
             ],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -516,8 +506,6 @@ mod tests {
             MethodDescriptorOptions {
                 response_wire_shape:
                     <Result<SubscribeMessage, vox_types::VoxError> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
@@ -562,8 +550,6 @@ mod tests {
             &[None, None],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );

@@ -21,8 +21,6 @@ pub fn text_svc_service_descriptor() -> &'static ::vox::session::ServiceDescript
                         ::std::borrow::Cow<'static, str>,
                         ::vox::VoxError<::core::convert::Infallible>,
                     > as ::vox::facet::Facet<'static>>::SHAPE,
-                    retry_persist: false,
-                    retry_idem: false,
                     doc: None,
                 },
             )];

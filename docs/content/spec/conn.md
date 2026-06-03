@@ -374,13 +374,13 @@ starts only after that conduit has been selected and initialized.
 >
 > After initial establishment, the runtime MAY bind a replacement conduit onto
 > the same session. Resumption preserves session-scoped state, including the
-> session's connection namespace and any operation records attached to that
-> session. Protocol schemas are re-exchanged on resumption (new handshake).
+> session's connection namespace. Protocol schemas are re-exchanged on
+> resumption (new handshake).
 >
 > Session resumption preserves session-scoped state, but does not preserve
 > in-flight request attempts or in-flight response deliveries on the failed
-> attachment. If an unresolved operation continues after session resumption, it
-> does so by creating a new request attempt for the same operation.
+> attachment. A caller that wants to issue another request after recovery does
+> so as a new call with a fresh request attempt.
 
 > r[session.parity]
 >

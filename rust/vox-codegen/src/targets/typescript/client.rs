@@ -1,8 +1,7 @@
 //! TypeScript client generation.
 //!
 //! Generates client interface and implementation for making caller-visible RPC
-//! calls. Each generated method issues one logical call, which may map to one
-//! or more request attempts at runtime if retry/session recovery is involved.
+//! calls. Each generated method issues one request attempt.
 //! The client uses the canonical service schema table for request/response
 //! encode/decode. No method-specific serialization code is generated here.
 
@@ -74,11 +73,11 @@ pub fn generate_caller_interface(service: &ServiceDescriptor) -> String {
 
 /// Generate client implementation.
 ///
-/// Each generated client method represents one logical RPC call:
+/// Each generated client method represents one RPC call:
 /// 1. Binds to its generated `MethodDescriptor` constant
 /// 2. Binds any channel args (via canonical arg refs if streaming)
 /// 3. Calls `caller.call({ method, args, descriptor, ... })` to start a
-///    request attempt for that logical call
+///    request attempt
 /// 4. The runtime encodes/decodes using the canonical service schema table
 pub fn generate_client_impl(service: &ServiceDescriptor) -> String {
     let mut out = String::new();

@@ -5,10 +5,8 @@ final class ConnectionHandle: @unchecked Sendable {
     private let commandTx: @Sendable (HandleCommand) -> Bool
     private let taskTx: @Sendable (TaskMessage) -> Bool
     private let requestSemaphore: AsyncSemaphore?
-    private let peerSupportsRetry: Bool
 
     private var requestIdAllocator = RequestIdAllocator()
-    private var operationIdAllocator = RequestIdAllocator()
 
     let channelAllocator: ChannelIdAllocator
     let channelRegistry: ChannelRegistry
@@ -17,12 +15,10 @@ final class ConnectionHandle: @unchecked Sendable {
         commandTx: @escaping @Sendable (HandleCommand) -> Bool,
         taskTx: @escaping @Sendable (TaskMessage) -> Bool,
         role: Role,
-        peerSupportsRetry: Bool,
         maxConcurrentRequests: UInt32 = UInt32.max
     ) {
         self.commandTx = commandTx
         self.taskTx = taskTx
-        self.peerSupportsRetry = peerSupportsRetry
         self.channelAllocator = ChannelIdAllocator(role: role)
         self.channelRegistry = ChannelRegistry()
         if maxConcurrentRequests < UInt32.max {
@@ -40,9 +36,7 @@ final class ConnectionHandle: @unchecked Sendable {
         metadata: Metadata = .null,
         payload: [UInt8],
         channels: [UInt64] = [],
-        retry: RetryPolicy = .volatile,
         timeout: TimeInterval? = nil,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)? = nil,
         finalizeChannels: (@Sendable () -> Void)? = nil,
         schemaInfo: ClientSchemaInfo? = nil
     ) async throws -> [UInt8] {
@@ -51,13 +45,6 @@ final class ConnectionHandle: @unchecked Sendable {
         }
 
         let requestId = await requestIdAllocator.allocate()
-        let outboundMetadata: Metadata
-        if peerSupportsRetry {
-            let operationId = await operationIdAllocator.allocate()
-            outboundMetadata = ensureOperationId(metadata, operationId: operationId)
-        } else {
-            outboundMetadata = metadata
-        }
 
         return try await withCheckedThrowingContinuation { continuation in
             let semaphore = requestSemaphore
@@ -72,12 +59,10 @@ final class ConnectionHandle: @unchecked Sendable {
                 .call(
                     requestId: requestId,
                     methodId: methodId,
-                    metadata: outboundMetadata,
+                    metadata: metadata,
                     payload: payload,
                     channels: channels,
-                    retry: retry,
                     timeout: timeout,
-                    prepareRetry: prepareRetry,
                     responseTx: { result in responseTx(result) },
                     schemaInfo: schemaInfo
                 ))
@@ -92,18 +77,9 @@ final class ConnectionHandle: @unchecked Sendable {
         await requestSemaphore?.close()
     }
 
-    func freshOperationMetadata(from metadata: Metadata) async -> Metadata {
-        guard peerSupportsRetry else {
-            return metadata
-        }
-        let operationId = await operationIdAllocator.allocate()
-        return replacingOperationId(metadata, operationId: operationId)
-    }
-
-    // The session has been started fresh on a new conduit. We must reset all of
-    // the operation and request identifier allocators.
+    // The session has been started fresh on a new conduit. Reset request IDs so
+    // future calls use the new connection's identifier space.
     func onConduitReset() {
-        self.operationIdAllocator = RequestIdAllocator()
         self.requestIdAllocator = RequestIdAllocator()
     }
 

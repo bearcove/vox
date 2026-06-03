@@ -167,7 +167,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
             format!("{{ {} }}", finalizers.join("; "))
         };
         out.push_str(&format!(
-            "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, {channels_arg}retry: .volatile,\n            timeout: timeout, prepareRetry: nil, finalizeChannels: {finalize_arg},\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
+            "        let response = try await connection.call(\n            methodId: {method_id}, metadata: .null, payload: payload, {channels_arg}timeout: timeout,\n            finalizeChannels: {finalize_arg},\n            schemaInfo: ClientSchemaInfo(methodSchemas: {svc}Methods[{method_id}]!, registry: {svc}Registry))\n"
         ));
 
         // Decode the wire `Result<T, VoxError<E>>` response by reconciling the server's

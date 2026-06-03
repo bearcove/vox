@@ -269,8 +269,6 @@ mod tests {
                         'static,
                     >>::SHAPE,
                 args_have_channels: false,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             };
 
@@ -349,8 +347,6 @@ mod tests {
                     'static,
                 >>::SHAPE,
             args_have_channels: false,
-            retry_persist: false,
-            retry_idem: false,
             doc: None,
         };
 

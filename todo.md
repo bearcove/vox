@@ -196,7 +196,7 @@ Rust session resumption:
 - preserves operation ID scope
 - does **not** preserve in-flight request attempts on the failed attachment
 - does **not** preserve in-flight response deliveries on the failed attachment
-- unresolved operations continue by creating a **new request attempt** for the same operation
+- in-flight request attempts fail; future calls use the resumed session
 
 On resume, Rust resets per-connection schema state:
 
@@ -209,7 +209,6 @@ On resume, Rust resets per-connection schema state:
 
 - `rust/vox-core/src/session/mod.rs`
 - `docs/content/spec/conn.md`
-- `docs/content/spec/retry.md`
 - `docs/content/spec/intro.md`
 
 ---
@@ -231,8 +230,8 @@ It is **not** the same thing as session resumption.
 
 Important distinction:
 
-- stable conduit continuity alone does not settle ambiguous RPC outcomes
-- retry/session resumption semantics still govern operation continuity
+- stable conduit continuity and session resumption are separate layers
+- bare session resumption does not preserve in-flight request attempts
 
 Docs explicitly describe stable conduit reconnect as preserving state/channels across reconnect.
 
@@ -241,27 +240,6 @@ Docs explicitly describe stable conduit reconnect as preserving state/channels a
 - `rust/vox-core/src/stable_conduit/mod.rs`
 - `docs/content/spec/conn.md`
 - `docs/content/guides/rust.md` (`stable_conduit_reconnect`)
-
----
-
-## 7. Retry and operation continuity
-
-Rust has a real operation persistence model.
-
-Important spec/Rust expectations:
-
-- retry is defined in terms of **operations**, not request attempts
-- `persist` creates a durability obligation
-- sealed outcomes for persist operations must be durably recorded
-- operation ID scope persists across session resumption
-- durable operation storage is distinct from transient in-memory tracking
-
-TypeScript currently does not match this fully.
-
-### References
-
-- `docs/content/spec/retry.md`
-- Rust operation-store wiring in `rust/vox-core`
 
 ---
 
@@ -430,50 +408,7 @@ Match Rust ordering and responsibilities:
 
 ---
 
-## F. TypeScript does not have a Rust-style durable operation store
-
-### Problem
-
-TS currently has only an in-memory `OperationRegistry` in `driver.ts`.
-
-That is not equivalent to Rust's operation store / durability story.
-
-### Current TS behavior
-
-TS can:
-
-- admit operations
-- attach duplicate requests
-- replay sealed outcomes
-- track released/indeterminate state
-
-But only in-process and only in memory.
-
-### Missing parity
-
-- durable operation persistence
-- restart-surviving operation records
-- durable sealing for `persist`
-- satisfying spec durability obligations for persist methods
-
-### TODO
-
-- [ ] Introduce a real operation-store abstraction in TS, mirroring Rust's concept
-- [ ] Separate transient registry behavior from durable persistence behavior
-- [ ] Ensure `persist` creates an actual durability obligation
-- [ ] Ensure sealed persist outcomes are durably recorded before reporting sealed
-- [ ] Ensure admitted persist operations are recoverable across process restart if required by spec
-- [ ] Audit current `driver.ts` retry behavior against `docs/content/spec/retry.md`
-
-### Files
-
-- `typescript/packages/vox-core/src/driver.ts`
-- `typescript/packages/vox-core/src/retry.ts`
-- generated descriptors that expose retry policy
-
----
-
-## G. Session resumption does not preserve channel continuity in TS
+## F. Session resumption does not preserve channel continuity in TS
 
 ### Problem
 
@@ -481,7 +416,8 @@ Current TS `session.ts` explicitly closes all channels on session resume:
 
 - `this.channelRegistry.closeAll()`
 
-Then it retries requests with fresh request IDs / fresh channels if retry machinery is available.
+In-flight request attempts fail across session loss; future calls use the
+resumed session.
 
 That is not "seamless channel continuity."
 
@@ -490,7 +426,6 @@ That is not "seamless channel continuity."
 According to spec/Rust:
 
 - session resumption does not preserve in-flight request attempts
-- operation continuity may continue by creating a new request attempt
 - stable conduit reconnect is the place where transparent channel continuity is expected
 
 So the parity question here is layered:
@@ -506,9 +441,9 @@ So the parity question here is layered:
   - bare + session resumption
   - stable conduit reconnect
   - stable + session resumption
-- [ ] Ensure TS does not incorrectly claim seamless channel continuity where only retry/new-attempt semantics apply
+- [ ] Ensure TS does not incorrectly claim seamless channel continuity for bare session resumption
 - [ ] Ensure TS stable conduit path preserves channels/state the way Rust/docs intend
-- [ ] Update tests to distinguish stable reconnect continuity from session resumption retry semantics
+- [ ] Update tests to distinguish stable reconnect continuity from bare session resumption
 
 ### Files
 
@@ -518,7 +453,7 @@ So the parity question here is layered:
 
 ---
 
-## H. Old `connection.ts` stack looks stale relative to current architecture
+## G. Old `connection.ts` stack looks stale relative to current architecture
 
 ### Problem
 
@@ -542,7 +477,7 @@ That appears to be a pre-parity architecture and is now in conflict with current
 
 ---
 
-## I. `vox-wire` message helper payload shapes are out of date
+## H. `vox-wire` message helper payload shapes are out of date
 
 ### Problem
 
@@ -567,7 +502,7 @@ and should align exactly with Rust message layout.
 
 ---
 
-## J. Need protocol-schema generation to stay aligned with new handshake model
+## I. Need protocol-schema generation to stay aligned with new handshake model
 
 ### Problem
 
@@ -592,7 +527,7 @@ We added `wireMessageSchemasCbor`, but TS generation and exports need to reflect
 
 ---
 
-## K. Tests need to be updated to validate the new reality, not preserve the old one
+## J. Tests need to be updated to validate the new reality, not preserve the old one
 
 ### Problem
 
@@ -649,12 +584,7 @@ Those tests are useful only if rewritten to validate the current protocol.
 - [ ] Verify replay/ack/reconnect semantics
 - [ ] Verify channel continuity guarantees
 
-## Phase 5 — Retry persistence parity
-- [ ] Introduce durable operation store abstraction
-- [ ] Align `persist` semantics with spec durability obligations
-- [ ] Audit retry/indeterminate/released/sealed behavior against Rust/spec
-
-## Phase 6 — Clean up stale API/tests/docs
+## Phase 5 — Clean up stale API/tests/docs
 - [ ] Remove or rewrite `connection.ts`-based old architecture
 - [ ] Update tests to current semantics
 - [ ] Update TS docs/examples once runtime is correct
@@ -685,8 +615,7 @@ These should happen first:
 - Rust receives payload schemas in `Session::handle_message(...)` before routing.
 - Rust resets schema tracking on reconnect/resume because type IDs are per connection.
 - Rust/session resumption and stable conduit reconnect are separate layers.
-- TS currently has only in-memory retry operation tracking, not a durable operation store.
-- TS currently closes channels on session resume instead of preserving seamless continuity there.
+- TS currently closes channels on session resume; bare session resumption should fail in-flight attempts rather than preserve seamless continuity.
 
 ### Important caution
 
@@ -731,13 +660,6 @@ That would move it farther away from parity.
 - [ ] Replay buffer semantics
 - [ ] Duplicate suppression
 - [ ] Channel continuity parity
-
-### Retry / operation continuity
-- [ ] In-memory registry audit
-- [ ] Durable operation-store abstraction
-- [ ] Persist durability obligations
-- [ ] Resume behavior parity
-- [x] Indeterminate/sealed/released parity (persist=true + failClosedOnDrop → INDETERMINATE)
 
 ### Tests
 - [ ] Remove stale hello-exchange tests

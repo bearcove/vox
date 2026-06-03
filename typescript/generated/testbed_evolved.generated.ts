@@ -370,37 +370,31 @@ export class TestbedDispatcher implements Dispatcher {
 export const testbed_echoProfile_method: MethodDescriptor = {
   name: "echoProfile",
   id: 0xbd9bcabddeebeb04n,
-  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoRecord_method: MethodDescriptor = {
   name: "echoRecord",
   id: 0x100b0e08da4b8f1an,
-  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoStatus_method: MethodDescriptor = {
   name: "echoStatus",
   id: 0x697590d3ffc36703n,
-  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoTag_method: MethodDescriptor = {
   name: "echoTag",
   id: 0x2bd1b3149d73ce97n,
-  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoMeasurement_method: MethodDescriptor = {
   name: "echoMeasurement",
   id: 0x3b3d22b015fa1a3fn,
-  retry: { persist: false, idem: false },
 };
 
 export const testbed_echoConfig_method: MethodDescriptor = {
   name: "echoConfig",
   id: 0xe13a477fb964ce28n,
-  retry: { persist: false, idem: false },
 };
 
 // Service descriptor for runtime dispatch metadata

@@ -2,7 +2,6 @@ import Foundation
 
 struct SessionHandshakeResult {
     let negotiated: Negotiated
-    let peerSupportsRetry: Bool
     let sessionResumeKey: [UInt8]?
     let localRootSettings: ConnectionSettings
     let peerRootSettings: ConnectionSettings
@@ -66,7 +65,7 @@ func performInitiatorHandshake(
         connectionSettings: ourSettings,
         messagePayloadSchema: Data(localMessagePayloadSchema),
         resumeKey: resumeKey.map { ResumeKeyBytes(bytes: Data($0)) },
-        metadata: appendRetrySupportMetadata(metadata)
+        metadata: metadata
     )
     try await sendHandshake(link, .hello(hello))
 
@@ -109,7 +108,6 @@ func performInitiatorHandshake(
 
     return SessionHandshakeResult(
         negotiated: negotiated,
-        peerSupportsRetry: metadataSupportsRetry(peerHello.metadata),
         sessionResumeKey: sessionResumeKey,
         localRootSettings: ourSettings,
         peerRootSettings: peerHello.connectionSettings,
@@ -152,14 +150,13 @@ func performAcceptorHandshake(
     // Still advertise a fresh resume key when resumable, mirroring the Rust
     // and TypeScript acceptors. Reference initiators that request resumption
     // (the TS client rejects the handshake outright otherwise) require the
-    // acceptor to echo a key; recovery is handled by replaying in-flight
-    // requests on a fresh session rather than a true protocol-level resume.
+    // acceptor to echo a key.
     let sessionResumeKey: [UInt8]? = resumable ? freshResumeKey() : nil
     let helloYourself = HelloYourself(
         connectionSettings: ourSettings,
         messagePayloadSchema: Data(localMessagePayloadSchema),
         resumeKey: sessionResumeKey.map { ResumeKeyBytes(bytes: Data($0)) },
-        metadata: appendRetrySupportMetadata(metadata)
+        metadata: metadata
     )
     try await sendHandshake(link, .helloYourself(helloYourself))
     traceLog(.handshake, "acceptor sent HelloYourself resumable=\(sessionResumeKey != nil)")
@@ -190,7 +187,6 @@ func performAcceptorHandshake(
 
     return SessionHandshakeResult(
         negotiated: negotiated,
-        peerSupportsRetry: metadataSupportsRetry(peerHello.metadata),
         sessionResumeKey: sessionResumeKey,
         localRootSettings: ourSettings,
         peerRootSettings: peerHello.connectionSettings,
@@ -251,7 +247,6 @@ func establishInitiator(
         dispatcher: dispatcher,
         role: .initiator,
         negotiated: handshake.negotiated,
-        peerSupportsRetry: handshake.peerSupportsRetry,
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
         resumable: resumable,
@@ -367,7 +362,6 @@ func establishAcceptor(
         dispatcher: dispatcher,
         role: .acceptor,
         negotiated: handshake.negotiated,
-        peerSupportsRetry: handshake.peerSupportsRetry,
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
         resumable: resumable,

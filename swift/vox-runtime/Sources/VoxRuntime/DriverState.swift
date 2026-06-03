@@ -135,17 +135,6 @@ actor DriverState {
         return responses
     }
 
-    func pendingCallsSnapshot() -> [DriverQueuedCall] {
-        pendingResponses.values.map(\.request)
-    }
-
-    func clearIncomingInFlightForResume() -> [UInt64] {
-        let requestIds = Array(inFlightRequests)
-        inFlightRequests.removeAll()
-        inFlightResponseContext.removeAll()
-        return requestIds
-    }
-
     func isConnectionClosed() -> Bool {
         isClosed
     }

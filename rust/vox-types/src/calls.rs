@@ -75,9 +75,8 @@ pub type CallResult = Result<crate::WithTracker<SelfRef<RequestResponse<'static>
 /// response for that attempt back to the caller. The response can be sent
 /// via [`Call::reply`], [`Call::ok`], or [`Call::err`].
 ///
-/// In the retry model, one logical operation may span multiple request
-/// attempts over time, but each `Call` value corresponds to exactly one
-/// request attempt currently being handled.
+/// Each `Call` value corresponds to exactly one request attempt currently
+/// being handled.
 ///
 /// # Cancellation
 ///

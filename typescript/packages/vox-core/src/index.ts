@@ -51,9 +51,7 @@ export {
 
 export {
   Driver,
-  InMemoryOperationStore,
   type Dispatcher,
-  type OperationStore,
 } from "./driver.ts";
 
 export { RequestContext } from "./request_context.ts";
@@ -96,12 +94,6 @@ export {
   type ClientMetadataValue,
   clientMetadataToWire,
 } from "./metadata.ts";
-
-export {
-  OPERATION_ID_METADATA_KEY,
-  RETRY_SUPPORT_METADATA_KEY,
-  RETRY_SUPPORT_VERSION,
-} from "./retry.ts";
 
 export {
   setVoxLogger,

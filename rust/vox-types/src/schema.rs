@@ -1650,8 +1650,6 @@ mod tests {
             &[Some(Element::SHAPE)],
             crate::MethodDescriptorOptions {
                 response_wire_shape: <() as Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );

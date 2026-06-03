@@ -787,9 +787,9 @@ pub fn build_registry(schemas: &[Schema]) -> SchemaRegistry {
 
 /// Anything that can look up schemas by their content hash.
 ///
-/// Implemented by SchemaRegistry (HashMap), the operation store, etc.
-/// Used by the send tracker to source schemas without caring where they
-/// come from.
+/// Implemented by SchemaRegistry (HashMap) and any other schema cache.
+/// Used by the send tracker to source schemas without caring where they come
+/// from.
 pub trait SchemaSource {
     fn get_schema(&self, id: SchemaHash) -> Option<Schema>;
 }

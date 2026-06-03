@@ -1,8 +1,6 @@
 use std::future::Future;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use std::time::SystemTime;
 
 use spec_proto::{
     Canvas, Color, Config, GnarlyPayload, LookupError, MathError, Measurement, Message, Person,
@@ -350,54 +348,16 @@ pub fn run_async<T>(f: impl Future<Output = T>) -> T {
     rt.block_on(f)
 }
 
-struct RetryProbeState {
-    active_breaks: CurrentBreakPair,
-    break_after: usize,
-    sent: AtomicUsize,
-    broke: AtomicBool,
-}
-
 #[derive(Clone, Default)]
-struct TestbedService {
-    retry_probe: Option<Arc<RetryProbeState>>,
-}
+struct TestbedService;
 
 impl TestbedService {
     fn new() -> Self {
         Self::default()
     }
-
-    fn with_retry_probe(active_breaks: CurrentBreakPair, break_after: usize) -> Self {
-        Self {
-            retry_probe: Some(Arc::new(RetryProbeState {
-                active_breaks,
-                break_after,
-                sent: AtomicUsize::new(0),
-                broke: AtomicBool::new(false),
-            })),
-        }
-    }
-
-    async fn stream_retry_probe_values(&self, count: u32, output: Tx<i32>) {
-        for i in 0..count as i32 {
-            if output.send(i).await.is_err() {
-                eprintln!("[harness] stream_retry_probe_values send failed at {i}");
-                break;
-            }
-            if let Some(state) = &self.retry_probe {
-                let sent = state.sent.fetch_add(1, Ordering::SeqCst) + 1;
-                if sent >= state.break_after && !state.broke.swap(true, Ordering::SeqCst) {
-                    eprintln!("[harness] breaking active tcp attachment after {sent} items");
-                    state.active_breaks.break_current().await;
-                }
-            }
-        }
-        eprintln!("[harness] stream_retry_probe_values closing output");
-        output.close(Default::default()).await.ok();
-    }
 }
 
-async fn stream_retry_probe_values(count: u32, output: Tx<i32>) {
+async fn stream_values(count: u32, output: Tx<i32>) {
     for i in 0..count as i32 {
         if output.send(i).await.is_err() {
             break;
@@ -455,15 +415,7 @@ impl Testbed for TestbedService {
     }
 
     async fn generate(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
-    }
-
-    async fn generate_retry_non_idem(&self, count: u32, output: Tx<i32>) {
-        self.stream_retry_probe_values(count, output).await;
-    }
-
-    async fn generate_retry_idem(&self, count: u32, output: Tx<i32>) {
-        self.stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     async fn transform(&self, mut input: Rx<String>, output: Tx<String>) {
@@ -581,7 +533,7 @@ impl Testbed for TestbedService {
     }
 
     async fn generate_large(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     async fn all_colors(&self) -> Vec<Color> {
@@ -726,37 +678,6 @@ async fn spawn_subject_cmd_with_env(
     Ok(child)
 }
 
-struct ResumableSubjectClientGuard {
-    path: std::path::PathBuf,
-}
-
-impl Drop for ResumableSubjectClientGuard {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir(&self.path);
-    }
-}
-
-async fn acquire_resumable_subject_client_guard() -> Result<ResumableSubjectClientGuard, String> {
-    let path = std::env::temp_dir().join("vox-spec-tests-resumable-subject-client.lock");
-    loop {
-        match std::fs::create_dir(&path) {
-            Ok(()) => return Ok(ResumableSubjectClientGuard { path }),
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                if let Ok(metadata) = std::fs::metadata(&path)
-                    && let Ok(modified) = metadata.modified()
-                    && let Ok(age) = SystemTime::now().duration_since(modified)
-                    && age > Duration::from_secs(10)
-                {
-                    let _ = std::fs::remove_dir_all(&path);
-                    continue;
-                }
-                tokio::time::sleep(Duration::from_millis(10)).await;
-            }
-            Err(err) => return Err(format!("create resumable subject lock: {err}")),
-        }
-    }
-}
-
 /// Listen on a random TCP port, upgrade incoming connection to WebSocket,
 /// complete the vox handshake, and return a ready `TestbedClient`.
 pub async fn accept_subject_ws(cmd: &str) -> Result<(TestbedClient, Child, SessionHandle), String> {
@@ -892,11 +813,6 @@ pub async fn accept_subject_spec_resumable(
     }
 }
 
-/// Spawn the subject in client mode, connect to a simple (non-resumable) Rust
-/// server, let the subject run the named scenario, and verify it exits 0.
-///
-/// This is the non-resumable counterpart of `run_subject_client_scenario_resumable`.
-/// Use it for scenarios that don't require session recovery.
 /// Spawn a subject in `server-listen` mode, wait for it to announce its
 /// bound address on stdout (`LISTEN_ADDR=127.0.0.1:PORT`), then return
 /// the address string and the child process handle.
@@ -1156,112 +1072,6 @@ async fn run_subject_client_scenario_ws(
     } else {
         Err(format!(
             "subject client scenario (ws) `{scenario}` failed with status {status}"
-        ))
-    }
-}
-
-pub async fn run_subject_client_scenario_resumable(
-    spec: SubjectSpec,
-    scenario: &str,
-    break_after: usize,
-) -> Result<(), String> {
-    let _guard = acquire_resumable_subject_client_guard().await?;
-
-    if spec.transport != SubjectTestTransport::Tcp {
-        return Err("resumable subject client scenarios are only supported for TCP".to_string());
-    }
-
-    let cmd = subject_cmd_for_language(spec.language);
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .map_err(|e| format!("bind: {e}"))?;
-    let addr = listener
-        .local_addr()
-        .map_err(|e| format!("local_addr: {e}"))?;
-
-    let mut child = spawn_subject_cmd_with_env(
-        &cmd,
-        &addr.to_string(),
-        &[("SUBJECT_MODE", "client"), ("CLIENT_SCENARIO", scenario)],
-    )
-    .await?;
-
-    let registry = SessionRegistry::default();
-    let active_breaks = CurrentBreakPair::default();
-    let (first_accept_tx, first_accept_rx) = oneshot::channel::<Result<(), String>>();
-    let service = TestbedService::with_retry_probe(active_breaks.clone(), break_after);
-
-    let accept_task = tokio::spawn(async move {
-        let mut first_accept_tx = Some(first_accept_tx);
-        let mut retained_clients = Vec::new();
-        let mut retained_handles = Vec::new();
-        loop {
-            let (stream, _) = match listener.accept().await {
-                Ok(accepted) => accepted,
-                Err(err) => {
-                    if let Some(tx) = first_accept_tx.take() {
-                        let _ = tx.send(Err(format!("accept: {err}")));
-                    }
-                    break;
-                }
-            };
-            eprintln!("[harness] accepted subject client tcp connection");
-            stream.set_nodelay(true).ok();
-
-            let (bridge_link, bridge_break, session_link, session_break) = breakable_link_pair(64);
-            active_breaks.set(bridge_break, session_break);
-
-            tokio::spawn(async move {
-                let _ = bridge_links(StreamLink::tcp(stream), bridge_link).await;
-            });
-
-            match acceptor_on(session_link)
-                .session_registry(registry.clone())
-                .metadata(vox_types::metadata().str("vox-service", "Testbed").build())
-                .on_connection(TestbedDispatcher::new(service.clone()))
-                .establish_or_resume::<TestbedClient>()
-                .await
-            {
-                Ok(SessionAcceptOutcome::Established(client)) => {
-                    eprintln!("[harness] established subject client session");
-                    if let Some(sh) = client.session.clone() {
-                        retained_handles.push(sh);
-                    }
-                    retained_clients.push(client);
-                    if let Some(tx) = first_accept_tx.take() {
-                        let _ = tx.send(Ok(()));
-                    }
-                }
-                Ok(SessionAcceptOutcome::Resumed) => {
-                    eprintln!("[harness] resumed subject client session");
-                }
-                Err(err) => {
-                    eprintln!("[harness] subject client handshake error: {err}");
-                    if let Some(tx) = first_accept_tx.take() {
-                        let _ = tx.send(Err(format!("handshake: {err}")));
-                    }
-                    break;
-                }
-            }
-        }
-    });
-
-    first_accept_rx
-        .await
-        .map_err(|e| format!("accept task join: {e}"))??;
-
-    let status = tokio::time::timeout(Duration::from_secs(10), child.wait())
-        .await
-        .map_err(|_| format!("subject client scenario `{scenario}` timed out"))?
-        .map_err(|e| format!("wait on subject process: {e}"))?;
-
-    accept_task.abort();
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "subject client scenario `{scenario}` failed with status {status}"
         ))
     }
 }

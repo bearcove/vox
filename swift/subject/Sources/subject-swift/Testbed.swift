@@ -1395,367 +1395,6 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
           ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
       ])))
 nonisolated(unsafe) let testbed_generate_ResponseDescriptorBlocks: [SchemaId: Descriptor] = [:]
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
-  layout: Layout(
-    size: MemoryLayout<(UInt32, Data)>.size, align: MemoryLayout<(UInt32, Data)>.alignment),
-  access: .record(
-    RecordAccess(
-      fields: [
-        FieldAccess(
-          offset: MemoryLayout<(UInt32, Data)>.offset(of: \.0)!,
-          descriptor: Descriptor(
-            schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
-            layout: Layout(size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
-            access: .scalar)),
-        FieldAccess(
-          offset: MemoryLayout<(UInt32, Data)>.offset(of: \.1)!,
-          descriptor: Descriptor(
-            schema: .concrete(SchemaId(0xba81_2587_6d63_88b4)),
-            layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
-            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
-      ], construct: .inPlace)))
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsDescriptorBlocks: [SchemaId: Descriptor] =
-  [:]
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
-  layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
-    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
-  access: .enumeration(
-    EnumAccess(
-      tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
-        case .success: return 0
-        case .failure: return 1
-        }
-      },
-      projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
-        case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0):
-          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
-        }
-      },
-      destroyPayload: { scratch, localIndex in
-        if localIndex == 0 {
-          scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
-        } else {
-          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
-        }
-      },
-      inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError<Infallible>> =
-          localIndex == 0
-          ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
-      },
-      variants: [
-        VariantAccess(
-          wireIndex: 0,
-          payloadFields: [
-            FieldAccess(
-              offset: 0,
-              descriptor: Descriptor(
-                schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
-                layout: Layout(size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
-                access: .scalar))
-          ], payloadLayout: MemoryLayout<Void>.phonLayout),
-        VariantAccess(
-          wireIndex: 1,
-          payloadFields: [
-            FieldAccess(
-              offset: 0,
-              descriptor: Descriptor(
-                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
-                layout: Layout(
-                  size: MemoryLayout<VoxError<Infallible>>.size,
-                  align: MemoryLayout<VoxError<Infallible>>.alignment),
-                access: .enumeration(
-                  EnumAccess(
-                    tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user: return 0
-                      case .unknownMethod: return 1
-                      case .invalidPayload: return 2
-                      case .cancelled: return 3
-                      case .connectionClosed: return 4
-                      case .sessionShutdown: return 5
-                      case .sendFailed: return 6
-                      case .indeterminate: return 7
-                      }
-                    },
-                    projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
-                      case .unknownMethod: break
-                      case .invalidPayload(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
-                          to: f0)
-                      case .cancelled: break
-                      case .connectionClosed: break
-                      case .sessionShutdown: break
-                      case .sendFailed: break
-                      case .indeterminate: break
-                      }
-                    },
-                    destroyPayload: { scratch, localIndex in
-                      switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
-                      case 2:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
-                          count: 1)
-                      default: break
-                      }
-                    },
-                    inject: { slot, localIndex, scratch in
-                      let v: VoxError<Infallible>
-                      switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
-                      case 1: v = .unknownMethod
-                      case 2:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
-                        v = .invalidPayload(f0)
-                      case 3: v = .cancelled
-                      case 4: v = .connectionClosed
-                      case 5: v = .sessionShutdown
-                      case 6: v = .sendFailed
-                      case 7: v = .indeterminate
-                      default: fatalError("bad variant index")
-                      }
-                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
-                    },
-                    variants: [
-                      VariantAccess(
-                        wireIndex: 0,
-                        payloadFields: [
-                          FieldAccess(
-                            offset: 0,
-                            descriptor: Descriptor(
-                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
-                              layout: Layout(
-                                size: MemoryLayout<Infallible>.size,
-                                align: MemoryLayout<Infallible>.alignment),
-                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
-                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
-                      VariantAccess(
-                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 2,
-                        payloadFields: [
-                          FieldAccess(
-                            offset: 0,
-                            descriptor: Descriptor(
-                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
-                              layout: Layout(
-                                size: MemoryLayout<String>.size,
-                                align: MemoryLayout<String>.alignment),
-                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
-                            ))
-                        ], payloadLayout: MemoryLayout<String>.phonLayout),
-                      VariantAccess(
-                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                    ]))))
-          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
-      ])))
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseDescriptorBlocks:
-  [SchemaId: Descriptor] = [:]
-nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x3425_da3b_ff2c_e4c1)),
-  layout: Layout(
-    size: MemoryLayout<(UInt32, Data)>.size, align: MemoryLayout<(UInt32, Data)>.alignment),
-  access: .record(
-    RecordAccess(
-      fields: [
-        FieldAccess(
-          offset: MemoryLayout<(UInt32, Data)>.offset(of: \.0)!,
-          descriptor: Descriptor(
-            schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
-            layout: Layout(size: MemoryLayout<UInt32>.size, align: MemoryLayout<UInt32>.alignment),
-            access: .scalar)),
-        FieldAccess(
-          offset: MemoryLayout<(UInt32, Data)>.offset(of: \.1)!,
-          descriptor: Descriptor(
-            schema: .concrete(SchemaId(0xba81_2587_6d63_88b4)),
-            layout: Layout(size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
-            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
-      ], construct: .inPlace)))
-nonisolated(unsafe) let testbed_generateRetryIdem_ArgsDescriptorBlocks: [SchemaId: Descriptor] = [:]
-nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
-  layout: Layout(
-    size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
-    align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
-  access: .enumeration(
-    EnumAccess(
-      tag: { ptr in
-        switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
-        case .success: return 0
-        case .failure: return 1
-        }
-      },
-      projectPayload: { value, _, scratch in
-        switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
-        case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
-        case .failure(let f0):
-          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
-        }
-      },
-      destroyPayload: { scratch, localIndex in
-        if localIndex == 0 {
-          scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
-        } else {
-          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
-        }
-      },
-      inject: { slot, localIndex, scratch in
-        let v: Result<Void, VoxError<Infallible>> =
-          localIndex == 0
-          ? .success(scratch.assumingMemoryBound(to: Void.self).move())
-          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
-        slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
-      },
-      variants: [
-        VariantAccess(
-          wireIndex: 0,
-          payloadFields: [
-            FieldAccess(
-              offset: 0,
-              descriptor: Descriptor(
-                schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
-                layout: Layout(size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
-                access: .scalar))
-          ], payloadLayout: MemoryLayout<Void>.phonLayout),
-        VariantAccess(
-          wireIndex: 1,
-          payloadFields: [
-            FieldAccess(
-              offset: 0,
-              descriptor: Descriptor(
-                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
-                layout: Layout(
-                  size: MemoryLayout<VoxError<Infallible>>.size,
-                  align: MemoryLayout<VoxError<Infallible>>.alignment),
-                access: .enumeration(
-                  EnumAccess(
-                    tag: { ptr in
-                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user: return 0
-                      case .unknownMethod: return 1
-                      case .invalidPayload: return 2
-                      case .cancelled: return 3
-                      case .connectionClosed: return 4
-                      case .sessionShutdown: return 5
-                      case .sendFailed: return 6
-                      case .indeterminate: return 7
-                      }
-                    },
-                    projectPayload: { value, _, scratch in
-                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
-                      case .unknownMethod: break
-                      case .invalidPayload(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
-                          to: f0)
-                      case .cancelled: break
-                      case .connectionClosed: break
-                      case .sessionShutdown: break
-                      case .sendFailed: break
-                      case .indeterminate: break
-                      }
-                    },
-                    destroyPayload: { scratch, localIndex in
-                      switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
-                      case 2:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
-                          count: 1)
-                      default: break
-                      }
-                    },
-                    inject: { slot, localIndex, scratch in
-                      let v: VoxError<Infallible>
-                      switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
-                      case 1: v = .unknownMethod
-                      case 2:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
-                        v = .invalidPayload(f0)
-                      case 3: v = .cancelled
-                      case 4: v = .connectionClosed
-                      case 5: v = .sessionShutdown
-                      case 6: v = .sendFailed
-                      case 7: v = .indeterminate
-                      default: fatalError("bad variant index")
-                      }
-                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
-                    },
-                    variants: [
-                      VariantAccess(
-                        wireIndex: 0,
-                        payloadFields: [
-                          FieldAccess(
-                            offset: 0,
-                            descriptor: Descriptor(
-                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
-                              layout: Layout(
-                                size: MemoryLayout<Infallible>.size,
-                                align: MemoryLayout<Infallible>.alignment),
-                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
-                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
-                      VariantAccess(
-                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 2,
-                        payloadFields: [
-                          FieldAccess(
-                            offset: 0,
-                            descriptor: Descriptor(
-                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
-                              layout: Layout(
-                                size: MemoryLayout<String>.size,
-                                align: MemoryLayout<String>.alignment),
-                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
-                            ))
-                        ], payloadLayout: MemoryLayout<String>.phonLayout),
-                      VariantAccess(
-                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                      VariantAccess(
-                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
-                    ]))))
-          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
-      ])))
-nonisolated(unsafe) let testbed_generateRetryIdem_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
-  [:]
 nonisolated(unsafe) let testbed_transform_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xb6a6_8f26_51e5_1847)),
   layout: Layout(
@@ -10143,190 +9782,6 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
         index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
         elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
     ]),
-  0x3441_9529_478c_c7b8: PhonMethodSchemas(
-    argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
-    argsSchemaClosure: [
-      193, 228, 44, 255, 59, 218, 37, 52, 1, 0, 0, 0, 81, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
-      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 193, 228, 44, 255, 59, 218, 37, 52, 11, 0, 0, 0,
-      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
-      100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
-      2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 40, 226, 128, 166, 41, 6, 0, 0, 0,
-      102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0,
-      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 1, 0, 0, 0, 48, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
-      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
-      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0,
-      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100,
-      1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
-      1, 0, 0, 0, 49, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
-      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
-      105, 100, 5, 180, 136, 99, 109, 135, 37, 129, 186, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
-      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 1, 0, 0, 0, 24, 0, 0, 0, 99, 104,
-      97, 110, 110, 101, 108, 46, 97, 114, 103, 46, 49, 46, 116, 120, 46, 101, 108, 101, 109, 101,
-      110, 116, 145, 249, 233, 238, 54, 69, 31, 54,
-    ],
-    argsDescriptor: testbed_generateRetryNonIdem_ArgsDescriptor,
-    argsDescriptorBlocks: testbed_generateRetryNonIdem_ArgsDescriptorBlocks,
-    okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
-    responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
-    responseSchemaClosure: [
-      72, 228, 1, 146, 178, 220, 220, 74, 3, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
-      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 72, 228, 1, 146, 178, 220, 220, 74, 11, 0,
-      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
-      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
-      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
-      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
-      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
-      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
-      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
-      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32,
-      199, 45, 154, 36, 51, 92, 188, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
-      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
-      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
-      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
-      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
-      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
-      0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
-      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
-      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
-      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0,
-      0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115,
-      17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
-      97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
-      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
-      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
-      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254,
-      139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
-      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119,
-      110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0,
-      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
-      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73,
-      110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101,
-      120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119,
-      116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
-      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
-      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
-      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99,
-      101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112,
-      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
-      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110,
-      110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101,
-      120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
-      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
-      101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110,
-      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
-      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3,
-      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108,
-      101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
-      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
-      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101,
-      114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0,
-      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6,
-      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
-      86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0,
-      0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0,
-      0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73,
-      110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0,
-      0, 0,
-    ],
-    responseDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor,
-    responseDescriptorBlocks: testbed_generateRetryNonIdem_ResponseDescriptorBlocks,
-    channels: [
-      PhonChannelMeta(
-        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
-        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
-    ]),
-  0xe2d2_7fd9_098c_6ea2: PhonMethodSchemas(
-    argsRoot: SchemaId(0x3425_da3b_ff2c_e4c1),
-    argsSchemaClosure: [
-      193, 228, 44, 255, 59, 218, 37, 52, 1, 0, 0, 0, 81, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
-      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 193, 228, 44, 255, 59, 218, 37, 52, 11, 0, 0, 0,
-      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
-      100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
-      2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 40, 226, 128, 166, 41, 6, 0, 0, 0,
-      102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0,
-      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 1, 0, 0, 0, 48, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
-      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
-      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0,
-      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100,
-      1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
-      1, 0, 0, 0, 49, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
-      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
-      105, 100, 5, 180, 136, 99, 109, 135, 37, 129, 186, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
-      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 1, 0, 0, 0, 24, 0, 0, 0, 99, 104,
-      97, 110, 110, 101, 108, 46, 97, 114, 103, 46, 49, 46, 116, 120, 46, 101, 108, 101, 109, 101,
-      110, 116, 145, 249, 233, 238, 54, 69, 31, 54,
-    ],
-    argsDescriptor: testbed_generateRetryIdem_ArgsDescriptor,
-    argsDescriptorBlocks: testbed_generateRetryIdem_ArgsDescriptorBlocks,
-    okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
-    responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
-    responseSchemaClosure: [
-      72, 228, 1, 146, 178, 220, 220, 74, 3, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
-      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 72, 228, 1, 146, 178, 220, 220, 74, 11, 0,
-      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
-      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
-      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
-      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
-      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
-      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
-      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
-      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32,
-      199, 45, 154, 36, 51, 92, 188, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
-      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
-      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
-      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
-      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
-      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
-      0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
-      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
-      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
-      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0,
-      0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115,
-      17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
-      97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
-      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
-      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
-      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254,
-      139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
-      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119,
-      110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0,
-      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
-      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73,
-      110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101,
-      120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119,
-      116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
-      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
-      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
-      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99,
-      101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112,
-      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
-      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110,
-      110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101,
-      120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
-      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
-      101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110,
-      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
-      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3,
-      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108,
-      101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
-      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
-      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101,
-      114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0,
-      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6,
-      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
-      86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0,
-      0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0,
-      0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73,
-      110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0,
-      0, 0,
-    ],
-    responseDescriptor: testbed_generateRetryIdem_ResponseDescriptor,
-    responseDescriptorBlocks: testbed_generateRetryIdem_ResponseDescriptorBlocks,
-    channels: [
-      PhonChannelMeta(
-        index: 1, isTx: true, elementRoot: SchemaId(0x361f_4536_eee9_f991),
-        elementSchemaClosure: [145, 249, 233, 238, 54, 69, 31, 54, 0, 0, 0, 0])
-    ]),
   0xcb46_9cff_8d79_8feb: PhonMethodSchemas(
     argsRoot: SchemaId(0xb6a6_8f26_51e5_1847),
     argsSchemaClosure: [
@@ -14135,19 +13590,6 @@ nonisolated(unsafe) let testbed_generate_ArgsEncodeProgram: Lowered = try! lower
   testbed_generate_ArgsDescriptor, testbedRegistry, testbed_generate_ArgsDescriptorBlocks)
 nonisolated(unsafe) let testbed_generate_ResponseEncodeProgram: Lowered = try! lowerTyped(
   testbed_generate_ResponseDescriptor, testbedRegistry, testbed_generate_ResponseDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ArgsEncodeProgram: Lowered = try! lowerTyped(
-  testbed_generateRetryNonIdem_ArgsDescriptor, testbedRegistry,
-  testbed_generateRetryNonIdem_ArgsDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_ResponseEncodeProgram: Lowered =
-  try! lowerTyped(
-    testbed_generateRetryNonIdem_ResponseDescriptor, testbedRegistry,
-    testbed_generateRetryNonIdem_ResponseDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryIdem_ArgsEncodeProgram: Lowered = try! lowerTyped(
-  testbed_generateRetryIdem_ArgsDescriptor, testbedRegistry,
-  testbed_generateRetryIdem_ArgsDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryIdem_ResponseEncodeProgram: Lowered = try! lowerTyped(
-  testbed_generateRetryIdem_ResponseDescriptor, testbedRegistry,
-  testbed_generateRetryIdem_ResponseDescriptorBlocks)
 nonisolated(unsafe) let testbed_transform_ArgsEncodeProgram: Lowered = try! lowerTyped(
   testbed_transform_ArgsDescriptor, testbedRegistry, testbed_transform_ArgsDescriptorBlocks)
 nonisolated(unsafe) let testbed_transform_ResponseEncodeProgram: Lowered = try! lowerTyped(
@@ -14313,27 +13755,6 @@ nonisolated(unsafe) let testbed_generate_output_ElementDescriptorBlocks: [Schema
 nonisolated(unsafe) let testbed_generate_output_ElementEncodeProgram: Lowered = try! lowerTyped(
   testbed_generate_output_ElementDescriptor, testbedRegistry,
   testbed_generate_output_ElementDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDescriptor: Descriptor =
-  Descriptor(
-    schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
-    layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
-    access: .scalar)
-nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementDescriptorBlocks:
-  [SchemaId: Descriptor] = [:]
-nonisolated(unsafe) let testbed_generateRetryNonIdem_output_ElementEncodeProgram: Lowered =
-  try! lowerTyped(
-    testbed_generateRetryNonIdem_output_ElementDescriptor, testbedRegistry,
-    testbed_generateRetryNonIdem_output_ElementDescriptorBlocks)
-nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDescriptor: Descriptor = Descriptor(
-  schema: .concrete(SchemaId(0x361f_4536_eee9_f991)),
-  layout: Layout(size: MemoryLayout<Int32>.size, align: MemoryLayout<Int32>.alignment),
-  access: .scalar)
-nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementDescriptorBlocks:
-  [SchemaId: Descriptor] = [:]
-nonisolated(unsafe) let testbed_generateRetryIdem_output_ElementEncodeProgram: Lowered =
-  try! lowerTyped(
-    testbed_generateRetryIdem_output_ElementDescriptor, testbedRegistry,
-    testbed_generateRetryIdem_output_ElementDescriptorBlocks)
 nonisolated(unsafe) let testbed_transform_input_ElementDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
   layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
@@ -14424,14 +13845,6 @@ public protocol TestbedCaller: Sendable {
   ///
   ///  Tests: server→client streaming. Server sends via `Tx<T>`.
   func generate(count: UInt32, output: UnboundTx<Int32>) async throws
-  ///  Server streams numbers back to client on a non-idempotent retry probe.
-  ///
-  ///  Tests: channel retry fails closed when the session breaks mid-stream.
-  func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws
-  ///  Server streams numbers back to client on an idempotent retry probe.
-  ///
-  ///  Tests: channel retry reruns the method with fresh channel bindings.
-  func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws
   ///  Bidirectional: client sends strings, server echoes each back.
   ///
   ///  Tests: bidirectional streaming. Server receives via `Rx<T>`, sends via `Tx<T>`.
@@ -14520,8 +13933,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echo(message: String) async throws -> String {
     let payload = encodeTyped(message, testbed_echo_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x880b_c4ee_e235_74be, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x880b_c4ee_e235_74be, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x880b_c4ee_e235_74be]!, registry: testbedRegistry))
     guard
@@ -14541,8 +13954,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func reverse(message: String) async throws -> String {
     let payload = encodeTyped(message, testbed_reverse_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x1c22_3f30_e180_392a, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x1c22_3f30_e180_392a, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x1c22_3f30_e180_392a]!, registry: testbedRegistry))
     guard
@@ -14562,8 +13975,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func divide(dividend: Int64, divisor: Int64) async throws -> Result<Int64, MathError> {
     let payload = encodeTyped((dividend, divisor), testbed_divide_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xfb68_d931_8f83_0875, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xfb68_d931_8f83_0875, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xfb68_d931_8f83_0875]!, registry: testbedRegistry))
     guard
@@ -14584,8 +13997,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func lookup(id: UInt32) async throws -> Result<Person, LookupError> {
     let payload = encodeTyped(id, testbed_lookup_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xa15f_f520_9471_2a3b, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xa15f_f520_9471_2a3b, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xa15f_f520_9471_2a3b]!, registry: testbedRegistry))
     guard
@@ -14616,8 +14029,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
       Data(channelWireIndexBytes(numbersWireIndex)), testbed_sum_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x51f9_cfd8_e865_77c9, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(numbers) },
+      timeout: timeout,
+      finalizeChannels: { finalizeChannel(numbers) },
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x51f9_cfd8_e865_77c9]!, registry: testbedRegistry))
     guard
@@ -14655,98 +14068,14 @@ public final class TestbedClient: TestbedCaller, Sendable {
       (count, Data(channelWireIndexBytes(outputWireIndex))), testbed_generate_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x239e_5b99_b1f8_207a, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      timeout: timeout,
+      finalizeChannels: { finalizeChannel(output) },
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x239e_5b99_b1f8_207a]!, registry: testbedRegistry))
     guard
       let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
         0x239e_5b99_b1f8_207a, .response, readerDescriptor: testbed_generate_ResponseDescriptor,
         readerBlocks: testbed_generate_ResponseDescriptorBlocks, local: testbedRegistry)
-    else {
-      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
-    }
-    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
-    switch result {
-    case .success: return
-    case .failure(let error): throw error
-    }
-  }
-
-  public func generateRetryNonIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
-    var channelIds: [UInt64] = []
-    let outputWireIndex = channelIds.count
-    // r[impl schema.exchange.channels.tx-args]
-    channelIds.append(
-      await connection.bindClientTxArg(
-        output,
-        deserialize: { (buf) throws -> Int32 in
-          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
-          guard
-            let program = self.connection.schemaReceiveTracker.buildAuxiliaryDecodeProgram(
-              0x3441_9529_478c_c7b8, .args, role: "channel.arg.1.tx.element",
-              readerDescriptor: testbed_generateRetryNonIdem_output_ElementDescriptor,
-              readerBlocks: testbed_generateRetryNonIdem_output_ElementDescriptorBlocks,
-              local: testbedRegistry)
-          else { throw VoxError<Infallible>.invalidPayload("no channel element schema advertised") }
-          return try decodeTyped(program, bytes)
-        }))
-    let payload = encodeTyped(
-      (count, Data(channelWireIndexBytes(outputWireIndex))),
-      testbed_generateRetryNonIdem_ArgsEncodeProgram)
-    let response = try await connection.call(
-      methodId: 0x3441_9529_478c_c7b8, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
-      schemaInfo: ClientSchemaInfo(
-        methodSchemas: testbedMethods[0x3441_9529_478c_c7b8]!, registry: testbedRegistry))
-    guard
-      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
-        0x3441_9529_478c_c7b8, .response,
-        readerDescriptor: testbed_generateRetryNonIdem_ResponseDescriptor,
-        readerBlocks: testbed_generateRetryNonIdem_ResponseDescriptorBlocks, local: testbedRegistry)
-    else {
-      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
-    }
-    let result: Result<Void, VoxError<Infallible>> = try decodeTyped(respProgram, response)
-    switch result {
-    case .success: return
-    case .failure(let error): throw error
-    }
-  }
-
-  public func generateRetryIdem(count: UInt32, output: UnboundTx<Int32>) async throws {
-    var channelIds: [UInt64] = []
-    let outputWireIndex = channelIds.count
-    // r[impl schema.exchange.channels.tx-args]
-    channelIds.append(
-      await connection.bindClientTxArg(
-        output,
-        deserialize: { (buf) throws -> Int32 in
-          let bytes = buf.readBytes(length: buf.readableBytes) ?? []
-          guard
-            let program = self.connection.schemaReceiveTracker.buildAuxiliaryDecodeProgram(
-              0xe2d2_7fd9_098c_6ea2, .args, role: "channel.arg.1.tx.element",
-              readerDescriptor: testbed_generateRetryIdem_output_ElementDescriptor,
-              readerBlocks: testbed_generateRetryIdem_output_ElementDescriptorBlocks,
-              local: testbedRegistry)
-          else { throw VoxError<Infallible>.invalidPayload("no channel element schema advertised") }
-          return try decodeTyped(program, bytes)
-        }))
-    let payload = encodeTyped(
-      (count, Data(channelWireIndexBytes(outputWireIndex))),
-      testbed_generateRetryIdem_ArgsEncodeProgram)
-    let response = try await connection.call(
-      methodId: 0xe2d2_7fd9_098c_6ea2, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
-      schemaInfo: ClientSchemaInfo(
-        methodSchemas: testbedMethods[0xe2d2_7fd9_098c_6ea2]!, registry: testbedRegistry))
-    guard
-      let respProgram = connection.schemaReceiveTracker.buildDecodeProgram(
-        0xe2d2_7fd9_098c_6ea2, .response,
-        readerDescriptor: testbed_generateRetryIdem_ResponseDescriptor,
-        readerBlocks: testbed_generateRetryIdem_ResponseDescriptorBlocks, local: testbedRegistry)
     else {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
@@ -14787,8 +14116,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
       testbed_transform_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xcb46_9cff_8d79_8feb, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil,
+      timeout: timeout,
       finalizeChannels: {
         finalizeChannel(input)
         finalizeChannel(output)
@@ -14831,8 +14159,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
       Data(channelWireIndexBytes(outputWireIndex)), testbed_postReplyGenerate_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xec36_e847_51a8_97be, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      timeout: timeout,
+      finalizeChannels: { finalizeChannel(output) },
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xec36_e847_51a8_97be]!, registry: testbedRegistry))
     guard
@@ -14880,8 +14208,7 @@ public final class TestbedClient: TestbedCaller, Sendable {
       testbed_postReplySum_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0xc1ce_3c39_7e4c_a6e7, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil,
+      timeout: timeout,
       finalizeChannels: {
         finalizeChannel(input)
         finalizeChannel(result)
@@ -14905,8 +14232,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoPoint(point: Point) async throws -> Point {
     let payload = encodeTyped(point, testbed_echoPoint_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x81f5_386d_589d_fbe4, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x81f5_386d_589d_fbe4, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x81f5_386d_589d_fbe4]!, registry: testbedRegistry))
     guard
@@ -14926,8 +14253,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func createPerson(name: String, age: UInt8, email: String?) async throws -> Person {
     let payload = encodeTyped((name, age, email), testbed_createPerson_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x68ff_a90b_7728_bde7, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x68ff_a90b_7728_bde7, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x68ff_a90b_7728_bde7]!, registry: testbedRegistry))
     guard
@@ -14947,8 +14274,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func rectangleArea(rect: Rectangle) async throws -> Double {
     let payload = encodeTyped(rect, testbed_rectangleArea_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x223f_e028_2d26_3107, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x223f_e028_2d26_3107, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x223f_e028_2d26_3107]!, registry: testbedRegistry))
     guard
@@ -14969,8 +14296,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func parseColor(name: String) async throws -> Color? {
     let payload = encodeTyped(name, testbed_parseColor_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xd4f1_6ea9_eca1_32e6, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xd4f1_6ea9_eca1_32e6, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xd4f1_6ea9_eca1_32e6]!, registry: testbedRegistry))
     guard
@@ -14990,8 +14317,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func shapeArea(shape: Shape) async throws -> Double {
     let payload = encodeTyped(shape, testbed_shapeArea_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x0438_5a4b_e2a8_82f5, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x0438_5a4b_e2a8_82f5, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x0438_5a4b_e2a8_82f5]!, registry: testbedRegistry))
     guard
@@ -15012,8 +14339,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   {
     let payload = encodeTyped((name, shapes, background), testbed_createCanvas_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xef42_1eb5_b08c_973a, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xef42_1eb5_b08c_973a, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xef42_1eb5_b08c_973a]!, registry: testbedRegistry))
     guard
@@ -15033,8 +14360,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoGnarly(payload: GnarlyPayload) async throws -> GnarlyPayload {
     let payload = encodeTyped(payload, testbed_echoGnarly_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xb6fa_cae6_a7a8_6e99, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xb6fa_cae6_a7a8_6e99, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xb6fa_cae6_a7a8_6e99]!, registry: testbedRegistry))
     guard
@@ -15054,8 +14381,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func processMessage(msg: Message) async throws -> Message {
     let payload = encodeTyped(msg, testbed_processMessage_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xe08f_0f52_54e7_a997, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xe08f_0f52_54e7_a997, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xe08f_0f52_54e7_a997]!, registry: testbedRegistry))
     guard
@@ -15076,8 +14403,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func getPoints(count: UInt32) async throws -> [Point] {
     let payload = encodeTyped(count, testbed_getPoints_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x5985_1852_3a62_66bf, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x5985_1852_3a62_66bf, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x5985_1852_3a62_66bf]!, registry: testbedRegistry))
     guard
@@ -15097,8 +14424,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func swapPair(pair: (Int32, String)) async throws -> (String, Int32) {
     let payload = encodeTyped(pair, testbed_swapPair_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x7d55_a713_ad61_2bf2, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x7d55_a713_ad61_2bf2, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x7d55_a713_ad61_2bf2]!, registry: testbedRegistry))
     guard
@@ -15119,8 +14446,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoBytes(data: Data) async throws -> Data {
     let payload = encodeTyped(data, testbed_echoBytes_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x4405_6c78_42fa_336c, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x4405_6c78_42fa_336c, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x4405_6c78_42fa_336c]!, registry: testbedRegistry))
     guard
@@ -15140,8 +14467,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoBool(b: Bool) async throws -> Bool {
     let payload = encodeTyped(b, testbed_echoBool_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x5136_d8f0_1a5f_496c, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x5136_d8f0_1a5f_496c, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x5136_d8f0_1a5f_496c]!, registry: testbedRegistry))
     guard
@@ -15161,8 +14488,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoU64(n: UInt64) async throws -> UInt64 {
     let payload = encodeTyped(n, testbed_echoU64_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x85e2_380d_bf7f_fe65, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x85e2_380d_bf7f_fe65, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x85e2_380d_bf7f_fe65]!, registry: testbedRegistry))
     guard
@@ -15182,8 +14509,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoOptionString(s: String?) async throws -> String? {
     let payload = encodeTyped(s, testbed_echoOptionString_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xb1a5_bfd2_05b3_fbfc, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xb1a5_bfd2_05b3_fbfc, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xb1a5_bfd2_05b3_fbfc]!, registry: testbedRegistry))
     guard
@@ -15214,8 +14541,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
       Data(channelWireIndexBytes(numbersWireIndex)), testbed_sumLarge_ArgsEncodeProgram)
     let response = try await connection.call(
       methodId: 0x9a7b_ed54_5e08_8054, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(numbers) },
+      timeout: timeout,
+      finalizeChannels: { finalizeChannel(numbers) },
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x9a7b_ed54_5e08_8054]!, registry: testbedRegistry))
     guard
@@ -15255,8 +14582,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
     )
     let response = try await connection.call(
       methodId: 0x8edf_bd65_d162_f685, metadata: .null, payload: payload, channels: channelIds,
-      retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: { finalizeChannel(output) },
+      timeout: timeout,
+      finalizeChannels: { finalizeChannel(output) },
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x8edf_bd65_d162_f685]!, registry: testbedRegistry))
     guard
@@ -15277,8 +14604,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func allColors() async throws -> [Color] {
     let payload: [UInt8] = []
     let response = try await connection.call(
-      methodId: 0xfbfb_05bb_caad_e4a0, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xfbfb_05bb_caad_e4a0, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xfbfb_05bb_caad_e4a0]!, registry: testbedRegistry))
     guard
@@ -15300,8 +14627,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   {
     let payload = encodeTyped((label, x, y, active), testbed_describePoint_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x62fe_b14a_8fcf_9b6d, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x62fe_b14a_8fcf_9b6d, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x62fe_b14a_8fcf_9b6d]!, registry: testbedRegistry))
     guard
@@ -15322,8 +14649,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoShape(shape: Shape) async throws -> Shape {
     let payload = encodeTyped(shape, testbed_echoShape_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x4125_b5e6_78b7_b4a5, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x4125_b5e6_78b7_b4a5, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x4125_b5e6_78b7_b4a5]!, registry: testbedRegistry))
     guard
@@ -15343,8 +14670,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoStatusV1(status: Status) async throws -> Status {
     let payload = encodeTyped(status, testbed_echoStatusV1_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xc7c5_aa84_5cfb_8bf6, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xc7c5_aa84_5cfb_8bf6, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xc7c5_aa84_5cfb_8bf6]!, registry: testbedRegistry))
     guard
@@ -15364,8 +14691,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoTagV1(tag: Tag) async throws -> Tag {
     let payload = encodeTyped(tag, testbed_echoTagV1_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x6619_071b_e5d5_c259, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x6619_071b_e5d5_c259, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x6619_071b_e5d5_c259]!, registry: testbedRegistry))
     guard
@@ -15385,8 +14712,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoProfile(profile: Profile) async throws -> Profile {
     let payload = encodeTyped(profile, testbed_echoProfile_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xbd9b_cabd_deeb_eb04, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xbd9b_cabd_deeb_eb04, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xbd9b_cabd_deeb_eb04]!, registry: testbedRegistry))
     guard
@@ -15406,8 +14733,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoRecord(record: Record) async throws -> Record {
     let payload = encodeTyped(record, testbed_echoRecord_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x100b_0e08_da4b_8f1a, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x100b_0e08_da4b_8f1a, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x100b_0e08_da4b_8f1a]!, registry: testbedRegistry))
     guard
@@ -15427,8 +14754,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoStatus(status: Status) async throws -> Status {
     let payload = encodeTyped(status, testbed_echoStatus_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x6975_90d3_ffc3_6703, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x6975_90d3_ffc3_6703, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x6975_90d3_ffc3_6703]!, registry: testbedRegistry))
     guard
@@ -15448,8 +14775,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoTag(tag: Tag) async throws -> Tag {
     let payload = encodeTyped(tag, testbed_echoTag_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x2bd1_b314_9d73_ce97, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x2bd1_b314_9d73_ce97, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x2bd1_b314_9d73_ce97]!, registry: testbedRegistry))
     guard
@@ -15469,8 +14796,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoMeasurement(m: Measurement) async throws -> Measurement {
     let payload = encodeTyped(m, testbed_echoMeasurement_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0x3b3d_22b0_15fa_1a3f, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0x3b3d_22b0_15fa_1a3f, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0x3b3d_22b0_15fa_1a3f]!, registry: testbedRegistry))
     guard
@@ -15491,8 +14818,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoConfig(c: Config) async throws -> Config {
     let payload = encodeTyped(c, testbed_echoConfig_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xe13a_477f_b964_ce28, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xe13a_477f_b964_ce28, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xe13a_477f_b964_ce28]!, registry: testbedRegistry))
     guard
@@ -15512,8 +14839,8 @@ public final class TestbedClient: TestbedCaller, Sendable {
   public func echoTree(tree: Tree) async throws -> Tree {
     let payload = encodeTyped(tree, testbed_echoTree_ArgsEncodeProgram)
     let response = try await connection.call(
-      methodId: 0xa142_60aa_6471_15b4, metadata: .null, payload: payload, retry: .volatile,
-      timeout: timeout, prepareRetry: nil, finalizeChannels: nil,
+      methodId: 0xa142_60aa_6471_15b4, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
       schemaInfo: ClientSchemaInfo(
         methodSchemas: testbedMethods[0xa142_60aa_6471_15b4]!, registry: testbedRegistry))
     guard
@@ -15556,14 +14883,6 @@ public protocol TestbedHandler: Sendable {
   ///
   ///  Tests: server→client streaming. Server sends via `Tx<T>`.
   func generate(count: UInt32, output: Tx<Int32>) async throws
-  ///  Server streams numbers back to client on a non-idempotent retry probe.
-  ///
-  ///  Tests: channel retry fails closed when the session breaks mid-stream.
-  func generateRetryNonIdem(count: UInt32, output: Tx<Int32>) async throws
-  ///  Server streams numbers back to client on an idempotent retry probe.
-  ///
-  ///  Tests: channel retry reruns the method with fresh channel bindings.
-  func generateRetryIdem(count: UInt32, output: Tx<Int32>) async throws
   ///  Bidirectional: client sends strings, server echoes each back.
   ///
   ///  Tests: bidirectional streaming. Server receives via `Rx<T>`, sends via `Tx<T>`.
@@ -15644,51 +14963,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
   private let handler: TestbedHandler
   public init(handler: TestbedHandler) { self.handler = handler }
 
-  public func retryPolicy(methodId: UInt64) -> RetryPolicy {
-    switch methodId {
-    case 0x880b_c4ee_e235_74be: return RetryPolicy(persist: false, idem: false)
-    case 0x1c22_3f30_e180_392a: return RetryPolicy(persist: false, idem: false)
-    case 0xfb68_d931_8f83_0875: return RetryPolicy(persist: false, idem: false)
-    case 0xa15f_f520_9471_2a3b: return RetryPolicy(persist: false, idem: false)
-    case 0x51f9_cfd8_e865_77c9: return RetryPolicy(persist: false, idem: false)
-    case 0x239e_5b99_b1f8_207a: return RetryPolicy(persist: false, idem: false)
-    case 0x3441_9529_478c_c7b8: return RetryPolicy(persist: false, idem: false)
-    case 0xe2d2_7fd9_098c_6ea2: return RetryPolicy(persist: false, idem: true)
-    case 0xcb46_9cff_8d79_8feb: return RetryPolicy(persist: false, idem: false)
-    case 0xec36_e847_51a8_97be: return RetryPolicy(persist: false, idem: false)
-    case 0xc1ce_3c39_7e4c_a6e7: return RetryPolicy(persist: false, idem: false)
-    case 0x81f5_386d_589d_fbe4: return RetryPolicy(persist: false, idem: false)
-    case 0x68ff_a90b_7728_bde7: return RetryPolicy(persist: false, idem: false)
-    case 0x223f_e028_2d26_3107: return RetryPolicy(persist: false, idem: false)
-    case 0xd4f1_6ea9_eca1_32e6: return RetryPolicy(persist: false, idem: false)
-    case 0x0438_5a4b_e2a8_82f5: return RetryPolicy(persist: false, idem: false)
-    case 0xef42_1eb5_b08c_973a: return RetryPolicy(persist: false, idem: false)
-    case 0xb6fa_cae6_a7a8_6e99: return RetryPolicy(persist: false, idem: false)
-    case 0xe08f_0f52_54e7_a997: return RetryPolicy(persist: false, idem: false)
-    case 0x5985_1852_3a62_66bf: return RetryPolicy(persist: false, idem: false)
-    case 0x7d55_a713_ad61_2bf2: return RetryPolicy(persist: false, idem: false)
-    case 0x4405_6c78_42fa_336c: return RetryPolicy(persist: false, idem: false)
-    case 0x5136_d8f0_1a5f_496c: return RetryPolicy(persist: false, idem: false)
-    case 0x85e2_380d_bf7f_fe65: return RetryPolicy(persist: false, idem: false)
-    case 0xb1a5_bfd2_05b3_fbfc: return RetryPolicy(persist: false, idem: false)
-    case 0x9a7b_ed54_5e08_8054: return RetryPolicy(persist: false, idem: false)
-    case 0x8edf_bd65_d162_f685: return RetryPolicy(persist: false, idem: false)
-    case 0xfbfb_05bb_caad_e4a0: return RetryPolicy(persist: false, idem: false)
-    case 0x62fe_b14a_8fcf_9b6d: return RetryPolicy(persist: false, idem: false)
-    case 0x4125_b5e6_78b7_b4a5: return RetryPolicy(persist: false, idem: false)
-    case 0xc7c5_aa84_5cfb_8bf6: return RetryPolicy(persist: false, idem: false)
-    case 0x6619_071b_e5d5_c259: return RetryPolicy(persist: false, idem: false)
-    case 0xbd9b_cabd_deeb_eb04: return RetryPolicy(persist: false, idem: false)
-    case 0x100b_0e08_da4b_8f1a: return RetryPolicy(persist: false, idem: false)
-    case 0x6975_90d3_ffc3_6703: return RetryPolicy(persist: false, idem: false)
-    case 0x2bd1_b314_9d73_ce97: return RetryPolicy(persist: false, idem: false)
-    case 0x3b3d_22b0_15fa_1a3f: return RetryPolicy(persist: false, idem: false)
-    case 0xe13a_477f_b964_ce28: return RetryPolicy(persist: false, idem: false)
-    case 0xa142_60aa_6471_15b4: return RetryPolicy(persist: false, idem: false)
-    default: return .volatile
-    }
-  }
-
   public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {
     let wire: VoxError<Infallible>
     switch error {
@@ -15737,16 +15011,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
         taskTx: taskTx)
     case 0x239e_5b99_b1f8_207a:
       await dispatch_generate(
-        payload: payload, requestId: requestId, channels: channels, registry: registry,
-        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
-        taskTx: taskTx)
-    case 0x3441_9529_478c_c7b8:
-      await dispatch_generateRetryNonIdem(
-        payload: payload, requestId: requestId, channels: channels, registry: registry,
-        schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
-        taskTx: taskTx)
-    case 0xe2d2_7fd9_098c_6ea2:
-      await dispatch_generateRetryIdem(
         payload: payload, requestId: requestId, channels: channels, registry: registry,
         schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
         taskTx: taskTx)
@@ -16160,120 +15424,6 @@ public final class TestbedDispatcher: ServiceDispatcher {
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x239e_5b99_b1f8_207a,
         responseSchemaClosure: testbedMethods[0x239e_5b99_b1f8_207a]!.responseSchemaClosure))
-  }
-
-  private func dispatch_generateRetryNonIdem(
-    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
-    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
-    taskTx: @escaping @Sendable (TaskMessage) -> Void
-  ) async {
-    guard
-      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
-        0x3441_9529_478c_c7b8, .args, readerDescriptor: testbed_generateRetryNonIdem_ArgsDescriptor,
-        readerBlocks: testbed_generateRetryNonIdem_ArgsDescriptorBlocks, local: testbedRegistry)
-    else {
-      taskTx(
-        .response(
-          requestId: requestId,
-          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
-          methodId: 0x3441_9529_478c_c7b8))
-      return
-    }
-    let args: (UInt32, Data)
-    do { args = try decodeTyped(argsProgram, payload) } catch {
-      taskTx(
-        .response(
-          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
-          methodId: 0x3441_9529_478c_c7b8))
-      return
-    }
-    let outputWireIndex = channelWireIndex(args.1)
-    guard outputWireIndex < channels.count else {
-      taskTx(
-        .response(
-          requestId: requestId,
-          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
-          methodId: 0x3441_9529_478c_c7b8))
-      return
-    }
-    // r[impl schema.exchange.channels.tx-args]
-    let output = await bindServerTx(
-      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      methodId: 0x3441_9529_478c_c7b8,
-      argsSchemaClosure: testbedMethods[0x3441_9529_478c_c7b8]!.argsSchemaClosure,
-      schemaSendTracker: schemaSendTracker,
-      serialize: { (v: Int32, buf) in
-        buf.writeBytes(encodeTyped(v, testbed_generateRetryNonIdem_output_ElementEncodeProgram))
-      })
-    let voxResult: Result<Void, VoxError<Infallible>>
-    do {
-      try await handler.generateRetryNonIdem(count: args.0, output: output)
-      voxResult = .success(())
-    } catch {
-      voxResult = .failure(.indeterminate)
-    }
-    let respPayload = encodeTyped(voxResult, testbed_generateRetryNonIdem_ResponseEncodeProgram)
-    taskTx(
-      .response(
-        requestId: requestId, payload: respPayload, methodId: 0x3441_9529_478c_c7b8,
-        responseSchemaClosure: testbedMethods[0x3441_9529_478c_c7b8]!.responseSchemaClosure))
-  }
-
-  private func dispatch_generateRetryIdem(
-    payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry,
-    schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker,
-    taskTx: @escaping @Sendable (TaskMessage) -> Void
-  ) async {
-    guard
-      let argsProgram = schemaReceiveTracker.buildDecodeProgram(
-        0xe2d2_7fd9_098c_6ea2, .args, readerDescriptor: testbed_generateRetryIdem_ArgsDescriptor,
-        readerBlocks: testbed_generateRetryIdem_ArgsDescriptorBlocks, local: testbedRegistry)
-    else {
-      taskTx(
-        .response(
-          requestId: requestId,
-          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
-          methodId: 0xe2d2_7fd9_098c_6ea2))
-      return
-    }
-    let args: (UInt32, Data)
-    do { args = try decodeTyped(argsProgram, payload) } catch {
-      taskTx(
-        .response(
-          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
-          methodId: 0xe2d2_7fd9_098c_6ea2))
-      return
-    }
-    let outputWireIndex = channelWireIndex(args.1)
-    guard outputWireIndex < channels.count else {
-      taskTx(
-        .response(
-          requestId: requestId,
-          payload: encodeVoxError(.invalidPayload("channel wire index out of range")),
-          methodId: 0xe2d2_7fd9_098c_6ea2))
-      return
-    }
-    // r[impl schema.exchange.channels.tx-args]
-    let output = await bindServerTx(
-      channelId: channels[outputWireIndex], registry: registry, taskTx: taskTx,
-      methodId: 0xe2d2_7fd9_098c_6ea2,
-      argsSchemaClosure: testbedMethods[0xe2d2_7fd9_098c_6ea2]!.argsSchemaClosure,
-      schemaSendTracker: schemaSendTracker,
-      serialize: { (v: Int32, buf) in
-        buf.writeBytes(encodeTyped(v, testbed_generateRetryIdem_output_ElementEncodeProgram))
-      })
-    let voxResult: Result<Void, VoxError<Infallible>>
-    do {
-      try await handler.generateRetryIdem(count: args.0, output: output)
-      voxResult = .success(())
-    } catch {
-      voxResult = .failure(.indeterminate)
-    }
-    let respPayload = encodeTyped(voxResult, testbed_generateRetryIdem_ResponseEncodeProgram)
-    taskTx(
-      .response(
-        requestId: requestId, payload: respPayload, methodId: 0xe2d2_7fd9_098c_6ea2,
-        responseSchemaClosure: testbedMethods[0xe2d2_7fd9_098c_6ea2]!.responseSchemaClosure))
   }
 
   private func dispatch_transform(

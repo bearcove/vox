@@ -38,11 +38,6 @@ import { ClientMetadata } from "./metadata.ts";
 import type { Conduit } from "./conduit.ts";
 import { AsyncQueue } from "./internal/async_queue.ts";
 import { deferred, type Deferred } from "./internal/deferred.ts";
-import {
- // appendRetrySupportMetadata,
-  ensureOperationId,
- // metadataSupportsRetry,
-} from "./retry.ts";
 // import {
 //   appendSessionResumeKeyMetadata,
 //   metadataSessionResumeKey,
@@ -80,18 +75,10 @@ interface PendingResponse {
   channels: bigint[];
   /**
    * Lazily computes args schemas bytes for each send attempt.
-   * Called on every send so that after a SchemaSendTracker.reset() (session
-   * resume), fresh schemas are included in the retried request.
+   * Called when sending so the current connection's schema tracker can decide
+   * whether fresh schemas are required.
    */
   computeSchemas?: () => number[];
-  /** Whether this method uses persist retry policy (affects close behavior). */
-  persist: boolean;
-  /** Whether this method is idempotent. */
-  idem: boolean;
-  prepareRetry?: () => {
-    payload: Uint8Array;
-    channels: bigint[];
-  };
   finalizeChannels?: () => void;
   requestIds: Set<bigint>;
   settled: boolean;
@@ -270,7 +257,12 @@ async function makeInitiatorEstablishedTransport(
   if (isLinkSource(transport)) {
     const attachment = await transport.nextLink();
     await requestTransportMode(attachment.link);
-    const handshake = await handshakeAsInitiator(attachment.link, localSettings, true, null, options.metadata ?? emptyMetadata());
+    const handshake = await handshakeAsInitiator(
+      attachment.link,
+      localSettings,
+      null,
+      options.metadata ?? emptyMetadata(),
+    );
     const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
 
     // For resumable bare sessions: build a recoverConduit that reconnects,
@@ -302,7 +294,6 @@ async function makeInitiatorEstablishedTransport(
             const newHandshake = await handshakeAsInitiator(
               newAttachment.link,
               localSettings,
-              true,
               keyCell.value,
               options.metadata ?? emptyMetadata(),
             );
@@ -375,7 +366,12 @@ async function makeInitiatorEstablishedTransport(
   }
 
   await requestTransportMode(transport);
-  const handshake = await handshakeAsInitiator(transport, localSettings, true, null, options.metadata ?? emptyMetadata());
+  const handshake = await handshakeAsInitiator(
+    transport,
+    localSettings,
+    null,
+    options.metadata ?? emptyMetadata(),
+  );
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
 
   return {
@@ -402,7 +398,6 @@ async function makeAcceptorEstablishedTransport(
   const handshake = await handshakeAsAcceptor(
     attachment.link,
     localSettings,
-    true,
     options.resumable ?? false,
     null,
     options.metadata ?? emptyMetadata(),
@@ -450,7 +445,6 @@ class SessionCore {
   private closeError: SessionError | null = null;
   private rootConnectionValue: ConnectionHandle | null = null;
   private runPromise: Promise<void> | null = null;
-  private peerSupportsRetry: boolean;
   private readonly resumable: boolean;
   private sessionResumeKey: Uint8Array | null;
   private readonly recoverConduit?: () => Promise<Conduit<Message>>;
@@ -474,7 +468,6 @@ class SessionCore {
     conduit: Conduit<Message>,
     localRootSettings: ConnectionSettings,
     peerRootSettings: ConnectionSettings,
-    peerSupportsRetry: boolean,
     resumable: boolean,
     sessionResumeKey: Uint8Array | null,
     recoverConduit: (() => Promise<Conduit<Message>>) | undefined,
@@ -486,7 +479,6 @@ class SessionCore {
     this.conduit = conduit;
     this.localRootSettings = localRootSettings;
     this.peerRootSettings = peerRootSettings;
-    this.peerSupportsRetry = peerSupportsRetry;
     this.resumable = resumable;
     this.sessionResumeKey = sessionResumeKey?.slice() ?? null;
     this.recoverConduit = recoverConduit;
@@ -522,7 +514,6 @@ class SessionCore {
         0n,
         this.localRootSettings,
         this.peerRootSettings,
-        this.peerSupportsRetry,
       );
       this.connections.set(0n, this.rootConnectionValue);
     }
@@ -532,6 +523,12 @@ class SessionCore {
   notifyConnectionsResumed(): void {
     for (const connection of this.connections.values()) {
       connection.onSessionResumed();
+    }
+  }
+
+  failPendingAttempts(error: Error): void {
+    for (const connection of this.connections.values()) {
+      connection.failPendingAttempts(error);
     }
   }
 
@@ -747,6 +744,7 @@ class SessionCore {
     if (this.closed) {
       return false;
     }
+    this.failPendingAttempts(new SessionError("connection lost"));
     if (!this.resumable) {
       return false;
     }
@@ -942,7 +940,6 @@ class SessionCore {
       connectionId,
       localSettings,
       value.connection_settings,
-      this.peerSupportsRetry,
     );
     this.connections.set(connectionId, connection);
     await this.sendMessage(messageAccept(connectionId, localSettings, emptyMetadata()));
@@ -963,7 +960,6 @@ class SessionCore {
       connectionId,
       pending.localSettings,
       peerSettings,
-      this.peerSupportsRetry,
     );
     this.connections.set(connectionId, connection);
     pending.result.resolve(connection);
@@ -1119,7 +1115,6 @@ export class ConnectionHandle {
   private readonly schemaTracker = new SchemaTracker();
   private readonly schemaSendTracker = new SchemaSendTracker();
   private nextRequestId: bigint;
-  private nextOperationId = 1n;
   private closed = false;
   private flushPromise: Promise<void> | null = null;
   private flushRequested = false;
@@ -1128,20 +1123,17 @@ export class ConnectionHandle {
   readonly id: bigint;
   readonly localSettings: ConnectionSettings;
   readonly peerSettings: ConnectionSettings;
-  readonly peerSupportsRetry: boolean;
 
   constructor(
     session: SessionCore,
     id: bigint,
     localSettings: ConnectionSettings,
     peerSettings: ConnectionSettings,
-    peerSupportsRetry: boolean,
   ) {
     this.session = session;
     this.id = id;
     this.localSettings = localSettings;
     this.peerSettings = peerSettings;
-    this.peerSupportsRetry = peerSupportsRetry;
     this.role = roleFromParity(localSettings.parity);
     this.channelAllocator = new ChannelIdAllocator(this.role);
     this.channelRegistry = new ChannelRegistry(undefined, () => {
@@ -1226,19 +1218,8 @@ export class ConnectionHandle {
     };
 
     let finalizeChannels = request.finalizeChannels;
-    const prepareRetry = hasChannels
-      ? () => encodeWithChannels()
-      : request.prepareRetry
-      ? () => {
-          const rebuilt = request.prepareRetry!();
-          return { payload: encodeWithChannels().payload, channels: rebuilt.channels };
-        }
-      : undefined;
     const initial = encodeWithChannels();
     const metadataCarrier = request.metadata ? request.metadata.clone() : new ClientMetadata();
-    if (this.peerSupportsRetry) {
-      ensureOperationId(metadataCarrier, this.nextOperationId++);
-    }
     const metadata = metadataCarrier.toWire();
     const requestId = this.nextRequestId;
     this.nextRequestId += 2n;
@@ -1264,9 +1245,6 @@ export class ConnectionHandle {
         metadata: cloneMetadata(metadata),
         channels: [...initial.channels],
         computeSchemas,
-        persist: request.descriptor.retry?.persist ?? false,
-        idem: request.descriptor.retry?.idem ?? false,
-        prepareRetry,
         finalizeChannels,
         requestIds: new Set(),
         settled: false,
@@ -1418,41 +1396,31 @@ export class ConnectionHandle {
       clearTimeout(pending.timer);
       pending.requestIds.clear();
       pending.finalizeChannels?.();
-      // Report INDETERMINATE when session closes for:
-      //   - persist=true methods (op may have executed on remote)
-      //   - channel-bearing non-idempotent methods (fails-closed: channel
-      //     state is indeterminate after a broken connection)
-      const failClosedOnDrop = pending.channels.length > 0 && !pending.idem;
-      if ((pending.persist || failClosedOnDrop) && error instanceof SessionError) {
-        pending.reject(new RpcError(RpcErrorCode.INDETERMINATE));
-      } else {
-        pending.reject(error);
+      pending.reject(error);
+    }
+  }
+
+  failPendingAttempts(error: Error): void {
+    this.channelRegistry.closeAll();
+    const pendingStates = new Set(this.pendingResponses.values());
+    this.pendingResponses.clear();
+    for (const pending of pendingStates) {
+      if (pending.settled) {
+        continue;
       }
+      pending.settled = true;
+      clearTimeout(pending.timer);
+      pending.requestIds.clear();
+      pending.finalizeChannels?.();
+      pending.reject(error);
     }
   }
 
   onSessionResumed(): void {
-    if (this.closed || !this.peerSupportsRetry) {
+    if (this.closed) {
       return;
     }
     this.channelRegistry.closeAll();
-    const states = new Set(this.pendingResponses.values());
-    for (const state of states) {
-      if (state.settled) {
-        continue;
-      }
-      const failClosedOnResume = state.channels.length > 0 && !state.idem;
-      if (failClosedOnResume) {
-        this.clearPendingState(state);
-        state.reject(new RpcError(RpcErrorCode.INDETERMINATE));
-        continue;
-      }
-      for (const requestId of state.requestIds) {
-        this.pendingResponses.delete(requestId);
-      }
-      state.requestIds.clear();
-      void this.sendPendingRequest(state);
-    }
   }
 
   private clearPendingState(
@@ -1485,11 +1453,6 @@ export class ConnectionHandle {
     state.requestIds.add(requestId);
 
     try {
-      if (state.prepareRetry) {
-        const rebuilt = state.prepareRetry();
-        state.payload = rebuilt.payload.slice();
-        state.channels = [...rebuilt.channels];
-      }
       const schemas = state.computeSchemas?.();
       voxLogger()?.debug(
         `[vox:session] sendPendingRequest: req=${requestId} method=${state.methodId} payload=${state.payload.length} channels=${state.channels.length} schemas=${schemas?.length ?? 0}`,
@@ -1618,7 +1581,6 @@ export class Session {
       conduit,
       handshake.localSettings,
       handshake.peerSettings,
-      handshake.peerSupportsRetry,
       options.resumable ?? false,
       handshake.sessionResumeKey,
       recoverConduit,
@@ -1730,7 +1692,12 @@ export const session = {
       max_concurrent_requests: options.maxConcurrentRequests ?? 64,
       initial_channel_credit: channelCapacityFromOptions(options),
     };
-    const handshake = await handshakeAsInitiator(link, localSettings, true, null, options.metadata ?? emptyMetadata());
+    const handshake = await handshakeAsInitiator(
+      link,
+      localSettings,
+      null,
+      options.metadata ?? emptyMetadata(),
+    );
     return Session.initiatorConduit(
       new BareConduit(link, buildMessageDecodePlan(handshake.peerMessageSchema)),
       handshake,
@@ -1747,7 +1714,13 @@ export const session = {
       max_concurrent_requests: options.maxConcurrentRequests ?? 64,
       initial_channel_credit: channelCapacityFromOptions(options),
     };
-    const handshake = await handshakeAsAcceptor(link, localSettings, true, false, null, options.metadata ?? emptyMetadata());
+    const handshake = await handshakeAsAcceptor(
+      link,
+      localSettings,
+      false,
+      null,
+      options.metadata ?? emptyMetadata(),
+    );
     return Session.initiatorConduit(
       new BareConduit(link, buildMessageDecodePlan(handshake.peerMessageSchema)),
       handshake,

@@ -167,8 +167,8 @@ The same factory handles both root and virtual connections.
 
 ### Everything is metadata
 
-The `vox-` prefix is already reserved for internal metadata keys:
-`vox-session-key`, `vox-retry-support`, `vox-operation-id`, etc.
+The `vox-` prefix is reserved for internal metadata keys such as
+`vox-session-key`.
 
 Service routing and transport info use the same mechanism:
 

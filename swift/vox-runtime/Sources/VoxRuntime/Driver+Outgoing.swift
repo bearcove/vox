@@ -13,7 +13,6 @@ extension Driver {
             pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
         } catch {
             if resumable {
-                pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
                 _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
                 return
             }
@@ -92,20 +91,6 @@ extension Driver {
             } else {
                 checkedPayload = payload
             }
-            let sealedResponse = SealedOperationResponse(
-                payload: checkedPayload,
-                responseSchemaClosure: responseSchemaClosure
-            )
-            let waiters = await operations.seal(ownerRequestId: requestId, response: sealedResponse)
-            if !waiters.isEmpty {
-                for waiter in waiters {
-                    guard let replay = await responseMessage(requestId: waiter, payload: checkedPayload, schemas: schemas) else {
-                        continue
-                    }
-                    try await sendOrEnqueue(replay)
-                }
-                return
-            }
             guard let response = await responseMessage(requestId: requestId, payload: checkedPayload, schemas: schemas) else {
                 return
             }
@@ -118,8 +103,8 @@ extension Driver {
     func handleCommand(_ cmd: HandleCommand) async {
         switch cmd {
         case .call(
-            let requestId, let methodId, let metadata, let payload, let channels, let retry,
-            let timeout, let prepareRetry, let responseTx, let schemaInfo):
+            let requestId, let methodId, let metadata, let payload, let channels,
+            let timeout, let responseTx, let schemaInfo):
             let isClosed = await state.isConnectionClosed()
             guard !isClosed else {
                 responseTx(.failure(.connectionClosed))
@@ -132,9 +117,7 @@ extension Driver {
                 metadata: metadata,
                 payload: payload,
                 channels: channels,
-                retry: retry,
                 timeout: timeout,
-                prepareRetry: prepareRetry,
                 schemaInfo: schemaInfo
             )
 
@@ -173,7 +156,12 @@ extension Driver {
                 return
             } catch {
                 if resumable {
-                    pendingCalls.append(queuedCall)
+                    let pending = await state.claimPendingResponse(
+                        requestId,
+                        reason: "conduit-send-failed"
+                    )
+                    pending?.timeoutTask?.cancel()
+                    pending?.responseTx(.failure(.transportError(String(describing: error))))
                     _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
                     return
                 }
@@ -227,65 +215,45 @@ extension Driver {
 
         traceLog(.resume, "flushPendingCalls: count=\(pendingCalls.count)")
         while let call = pendingCalls.first {
-            let replayCall: DriverQueuedCall
-            if let prepareRetry = call.prepareRetry {
-                traceLog(.resume, "flushPendingCalls: rebuilding requestId=\(call.requestId) methodId=\(call.methodId)")
-                let rebuilt = await prepareRetry()
-                let replayMetadata =
-                    if call.retry.idem {
-                        await handle.freshOperationMetadata(from: call.metadata)
-                    } else {
-                        call.metadata
-                    }
-                replayCall = DriverQueuedCall(
-                    requestId: call.requestId,
-                    methodId: call.methodId,
-                    metadata: replayMetadata,
-                    payload: rebuilt.payload,
-                    channels: rebuilt.channels,
-                    retry: call.retry,
-                    timeout: call.timeout,
-                    prepareRetry: call.prepareRetry,
-                    schemaInfo: call.schemaInfo
-                )
-            } else {
-                replayCall = call
-            }
-
-            // Advertise the args schema closure (on replay, may already be sent → deduped).
+            // Advertise the args schema closure (at most once per method, deduped).
             let schemas: [UInt8]
-            if let schemaInfo = replayCall.schemaInfo {
+            if let schemaInfo = call.schemaInfo {
                 schemas = schemaSendTracker.prepareSchemas(
-                    replayCall.methodId, .args, schemaInfo.methodSchemas.argsSchemaClosure)
+                    call.methodId, .args, schemaInfo.methodSchemas.argsSchemaClosure)
             } else {
                 schemas = []
             }
 
             let msg = messageRequest(
-                requestId: replayCall.requestId,
-                methodId: replayCall.methodId,
-                payload: replayCall.payload,
-                metadata: replayCall.metadata,
-                channels: replayCall.channels,
+                requestId: call.requestId,
+                methodId: call.methodId,
+                payload: call.payload,
+                metadata: call.metadata,
+                channels: call.channels,
                 schemas: schemas
             )
 
-            traceLog(.resume, "flushPendingCalls: sending replay requestId=\(replayCall.requestId) methodId=\(replayCall.methodId)")
+            traceLog(.resume, "flushPendingCalls: sending requestId=\(call.requestId) methodId=\(call.methodId)")
             do {
                 try await conduit.send(msg)
             } catch TransportError.wouldBlock {
-                traceLog(.resume, "flushPendingCalls: conduit would block requestId=\(replayCall.requestId)")
-                pendingCalls[0] = replayCall
+                traceLog(.resume, "flushPendingCalls: conduit would block requestId=\(call.requestId)")
                 return
             } catch {
                 if resumable {
-                    traceLog(.resume, "flushPendingCalls: send failed requestId=\(replayCall.requestId) error=\(String(describing: error))")
-                    pendingCalls[0] = replayCall
+                    traceLog(.resume, "flushPendingCalls: send failed requestId=\(call.requestId) error=\(String(describing: error))")
+                    let pending = await state.claimPendingResponse(
+                        call.requestId,
+                        reason: "conduit-send-failed"
+                    )
+                    pending?.timeoutTask?.cancel()
+                    pending?.responseTx(.failure(.transportError(String(describing: error))))
+                    pendingCalls.removeFirst()
                     _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
                     return
                 }
                 let pending = await state.claimPendingResponse(
-                    replayCall.requestId,
+                    call.requestId,
                     reason: "conduit-send-failed"
                 )
                 pending?.timeoutTask?.cancel()
@@ -298,14 +266,14 @@ extension Driver {
 
             pendingCalls.removeFirst()
 
-            guard let timeout = replayCall.timeout else {
+            guard let timeout = call.timeout else {
                 continue
             }
 
             let timeoutNs = Self.timeoutToNanoseconds(timeout)
             let capturedState = state
             let capturedConduit = conduit
-            let requestId = replayCall.requestId
+            let requestId = call.requestId
             let timeoutTask = Task {
                 do {
                     try await Task.sleep(nanoseconds: timeoutNs)
@@ -327,31 +295,6 @@ extension Driver {
             if !installed {
                 timeoutTask.cancel()
             }
-        }
-    }
-
-    func replayPendingCallsAfterResume() async {
-        let inFlight = await state.pendingCallsSnapshot()
-        pendingCalls.removeAll()
-        traceLog(.resume, "replayPendingCallsAfterResume: inFlight=\(inFlight.count)")
-        for call in inFlight {
-            if call.prepareRetry != nil && !call.retry.idem {
-                traceLog(.resume, "replayPendingCallsAfterResume: indeterminate requestId=\(call.requestId)")
-                guard let pending = await state.claimPendingResponse(
-                    call.requestId,
-                    reason: "resume-channel-indeterminate"
-                ) else {
-                    continue
-                }
-                pending.timeoutTask?.cancel()
-                // Deliver a typed Result.Err(VoxError.Indeterminate): the dispatcher
-                // encodes it through a response program (Err is T/E-independent on the
-                // wire), and the generated client decodes it back to .indeterminate.
-                pending.responseTx(.success(dispatcher.encodeVoxError(.indeterminate)))
-                continue
-            }
-            traceLog(.resume, "replayPendingCallsAfterResume: queueing requestId=\(call.requestId) methodId=\(call.methodId)")
-            pendingCalls.append(call)
         }
     }
 

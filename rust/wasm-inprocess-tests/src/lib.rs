@@ -90,14 +90,6 @@ impl Testbed for TestbedService {
         let _ = output.close(Default::default()).await;
     }
 
-    async fn generate_retry_non_idem(&self, count: u32, output: Tx<i32>) {
-        self.generate(count, output).await;
-    }
-
-    async fn generate_retry_idem(&self, count: u32, output: Tx<i32>) {
-        self.generate(count, output).await;
-    }
-
     async fn transform(&self, mut input: Rx<String>, output: Tx<String>) {
         while let Ok(Some(item)) = input.recv().await {
             let _ = output.send(item.get().to_uppercase()).await;

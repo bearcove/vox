@@ -93,7 +93,7 @@ private actor ScriptedTransport: Link {
                 connectionSettings: ConnectionSettings(parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
                 messagePayloadSchema: Data(MessageSchemaClosure),
                 resumeKey: nil,
-                metadata: appendRetrySupportMetadata(.null)
+                metadata: .null
             ))
     ) {
         self.autoRespondRequestCount = autoRespondRequestCount
@@ -328,71 +328,6 @@ private struct ImmediateResponseDispatcher: ServiceDispatcher {
     }
 }
 
-private actor BlockingDispatchProbe {
-    private var dispatchCount = 0
-    private var released = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
-
-    func waitForRelease() async {
-        dispatchCount += 1
-        guard !released else {
-            return
-        }
-        await withCheckedContinuation { continuation in
-            waiters.append(continuation)
-        }
-    }
-
-    func release() {
-        released = true
-        let waiters = waiters
-        self.waiters.removeAll()
-        for waiter in waiters {
-            waiter.resume()
-        }
-    }
-
-    func count() -> Int {
-        dispatchCount
-    }
-}
-
-private struct BlockingResponseDispatcher: ServiceDispatcher {
-    let probe: BlockingDispatchProbe
-    let responseSchemaClosure: [UInt8]
-
-    func retryPolicy(methodId _: UInt64) -> RetryPolicy {
-        .persistIdem
-    }
-
-    func preregister(
-        methodId _: UInt64,
-        payload _: [UInt8],
-        channels _: [UInt64],
-        registry _: ChannelRegistry
-    ) async {}
-
-    func dispatch(
-        methodId: UInt64,
-        payload _: [UInt8],
-        requestId: UInt64,
-        channels _: [UInt64],
-        registry _: ChannelRegistry,
-        schemaSendTracker _: SchemaSendTracker,
-        schemaReceiveTracker _: SchemaTracker,
-        taskTx: @escaping @Sendable (TaskMessage) -> Void
-    ) async {
-        await probe.waitForRelease()
-        taskTx(
-            .response(
-                requestId: requestId,
-                payload: [0x42],
-                methodId: methodId,
-                responseSchemaClosure: responseSchemaClosure
-            ))
-    }
-}
-
 private func metadataString(_ metadata: Metadata, key: String) -> String? {
     metadata.metaStr(key)
 }
@@ -448,50 +383,6 @@ private func awaitProtocolReason(
         for msg in sent {
             if case .protocolError(let err) = msg.payload {
                 return err.description
-            }
-        }
-        try? await Task.sleep(nanoseconds: 5_000_000)
-    }
-    return nil
-}
-
-private func awaitResponsePayload(
-    _ transport: ScriptedTransport,
-    requestId: UInt64,
-    timeoutMs: UInt64 = 1_000
-) async -> [UInt8]? {
-    let start = ContinuousClock.now
-    let timeout = Duration.milliseconds(Int64(timeoutMs))
-    while ContinuousClock.now - start < timeout {
-        let sent = await transport.sent()
-        for message in sent {
-            if case .requestMessage(let request) = message.payload,
-                case .response(let response) = request.body,
-                request.id == requestId
-            {
-                return Array(response.ret)
-            }
-        }
-        try? await Task.sleep(nanoseconds: 5_000_000)
-    }
-    return nil
-}
-
-private func awaitResponseSchemas(
-    _ transport: ScriptedTransport,
-    requestId: UInt64,
-    timeoutMs: UInt64 = 1_000
-) async -> [UInt8]? {
-    let start = ContinuousClock.now
-    let timeout = Duration.milliseconds(Int64(timeoutMs))
-    while ContinuousClock.now - start < timeout {
-        let sent = await transport.sent()
-        for message in sent {
-            if case .requestMessage(let request) = message.payload,
-                case .response(let response) = request.body,
-                request.id == requestId
-            {
-                return Array(response.schemas)
             }
         }
         try? await Task.sleep(nanoseconds: 5_000_000)
@@ -579,7 +470,7 @@ private func awaitTaskResult<T: Sendable>(
 
 @Suite(.serialized)
 struct ConnectionFailureTests {
-    @Test func initiatorHelloCarriesConnectionCorrelationMetadata() async throws {
+    @Test func initiatorHelloCarriesMessagePayloadSchema() async throws {
         let transport = ScriptedTransport()
         _ = try await establishInitiator(
             conduit: transport,
@@ -595,141 +486,7 @@ struct ConnectionFailureTests {
             Issue.record("expected first sent message to be hello")
             return
         }
-        #expect(metadataSupportsRetry(hello.metadata))
         #expect(Array(hello.messagePayloadSchema) == MessageSchemaClosure)
-    }
-
-    @Test func callerInjectsOperationIdWhenPeerSupportsRetry() async throws {
-        let transport = ScriptedTransport(
-            autoRespondRequestCount: 1,
-            initialHandshake: .helloYourself(
-                HelloYourself(
-                    connectionSettings: ConnectionSettings(
-                        parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
-                    messagePayloadSchema: Data(MessageSchemaClosure),
-                    resumeKey: nil,
-                    metadata: appendRetrySupportMetadata(.null)
-                )))
-        let (handle, driver, _, _, _) = try await establishInitiator(
-            conduit: transport,
-            dispatcher: NoopDispatcher()
-        )
-        let driverTask = Task {
-            try await driver.run()
-        }
-        try await withAsyncCleanup({
-            try? await transport.close()
-            await cancelAndDrain(driverTask)
-        }) {
-            _ = try await handle.callRaw(
-                methodId: 1, payload: [0x01], retry: .persist, timeout: 1.0)
-
-            let sent = await transport.sent()
-            guard
-                let request = sent.first(where: { message in
-                    if case .requestMessage(let request) = message.payload,
-                        case .call = request.body
-                    {
-                        return request.id == 1
-                    }
-                    return false
-                })
-            else {
-                Issue.record("expected request to be sent")
-                return
-            }
-            guard case .requestMessage(let outboundRequest) = request.payload,
-                case .call(let call) = outboundRequest.body
-            else {
-                Issue.record("expected outbound request call")
-                return
-            }
-
-            #expect(metadataOperationId(call.metadata) != nil)
-        }
-    }
-
-    @Test func duplicateOperationIdAttachesLiveAndReplaysSealedOutcome() async throws {
-        let transport = ScriptedTransport(
-            initialHandshake: .hello(
-                Hello(
-                    parity: .odd,
-                    connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
-                    messagePayloadSchema: Data(MessageSchemaClosure),
-                    resumeKey: nil,
-                    metadata: appendRetrySupportMetadata(.null)
-                )))
-        let probe = BlockingDispatchProbe()
-        let responseSchemaClosure: [UInt8] = [0xFE, 0xED, 0xFA, 0xCE]
-        let (_, driver, _, _, _) = try await establishAcceptor(
-            conduit: transport,
-            dispatcher: BlockingResponseDispatcher(
-                probe: probe,
-                responseSchemaClosure: responseSchemaClosure
-            )
-        )
-        let driverTask = Task {
-            try await driver.run()
-        }
-        await withAsyncCleanup({
-            try? await transport.close()
-            await cancelAndDrain(driverTask)
-        }) {
-            let operationMetadata = ensureOperationId(.null, operationId: 99)
-
-            await transport.enqueueMessage(
-                .request(
-                    connId: 0,
-                    requestId: 11,
-                    methodId: 7,
-                    metadata: operationMetadata,
-                    payload: [0xAB]
-                )
-            )
-
-            let start = ContinuousClock.now
-            while ContinuousClock.now - start < .milliseconds(250) {
-                if await probe.count() == 1 {
-                    break
-                }
-                try? await Task.sleep(nanoseconds: 5_000_000)
-            }
-            #expect(await probe.count() == 1)
-
-            await transport.enqueueMessage(
-                .request(
-                    connId: 0,
-                    requestId: 13,
-                    methodId: 7,
-                    metadata: operationMetadata,
-                    payload: [0xAB]
-                )
-            )
-
-            try? await Task.sleep(nanoseconds: 20_000_000)
-            #expect(await probe.count() == 1)
-
-            await probe.release()
-
-            #expect(await awaitResponsePayload(transport, requestId: 11) == [0x42])
-            #expect(await awaitResponsePayload(transport, requestId: 13) == [0x42])
-
-            driver.schemaSendTracker.reset()
-
-            await transport.enqueueMessage(
-                .request(
-                    connId: 0,
-                    requestId: 15,
-                    methodId: 7,
-                    metadata: operationMetadata,
-                    payload: [0xAB]
-                )
-            )
-
-            #expect(await awaitResponsePayload(transport, requestId: 15) == [0x42])
-            #expect(await awaitResponseSchemas(transport, requestId: 15) == responseSchemaClosure)
-            #expect(await probe.count() == 1)
-        }
     }
 
     @Test func serverResponsePreservesPeepsRequestMetadata() async throws {
@@ -740,7 +497,7 @@ struct ConnectionFailureTests {
                     connectionSettings: ConnectionSettings(parity: .odd, maxConcurrentRequests: 64, initialChannelCredit: 16),
                     messagePayloadSchema: Data(MessageSchemaClosure),
                     resumeKey: nil,
-                    metadata: appendRetrySupportMetadata(.null)
+                    metadata: .null
                 )))
         let (_, driver, _, _, _) = try await establishAcceptor(
             conduit: transport,

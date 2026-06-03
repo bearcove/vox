@@ -17,7 +17,6 @@ export type { Metadata } from "@bearcove/vox-wire";
 export interface HandshakeResult {
   localSettings: ConnectionSettings;
   peerSettings: ConnectionSettings;
-  peerSupportsRetry: boolean;
   sessionResumeKey: Uint8Array | null;
   peerResumeKey: Uint8Array | null;
   peerMessageSchema: Uint8Array;
@@ -74,26 +73,6 @@ function localMessagePayloadSchema(): number[] {
   return Array.from(hexToBytes(messageSchemaClosure));
 }
 
-// Operation-store retry support is advertised out-of-band in the handshake
-// metadata (the wire `HandshakeMessage` carries no dedicated flag). A peer that
-// implements the operation store sets `vox:supports-retry`; the counterpart only
-// injects operation ids when it sees the flag, so a peer that doesn't support
-// retry (e.g. the Rust subject) never receives spurious ids.
-const SUPPORTS_RETRY_KEY = "vox:supports-retry";
-
-/** A copy of `metadata` with the retry-support flag set when `supportsRetry`. */
-function withRetryFlag(metadata: Metadata, supportsRetry: boolean): Metadata {
-  if (!supportsRetry) return metadata;
-  const out = new Map(metadata);
-  out.set(SUPPORTS_RETRY_KEY, true);
-  return out;
-}
-
-/** Whether the peer advertised operation-store retry support in its metadata. */
-function peerSupportsRetryFrom(peerMetadata: Metadata): boolean {
-  return peerMetadata.get(SUPPORTS_RETRY_KEY) === true;
-}
-
 function resumeKeyToBytes(key: Uint8Array | null): ResumeKeyBytes | null {
   if (key === null) {
     return null;
@@ -133,7 +112,6 @@ function randomSessionResumeKey(): Uint8Array {
 export async function handshakeAsInitiator(
   link: Link,
   settings: ConnectionSettings,
-  supportsRetry: boolean = true,
   resumeKey: Uint8Array | null = null,
   metadata: Metadata = emptyMetadata(),
 ): Promise<HandshakeResult> {
@@ -144,7 +122,7 @@ export async function handshakeAsInitiator(
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
       resume_key: resumeKeyToBytes(resumeKey),
-      metadata: withRetryFlag(metadata, supportsRetry),
+      metadata,
     },
   });
 
@@ -163,7 +141,6 @@ export async function handshakeAsInitiator(
   return {
     localSettings: settings,
     peerSettings: helloYourself.value.connection_settings,
-    peerSupportsRetry: peerSupportsRetryFrom(peerMetadata),
     sessionResumeKey: resumeKeyFromBytes(helloYourself.value.resume_key),
     peerResumeKey: null,
     peerMessageSchema: new Uint8Array(helloYourself.value.message_payload_schema),
@@ -174,7 +151,6 @@ export async function handshakeAsInitiator(
 export async function handshakeAsAcceptor(
   link: Link,
   settings: ConnectionSettings,
-  supportsRetry: boolean = true,
   resumable: boolean = false,
   expectedResumeKey: Uint8Array | null = null,
   metadata: Metadata = emptyMetadata(),
@@ -203,7 +179,7 @@ export async function handshakeAsAcceptor(
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
       resume_key: resumeKeyToBytes(sessionResumeKey),
-      metadata: withRetryFlag(metadata, supportsRetry),
+      metadata,
     },
   });
 
@@ -219,7 +195,6 @@ export async function handshakeAsAcceptor(
   return {
     localSettings: settings,
     peerSettings: hello.value.connection_settings,
-    peerSupportsRetry: peerSupportsRetryFrom(peerMetadata),
     sessionResumeKey,
     peerResumeKey: resumeKeyFromBytes(hello.value.resume_key),
     peerMessageSchema: new Uint8Array(hello.value.message_payload_schema),

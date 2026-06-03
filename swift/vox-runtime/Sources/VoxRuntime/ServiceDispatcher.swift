@@ -1,7 +1,5 @@
 /// Protocol for dispatching incoming requests.
 public protocol ServiceDispatcher: Sendable {
-    func retryPolicy(methodId: UInt64) -> RetryPolicy
-
     /// Encode a runtime-originated `VoxRuntimeError` (cancelled, indeterminate,
     /// invalid payload, …) as a response payload. The wire type is
     /// `Result<T, VoxError<E>>`, whose `Err` arm is independent of the method's
@@ -32,10 +30,4 @@ public protocol ServiceDispatcher: Sendable {
         schemaReceiveTracker: SchemaTracker,
         taskTx: @escaping @Sendable (TaskMessage) -> Void
     ) async
-}
-
-public extension ServiceDispatcher {
-    func retryPolicy(methodId _: UInt64) -> RetryPolicy {
-        .volatile
-    }
 }

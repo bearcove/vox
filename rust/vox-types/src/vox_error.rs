@@ -38,10 +38,10 @@ pub enum VoxError<E = ::core::convert::Infallible> {
 impl<E> VoxError<E> {
     // r[impl rpc.fallible.vox-error.retryable]
     // r[impl schema.errors.non-retryable]
-    /// Returns `true` if retrying the same operation on a fresh connection may succeed.
+    /// Returns `true` if issuing a new call on a fresh connection may succeed.
     ///
     /// `InvalidPayload`, `UnknownMethod`, `User`, `Cancelled`, and `Indeterminate`
-    /// are permanent failures — retrying them against the same peer will reproduce
+    /// are permanent failures — issuing the same call against the same peer will reproduce
     /// the same outcome.
     pub fn is_retryable(&self) -> bool {
         matches!(

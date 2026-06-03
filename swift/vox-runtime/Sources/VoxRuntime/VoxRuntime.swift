@@ -20,9 +20,7 @@ public protocol VoxConnection: Sendable {
         metadata: Metadata,
         payload: [UInt8],
         channels: [UInt64],
-        retry: RetryPolicy,
         timeout: TimeInterval?,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
         finalizeChannels: (@Sendable () -> Void)?,
         schemaInfo: ClientSchemaInfo?
     ) async throws -> [UInt8]
@@ -48,9 +46,7 @@ extension VoxConnection {
         methodId: UInt64,
         metadata: Metadata,
         payload: [UInt8],
-        retry: RetryPolicy,
         timeout: TimeInterval?,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
         finalizeChannels: (@Sendable () -> Void)?,
         schemaInfo: ClientSchemaInfo?
     ) async throws -> [UInt8] {
@@ -59,9 +55,7 @@ extension VoxConnection {
             metadata: metadata,
             payload: payload,
             channels: [],
-            retry: retry,
             timeout: timeout,
-            prepareRetry: prepareRetry,
             finalizeChannels: finalizeChannels,
             schemaInfo: schemaInfo
         )
@@ -71,9 +65,7 @@ extension VoxConnection {
         methodId: UInt64,
         metadata: Metadata,
         payload: [UInt8],
-        retry: RetryPolicy,
         timeout: TimeInterval?,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
         finalizeChannels: (@Sendable () -> Void)?
     ) async throws -> [UInt8] {
         try await call(
@@ -81,9 +73,7 @@ extension VoxConnection {
             metadata: metadata,
             payload: payload,
             channels: [],
-            retry: retry,
             timeout: timeout,
-            prepareRetry: prepareRetry,
             finalizeChannels: finalizeChannels,
             schemaInfo: nil
         )
@@ -92,16 +82,13 @@ extension VoxConnection {
     public func call(
         methodId: UInt64,
         payload: [UInt8],
-        retry: RetryPolicy,
         timeout: TimeInterval?
     ) async throws -> [UInt8] {
         try await call(
             methodId: methodId,
             metadata: .null,
             payload: payload,
-            retry: retry,
             timeout: timeout,
-            prepareRetry: nil,
             finalizeChannels: nil,
             schemaInfo: nil
         )
@@ -110,18 +97,14 @@ extension VoxConnection {
     public func call(
         methodId: UInt64,
         payload: [UInt8],
-        retry: RetryPolicy,
         timeout: TimeInterval?,
-        prepareRetry: (@Sendable () async -> PreparedRetryRequest)?,
         finalizeChannels: (@Sendable () -> Void)?
     ) async throws -> [UInt8] {
         try await call(
             methodId: methodId,
             metadata: .null,
             payload: payload,
-            retry: retry,
             timeout: timeout,
-            prepareRetry: prepareRetry,
             finalizeChannels: finalizeChannels,
             schemaInfo: nil
         )
@@ -137,9 +120,7 @@ extension VoxConnection {
             methodId: methodId,
             metadata: metadata,
             payload: payload,
-            retry: .volatile,
             timeout: timeout,
-            prepareRetry: nil,
             finalizeChannels: nil,
             schemaInfo: nil
         )
@@ -150,24 +131,7 @@ extension VoxConnection {
             methodId: methodId,
             metadata: .null,
             payload: payload,
-            retry: .volatile,
             timeout: nil,
-            prepareRetry: nil,
-            finalizeChannels: nil,
-            schemaInfo: nil
-        )
-    }
-
-    public func call(methodId: UInt64, payload: [UInt8], timeout: TimeInterval?) async throws
-        -> [UInt8]
-    {
-        try await call(
-            methodId: methodId,
-            metadata: .null,
-            payload: payload,
-            retry: .volatile,
-            timeout: timeout,
-            prepareRetry: nil,
             finalizeChannels: nil,
             schemaInfo: nil
         )

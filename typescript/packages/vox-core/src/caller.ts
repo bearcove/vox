@@ -68,15 +68,6 @@ export interface CallerRequest {
   metadata?: ClientMetadata;
 
   /**
-   * Optional rebuild hook for retryable requests that need to rebind channels
-   * and regenerate payload/channels on resend.
-   */
-  prepareRetry?: () => {
-    payload: Uint8Array;
-    channels: bigint[];
-  };
-
-  /**
    * Optional cleanup hook for channel-bearing requests. Called when the
    * request is finally settled or closed.
    */

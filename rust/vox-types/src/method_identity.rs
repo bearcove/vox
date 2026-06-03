@@ -25,8 +25,6 @@ pub fn method_id_name_only(service_name: &str, method_name: &str) -> MethodId {
 /// Build and leak a `MethodDescriptor`.
 pub struct MethodDescriptorOptions {
     pub response_wire_shape: &'static Shape,
-    pub retry_persist: bool,
-    pub retry_idem: bool,
     pub doc: Option<&'static str>,
 }
 
@@ -87,8 +85,6 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         return_shape: R::SHAPE,
         response_wire_shape: options.response_wire_shape,
         args_have_channels,
-        retry_persist: options.retry_persist,
-        retry_idem: options.retry_idem,
         doc: options.doc,
     }))
 }

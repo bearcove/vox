@@ -341,7 +341,7 @@ impl ChannelRuntimeDebug {
 /// State shared between the driver loop and any `DriverCaller` / `DriverChannelSink` handles.
 ///
 /// `pending_responses` is keyed by request ID and therefore tracks live
-/// request attempts, not logical operations.
+/// request attempts.
 struct DriverShared {
     connection_id: ConnectionId,
     pending_responses: SyncMutex<BTreeMap<RequestId, ResponseSlot>>,

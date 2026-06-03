@@ -374,9 +374,6 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
                 None => quote! { None },
             };
 
-            let retry_persist = m.is_persist();
-            let retry_idem = m.is_idem();
-
             quote! {
                 #vox::hash::method_descriptor::<#args_tuple_ty, #return_ty_tokens>(
                     #service_name,
@@ -385,8 +382,6 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
                     &[#(#channel_elements),*],
                     #vox::hash::MethodDescriptorOptions {
                         response_wire_shape: #response_wire_shape,
-                        retry_persist: #retry_persist,
-                        retry_idem: #retry_idem,
                         doc: #method_doc_expr,
                     },
                 )

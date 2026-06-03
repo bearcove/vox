@@ -13,7 +13,7 @@ mod ffi;
 #[derive(Clone)]
 pub struct TestbedService;
 
-pub async fn stream_retry_probe_values(count: u32, output: Tx<i32>) {
+pub async fn stream_values(count: u32, output: Tx<i32>) {
     for i in 0..count as i32 {
         debug!(i, "sending value");
         if let Err(e) = output.send(i).await {
@@ -116,19 +116,7 @@ impl Testbed for TestbedService {
     #[instrument(skip(self, output))]
     async fn generate(&self, count: u32, output: Tx<i32>) {
         info!(count, "generate called");
-        stream_retry_probe_values(count, output).await;
-    }
-
-    #[instrument(skip(self, output))]
-    async fn generate_retry_non_idem(&self, count: u32, output: Tx<i32>) {
-        info!(count, "generate_retry_non_idem called");
-        stream_retry_probe_values(count, output).await;
-    }
-
-    #[instrument(skip(self, output))]
-    async fn generate_retry_idem(&self, count: u32, output: Tx<i32>) {
-        info!(count, "generate_retry_idem called");
-        stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     #[instrument(skip(self, input, output))]
@@ -241,7 +229,7 @@ impl Testbed for TestbedService {
     }
 
     async fn generate_large(&self, count: u32, output: Tx<i32>) {
-        stream_retry_probe_values(count, output).await;
+        stream_values(count, output).await;
     }
 
     async fn all_colors(&self) -> Vec<Color> {

@@ -40,10 +40,10 @@ extension Driver {
 
     /// Try to recover the conduit using the recovery callback.
     ///
-    /// If the original session had a resume key (peer supports resumption),
-    /// we do a protocol-level resume handshake. If not (peer only supports
-    /// fresh sessions), we do a plain fresh handshake and rely on in-flight
-    /// request replay to recover pending calls.
+    /// If the original session had a resume key, try a protocol-level resume
+    /// handshake. Otherwise do a plain fresh handshake. In-flight request
+    /// attempts fail when the conduit is lost; recovery only restores the
+    /// session for future traffic.
     private func tryRecoverConduit() async -> (any Conduit)? {
         guard let recoverAttachment, let localRootSettings, let peerRootSettings, let transport
         else {
@@ -100,7 +100,7 @@ extension Driver {
                 }
             } else {
                 // Fresh-session recovery: peer doesn't support resumption.
-                // Do a plain handshake; in-flight requests will be replayed.
+                // Do a plain handshake for future traffic.
                 traceLog(.resume, "trying recoverAttachment with fresh handshake (no session key)")
                 _ = try await performInitiatorHandshake(
                     link: attachment.link,
@@ -135,25 +135,16 @@ extension Driver {
         // Reset schema tracker - type IDs are per-connection and must not carry over
         schemaSendTracker.reset()
 
-        // Reset operation ID and request ID allocator
+        // Reset request ID allocator for the new connection.
         self.handle.onConduitReset()
 
-        // Reset operations tracker (the peer will send operation 0, 1, 2 etc. again)
-        await self.operations.onConduitReset()
-
         // r[impl rpc.channel.connection-closure] - Close all channels on resume.
-        // Channel handles become invalid on disconnect. When idem methods with channels
-        // are re-run, fresh channels will be allocated and the handles will be rebound.
+        // Channel handles become invalid on disconnect. Later calls allocate
+        // fresh channels and bind fresh handles.
         await serverRegistry.closeAllChannels()
         await handle.channelRegistry.closeAllChannels()
 
-        // Note: We do NOT clear incoming in-flight requests on the acceptor side.
-        // Handlers that are still processing should complete and send their responses
-        // on the new conduit. The inFlightRequests map is kept intact so responseMessage()
-        // can find the request context when the handler eventually responds.
-
-        // Replay pending outgoing calls (initiator side)
-        await replayPendingCallsAfterResume()
+        pendingCalls.removeAll()
 
         // Reset keepalive
         keepaliveRuntime = makeKeepaliveRuntime()
@@ -217,7 +208,7 @@ extension Driver {
                         // Drain queues but reject new calls
                         let commands = commandQueue.popAll()
                         for command in commands {
-                            if case .call(_, _, _, _, _, _, _, _, let responseTx, _) = command {
+                            if case .call(_, _, _, _, _, _, let responseTx, _) = command {
                                 responseTx(.failure(.connectionClosed))
                             }
                         }
@@ -260,6 +251,7 @@ extension Driver {
                 case .conduitClosed, .conduitFailed:
                     traceLog(.driver, "conduit broke")
                     if resumable {
+                        await failAllPending()
                         // Enter disconnected state
                         isConnected = false
                         needsRecoveryAttempt = true

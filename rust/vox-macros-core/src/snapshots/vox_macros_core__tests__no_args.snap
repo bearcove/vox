@@ -19,8 +19,6 @@ pub fn ping_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
                             u64,
                             ::vox::VoxError<::core::convert::Infallible>,
                         > as ::vox::facet::Facet<'static>>::SHAPE,
-                        retry_persist: false,
-                        retry_idem: false,
                         doc: None,
                     },
                 ),

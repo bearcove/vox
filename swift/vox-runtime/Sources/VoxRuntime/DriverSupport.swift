@@ -53,7 +53,6 @@ func makeDriverAndConnection(
     dispatcher: any ServiceDispatcher,
     role: Role,
     negotiated: Negotiated,
-    peerSupportsRetry: Bool,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     keepalive: SessionKeepaliveConfig? = nil
 ) -> (Connection, Driver) {
@@ -90,7 +89,6 @@ func makeDriverAndConnection(
         commandTx: commandSender,
         taskTx: taskSender,
         role: role,
-        peerSupportsRetry: peerSupportsRetry,
         maxConcurrentRequests: negotiated.maxConcurrentRequests
     )
 
@@ -100,7 +98,6 @@ func makeDriverAndConnection(
         role: role,
         negotiated: negotiated,
         handle: handle,
-        operations: OperationRegistry(),
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
         eventStream: eventStream,
@@ -117,7 +114,6 @@ func makeSessionDriverAndConnection(
     dispatcher: any ServiceDispatcher,
     role: Role,
     negotiated: Negotiated,
-    peerSupportsRetry: Bool,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     keepalive: SessionKeepaliveConfig? = nil,
     resumable: Bool,
@@ -161,7 +157,6 @@ func makeSessionDriverAndConnection(
         commandTx: commandSender,
         taskTx: taskSender,
         role: role,
-        peerSupportsRetry: peerSupportsRetry,
         maxConcurrentRequests: negotiated.maxConcurrentRequests
     )
 
@@ -171,7 +166,6 @@ func makeSessionDriverAndConnection(
         role: role,
         negotiated: negotiated,
         handle: handle,
-        operations: OperationRegistry(),
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
         eventStream: eventStream,

@@ -99,7 +99,7 @@ The layers have distinct continuity boundaries:
   replacement.
 - A **Connection** is scoped to a session, not to an individual conduit.
 
-# Terminology: call, request attempt, response, and operation
+# Terminology: call, request attempt, and response
 
 vox uses several related terms that refer to different layers of the system.
 This specification uses them consistently as follows.
@@ -118,25 +118,16 @@ A **response** is the terminal reply to one request attempt. On the wire, a
 response is carried by `RequestResponse` and is matched to a prior request
 attempt by `RequestId`.
 
-An **operation** is the logical RPC action across retries. An operation is
-identified by `operation_id`. One call corresponds to exactly one logical
-operation. That operation may be represented by one request attempt or by
-multiple request attempts if retry or session recovery creates later delivery
-attempts for the same operation.
-
 In summary:
 
-- one **call** corresponds to one **operation**
-- one **operation** may have one or more **request attempts**
+- one **call** creates one **request attempt**
 - each **request attempt** has at most one terminal **response**
 
 This distinction matters for continuity:
 
 - conduit continuity preserves **request-attempt continuity**
 - session resumption preserves **session-scoped state**
-- retry preserves **operation continuity**
 
 Session resumption does not preserve in-flight request or response attempts on
-the failed attachment. If an unresolved operation continues after session
-resumption, it does so by creating a new request attempt for the same
-operation.
+the failed attachment. A caller that wants to issue another request after
+recovery does so as a new call with a fresh request attempt.

@@ -57,14 +57,6 @@ pub struct MethodDescriptor {
     /// instead of re-walking the shape per request.
     pub args_have_channels: bool,
 
-    /// Static retry policy: whether an admitted operation must persist once
-    /// started (`#[vox(persist)]`).
-    pub retry_persist: bool,
-
-    /// Static retry policy: whether re-executing the operation is safe
-    /// (`#[vox(idem)]`).
-    pub retry_idem: bool,
-
     /// Documentation string, if any.
     pub doc: Option<&'static str>,
 }

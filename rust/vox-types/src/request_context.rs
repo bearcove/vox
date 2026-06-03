@@ -93,8 +93,6 @@ mod tests {
             &[],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
-                retry_persist: false,
-                retry_idem: false,
                 doc: None,
             },
         );
