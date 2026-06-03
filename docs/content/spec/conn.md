@@ -176,8 +176,7 @@ weight = 11
 > r[conduit]
 >
 > Conduits provide [phon](https://github.com/bearcove/phon)
-> serialization/deserialization on top of links. Sending is split into
-> synchronous preparation and asynchronous enqueue.
+> serialization/deserialization on top of links.
 
 > r[conduit.typeplan]
 >
@@ -191,25 +190,6 @@ weight = 11
 > `BareConduit` does not provide any feature on top of
 > serialization/deserialization. It begins immediately after the transport
 > prologue has accepted `bare`.
-
-> r[conduit.split]
->
-> Conduits can be passed around whole, but before use, they MUST be split into
-> a Sender and a Receiver.
-
-> r[conduit.tx.prepare]
->
-> A conduit's Sender MUST expose a synchronous preparation step which takes
-> one value and produces an owned prepared representation. Preparation may
-> borrow from the caller's value while it runs, but the returned prepared
-> representation MUST be safe to hold across await points.
-
-> r[conduit.tx.send]
->
-> A conduit's Sender MUST expose an async send/enqueue step which consumes a
-> previously prepared item and waits until the underlying link can accept it.
-> This is the conduit-level backpressure point and it MAY error if the conduit
-> has died.
 
 # Sessions
 

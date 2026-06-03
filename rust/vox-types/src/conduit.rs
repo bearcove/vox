@@ -36,7 +36,6 @@ pub trait Conduit {
     type Tx: ConduitTx<Msg = Self::Msg>;
     type Rx: ConduitRx<Msg = Self::Msg>;
 
-    // r[impl conduit.split]
     fn split(self) -> (Self::Tx, Self::Rx);
 }
 

@@ -24,6 +24,7 @@ export function buildMessageDecodePlan(peerSchemaBytes?: Uint8Array): MessageDec
   return buildMessageDecoder(peerSchemaBytes);
 }
 
+// r[impl conduit]
 // r[impl conduit.bare]
 export class BareConduit implements Conduit<Message> {
   private readonly link: Link;

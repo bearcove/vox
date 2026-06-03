@@ -65,7 +65,6 @@ where
     type Tx = BareConduitTx<F, L::Tx>;
     type Rx = BareConduitRx<F, L::Rx>;
 
-    // r[impl conduit.split]
     fn split(self) -> (Self::Tx, Self::Rx) {
         let (tx, rx) = self.link.split();
         (
@@ -109,7 +108,6 @@ impl<F: MsgFamily, LTx: LinkTx + MaybeSend + 'static> ConduitTx for BareConduitT
     // r[impl zerocopy.framing.single-pass]
     // r[impl zerocopy.framing.no-double-serialize]
     // r[impl zerocopy.scatter]
-    // r[impl conduit.tx.prepare]
     fn prepare_send(&self, item: F::Msg<'_>) -> Result<Self::Prepared, Self::Error> {
         // Collect any `Fd`s the encoder funnels into the thread-local
         // collector — same install-around-encode shape as the channel
@@ -122,7 +120,6 @@ impl<F: MsgFamily, LTx: LinkTx + MaybeSend + 'static> ConduitTx for BareConduitT
         })
     }
 
-    // r[impl conduit.tx.send]
     async fn send_prepared(&self, prepared: Self::Prepared) -> Result<(), Self::Error> {
         let PreparedFrame { bytes, fds } = prepared;
         if vox_types::frame_fds_len(&fds) > 0 && !self.link_tx.supports_fd_passing() {
