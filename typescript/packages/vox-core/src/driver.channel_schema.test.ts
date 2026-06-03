@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { emptyMetadata } from "@bearcove/vox-wire";
+import { decodeTyped } from "@bearcove/phon-engine";
 import { hexToBytes, type Registry } from "@bearcove/phon-schema";
 import { Driver } from "./driver.ts";
 import {
+  SchemaCompatibilityError,
   SchemaSendTracker,
   type PhonChannelMeta,
   type PhonMethodSchemas,
@@ -37,6 +39,87 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("Driver channel schema exchange", () => {
+  // r[verify schema.errors.call-level]
+  // r[verify schema.errors.call-level.callee]
+  it("responds with invalid payload when callee args decode fails", async () => {
+    const sent: Array<{ requestId: bigint; payload: Uint8Array; schemas: number[] }> = [];
+    const schemaSendTracker = new SchemaSendTracker();
+    let dispatchCount = 0;
+    const driver = new Driver(
+      {
+        currentEpoch: () => 0,
+        getSchemaSendTracker: () => schemaSendTracker,
+        getSchemaTracker: () => ({
+          requireReceived() {},
+          buildDecoder() {
+            return () => {
+              throw new SchemaCompatibilityError("args decode plan failed");
+            };
+          },
+        }),
+        sendResponse: async (
+          requestId: bigint,
+          payload: Uint8Array,
+          _metadata: unknown,
+          _channels: bigint[],
+          schemas: number[],
+        ) => {
+          sent.push({ requestId, payload, schemas });
+        },
+      } as never,
+      {
+        getDescriptor: () => ({
+          service_name: "Test",
+          send_schemas: { [ECHO_METHOD_KEY]: ECHO_METHOD_SCHEMAS },
+          registry: sessionEchoRegistry,
+          methods: new Map([[ECHO_METHOD.id, ECHO_METHOD]]),
+        }),
+        dispatch: async () => {
+          dispatchCount += 1;
+        },
+      },
+    ) as unknown as {
+      handleCall(call: {
+        requestId: bigint;
+        methodId: bigint;
+        args: Uint8Array;
+        channels: bigint[];
+        metadata: ReturnType<typeof emptyMetadata>;
+        connectionEpoch: number;
+      }): Promise<void>;
+    };
+
+    await driver.handleCall({
+      requestId: 9n,
+      methodId: ECHO_METHOD.id,
+      args: Uint8Array.of(1),
+      channels: [],
+      metadata: emptyMetadata(),
+      connectionEpoch: 0,
+    });
+
+    expect(dispatchCount).toBe(0);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].requestId).toBe(9n);
+    expect(sent[0].schemas).toEqual(
+      Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.responseSchemaClosure)),
+    );
+    expect(
+      decodeTyped(
+        sent[0].payload,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        sessionEchoRegistry,
+      ),
+    ).toEqual({
+      tag: "Err",
+      value: {
+        tag: "InvalidPayload",
+        value: "Schema compatibility error: args decode plan failed",
+      },
+    });
+  });
+
   // r[verify schema.exchange.callee]
   it("advertises response schemas with the first callee response", async () => {
     const sent: Array<{ requestId: bigint; schemas: number[] }> = [];

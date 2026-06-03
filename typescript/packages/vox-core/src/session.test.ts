@@ -22,6 +22,7 @@ import {
   sessionEchoMethods,
   SESSION_ECHO_METHOD_ID,
 } from "./session_echo.fixture.ts";
+import { SchemaCompatibilityError } from "./schema_tracker.ts";
 
 const ECHO_METHOD_KEY = `0x${SESSION_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
 const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
@@ -233,6 +234,55 @@ describe("session", () => {
     clientSession.handle().shutdown();
     serverSession.handle().shutdown();
     await Promise.allSettled([clientSession.closed(), serverSession.closed()]);
+  });
+
+  // r[verify schema.errors.call-level]
+  // r[verify schema.errors.call-level.caller]
+  // r[verify schema.errors.non-retryable]
+  it("rejects only the call when caller response decode fails", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      0n,
+      settings,
+      settings,
+    );
+    const tracker = connection.getSchemaTracker();
+    tracker.recordReceived(
+      ECHO_METHOD.id,
+      "response",
+      hexToBytes(ECHO_METHOD_SCHEMAS.responseSchemaClosure),
+    );
+    tracker.buildWriterDecoder = () => () => {
+      throw new SchemaCompatibilityError("response decode plan failed");
+    };
+
+    const call = connection.caller().call({
+      method: "Test.echo",
+      args: { value: 55 },
+      descriptor: ECHO_METHOD,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: sessionEchoRegistry,
+      timeoutMs: 1_000,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sent).toHaveLength(1);
+    connection.resolveResponse(1n, Uint8Array.of(0));
+
+    await expect(call).rejects.toBeInstanceOf(SchemaCompatibilityError);
+    expect(connection.isClosed()).toBe(false);
+    expect(sent).toHaveLength(1);
   });
 
   it("restarts channel flushing when new work arrives during a pending exit", async () => {
