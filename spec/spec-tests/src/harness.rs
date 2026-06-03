@@ -1,5 +1,4 @@
 use std::future::Future;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use spec_proto::{
@@ -14,11 +13,11 @@ use tokio::process::{Child, Command};
 use tokio::sync::oneshot;
 use vox::{Rx, Tx};
 use vox_core::{
-    DriverReplySink, SessionAcceptOutcome, SessionHandle, SessionRegistry, acceptor_conduit,
-    acceptor_on, acceptor_transport, memory_link_pair,
+    DriverReplySink, SessionHandle, acceptor_conduit, acceptor_on, acceptor_transport,
+    memory_link_pair,
 };
 use vox_stream::StreamLink;
-use vox_types::{Backing, Link, LinkRx, LinkTx, RequestCall, SelfRef};
+use vox_types::{RequestCall, SelfRef};
 use vox_websocket::WsLink;
 
 const SUBJECT_WAIT_HEARTBEAT: Duration = Duration::from_millis(500);
@@ -100,195 +99,6 @@ impl vox_types::Handler<DriverReplySink> for NoopHandler {
         _reply: DriverReplySink,
         _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
     ) {
-    }
-}
-
-struct BreakableLink {
-    tx: moire::sync::mpsc::Sender<Option<Vec<u8>>>,
-    rx: moire::sync::mpsc::Receiver<Option<Vec<u8>>>,
-}
-
-#[derive(Clone)]
-struct BreakHandle {
-    tx: moire::sync::mpsc::Sender<Option<Vec<u8>>>,
-}
-
-fn breakable_link_pair(buffer: usize) -> (BreakableLink, BreakHandle, BreakableLink, BreakHandle) {
-    let (tx_a, rx_b) = moire::sync::mpsc::channel("breakable_link.a→b", buffer);
-    let (tx_b, rx_a) = moire::sync::mpsc::channel("breakable_link.b→a", buffer);
-
-    let a_handle = BreakHandle { tx: tx_b.clone() };
-    let b_handle = BreakHandle { tx: tx_a.clone() };
-
-    (
-        BreakableLink { tx: tx_a, rx: rx_a },
-        a_handle,
-        BreakableLink { tx: tx_b, rx: rx_b },
-        b_handle,
-    )
-}
-
-impl BreakHandle {
-    async fn close(&self) {
-        let _ = self.tx.send(None).await;
-    }
-}
-
-impl Link for BreakableLink {
-    type Tx = BreakableLinkTx;
-    type Rx = BreakableLinkRx;
-
-    fn split(self) -> (Self::Tx, Self::Rx) {
-        (
-            BreakableLinkTx { tx: self.tx },
-            BreakableLinkRx { rx: self.rx },
-        )
-    }
-}
-
-#[derive(Clone)]
-struct BreakableLinkTx {
-    tx: moire::sync::mpsc::Sender<Option<Vec<u8>>>,
-}
-
-impl LinkTx for BreakableLinkTx {
-    async fn send(&self, bytes: Vec<u8>) -> std::io::Result<()> {
-        self.tx.clone().send(Some(bytes)).await.map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::ConnectionReset, "receiver dropped")
-        })
-    }
-
-    async fn close(self) -> std::io::Result<()> {
-        drop(self.tx);
-        Ok(())
-    }
-}
-
-struct BreakableLinkRx {
-    rx: moire::sync::mpsc::Receiver<Option<Vec<u8>>>,
-}
-
-#[derive(Debug)]
-struct BreakableLinkRxError;
-
-impl std::fmt::Display for BreakableLinkRxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "breakable link rx error")
-    }
-}
-
-impl std::error::Error for BreakableLinkRxError {}
-
-impl LinkRx for BreakableLinkRx {
-    type Error = BreakableLinkRxError;
-
-    async fn recv(&mut self) -> Result<Option<Backing>, Self::Error> {
-        match self.rx.recv().await {
-            Some(Some(bytes)) => Ok(Some(Backing::Boxed(bytes.into_boxed_slice()))),
-            Some(None) | None => Ok(None),
-        }
-    }
-}
-
-async fn forward_link_frames<Rx, Tx>(rx: &mut Rx, tx: &Tx) -> Result<(), String>
-where
-    Rx: LinkRx,
-    Rx::Error: std::fmt::Display,
-    Tx: LinkTx,
-{
-    loop {
-        let Some(frame) = rx.recv().await.map_err(|e| format!("recv frame: {e}"))? else {
-            return Ok(());
-        };
-        tx.send(frame.as_bytes().to_vec())
-            .await
-            .map_err(|e| format!("send frame: {e}"))?;
-    }
-}
-
-async fn bridge_links<A, B>(left: A, right: B) -> Result<(), String>
-where
-    A: Link + Send + 'static,
-    B: Link + Send + 'static,
-    A::Tx: Send + 'static,
-    A::Rx: Send + 'static,
-    B::Tx: Send + 'static,
-    B::Rx: Send + 'static,
-    <A::Rx as LinkRx>::Error: std::fmt::Display,
-    <B::Rx as LinkRx>::Error: std::fmt::Display,
-{
-    let (left_tx, mut left_rx) = left.split();
-    let (right_tx, mut right_rx) = right.split();
-
-    let left_to_right = async {
-        let result = forward_link_frames(&mut left_rx, &right_tx).await;
-        let _ = right_tx.close().await;
-        result
-    };
-    let right_to_left = async {
-        let result = forward_link_frames(&mut right_rx, &left_tx).await;
-        let _ = left_tx.close().await;
-        result
-    };
-
-    let (a, b) = tokio::join!(left_to_right, right_to_left);
-    match (a, b) {
-        (Ok(()), Ok(())) => Ok(()),
-        (Err(err), _) | (_, Err(err)) => Err(err),
-    }
-}
-
-#[derive(Clone, Default)]
-struct CurrentBreakPair {
-    inner: Arc<Mutex<Option<(BreakHandle, BreakHandle)>>>,
-}
-
-impl CurrentBreakPair {
-    fn set(&self, left: BreakHandle, right: BreakHandle) {
-        *self.inner.lock().expect("break pair mutex") = Some((left, right));
-    }
-
-    async fn break_current(&self) {
-        let pair = self.inner.lock().expect("break pair mutex").clone();
-        if let Some((left, right)) = pair {
-            left.close().await;
-            right.close().await;
-        }
-    }
-}
-
-pub struct ResumableSubjectHarness {
-    pub client: TestbedClient,
-    pub child: Child,
-    active_breaks: CurrentBreakPair,
-    accept_task: tokio::task::JoinHandle<()>,
-}
-
-#[derive(Clone)]
-pub struct SubjectConnectionBreaker {
-    active_breaks: CurrentBreakPair,
-}
-
-impl SubjectConnectionBreaker {
-    pub async fn break_current(&self) {
-        self.active_breaks.break_current().await;
-    }
-}
-
-impl ResumableSubjectHarness {
-    pub async fn break_current(&self) {
-        self.active_breaks.break_current().await;
-    }
-
-    pub fn breaker(&self) -> SubjectConnectionBreaker {
-        SubjectConnectionBreaker {
-            active_breaks: self.active_breaks.clone(),
-        }
-    }
-
-    pub async fn cleanup(mut self) {
-        self.accept_task.abort();
-        let _ = self.child.kill().await;
     }
 }
 
@@ -801,18 +611,6 @@ pub async fn accept_subject_with_transport(
     .await
 }
 
-pub async fn accept_subject_spec_resumable(
-    spec: SubjectSpec,
-) -> Result<ResumableSubjectHarness, String> {
-    let cmd = subject_cmd_for_language(spec.language);
-    match spec.transport {
-        SubjectTestTransport::Tcp => accept_subject_tcp_resumable(&cmd).await,
-        SubjectTestTransport::Ws => {
-            Err("resumable subject harness is only supported for TCP transport".to_string())
-        }
-    }
-}
-
 /// Spawn a subject in `server-listen` mode, wait for it to announce its
 /// bound address on stdout (`LISTEN_ADDR=127.0.0.1:PORT`), then return
 /// the address string and the child process handle.
@@ -1137,8 +935,6 @@ where
                 max_concurrent_requests: 64,
                 initial_channel_credit: 16,
             },
-            false,
-            None,
             vox_types::metadata().str("vox-service", "Noop").build(),
         )
         .await
@@ -1182,7 +978,6 @@ where
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        None,
         vox_types::metadata().str("vox-service", "Noop").build(),
     )
     .await
@@ -1266,77 +1061,4 @@ async fn accept_subject_tcp(cmd: &str) -> Result<(TestbedClient, Child, SessionH
     let sh = client.session.clone().unwrap();
 
     Ok((client, child, sh))
-}
-
-async fn accept_subject_tcp_resumable(cmd: &str) -> Result<ResumableSubjectHarness, String> {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .map_err(|e| format!("bind: {e}"))?;
-    let addr = listener
-        .local_addr()
-        .map_err(|e| format!("local_addr: {e}"))?;
-
-    let child = spawn_subject_cmd_with_env(cmd, &addr.to_string(), &[]).await?;
-    let registry = SessionRegistry::default();
-    let active_breaks = CurrentBreakPair::default();
-    let (first_client_tx, first_client_rx) = oneshot::channel::<Result<TestbedClient, String>>();
-
-    let accept_task = {
-        let active_breaks = active_breaks.clone();
-        tokio::spawn(async move {
-            let mut first_client_tx = Some(first_client_tx);
-            loop {
-                let (stream, _) = match listener.accept().await {
-                    Ok(accepted) => accepted,
-                    Err(err) => {
-                        if let Some(tx) = first_client_tx.take() {
-                            let _ = tx.send(Err(format!("accept: {err}")));
-                        }
-                        break;
-                    }
-                };
-                stream.set_nodelay(true).ok();
-
-                let (bridge_link, bridge_break, session_link, session_break) =
-                    breakable_link_pair(64);
-                active_breaks.set(bridge_break, session_break);
-
-                tokio::spawn(async move {
-                    let _ = bridge_links(StreamLink::tcp(stream), bridge_link).await;
-                });
-
-                match acceptor_on(session_link)
-                    .session_registry(registry.clone())
-                    .metadata(vox_types::metadata().str("vox-service", "Testbed").build())
-                    .on_connection(NoopHandler)
-                    .establish_or_resume::<TestbedClient>()
-                    .await
-                {
-                    Ok(SessionAcceptOutcome::Established(client)) => {
-                        if let Some(tx) = first_client_tx.take() {
-                            let _ = tx.send(Ok(client));
-                        }
-                    }
-                    Ok(SessionAcceptOutcome::Resumed) => {}
-                    Err(err) => {
-                        if let Some(tx) = first_client_tx.take() {
-                            let _ = tx.send(Err(format!("handshake: {err}")));
-                            break;
-                        }
-                    }
-                }
-            }
-        })
-    };
-
-    let client = first_client_rx
-        .await
-        .map_err(|e| format!("accept task join: {e}"))??;
-
-    Ok(ResumableSubjectHarness {
-        client,
-        child,
-        active_breaks,
-        accept_task,
-    })
 }

@@ -20,14 +20,3 @@ send path should accept borrowed data like `&[u8]` or structs containing
 
 Prerequisite for the vertical slice: `#[vox::service]` with a method
 that takes `&[u8]`, through codegen → RPC machinery → conduit → link.
-
-## Replay buffer copy path in StableConduit
-
-After scatter/gather lands, StableConduit should:
-1. Build scatter plan from `Frame<T>`
-2. `alloc(plan.total_size())` → write slot
-3. Write plan into slot
-4. `memcpy` slot bytes → replay buffer
-5. `commit()`
-
-Instead of the current: `to_vec` → `clone` → `copy_from_slice`.
