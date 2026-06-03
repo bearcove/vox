@@ -459,6 +459,7 @@ mod tests {
     }
 
     #[test]
+    // r[verify schema.exchange.channels]
     fn generated_typescript_emits_channel_schemas() {
         let subscribe = method_descriptor::<(Tx<u32>, Rx<u32>), ()>(
             "StreamSvc",
@@ -494,6 +495,14 @@ mod tests {
         assert!(
             generated.contains("direction: \"rx\", elementRoot:"),
             "Rx<T> arg must be emitted as out-of-band channel metadata:\n{generated}"
+        );
+        assert!(
+            generated.contains("6368616e6e656c2e6172672e302e74782e656c656d656e74"),
+            "Tx<T> element root must be carried as an auxiliary schema root:\n{generated}"
+        );
+        assert!(
+            generated.contains("6368616e6e656c2e6172672e312e72782e656c656d656e74"),
+            "Rx<T> element root must be carried as an auxiliary schema root:\n{generated}"
         );
     }
 

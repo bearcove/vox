@@ -15,6 +15,7 @@ import {
   messageGoodbye,
   messageRequest,
   messageResponse,
+  messageSchema,
   messageCancel,
   messageData,
   messageClose,
@@ -1213,6 +1214,11 @@ export class ConnectionHandle {
         this.channelRegistry,
         registry,
         channelCredit,
+        {
+          methodId: request.descriptor.id,
+          direction: "args",
+          tracker: this.getSchemaTracker(),
+        },
       );
       finalizeChannels = bound.finalize;
       const payload = encodeTyped(bound.values as never, methodSchemas.argsRoot, registry);
@@ -1332,6 +1338,14 @@ export class ConnectionHandle {
 
   async sendChannelCredit(channelId: bigint, additional: number): Promise<void> {
     await this.session.sendMessage(messageCredit(channelId, additional, this.id));
+  }
+
+  async sendSchemas(
+    methodId: bigint,
+    direction: "args" | "response",
+    schemas: Uint8Array,
+  ): Promise<void> {
+    await this.session.sendMessage(messageSchema(methodId, direction, Array.from(schemas), this.id));
   }
 
   enqueueIncomingCall(call: IncomingCall): void {

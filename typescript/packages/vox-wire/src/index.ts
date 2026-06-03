@@ -54,6 +54,7 @@ export {
   messageGoodbye,
   messageRequest,
   messageResponse,
+  messageSchema,
   messageCancel,
   messageData,
   messageClose,

@@ -38,12 +38,21 @@ export interface PhonMethodSchemas {
 const bindingKey = (methodId: bigint, direction: BindingDirection): string =>
   `${methodId}:${direction}`;
 
+const decoderKeyPrefix = (methodId: bigint, direction: BindingDirection): string =>
+  `${bindingKey(methodId, direction)}:`;
+
+interface ReceivedBinding {
+  root: bigint;
+  schemas: Schema[];
+  auxiliaryRoots: Map<string, bigint>;
+}
+
 /**
  * Tracks the writer schema closures a peer advertised, and builds compat decoders
  * against local reader roots.
  */
 export class SchemaTracker {
-  private received = new Map<string, { root: bigint; schemas: Schema[] }>();
+  private received = new Map<string, ReceivedBinding>();
   // Cache of built decoders, keyed by (method, direction, readerRoot).
   private decoders = new Map<string, TypedDecoder>();
 
@@ -58,8 +67,18 @@ export class SchemaTracker {
    */
   recordReceived(methodId: bigint, direction: BindingDirection, schemaBytes: Uint8Array): void {
     if (schemaBytes.length === 0) return;
-    this.received.set(bindingKey(methodId, direction), parseSchemaClosure(schemaBytes));
-    this.decoders.delete(`${bindingKey(methodId, direction)}`);
+    const parsed = parseSchemaClosure(schemaBytes);
+    this.received.set(bindingKey(methodId, direction), {
+      root: parsed.root,
+      schemas: parsed.schemas,
+      auxiliaryRoots: new Map(parsed.auxiliaryRoots.map((root) => [root.role, root.root])),
+    });
+    const prefix = decoderKeyPrefix(methodId, direction);
+    for (const key of this.decoders.keys()) {
+      if (key.startsWith(prefix)) {
+        this.decoders.delete(key);
+      }
+    }
   }
 
   hasReceived(methodId: bigint, direction: BindingDirection): boolean {
@@ -84,6 +103,35 @@ export class SchemaTracker {
     if (cached) return cached;
     const reg = local.with(writer.schemas);
     const decoder: TypedDecoder = (bytes) => decodeTyped(bytes, writer.root, readerRoot, reg);
+    this.decoders.set(cacheKey, decoder);
+    return decoder;
+  }
+
+  auxiliaryRoot(
+    methodId: bigint,
+    direction: BindingDirection,
+    role: string,
+  ): bigint | null {
+    return this.received.get(bindingKey(methodId, direction))?.auxiliaryRoots.get(role) ?? null;
+  }
+
+  // r[impl schema.exchange.channels]
+  buildAuxiliaryDecoder(
+    methodId: bigint,
+    direction: BindingDirection,
+    role: string,
+    readerRoot: bigint,
+    local: Registry,
+  ): TypedDecoder | null {
+    const writer = this.received.get(bindingKey(methodId, direction));
+    if (!writer) return null;
+    const writerRoot = writer.auxiliaryRoots.get(role);
+    if (writerRoot === undefined) return null;
+    const cacheKey = `${bindingKey(methodId, direction)}:${role}:${readerRoot}`;
+    const cached = this.decoders.get(cacheKey);
+    if (cached) return cached;
+    const reg = local.with(writer.schemas);
+    const decoder: TypedDecoder = (bytes) => decodeTyped(bytes, writerRoot, readerRoot, reg);
     this.decoders.set(cacheKey, decoder);
     return decoder;
   }

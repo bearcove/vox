@@ -33,7 +33,12 @@ export type {
   Pong,
 } from "./wire.phon.generated.ts";
 
-import type { ConnectionSettings, Message, Parity } from "./wire.phon.generated.ts";
+import type {
+  BindingDirection,
+  ConnectionSettings,
+  Message,
+  Parity,
+} from "./wire.phon.generated.ts";
 
 // Branded id aliases (all `bigint` on the wire).
 export type ConnectionId = bigint;
@@ -192,6 +197,27 @@ export function messageResponse(
       value: {
         id: requestId,
         body: { tag: "Response", value: { ret: payload, metadata, schemas } },
+      },
+    },
+  };
+}
+
+export function messageSchema(
+  methodId: bigint,
+  direction: "args" | "response",
+  schemas: number[],
+  connId: bigint = 0n,
+): Message {
+  const bindingDirection: BindingDirection =
+    direction === "args" ? { tag: "Args" } : { tag: "Response" };
+  return {
+    connection_id: connId,
+    payload: {
+      tag: "SchemaMessage",
+      value: {
+        method_id: methodId,
+        direction: bindingDirection,
+        schemas,
       },
     },
   };

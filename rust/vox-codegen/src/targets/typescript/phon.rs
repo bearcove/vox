@@ -28,15 +28,47 @@ fn root_id(shape: &'static Shape) -> u64 {
         .0
 }
 
-/// The args schema closure bytes (vox-phon framing) as a hex string — what the
-/// caller advertises in `RequestCall.schemas`.
-fn args_closure_hex(shape: &'static Shape) -> String {
-    let bytes = vox_phon::schema_bytes_for_shape(shape).expect("phon schema bytes");
+fn schema_closure_hex(
+    shape: &'static Shape,
+    auxiliary_roots: &[(String, &'static Shape)],
+) -> String {
+    let auxiliary_roots: Vec<(&str, &'static Shape)> = auxiliary_roots
+        .iter()
+        .map(|(role, shape)| (role.as_str(), *shape))
+        .collect();
+    let bytes = if auxiliary_roots.is_empty() {
+        vox_phon::schema_bytes_for_shape(shape).expect("phon schema bytes")
+    } else {
+        vox_phon::schema_bytes_for_shape_with_auxiliary_roots(shape, &auxiliary_roots)
+            .expect("phon schema bytes")
+    };
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
         s.push_str(&format!("{b:02x}"));
     }
     s
+}
+
+// r[impl schema.exchange.channels]
+fn channel_auxiliary_roots(method: &vox_types::MethodDescriptor) -> Vec<(String, &'static Shape)> {
+    method
+        .args
+        .iter()
+        .enumerate()
+        .filter_map(|(index, arg)| {
+            let direction = if is_tx(arg.shape) {
+                "tx"
+            } else if is_rx(arg.shape) {
+                "rx"
+            } else {
+                return None;
+            };
+            let element = arg
+                .channel_element
+                .expect("Tx/Rx arg must carry its channel element shape");
+            Some((format!("channel.arg.{index}.{direction}.element"), element))
+        })
+        .collect()
 }
 
 /// Generate the `{service}` phon registry + per-method schema table.
@@ -79,8 +111,9 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         let args_root = root_id(m.args_shape);
         let ok_root = root_id(ok_shape(m.return_shape));
         let response_root = root_id(m.response_wire_shape);
-        let closure = args_closure_hex(m.args_shape);
-        let response_closure = args_closure_hex(m.response_wire_shape);
+        let channel_auxiliary_roots = channel_auxiliary_roots(m);
+        let closure = schema_closure_hex(m.args_shape, &channel_auxiliary_roots);
+        let response_closure = schema_closure_hex(m.response_wire_shape, &[]);
 
         out.push_str(&format!("  \"{}\": {{\n", hex_u64(method_id)));
         out.push_str(&format!("    argsRoot: {}n,\n", hex_u64(args_root)));

@@ -14,7 +14,7 @@ import {
   DEFAULT_INITIAL_CREDIT,
 } from "./channeling/index.ts";
 import type { ServiceSendSchemas } from "./channeling/descriptor.ts";
-import type { PhonMethodSchemas } from "./schema_tracker.ts";
+import type { PhonChannelMeta, PhonMethodSchemas } from "./schema_tracker.ts";
 import { Extensions } from "./middleware.ts";
 import { RequestContext } from "./request_context.ts";
 import { metadataOperationId } from "./retry.ts";
@@ -134,6 +134,10 @@ function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
     }
   }
   return true;
+}
+
+function channelElementRole(meta: PhonChannelMeta): string {
+  return `channel.arg.${meta.index}.${meta.direction}.element`;
 }
 
 function sameSignature(
@@ -516,6 +520,13 @@ export class Driver {
             voxLogger()?.error("[vox:driver] failed to grant channel credit", error);
           });
           break;
+        case "schema":
+          await this.connection
+            .sendSchemas(message.methodId, message.direction, message.schemas)
+            .catch((error) => {
+              voxLogger()?.error("[vox:driver] failed to send schema message", error);
+            });
+          break;
         case "response":
           await this.connection
             .sendResponse(
@@ -686,6 +697,56 @@ export class Driver {
     }
   }
 
+  private argsSchemaAdvertisingTaskSender(
+    method: MethodDescriptor,
+    methodSchemas: PhonMethodSchemas,
+    taskSender: TaskSender,
+  ): TaskSender {
+    // r[impl schema.exchange.channels.tx-args]
+    let advertised = false;
+    return (message) => {
+      if (!advertised && message.kind === "data") {
+        advertised = true;
+        const schemas = this.connection.getSchemaSendTracker().prepareSchemas(
+          method.id,
+          "args",
+          methodSchemas.argsSchemaClosure,
+        );
+        if (schemas.length > 0) {
+          taskSender({
+            kind: "schema",
+            methodId: method.id,
+            direction: "args",
+            schemas: new Uint8Array(schemas),
+          });
+        }
+      }
+      taskSender(message);
+    };
+  }
+
+  private channelElementDeserializer(
+    method: MethodDescriptor,
+    channel: PhonChannelMeta,
+    registry: Registry,
+  ): (bytes: Uint8Array) => unknown {
+    // r[impl schema.exchange.channels.rx-args]
+    const role = channelElementRole(channel);
+    return (bytes) => {
+      const decoder = this.connection.getSchemaTracker().buildAuxiliaryDecoder(
+        method.id,
+        "args",
+        role,
+        channel.elementRoot,
+        registry,
+      );
+      if (decoder) {
+        return decoder(bytes) as unknown;
+      }
+      return decodeTyped(bytes, channel.elementRoot, channel.elementRoot, registry);
+    };
+  }
+
   private decodeArgs(
     descriptor: ServiceDescriptor,
     method: MethodDescriptor,
@@ -724,6 +785,9 @@ export class Driver {
     const channelRegistry = this.connection.getChannelRegistry();
     const creditOut = this.connection.peerSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT;
     const creditIn = this.connection.localSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT;
+    const serverTxTaskSender = ms.channels.some((ch) => ch.direction === "tx")
+      ? this.argsSchemaAdvertisingTaskSender(method, ms, taskSender)
+      : taskSender;
     for (const ch of ms.channels) {
       const wireIndex = readU32LE(values[ch.index] as Uint8Array);
       const channelId = incoming.channels[wireIndex];
@@ -734,7 +798,7 @@ export class Driver {
         // The handler holds a `Tx` and SENDS to the caller.
         values[ch.index] = createServerTx(
           channelId,
-          taskSender,
+          serverTxTaskSender,
           channelRegistry,
           creditOut,
           (value: unknown) => encodeTyped(value as never, ch.elementRoot, registry),
@@ -745,7 +809,7 @@ export class Driver {
         values[ch.index] = createServerRx(
           channelId,
           receiver,
-          (bytes: Uint8Array) => decodeTyped(bytes, ch.elementRoot, ch.elementRoot, registry),
+          this.channelElementDeserializer(method, ch, registry),
         );
       }
     }

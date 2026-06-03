@@ -15,7 +15,7 @@ import type { ChannelIdAllocator } from "./allocator.ts";
 import type { ChannelRegistry } from "./registry.ts";
 import type { Tx } from "./tx.ts";
 import type { Rx } from "./rx.ts";
-import type { PhonChannelMeta } from "../schema_tracker.ts";
+import type { BindingDirection, PhonChannelMeta, SchemaTracker } from "../schema_tracker.ts";
 
 /** The 4-byte little-endian phon-compact encoding of a `u32` wire index. */
 function wireIndexBytes(index: number): Uint8Array {
@@ -29,9 +29,35 @@ function makeSerialize(elementRoot: bigint, registry: Registry): (value: unknown
   return (value) => encodeTyped(value as never, elementRoot, registry);
 }
 
-/** A phon deserializer for a channel element type (writer == reader == element). */
-function makeDeserialize(elementRoot: bigint, registry: Registry): (bytes: Uint8Array) => unknown {
-  return (bytes) => decodeTyped(bytes, elementRoot, elementRoot, registry) as unknown;
+export interface ChannelSchemaContext {
+  methodId: bigint;
+  direction: BindingDirection;
+  tracker: SchemaTracker;
+}
+
+function channelElementRole(meta: PhonChannelMeta): string {
+  return `channel.arg.${meta.index}.${meta.direction}.element`;
+}
+
+function makeDeserialize(
+  elementRoot: bigint,
+  registry: Registry,
+  schemaContext: ChannelSchemaContext | undefined,
+  role: string,
+): (bytes: Uint8Array) => unknown {
+  return (bytes) => {
+    const decoder = schemaContext?.tracker.buildAuxiliaryDecoder(
+      schemaContext.methodId,
+      schemaContext.direction,
+      role,
+      elementRoot,
+      registry,
+    );
+    if (decoder) {
+      return decoder(bytes) as unknown;
+    }
+    return decodeTyped(bytes, elementRoot, elementRoot, registry) as unknown;
+  };
 }
 
 /** Per-direction initial credit windows for a bound channel. */
@@ -64,6 +90,7 @@ export function bindPhonChannels(
   channelRegistry: ChannelRegistry,
   registry: Registry,
   credit: ChannelCredit,
+  schemaContext?: ChannelSchemaContext,
 ): BoundChannels {
   if (channelMetas.length === 0) {
     return { channels: [], values: args, finalize: () => {} };
@@ -80,7 +107,7 @@ export function bindPhonChannels(
     const channelId = allocator.next();
     const wireIndex = channels.length;
     channels.push(channelId);
-    bindOne(handle, meta, channelId, channelRegistry, registry, credit);
+    bindOne(handle, meta, channelId, channelRegistry, registry, credit, schemaContext);
     values[meta.index] = wireIndexBytes(wireIndex);
     bound.push(handle);
   }
@@ -103,13 +130,15 @@ function bindOne(
   channelRegistry: ChannelRegistry,
   registry: Registry,
   credit: ChannelCredit,
+  schemaContext: ChannelSchemaContext | undefined,
 ): void {
   if (meta.direction === "tx") {
     // Method wants a `Tx` (callee sends). The caller passed a `Tx` and keeps the
     // paired `Rx` — the caller receives. Bind that pair for INCOMING.
     const tx = handle as Tx<unknown>;
     const rx = (tx as { _pair?: Rx<unknown> })._pair;
-    const deserialize = makeDeserialize(meta.elementRoot, registry);
+    // r[impl schema.exchange.channels.tx-args]
+    const deserialize = makeDeserialize(meta.elementRoot, registry, schemaContext, channelElementRole(meta));
     if (rx) {
       if (rx.isBound) rx.rebind(channelId, channelRegistry, deserialize, credit.incoming);
       else rx.bind(channelId, channelRegistry, deserialize, credit.incoming);
