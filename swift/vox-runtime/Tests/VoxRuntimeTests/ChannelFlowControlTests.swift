@@ -53,6 +53,7 @@ private final class PayloadInbox: @unchecked Sendable {
 
 @Suite(.serialized)
 struct ChannelFlowControlTests {
+    // r[verify schema.interaction.channels]
     @Test func senderWaitsForGrantCredit() async throws {
         let registry = ChannelRegistry()
         let payloads = PayloadInbox()

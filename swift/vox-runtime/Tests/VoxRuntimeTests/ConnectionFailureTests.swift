@@ -265,7 +265,9 @@ private struct NoopDispatcher: ServiceDispatcher {
     ) async {}
 }
 
-@Test func acceptorSessionExposesPeerHandshakeMetadata() async throws {
+@Test
+// r[verify schema.interaction.metadata]
+func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
     let link = ScriptedTransport(
         initialHandshake: .hello(

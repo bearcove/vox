@@ -25,6 +25,8 @@ specs (
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
                     typescript/packages/vox-core/src/driver.retry.test.ts
+                    typescript/packages/vox-core/src/metadata.ts
+                    typescript/packages/vox-core/src/metadata.test.ts
                     typescript/packages/vox-core/src/schema_tracker.ts
                     typescript/packages/vox-core/src/schema_tracker.test.ts
                     typescript/packages/vox-core/src/channeling/binding.ts

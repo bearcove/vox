@@ -3,6 +3,7 @@ import PhonSchema
 // Metadata: a self-describing key→value map carried on the wire as a phon dynamic
 // `Value` (`r[rpc.metadata]`) — an object of string keys to string / bytes / u64
 // values, or null when empty. Mirrors `rust/vox-types/src/metadata.rs`.
+// r[impl schema.interaction.metadata]
 //
 // Per-key behavior flags (sensitive, no-propagate) are recorded under the
 // well-known keys below, each holding an array of the metadata key-names the flag

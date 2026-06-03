@@ -49,9 +49,10 @@ export type ChannelId = bigint;
 // ---------------------------------------------------------------------------
 // Metadata
 //
-// Metadata is a self-describing `Value` map (`r[rpc.metadata]`): keys are
-// strings, values are phon `Value`s. Flags became well-known keys whose value is
-// a list of the key names they apply to (`r[rpc.metadata.flags]`).
+// Metadata is a self-describing `Value` map (`r[rpc.metadata]`): keys are strings,
+// values are phon `Value`s. Flags became well-known keys whose value is a list of
+// the key names they apply to (`r[rpc.metadata.flags]`).
+// r[impl schema.interaction.metadata]
 // ---------------------------------------------------------------------------
 
 export type Metadata = Map<string, Value>;

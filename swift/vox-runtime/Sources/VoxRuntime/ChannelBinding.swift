@@ -9,6 +9,7 @@ import Foundation
 // keeps); the callee resolves each wire index to a channel id and binds a local
 // `Tx`/`Rx`. Per-item bytes use the channel's own element codec (the caller supplies
 // it via `channel(...)`; the generated server uses the matching element codec).
+// r[impl schema.interaction.channels]
 
 /// The initial channel credit window (in items) both peers advertise at handshake
 /// (`SessionEstablishment.swift` `initialChannelCredit`). Credit is per-item: a sender

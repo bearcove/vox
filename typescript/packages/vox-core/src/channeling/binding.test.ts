@@ -8,6 +8,7 @@ import { ChannelRegistry } from "./registry.ts";
 import { Role } from "./types.ts";
 
 describe("bindPhonChannels", () => {
+  // r[verify schema.interaction.channels]
   // r[verify schema.exchange.channels.tx-args]
   it("uses lazily advertised auxiliary schemas for caller-side channel receives", async () => {
     const [tx, rx] = channel<unknown>();

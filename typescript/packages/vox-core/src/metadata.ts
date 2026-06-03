@@ -2,6 +2,7 @@
 //
 // On the wire metadata is a phon `Value` map; flags are well-known keys whose
 // value is a list of the key names they apply to (`r[rpc.metadata.flags]`).
+// r[impl schema.interaction.metadata]
 
 import type { Value } from "@bearcove/phon-schema";
 import {

@@ -3,6 +3,7 @@
 // `Tx`/`Rx` arguments are opaque on the wire: each encodes only a `u32` index
 // into `RequestCall.channels`, and the allocated `ChannelId`s travel out-of-band
 // in that list (`r[rpc.channel.payload-encoding]`, `r[rpc.channel.allocation]`).
+// r[impl schema.interaction.channels]
 //
 // For each channel argument we allocate a `ChannelId`, bind the *local-facing*
 // handle (the pair of the one passed into the call) with a phon per-item codec
