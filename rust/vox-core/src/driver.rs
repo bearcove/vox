@@ -1770,7 +1770,7 @@ impl DriverCaller {
                         channels: call.channels.clone(),
                         args: call.args.reborrow(),
                         metadata: call.metadata.clone(),
-                        schemas: Default::default(),
+                        schemas: call.schemas.clone(),
                     }),
                 }),
                 Some(self),

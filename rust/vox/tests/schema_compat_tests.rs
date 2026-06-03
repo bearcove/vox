@@ -192,6 +192,89 @@ async fn v2_client_v1_server_skips_unknown_field() {
 }
 
 // ============================================================================
+// Compatible: channel item schemas
+// ============================================================================
+
+mod channel_rx_v1 {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Event {
+        pub id: u32,
+    }
+
+    #[vox::service]
+    pub trait EventSink {
+        async fn consume(&self, events: vox::Rx<Event>) -> u32;
+    }
+}
+
+mod channel_rx_v2 {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Event {
+        pub id: u32,
+        #[facet(default)]
+        pub priority: u32,
+    }
+
+    unsafe impl vox_types::Reborrow for Event {
+        type Ref<'a> = Event;
+    }
+
+    #[vox::service]
+    pub trait EventSink {
+        async fn consume(&self, events: vox::Rx<Event>) -> u32;
+    }
+}
+
+#[derive(Clone)]
+struct ChannelRxV2Service;
+
+impl channel_rx_v2::EventSink for ChannelRxV2Service {
+    async fn consume(&self, mut events: vox::Rx<channel_rx_v2::Event>) -> u32 {
+        let event = events
+            .recv()
+            .await
+            .expect("channel receive should succeed")
+            .expect("expected one event");
+        event.get().id + event.get().priority
+    }
+}
+
+// r[verify schema.exchange.channels.rx-args]
+#[tokio::test]
+async fn rx_channel_items_use_caller_writer_schema() {
+    let (client_conduit, server_conduit) = conduit_pair();
+
+    let server_task = tokio::task::spawn(async move {
+        let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("EventSink"))
+            .on_connection(channel_rx_v2::EventSinkDispatcher::new(ChannelRxV2Service))
+            .establish::<channel_rx_v2::EventSinkClient>()
+            .await
+            .expect("server handshake failed");
+        std::future::pending::<()>().await;
+    });
+
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("EventSink"))
+        .establish::<channel_rx_v1::EventSinkClient>()
+        .await
+        .expect("client handshake failed");
+
+    let (tx, rx) = vox::channel::<channel_rx_v1::Event>();
+    let call_task = tokio::task::spawn(async move { client.consume(rx).await });
+
+    tx.send(channel_rx_v1::Event { id: 7 })
+        .await
+        .expect("channel send should succeed");
+
+    let total = call_task
+        .await
+        .expect("call task should finish")
+        .expect("call should succeed");
+    assert_eq!(total, 7);
+
+    server_task.abort();
+}
+
+// ============================================================================
 // Compatible: field reorder
 // ============================================================================
 
