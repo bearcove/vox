@@ -239,6 +239,7 @@ impl channel_rx_v2::EventSink for ChannelRxV2Service {
     }
 }
 
+// r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.rx-args]
 #[tokio::test]
 async fn rx_channel_items_use_caller_writer_schema() {
@@ -270,6 +271,88 @@ async fn rx_channel_items_use_caller_writer_schema() {
         .expect("call task should finish")
         .expect("call should succeed");
     assert_eq!(total, 7);
+
+    server_task.abort();
+}
+
+mod channel_tx_v1 {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Event {
+        pub id: u32,
+    }
+
+    unsafe impl vox_types::Reborrow for Event {
+        type Ref<'a> = Event;
+    }
+
+    #[vox::service]
+    pub trait EventSource {
+        async fn produce(&self, events: vox::Tx<Event>) -> u32;
+    }
+}
+
+mod channel_tx_v2 {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Event {
+        pub priority: u32,
+        pub id: u32,
+    }
+
+    #[vox::service]
+    pub trait EventSource {
+        async fn produce(&self, events: vox::Tx<Event>) -> u32;
+    }
+}
+
+#[derive(Clone)]
+struct ChannelTxV2Service;
+
+impl channel_tx_v2::EventSource for ChannelTxV2Service {
+    async fn produce(&self, events: vox::Tx<channel_tx_v2::Event>) -> u32 {
+        events
+            .send(channel_tx_v2::Event {
+                priority: 99,
+                id: 7,
+            })
+            .await
+            .expect("channel send should succeed");
+        1
+    }
+}
+
+// r[verify schema.exchange.channels]
+// r[verify schema.exchange.channels.tx-args]
+#[tokio::test]
+async fn tx_channel_items_use_callee_writer_schema() {
+    let (client_conduit, server_conduit) = conduit_pair();
+
+    let server_task = tokio::task::spawn(async move {
+        let _server_caller =
+            acceptor_conduit(server_conduit, test_acceptor_handshake("EventSource"))
+                .on_connection(channel_tx_v2::EventSourceDispatcher::new(
+                    ChannelTxV2Service,
+                ))
+                .establish::<channel_tx_v2::EventSourceClient>()
+                .await
+                .expect("server handshake failed");
+        std::future::pending::<()>().await;
+    });
+
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("EventSource"))
+        .establish::<channel_tx_v1::EventSourceClient>()
+        .await
+        .expect("client handshake failed");
+
+    let (tx, mut rx) = vox::channel::<channel_tx_v1::Event>();
+    let ack = client.produce(tx).await.expect("call should succeed");
+    assert_eq!(ack, 1);
+
+    let event = rx
+        .recv()
+        .await
+        .expect("channel receive should succeed")
+        .expect("expected one event");
+    assert_eq!(event.get().id, 7);
 
     server_task.abort();
 }

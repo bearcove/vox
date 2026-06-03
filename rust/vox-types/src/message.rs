@@ -408,4 +408,5 @@ impl_reborrow_owned!(
     ConnectionClose,
     ChannelClose,
     ChannelReset,
+    SchemaMessage,
 );

@@ -101,16 +101,36 @@ struct ChannelCollector {
     /// Handle value address → assigned index, scoped to this collector, so the
     /// same handle encoded more than once claims one slot.
     seen: std::collections::HashMap<usize, u32>,
+    roles: Vec<ChannelArgSchemaRole>,
+}
+
+#[derive(Clone)]
+struct ChannelArgSchemaRole {
+    method_id: crate::MethodId,
+    direction: BindingDirection,
+    role: String,
+}
+
+struct CollectedChannel {
+    index: u32,
+    role: Option<ChannelArgSchemaRole>,
 }
 
 struct ChannelSource {
     ids: Vec<ChannelId>,
-    writer_schemas: Vec<Result<Option<Arc<vox_phon::SchemaBundle>>, String>>,
+    bindings: Vec<Result<ProvidedChannelSchemas, String>>,
+}
+
+#[derive(Clone, Default)]
+struct ProvidedChannelSchemas {
+    writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
+    writer_schema_send: Option<crate::ChannelWriterSchemaPlan>,
 }
 
 struct ProvidedChannel {
     id: ChannelId,
     writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
+    writer_schema_send: Option<crate::ChannelWriterSchemaPlan>,
 }
 
 std::thread_local! {
@@ -134,6 +154,56 @@ pub fn collect_channels<R>(f: impl FnOnce() -> R) -> (R, Vec<ChannelId>) {
     let fresh = ChannelCollector {
         ids: Vec::new(),
         seen: std::collections::HashMap::new(),
+        roles: Vec::new(),
+    };
+    let _restore = Restore(CHANNEL_COLLECTOR.with(|c| c.borrow_mut().replace(fresh)));
+    let out = f();
+    let ids = CHANNEL_COLLECTOR
+        .with(|c| {
+            c.borrow_mut()
+                .as_mut()
+                .map(|col| std::mem::take(&mut col.ids))
+        })
+        .unwrap_or_default();
+    (out, ids)
+}
+
+pub fn collect_channels_for_method<R>(
+    method: &MethodDescriptor,
+    f: impl FnOnce() -> R,
+) -> (R, Vec<ChannelId>) {
+    // r[impl schema.exchange.channels]
+    struct Restore(Option<ChannelCollector>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CHANNEL_COLLECTOR.with(|c| *c.borrow_mut() = self.0.take());
+        }
+    }
+
+    let roles = method
+        .args
+        .iter()
+        .enumerate()
+        .filter_map(|(index, arg)| {
+            let direction = if is_tx(arg.shape) {
+                "tx"
+            } else if is_rx(arg.shape) {
+                "rx"
+            } else {
+                return None;
+            };
+            Some(ChannelArgSchemaRole {
+                method_id: method.id,
+                direction: BindingDirection::Args,
+                role: format!("channel.arg.{index}.{direction}.element"),
+            })
+        })
+        .collect();
+
+    let fresh = ChannelCollector {
+        ids: Vec::new(),
+        seen: std::collections::HashMap::new(),
+        roles,
     };
     let _restore = Restore(CHANNEL_COLLECTOR.with(|c| c.borrow_mut().replace(fresh)));
     let out = f();
@@ -160,7 +230,7 @@ pub fn provide_channels<R>(channels: Vec<ChannelId>, f: impl FnOnce() -> R) -> R
     }
     let source = ChannelSource {
         ids: channels,
-        writer_schemas: Vec::new(),
+        bindings: Vec::new(),
     };
     let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(source)));
     f()
@@ -172,6 +242,7 @@ pub fn provide_channels_for_method<R>(
     schemas: &SchemaRecvTracker,
     f: impl FnOnce() -> R,
 ) -> R {
+    // r[impl schema.exchange.channels]
     struct Restore(Option<ChannelSource>);
     impl Drop for Restore {
         fn drop(&mut self) {
@@ -179,13 +250,32 @@ pub fn provide_channels_for_method<R>(
         }
     }
 
-    let writer_schemas = method
+    let tx_plan = if method.args.iter().any(|arg| is_tx(arg.shape)) {
+        Some(crate::SchemaSendTracker::plan_for_method_args(method))
+    } else {
+        None
+    };
+
+    let bindings = method
         .args
         .iter()
         .enumerate()
         .filter_map(|(index, arg)| {
             if is_tx(arg.shape) {
-                return Some(Ok(None));
+                // r[impl schema.exchange.channels.tx-args]
+                let role = format!("channel.arg.{index}.tx.element");
+                return Some(match tx_plan.as_ref().expect("tx plan should be present") {
+                    Ok(prepared) => Ok(ProvidedChannelSchemas {
+                        writer_schema: None,
+                        writer_schema_send: Some(crate::ChannelWriterSchemaPlan {
+                            method_id: method.id,
+                            direction: BindingDirection::Args,
+                            role,
+                            prepared: prepared.clone(),
+                        }),
+                    }),
+                    Err(error) => Err(error.to_string()),
+                });
             }
             if !is_rx(arg.shape) {
                 return None;
@@ -195,14 +285,17 @@ pub fn provide_channels_for_method<R>(
             Some(
                 schemas
                     .writer_auxiliary_schema_bundle(method.id, BindingDirection::Args, &role)
-                    .map(|bundle| bundle.map(Arc::new)),
+                    .map(|bundle| ProvidedChannelSchemas {
+                        writer_schema: bundle.map(Arc::new),
+                        writer_schema_send: None,
+                    }),
             )
         })
         .collect();
 
     let source = ChannelSource {
         ids: channels,
-        writer_schemas,
+        bindings,
     };
     let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(source)));
     f()
@@ -211,19 +304,28 @@ pub fn provide_channels_for_method<R>(
 /// Record `channel_id` in the active collector, returning its stable index.
 /// Idempotent per handle value address. Returns [`CHANNEL_NOT_COLLECTED`] when
 /// no collector is installed (the error surfaces cleanly at decode).
-fn collect_channel(key: usize, channel_id: ChannelId) -> u32 {
+fn collect_channel(key: usize, channel_id: ChannelId) -> CollectedChannel {
     CHANNEL_COLLECTOR.with(|c| {
         let mut slot = c.borrow_mut();
         let Some(col) = slot.as_mut() else {
-            return CHANNEL_NOT_COLLECTED;
+            return CollectedChannel {
+                index: CHANNEL_NOT_COLLECTED,
+                role: None,
+            };
         };
         if let Some(&idx) = col.seen.get(&key) {
-            return idx;
+            return CollectedChannel {
+                index: idx,
+                role: col.roles.get(idx as usize).cloned(),
+            };
         }
         let idx = col.ids.len() as u32;
         col.ids.push(channel_id);
         col.seen.insert(key, idx);
-        idx
+        CollectedChannel {
+            index: idx,
+            role: col.roles.get(idx as usize).cloned(),
+        }
     })
 }
 
@@ -245,12 +347,16 @@ fn take_channel(index: u32) -> Result<ProvidedChannel, String> {
                 vec.ids.len()
             )
         })?;
-        let writer_schema = match vec.writer_schemas.get(index as usize) {
-            Some(Ok(writer_schema)) => writer_schema.clone(),
+        let schemas = match vec.bindings.get(index as usize) {
+            Some(Ok(binding)) => binding.clone(),
             Some(Err(error)) => return Err(error.clone()),
-            None => None,
+            None => ProvidedChannelSchemas::default(),
         };
-        Ok(ProvidedChannel { id, writer_schema })
+        Ok(ProvidedChannel {
+            id,
+            writer_schema: schemas.writer_schema,
+            writer_schema_send: schemas.writer_schema_send,
+        })
     })
 }
 
@@ -514,6 +620,7 @@ struct LogicalReceiverState {
     generation: u64,
     liveness: Option<ChannelLivenessHandle>,
     replenisher: Option<ChannelCreditReplenisherHandle>,
+    writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
     sender: Option<ChannelMailboxSender<LogicalIncomingChannelMessage>>,
     receiver: Option<ChannelMailboxReceiver<LogicalIncomingChannelMessage>>,
 }
@@ -589,6 +696,7 @@ impl ChannelCore {
                 generation: 0,
                 liveness: None,
                 replenisher: None,
+                writer_schema: None,
                 sender: Some(tx),
                 receiver: Some(rx),
             }
@@ -596,6 +704,7 @@ impl ChannelCore {
         state.generation = state.generation.wrapping_add(1);
         state.liveness = bound.liveness.clone();
         state.replenisher = bound.replenisher.clone();
+        state.writer_schema = bound.writer_schema.clone();
         let generation = state.generation;
 
         let Some(sender) = state.sender.clone() else {
@@ -641,16 +750,21 @@ impl ChannelCore {
         ChannelMailboxReceiver<LogicalIncomingChannelMessage>,
         Option<ChannelLivenessHandle>,
         Option<ChannelCreditReplenisherHandle>,
+        Option<Arc<vox_phon::SchemaBundle>>,
     )> {
         self.logical_receiver
             .lock()
             .expect("channel core logical receiver mutex poisoned")
             .as_mut()
             .and_then(|state| {
-                state
-                    .receiver
-                    .take()
-                    .map(|receiver| (receiver, state.liveness.clone(), state.replenisher.clone()))
+                state.receiver.take().map(|receiver| {
+                    (
+                        receiver,
+                        state.liveness.clone(),
+                        state.replenisher.clone(),
+                        state.writer_schema.clone(),
+                    )
+                })
             })
     }
 
@@ -810,6 +924,7 @@ fn observe_optional_replenisher_channel(
 }
 
 /// Decode one channel item through phon.
+// r[impl schema.exchange.channels]
 // r[impl schema.exchange.channels.rx-args]
 fn decode_channel_payload<T: Facet<'static>>(
     bytes: &'static [u8],
@@ -864,6 +979,13 @@ where
     T: Facet<'static>,
 {
     match msg {
+        Some(IncomingChannelMessage::WriterSchema(writer_schema)) => {
+            decoder.writer = Some(writer_schema);
+            decoder.program = None;
+            Err(RxError::Protocol(
+                "channel writer schema reached payload handler".into(),
+            ))
+        }
         Some(IncomingChannelMessage::Close(_)) => {
             observe_optional_replenisher_channel(replenisher, debug_context, |channel| {
                 ChannelEvent::Closed {
@@ -1115,6 +1237,7 @@ impl<S: ChannelSink> ChannelSink for CreditSink<S> {
 
 /// Message delivered to an `Rx` by the driver.
 pub enum IncomingChannelMessage {
+    WriterSchema(Arc<vox_phon::SchemaBundle>),
     Item(SelfRef<ChannelItem<'static>>),
     Close(SelfRef<ChannelClose>),
     Reset(SelfRef<ChannelReset>),
@@ -1519,6 +1642,15 @@ impl<T> TryFrom<ChannelId> for Tx<T> {
     // r[impl rpc.channel.binding.callee-args]
     // r[impl rpc.channel.binding.callee-args.tx]
     fn try_from(channel_id: ChannelId) -> Result<Self, Self::Error> {
+        Self::from_channel_id_with_writer_schema(channel_id, None)
+    }
+}
+
+impl<T> Tx<T> {
+    fn from_channel_id_with_writer_schema(
+        channel_id: ChannelId,
+        writer_schema_send: Option<crate::ChannelWriterSchemaPlan>,
+    ) -> Result<Self, String> {
         let debug_context = ChannelDebugContext {
             type_name: Some(std::any::type_name::<T>()),
             ..ChannelDebugContext::default()
@@ -1530,7 +1662,11 @@ impl<T> TryFrom<ChannelId> for Tx<T> {
             let Some(binder) = *cell.borrow() else {
                 return Err("deserializing Tx requires an active ChannelBinder".to_string());
             };
-            let sink = binder.bind_tx_with_context(channel_id, Some(debug_context));
+            let sink = binder.bind_tx_with_context_and_writer_schema(
+                channel_id,
+                Some(debug_context),
+                writer_schema_send,
+            );
             let liveness = binder.channel_liveness();
             tx.bind_with_liveness(sink, liveness);
             Ok(())
@@ -1559,7 +1695,22 @@ impl<T> FacetOpaqueAdapter for TxChannelAdapter<T> {
 
     fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
         let idx = match ChannelId::try_from(value) {
-            Ok(channel_id) => collect_channel(value as *const Tx<T> as usize, channel_id),
+            Ok(channel_id) => {
+                let collected = collect_channel(value as *const Tx<T> as usize, channel_id);
+                if let Some(role) = collected.role {
+                    CHANNEL_BINDER.with(|cell| {
+                        if let Some(binder) = *cell.borrow() {
+                            binder.note_channel_schema_role(
+                                channel_id,
+                                role.method_id,
+                                role.direction,
+                                &role.role,
+                            );
+                        }
+                    });
+                }
+                collected.index
+            }
             Err(_) => CHANNEL_NOT_COLLECTED,
         };
         value.wire_index.store(idx, Ordering::Relaxed);
@@ -1579,7 +1730,7 @@ impl<T> FacetOpaqueAdapter for TxChannelAdapter<T> {
         let index =
             vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Tx channel index: {e}"))?;
         let channel = take_channel(index)?;
-        <Tx<T>>::try_from(channel.id)
+        Tx::from_channel_id_with_writer_schema(channel.id, channel.writer_schema_send)
     }
 }
 
@@ -1724,15 +1875,27 @@ impl<T> Rx<T> {
         loop {
             if self.logical_receiver.inner.is_none()
                 && let Some(core) = &self.core.inner
-                && let Some((receiver, liveness, replenisher)) = core.take_logical_receiver()
+                && let Some((receiver, liveness, replenisher, writer_schema)) =
+                    core.take_logical_receiver()
             {
                 self.logical_receiver.inner = Some(receiver);
                 self.liveness.inner = liveness;
                 self.replenisher.inner = replenisher;
+                self.decoder.writer = writer_schema;
+                self.decoder.program = None;
             }
 
             if let Some(receiver) = self.logical_receiver.inner.as_mut() {
                 let received = receiver.recv().await;
+                if let Some(LogicalIncomingChannelMessage {
+                    msg: IncomingChannelMessage::WriterSchema(writer_schema),
+                    ..
+                }) = received
+                {
+                    self.decoder.writer = Some(writer_schema);
+                    self.decoder.program = None;
+                    continue;
+                }
                 return match received {
                     Some(LogicalIncomingChannelMessage { msg, replenisher }) => {
                         handle_incoming_channel_message(
@@ -1765,8 +1928,14 @@ impl<T> Rx<T> {
             }
 
             if let Some(receiver) = self.receiver.inner.as_mut() {
+                let received = receiver.recv().await;
+                if let Some(IncomingChannelMessage::WriterSchema(writer_schema)) = received {
+                    self.decoder.writer = Some(writer_schema);
+                    self.decoder.program = None;
+                    continue;
+                }
                 return handle_incoming_channel_message(
-                    receiver.recv().await,
+                    received,
                     self.replenisher.inner.as_ref(),
                     self.debug_context,
                     &self.closed,
@@ -1809,7 +1978,9 @@ impl<T> Drop for Rx<T> {
         if self.replenisher.inner.is_none()
             && let Some(core) = &self.core.inner
         {
-            if let Some((_receiver, _liveness, replenisher)) = core.take_logical_receiver() {
+            if let Some((_receiver, _liveness, replenisher, _writer_schema)) =
+                core.take_logical_receiver()
+            {
                 self.replenisher.inner = replenisher;
             } else if let Some(bound) = core.take_receiver() {
                 self.replenisher.inner = bound.replenisher;
@@ -1904,7 +2075,22 @@ impl<T> FacetOpaqueAdapter for RxChannelAdapter<T> {
 
     fn serialize_map(value: &Self::SendValue<'_>) -> OpaqueSerialize {
         let idx = match ChannelId::try_from(value) {
-            Ok(channel_id) => collect_channel(value as *const Rx<T> as usize, channel_id),
+            Ok(channel_id) => {
+                let collected = collect_channel(value as *const Rx<T> as usize, channel_id);
+                if let Some(role) = collected.role {
+                    CHANNEL_BINDER.with(|cell| {
+                        if let Some(binder) = *cell.borrow() {
+                            binder.note_channel_schema_role(
+                                channel_id,
+                                role.method_id,
+                                role.direction,
+                                &role.role,
+                            );
+                        }
+                    });
+                }
+                collected.index
+            }
             Err(_) => CHANNEL_NOT_COLLECTED,
         };
         value.wire_index.store(idx, Ordering::Relaxed);
@@ -2007,6 +2193,16 @@ pub trait ChannelBinder: crate::MaybeSend + crate::MaybeSync {
         self.bind_tx(channel_id)
     }
 
+    fn bind_tx_with_context_and_writer_schema(
+        &self,
+        channel_id: ChannelId,
+        debug_context: Option<ChannelDebugContext>,
+        writer_schema: Option<crate::ChannelWriterSchemaPlan>,
+    ) -> Arc<dyn ChannelSink> {
+        let _ = writer_schema;
+        self.bind_tx_with_context(channel_id, debug_context)
+    }
+
     /// Register an inbound channel by ID and return the receiver (callee side).
     ///
     /// The channel ID comes from `Request.channels`.
@@ -2025,6 +2221,16 @@ pub trait ChannelBinder: crate::MaybeSend + crate::MaybeSync {
     /// for the lifetime of any bound channel handle.
     fn channel_liveness(&self) -> Option<ChannelLivenessHandle> {
         None
+    }
+
+    fn note_channel_schema_role(
+        &self,
+        channel_id: ChannelId,
+        method_id: crate::MethodId,
+        direction: BindingDirection,
+        role: &str,
+    ) {
+        let _ = (channel_id, method_id, direction, role);
     }
 }
 

@@ -641,16 +641,50 @@ impl ConnectionSender {
         msg: ConnectionMessage<'a>,
         binder: Option<&'a dyn vox_types::ChannelBinder>,
     ) -> Result<(), ()> {
+        self.send_with_binder_and_method(msg, binder, None).await
+    }
+
+    pub(crate) async fn send_with_binder_and_method<'a>(
+        &self,
+        msg: ConnectionMessage<'a>,
+        binder: Option<&'a dyn vox_types::ChannelBinder>,
+        channel_method: Option<&'static vox_types::MethodDescriptor>,
+    ) -> Result<(), ()> {
         let payload = match msg {
             ConnectionMessage::Request(r) => MessagePayload::RequestMessage(r),
             ConnectionMessage::Channel(c) => MessagePayload::ChannelMessage(c),
+            ConnectionMessage::Schema(s) => MessagePayload::SchemaMessage(s),
         };
         let message = Message {
             connection_id: self.connection_id,
             payload,
         };
         self.sess_core
-            .send(message, binder, None)
+            .send_with_options(message, binder, None, channel_method, Vec::new())
+            .await
+            .map_err(|_| ())
+    }
+
+    pub(crate) async fn send_channel_with_writer_schema<'a>(
+        &self,
+        channel: ChannelMessage<'a>,
+        writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
+    ) -> Result<(), ()> {
+        let extra_schema_sends = writer_schema
+            .map(PendingSchemaSend::from)
+            .into_iter()
+            .collect();
+        self.sess_core
+            .send_with_options(
+                Message {
+                    connection_id: self.connection_id,
+                    payload: MessagePayload::ChannelMessage(channel),
+                },
+                None,
+                None,
+                None,
+                extra_schema_sends,
+            )
             .await
             .map_err(|_| ())
     }
@@ -660,19 +694,24 @@ impl ConnectionSender {
         self.send_with_binder(msg, None).await
     }
 
-    // r[impl rpc.flow-control.credit.try-send]
-    pub(crate) fn try_send<'a>(&self, msg: ConnectionMessage<'a>) -> Result<(), TrySendError<()>> {
-        let payload = match msg {
-            ConnectionMessage::Request(r) => MessagePayload::RequestMessage(r),
-            ConnectionMessage::Channel(c) => MessagePayload::ChannelMessage(c),
-        };
-        self.sess_core.try_send(
+    pub(crate) fn try_send_channel_with_writer_schema<'a>(
+        &self,
+        channel: ChannelMessage<'a>,
+        writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
+    ) -> Result<(), TrySendError<()>> {
+        let extra_schema_sends = writer_schema
+            .map(PendingSchemaSend::from)
+            .into_iter()
+            .collect();
+        self.sess_core.try_send_with_options(
             Message {
                 connection_id: self.connection_id,
-                payload,
+                payload: MessagePayload::ChannelMessage(channel),
             },
             None,
             None,
+            None,
+            extra_schema_sends,
         )
     }
 
@@ -691,6 +730,11 @@ impl ConnectionSender {
             ConnectionMessage::Channel(channel) => MessagePayload::ChannelMessage(ChannelMessage {
                 id: channel.id,
                 body: forwarded_channel_body(&channel.body),
+            }),
+            ConnectionMessage::Schema(schema) => MessagePayload::SchemaMessage(SchemaMessage {
+                method_id: schema.method_id,
+                direction: schema.direction,
+                schemas: schema.schemas.clone(),
             }),
         };
 
@@ -801,6 +845,7 @@ impl std::fmt::Debug for ConnectionHandle {
 pub(crate) enum ConnectionMessage<'payload> {
     Request(RequestMessage<'payload>),
     Channel(ChannelMessage<'payload>),
+    Schema(SchemaMessage),
 }
 
 vox_types::impl_reborrow!(ConnectionMessage);
@@ -1440,18 +1485,33 @@ impl Session {
                 return;
             }
             MessagePayload::SchemaMessage(schema_msg) => {
-                let schema_recv_tracker = match self.conns.get(&conn_id) {
-                    Some(ConnectionSlot::Active(state)) => Arc::clone(&state.schema_recv_tracker),
+                let (schema_recv_tracker, conn_tx) = match self.conns.get(&conn_id) {
+                    Some(ConnectionSlot::Active(state)) => (
+                        Arc::clone(&state.schema_recv_tracker),
+                        state.conn_tx.clone(),
+                    ),
                     _ => return,
                 };
                 let _ = self.record_received_schema_cbor(
                     conn_id,
-                    schema_recv_tracker,
+                    Arc::clone(&schema_recv_tracker),
                     schema_msg.method_id,
                     schema_msg.direction,
                     &schema_msg.schemas,
                     "standalone schema message",
                 );
+                let recv_msg = RecvMessage {
+                    schemas: schema_recv_tracker,
+                    msg: msg.map(|m| match m.payload {
+                        MessagePayload::SchemaMessage(schema) => ConnectionMessage::Schema(schema),
+                        _ => unreachable!(),
+                    }),
+                    fds,
+                };
+                if conn_tx.send(recv_msg).await.is_err() {
+                    self.remove_connection_with_reason(&conn_id, ConnectionCloseReason::Unknown);
+                    self.maybe_request_shutdown_after_root_closed();
+                }
                 return;
             }
             _ => {}
@@ -2134,6 +2194,17 @@ struct PendingSchemaSend {
     prepared: vox_types::PreparedSchemaPlan,
 }
 
+impl From<vox_types::ChannelWriterSchemaPlan> for PendingSchemaSend {
+    fn from(plan: vox_types::ChannelWriterSchemaPlan) -> Self {
+        let _ = plan.role;
+        Self {
+            method_id: plan.method_id,
+            direction: plan.direction,
+            prepared: plan.prepared,
+        }
+    }
+}
+
 struct OutboundBatch {
     conn_id: ConnectionId,
     request_id: Option<RequestId>,
@@ -2404,6 +2475,8 @@ impl SessionCore {
         mut msg: Message<'a>,
         binder: Option<&'a dyn vox_types::ChannelBinder>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
+        channel_method: Option<&'static vox_types::MethodDescriptor>,
+        extra_schema_sends: Vec<PendingSchemaSend>,
     ) -> Result<PreparedOutboundBatch, ()> {
         let conn_id = msg.connection_id;
         let (request_id, payload_kind) = match &msg.payload {
@@ -2452,7 +2525,7 @@ impl SessionCore {
                 let schema_sends = {
                     let mut conn_state_guard =
                         conn_state.lock().expect("send conn state mutex poisoned");
-                    let mut schema_sends = Vec::new();
+                    let mut schema_sends = extra_schema_sends;
                     match &mut req.body {
                         RequestBody::Call(call) => {
                             if let Some(schema_send) = Self::plan_call_schema_send(
@@ -2487,7 +2560,7 @@ impl SessionCore {
                 };
                 (tx, conn_state, schema_sends)
             } else {
-                (tx, conn_state, Vec::new())
+                (tx, conn_state, extra_schema_sends)
             }
         };
         trace!(
@@ -2516,12 +2589,16 @@ impl SessionCore {
             let (ptr, shape) = (*ptr, *shape);
             // The binder registers a CLOSED gate per channel it allocates here (before
             // binding the Tx sink), so an app `tx.send` that wakes mid-encode parks.
-            let (encoded, channels) = vox_types::collect_channels(|| match binder {
+            let encode_args = || match binder {
                 Some(b) => {
                     vox_types::with_channel_binder(b, || vox_phon::to_vec_for_shape(ptr, shape))
                 }
                 None => vox_phon::to_vec_for_shape(ptr, shape),
-            });
+            };
+            let (encoded, channels) = match channel_method {
+                Some(method) => vox_types::collect_channels_for_method(method, encode_args),
+                None => vox_types::collect_channels(encode_args),
+            };
             gated_channels = channels.clone();
             let encoded = match encoded {
                 Ok(encoded) => encoded,
@@ -2590,14 +2667,31 @@ impl SessionCore {
         binder: Option<&'a dyn vox_types::ChannelBinder>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
     ) -> Result<(), ()> {
+        self.send_with_options(msg, binder, forwarded_schemas, None, Vec::new())
+            .await
+    }
+
+    async fn send_with_options<'a>(
+        &self,
+        msg: Message<'a>,
+        binder: Option<&'a dyn vox_types::ChannelBinder>,
+        forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
+        channel_method: Option<&'static vox_types::MethodDescriptor>,
+        extra_schema_sends: Vec<PendingSchemaSend>,
+    ) -> Result<(), ()> {
         let connection_id = msg.connection_id;
         // r[impl rpc.channel.item] Hold an outbound channel item/close until the Call
         // that opened its channel has been enqueued — the sender upholds frame order.
         if let Some(channel_id) = gated_channel_id(&msg) {
             self.await_channel_gate(channel_id).await;
         }
-        let (batch, result_rx, gated_channels) =
-            self.prepare_outbound_batch(msg, binder, forwarded_schemas)?;
+        let (batch, result_rx, gated_channels) = self.prepare_outbound_batch(
+            msg,
+            binder,
+            forwarded_schemas,
+            channel_method,
+            extra_schema_sends,
+        )?;
         let queued = self.outbound_tx.send(batch).await;
         // This Call is now on the queue (or the queue is gone): release its channels'
         // gates so parked items follow it — unconditionally, so a failed enqueue never
@@ -2632,11 +2726,13 @@ impl SessionCore {
     }
 
     // r[impl rpc.flow-control.credit.try-send]
-    pub(crate) fn try_send<'a>(
+    fn try_send_with_options<'a>(
         &self,
         msg: Message<'a>,
         binder: Option<&'a dyn vox_types::ChannelBinder>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
+        channel_method: Option<&'static vox_types::MethodDescriptor>,
+        extra_schema_sends: Vec<PendingSchemaSend>,
     ) -> Result<(), TrySendError<()>> {
         let connection_id = msg.connection_id;
         // r[impl rpc.channel.item] A channel item whose declaring Call hasn't been
@@ -2648,7 +2744,13 @@ impl SessionCore {
             return Err(TrySendError::Full(()));
         }
         let (batch, _result_rx, gated_channels) = self
-            .prepare_outbound_batch(msg, binder, forwarded_schemas)
+            .prepare_outbound_batch(
+                msg,
+                binder,
+                forwarded_schemas,
+                channel_method,
+                extra_schema_sends,
+            )
             .map_err(|_| TrySendError::Closed(()))?;
         let result = self.outbound_tx.try_send(batch).map_err(|err| match err {
             tokio_mpsc::error::TrySendError::Full(_) => {
@@ -2839,6 +2941,7 @@ impl SessionCore {
         response: &mut RequestResponse<'_>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
     ) -> Option<PendingSchemaSend> {
+        // r[impl schema.exchange.callee]
         if conn_state
             .send_tracker
             .has_sent_binding(method_id, vox_types::BindingDirection::Response)
@@ -3049,6 +3152,10 @@ mod tests {
             method_id: vox_types::MethodId,
             schemas_len: usize,
         },
+        Response {
+            request_id: RequestId,
+            schemas_len: usize,
+        },
         Other,
     }
 
@@ -3069,6 +3176,10 @@ mod tests {
                         request_id: request.id,
                         method_id: call.method_id,
                         schemas_len: call.schemas.0.len(),
+                    },
+                    RequestBody::Response(response) => CapturedPayload::Response {
+                        request_id: request.id,
+                        schemas_len: response.schemas.0.len(),
                     },
                     _ => CapturedPayload::Other,
                 },
@@ -3302,6 +3413,106 @@ mod tests {
                 assert_eq!(*schemas_len, 0);
             }
             other => panic!("expected second request without schema resend, got {other:?}"),
+        }
+    }
+
+    // r[verify schema.exchange.callee]
+    #[tokio::test]
+    async fn callee_schema_exchange_sends_binding_once_before_response() {
+        use facet::Facet;
+
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let (_session, handle) = make_capturing_session(Arc::clone(&sent));
+        let method_id = vox_types::MethodId(701);
+        let request_id = RequestId(11);
+        handle
+            .sender
+            .sess_core
+            .record_incoming_call(ConnectionId::ROOT, request_id, method_id);
+
+        let first_response: Result<u32, vox_types::VoxError<core::convert::Infallible>> = Ok(99);
+        handle
+            .sender
+            .send_response(
+                request_id,
+                RequestResponse {
+                    metadata: Metadata::default(),
+                    ret: Payload::outgoing(&first_response),
+                    schemas: Default::default(),
+                },
+            )
+            .await
+            .expect("first response send");
+
+        {
+            let captured = sent.lock().expect("captured message mutex poisoned");
+            assert_eq!(captured.len(), 2);
+            assert_eq!(captured[0].connection_id, ConnectionId::ROOT);
+            match &captured[0].payload {
+                CapturedPayload::Schema {
+                    method_id: actual_method_id,
+                    direction,
+                    schemas,
+                } => {
+                    assert_eq!(*actual_method_id, method_id);
+                    assert_eq!(*direction, BindingDirection::Response);
+                    let parsed = vox_phon::parse_schema_bytes(schemas)
+                        .expect("parse response schema binding");
+                    let expected_root = vox_phon::schema_id_for_shape(
+                        <Result<
+                            u32,
+                            vox_types::VoxError<core::convert::Infallible>,
+                        > as Facet>::SHAPE,
+                    )
+                    .expect("response root");
+                    assert_eq!(parsed.root, expected_root);
+                }
+                other => panic!("expected schema message before response, got {other:?}"),
+            }
+            assert_eq!(captured[1].connection_id, ConnectionId::ROOT);
+            match &captured[1].payload {
+                CapturedPayload::Response {
+                    request_id: actual_request_id,
+                    schemas_len,
+                } => {
+                    assert_eq!(*actual_request_id, request_id);
+                    assert_eq!(*schemas_len, 0);
+                }
+                other => panic!("expected response after schema message, got {other:?}"),
+            }
+        }
+
+        let second_request_id = RequestId(13);
+        handle.sender.sess_core.record_incoming_call(
+            ConnectionId::ROOT,
+            second_request_id,
+            method_id,
+        );
+        let second_response: Result<u32, vox_types::VoxError<core::convert::Infallible>> = Ok(100);
+        handle
+            .sender
+            .send_response(
+                second_request_id,
+                RequestResponse {
+                    metadata: Metadata::default(),
+                    ret: Payload::outgoing(&second_response),
+                    schemas: Default::default(),
+                },
+            )
+            .await
+            .expect("second response send");
+
+        let captured = sent.lock().expect("captured message mutex poisoned");
+        assert_eq!(captured.len(), 3);
+        match &captured[2].payload {
+            CapturedPayload::Response {
+                request_id: actual_request_id,
+                schemas_len,
+            } => {
+                assert_eq!(*actual_request_id, second_request_id);
+                assert_eq!(*schemas_len, 0);
+            }
+            other => panic!("expected second response without schema resend, got {other:?}"),
         }
     }
 

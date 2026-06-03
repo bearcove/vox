@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     panic::AssertUnwindSafe,
     pin::Pin,
     sync::{Arc, Weak},
@@ -374,6 +374,9 @@ struct DriverShared {
     /// would send a ChannelClose message for a channel the peer no longer knows about.
     /// We suppress those Close messages by checking this set.
     stale_close_channels: SyncMutex<std::collections::HashSet<ChannelId>>,
+    channel_schema_roles: SyncMutex<
+        HashMap<(vox_types::MethodId, vox_types::BindingDirection, String), Vec<ChannelId>>,
+    >,
     // r[impl rpc.flow-control.credit.initial]
     local_initial_channel_credit: u32,
     // r[impl rpc.flow-control.credit.initial]
@@ -395,6 +398,37 @@ impl DriverShared {
                 channel.debug = Some(debug_context);
             }
         }
+    }
+
+    fn note_channel_schema_role(
+        &self,
+        channel_id: ChannelId,
+        method_id: vox_types::MethodId,
+        direction: vox_types::BindingDirection,
+        role: &str,
+    ) {
+        let mut roles = self.channel_schema_roles.lock();
+        let channels = roles
+            .entry((method_id, direction, role.to_string()))
+            .or_default();
+        if !channels.contains(&channel_id) {
+            channels.push(channel_id);
+        }
+    }
+
+    fn channel_schema_roles_for(
+        &self,
+        method_id: vox_types::MethodId,
+        direction: vox_types::BindingDirection,
+    ) -> Vec<(String, Vec<ChannelId>)> {
+        self.channel_schema_roles
+            .lock()
+            .iter()
+            .filter(|((stored_method, stored_direction, _role), _channels)| {
+                *stored_method == method_id && *stored_direction == direction
+            })
+            .map(|((_method, _direction, role), channels)| (role.clone(), channels.clone()))
+            .collect()
     }
 
     fn channel_event_context(
@@ -929,6 +963,7 @@ pub struct DriverChannelSink {
     channel_id: ChannelId,
     debug_context: Option<ChannelDebugContext>,
     local_control_tx: mpsc::UnboundedSender<DriverLocalControl>,
+    writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
 }
 
 impl ChannelSink for DriverChannelSink {
@@ -939,17 +974,22 @@ impl ChannelSink for DriverChannelSink {
         let sender = self.sender.clone();
         let shared = Arc::clone(&self.shared);
         let channel_id = self.channel_id;
+        let writer_schema = self.writer_schema.clone();
         Box::pin(async move {
             if shared.terminal_channels.lock().contains(&channel_id) {
                 return Err(TxError::Transport("channel closed".into()));
             }
 
             shared.mark_outbound_progress();
+            // r[impl schema.exchange.channels.tx-args]
             sender
-                .send(ConnectionMessage::Channel(ChannelMessage {
-                    id: channel_id,
-                    body: ChannelBody::Item(ChannelItem { item: payload }),
-                }))
+                .send_channel_with_writer_schema(
+                    ChannelMessage {
+                        id: channel_id,
+                        body: ChannelBody::Item(ChannelItem { item: payload }),
+                    },
+                    writer_schema,
+                )
                 .await
                 .map_err(|()| TxError::Transport("connection closed".into()))
         })
@@ -1012,11 +1052,15 @@ impl ChannelSink for DriverChannelSink {
         }
 
         self.shared.mark_outbound_progress();
+        // r[impl schema.exchange.channels.tx-args]
         self.sender
-            .try_send(ConnectionMessage::Channel(ChannelMessage {
-                id: self.channel_id,
-                body: ChannelBody::Item(ChannelItem { item: payload }),
-            }))
+            .try_send_channel_with_writer_schema(
+                ChannelMessage {
+                    id: self.channel_id,
+                    body: ChannelBody::Item(ChannelItem { item: payload }),
+                },
+                self.writer_schema.clone(),
+            )
             .map_err(|err| match err {
                 TrySendError::Closed(()) => ChannelTrySendOutcome::Closed,
                 TrySendError::Full(()) => ChannelTrySendOutcome::FullRuntimeQueue,
@@ -1216,8 +1260,7 @@ impl Caller {
             }
         }
 
-        let request_debug = method.map(|method| (method.service_name, method.method_name));
-        let result = self.inner.call_inner(call, request_debug).await;
+        let result = self.inner.call_inner(call, method).await;
         if !self.middlewares.is_empty() {
             let outcome = match &result {
                 Ok(_) => ClientCallOutcome::Response,
@@ -1375,6 +1418,7 @@ fn make_tx_channel_sink(
     local_control_tx: &mpsc::UnboundedSender<DriverLocalControl>,
     channel_id: ChannelId,
     debug_context: Option<ChannelDebugContext>,
+    writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
 ) -> Arc<CreditSink<DriverChannelSink>> {
     observe_channel_opened(
         shared,
@@ -1389,6 +1433,7 @@ fn make_tx_channel_sink(
         channel_id,
         debug_context: debug_context.and_then(ChannelDebugContext::into_option),
         local_control_tx: local_control_tx.clone(),
+        writer_schema,
     };
     let sink = Arc::new(CreditSink::new(inner, shared.peer_initial_channel_credit));
     shared
@@ -1427,6 +1472,7 @@ trait DriverChannelEndpoint {
             self.endpoint_local_control_tx(),
             channel_id,
             debug_context,
+            None,
         );
         (channel_id, sink)
     }
@@ -1452,6 +1498,7 @@ trait DriverChannelEndpoint {
         &self,
         channel_id: ChannelId,
         debug_context: Option<ChannelDebugContext>,
+        writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
     ) -> Arc<dyn ChannelSink> {
         make_tx_channel_sink(
             self.endpoint_sender(),
@@ -1459,6 +1506,7 @@ trait DriverChannelEndpoint {
             self.endpoint_local_control_tx(),
             channel_id,
             debug_context,
+            writer_schema,
         )
     }
 
@@ -1523,7 +1571,7 @@ impl ChannelBinder for DriverChannelBinder {
     }
 
     fn bind_tx(&self, channel_id: ChannelId) -> Arc<dyn ChannelSink> {
-        self.bind_tx_dyn(channel_id, None)
+        self.bind_tx_dyn(channel_id, None, None)
     }
 
     fn bind_tx_with_context(
@@ -1531,7 +1579,16 @@ impl ChannelBinder for DriverChannelBinder {
         channel_id: ChannelId,
         debug_context: Option<ChannelDebugContext>,
     ) -> Arc<dyn ChannelSink> {
-        self.bind_tx_dyn(channel_id, debug_context)
+        self.bind_tx_dyn(channel_id, debug_context, None)
+    }
+
+    fn bind_tx_with_context_and_writer_schema(
+        &self,
+        channel_id: ChannelId,
+        debug_context: Option<ChannelDebugContext>,
+        writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
+    ) -> Arc<dyn ChannelSink> {
+        self.bind_tx_dyn(channel_id, debug_context, writer_schema)
     }
 
     fn register_rx(&self, channel_id: ChannelId) -> vox_types::BoundChannelReceiver {
@@ -1548,6 +1605,17 @@ impl ChannelBinder for DriverChannelBinder {
 
     fn channel_liveness(&self) -> Option<ChannelLivenessHandle> {
         self.endpoint_liveness()
+    }
+
+    fn note_channel_schema_role(
+        &self,
+        channel_id: ChannelId,
+        method_id: vox_types::MethodId,
+        direction: vox_types::BindingDirection,
+        role: &str,
+    ) {
+        self.shared
+            .note_channel_schema_role(channel_id, method_id, direction, role);
     }
 }
 
@@ -1634,7 +1702,7 @@ impl ChannelBinder for DriverCaller {
     }
 
     fn bind_tx(&self, channel_id: ChannelId) -> Arc<dyn ChannelSink> {
-        self.bind_tx_dyn(channel_id, None)
+        self.bind_tx_dyn(channel_id, None, None)
     }
 
     fn bind_tx_with_context(
@@ -1642,7 +1710,16 @@ impl ChannelBinder for DriverCaller {
         channel_id: ChannelId,
         debug_context: Option<ChannelDebugContext>,
     ) -> Arc<dyn ChannelSink> {
-        self.bind_tx_dyn(channel_id, debug_context)
+        self.bind_tx_dyn(channel_id, debug_context, None)
+    }
+
+    fn bind_tx_with_context_and_writer_schema(
+        &self,
+        channel_id: ChannelId,
+        debug_context: Option<ChannelDebugContext>,
+        writer_schema: Option<vox_types::ChannelWriterSchemaPlan>,
+    ) -> Arc<dyn ChannelSink> {
+        self.bind_tx_dyn(channel_id, debug_context, writer_schema)
     }
 
     fn register_rx(&self, channel_id: ChannelId) -> vox_types::BoundChannelReceiver {
@@ -1659,6 +1736,17 @@ impl ChannelBinder for DriverCaller {
 
     fn channel_liveness(&self) -> Option<ChannelLivenessHandle> {
         self.endpoint_liveness()
+    }
+
+    fn note_channel_schema_role(
+        &self,
+        channel_id: ChannelId,
+        method_id: vox_types::MethodId,
+        direction: vox_types::BindingDirection,
+        role: &str,
+    ) {
+        self.shared
+            .note_channel_schema_role(channel_id, method_id, direction, role);
     }
 }
 
@@ -1687,12 +1775,14 @@ impl DriverCaller {
     async fn call_inner(
         &self,
         call: RequestCall<'_>,
-        request_debug: Option<(&'static str, &'static str)>,
+        method: Option<&'static vox_types::MethodDescriptor>,
     ) -> CallResult {
         // Allocate a request ID.
         let req_id = self.shared.request_ids.lock().alloc();
         let request_started_at = Instant::now();
-        let (service_name, method_name) = request_debug.unwrap_or(("<unknown>", "<unknown>"));
+        let (service_name, method_name) = method
+            .map(|method| (method.service_name, method.method_name))
+            .unwrap_or(("<unknown>", "<unknown>"));
         tracing::debug!(
             conn_id = ?self.sender.connection_id(),
             ?req_id,
@@ -1760,7 +1850,7 @@ impl DriverCaller {
         );
         if self
             .sender
-            .send_with_binder(
+            .send_with_binder_and_method(
                 ConnectionMessage::Request(RequestMessage {
                     id: req_id,
                     body: RequestBody::Call(RequestCall {
@@ -1774,6 +1864,7 @@ impl DriverCaller {
                     }),
                 }),
                 Some(self),
+                method,
             )
             .await
             .is_err()
@@ -2013,6 +2104,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             }
         }
         self.shared.channel_receivers.lock().clear();
+        self.shared.channel_schema_roles.lock().clear();
         self.shared.terminal_channels.lock().clear();
     }
 
@@ -2076,6 +2168,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     "driver.stale_close_channels",
                     std::collections::HashSet::new(),
                 ),
+                channel_schema_roles: SyncMutex::new("driver.channel_schema_roles", HashMap::new()),
                 local_initial_channel_credit: local_settings.initial_channel_credit,
                 peer_initial_channel_credit: peer_settings.initial_channel_credit,
                 observer,
@@ -2390,9 +2483,8 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         self.shared.mark_inbound_progress();
         let crate::session::RecvMessage { schemas, msg, fds } = recv;
         let msg_ref = msg.get();
-        let is_request = matches!(msg_ref, ConnectionMessage::Request(_));
-        if is_request {
-            if let ConnectionMessage::Request(req) = msg_ref {
+        match msg_ref {
+            ConnectionMessage::Request(req) => {
                 vox_types::dlog!(
                     "[driver] handle_recv request: conn={:?} req={:?} body={} method={:?}",
                     self.sender.connection_id(),
@@ -2425,18 +2517,58 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                         "driver received cancel message"
                     ),
                 }
+                let msg = msg.map(|m| match m {
+                    ConnectionMessage::Request(r) => r,
+                    _ => unreachable!(),
+                });
+                self.handle_request(msg, schemas, fds);
             }
-            let msg = msg.map(|m| match m {
-                ConnectionMessage::Request(r) => r,
-                _ => unreachable!(),
-            });
-            self.handle_request(msg, schemas, fds);
-        } else {
-            let msg = msg.map(|m| match m {
-                ConnectionMessage::Channel(c) => c,
-                _ => unreachable!(),
-            });
-            self.handle_channel(msg).await;
+            ConnectionMessage::Channel(_) => {
+                let msg = msg.map(|m| match m {
+                    ConnectionMessage::Channel(c) => c,
+                    _ => unreachable!(),
+                });
+                self.handle_channel(msg).await;
+            }
+            ConnectionMessage::Schema(_) => {
+                let msg = msg.map(|m| match m {
+                    ConnectionMessage::Schema(schema) => schema,
+                    _ => unreachable!(),
+                });
+                self.handle_schema(msg).await;
+            }
+        }
+    }
+
+    async fn handle_schema(&mut self, msg: SelfRef<vox_types::SchemaMessage>) {
+        let schema = msg.get();
+        let roles = self
+            .shared
+            .channel_schema_roles_for(schema.method_id, schema.direction);
+        for (role, channels) in roles {
+            // r[impl schema.exchange.channels.tx-args]
+            let bundle = match vox_types::writer_auxiliary_schema_bundle_from_bytes(
+                &schema.schemas.0,
+                &role,
+            ) {
+                Ok(Some(bundle)) => Arc::new(bundle),
+                Ok(None) => continue,
+                Err(error) => {
+                    tracing::debug!(
+                        method_id = ?schema.method_id,
+                        direction = ?schema.direction,
+                        role,
+                        "failed to parse channel writer schema: {error}"
+                    );
+                    continue;
+                }
+            };
+            for channel_id in channels {
+                let sender = self.shared.inbound_channel_sender(channel_id);
+                let _ = sender
+                    .send(IncomingChannelMessage::WriterSchema(Arc::clone(&bundle)))
+                    .await;
+            }
         }
     }
 

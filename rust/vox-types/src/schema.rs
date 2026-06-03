@@ -126,6 +126,15 @@ impl PreparedSchemaPlan {
     }
 }
 
+/// A channel item writer schema that must be sent before items on a bound channel.
+#[derive(Debug, Clone)]
+pub struct ChannelWriterSchemaPlan {
+    pub method_id: MethodId,
+    pub direction: BindingDirection,
+    pub role: String,
+    pub prepared: PreparedSchemaPlan,
+}
+
 impl SchemaSendTracker {
     pub fn new() -> Self {
         SchemaSendTracker {
@@ -374,17 +383,7 @@ impl SchemaRecvTracker {
         let Some(bytes) = self.writer_schema_bytes(method_id, direction) else {
             return Ok(None);
         };
-        let mut bundle = vox_phon::parse_schema_bytes(&bytes).map_err(|e| e.to_string())?;
-        let Some(root) = bundle
-            .auxiliary_roots
-            .iter()
-            .find(|root| root.role == role)
-            .map(|root| root.root)
-        else {
-            return Ok(None);
-        };
-        bundle.root = root;
-        Ok(Some(bundle))
+        writer_auxiliary_schema_bundle_from_bytes(&bytes, role)
     }
 
     /// Look up a cached plan by key, downcasting to `T`.
@@ -404,6 +403,23 @@ impl SchemaRecvTracker {
     ) {
         self.plan_cache.lock().unwrap().insert(key, Box::new(plan));
     }
+}
+
+pub fn writer_auxiliary_schema_bundle_from_bytes(
+    bytes: &[u8],
+    role: &str,
+) -> Result<Option<vox_phon::SchemaBundle>, String> {
+    let mut bundle = vox_phon::parse_schema_bytes(bytes).map_err(|e| e.to_string())?;
+    let Some(root) = bundle
+        .auxiliary_roots
+        .iter()
+        .find(|root| root.role == role)
+        .map(|root| root.root)
+    else {
+        return Ok(None);
+    };
+    bundle.root = root;
+    Ok(Some(bundle))
 }
 
 impl Default for SchemaRecvTracker {

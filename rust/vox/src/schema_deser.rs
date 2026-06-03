@@ -106,4 +106,21 @@ mod tests {
                 .expect("schema deserialize args");
         assert_eq!(decoded, ((42, "hello".to_string()),));
     }
+
+    // r[verify schema.exchange.required]
+    #[test]
+    fn schema_deserialize_args_requires_received_binding() {
+        let err = schema_deserialize_args_borrowed::<(u32,)>(
+            &vox_phon::to_vec(&(7_u32,)).expect("encode args"),
+            MethodId(99),
+            &SchemaRecvTracker::new(),
+        )
+        .expect_err("decode without a received schema binding should fail");
+
+        assert!(
+            err.to_string()
+                .contains("sender must send schemas before data"),
+            "unexpected missing-schema error: {err:?}"
+        );
+    }
 }

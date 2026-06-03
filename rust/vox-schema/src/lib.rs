@@ -7,6 +7,84 @@ use facet::{Facet, OpaqueSerialize, PtrConst};
 use facet_core::Shape;
 use std::collections::HashMap;
 
+/// Trait for types that can be reborrowed with a shorter lifetime.
+///
+/// This is the key to `SelfRef` soundness in `vox-types`: types stored inside
+/// `SelfRef` use a fake `'static` lifetime. `Reborrow` lets accessors return a
+/// reference with the lifetime shortened to match the borrow, preventing the
+/// fake `'static` from leaking out.
+///
+/// Analogous to `yoke::Yokeable`.
+///
+/// # Safety
+///
+/// The implementing type must be **covariant** in its lifetime parameter,
+/// and `Self` and `Ref<'a>` must have identical memory layout for all `'a`.
+pub unsafe trait Reborrow: 'static {
+    /// The same type with a (possibly shorter) lifetime.
+    type Ref<'a>;
+}
+
+// SAFETY: these owned types have no lifetime parameter; Ref<'a> = Self is
+// trivially sound.
+unsafe impl Reborrow for u32 {
+    type Ref<'a> = u32;
+}
+unsafe impl Reborrow for usize {
+    type Ref<'a> = usize;
+}
+unsafe impl Reborrow for i8 {
+    type Ref<'a> = i8;
+}
+unsafe impl Reborrow for i16 {
+    type Ref<'a> = i16;
+}
+unsafe impl Reborrow for i32 {
+    type Ref<'a> = i32;
+}
+unsafe impl Reborrow for i64 {
+    type Ref<'a> = i64;
+}
+unsafe impl Reborrow for i128 {
+    type Ref<'a> = i128;
+}
+unsafe impl Reborrow for u8 {
+    type Ref<'a> = u8;
+}
+unsafe impl Reborrow for u16 {
+    type Ref<'a> = u16;
+}
+unsafe impl Reborrow for u64 {
+    type Ref<'a> = u64;
+}
+unsafe impl Reborrow for u128 {
+    type Ref<'a> = u128;
+}
+unsafe impl Reborrow for f32 {
+    type Ref<'a> = f32;
+}
+unsafe impl Reborrow for f64 {
+    type Ref<'a> = f64;
+}
+unsafe impl Reborrow for bool {
+    type Ref<'a> = bool;
+}
+unsafe impl Reborrow for char {
+    type Ref<'a> = char;
+}
+unsafe impl Reborrow for String {
+    type Ref<'a> = String;
+}
+unsafe impl Reborrow for &'static str {
+    type Ref<'a> = &'a str;
+}
+unsafe impl Reborrow for &'static [u8] {
+    type Ref<'a> = &'a [u8];
+}
+unsafe impl Reborrow for (u32, u8, u8) {
+    type Ref<'a> = (u32, u8, u8);
+}
+
 // ============================================================================
 // Schema data types
 // ============================================================================
@@ -765,6 +843,48 @@ impl SchemaPayload {
 /// Used as a sentinel type for passthrough detection in serializers.
 #[repr(transparent)]
 pub struct RawPostcardBorrowed<'a>(pub &'a [u8]);
+
+// SAFETY: the schema model types below are owned data structures in the schema
+// crate. The concrete ID parameters used here are owned value IDs, so the
+// shortened view is layout-identical to the stored value.
+macro_rules! impl_reborrow_schema_identity {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            unsafe impl Reborrow for $ty {
+                type Ref<'a> = $ty;
+            }
+        )*
+    };
+}
+
+impl_reborrow_schema_identity!(
+    SchemaHash,
+    CycleSchemaIndex,
+    TypeParamName,
+    TypeRef,
+    TypeRef<MixedId>,
+    MixedId,
+    Schema,
+    Schema<MixedId>,
+    SchemaKind,
+    SchemaKind<MixedId>,
+    ChannelDirection,
+    FieldSchema,
+    FieldSchema<MixedId>,
+    VariantSchema,
+    VariantSchema<MixedId>,
+    VariantPayload,
+    VariantPayload<MixedId>,
+    PrimitiveType,
+    SchemaBytes,
+    BindingDirection,
+    SchemaPayload,
+);
+
+// SAFETY: this wrapper is covariant in `'a` and transparent over a byte slice.
+unsafe impl Reborrow for RawPostcardBorrowed<'static> {
+    type Ref<'a> = RawPostcardBorrowed<'a>;
+}
 
 /// Sentinel shape for borrowed passthrough bytes. Serializers check against
 /// this to distinguish pre-encoded bytes from regular `&[u8]`/`Vec<u8>` values.
