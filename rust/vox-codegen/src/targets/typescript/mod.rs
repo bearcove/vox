@@ -239,8 +239,17 @@ mod tests {
     #![allow(dead_code)]
 
     use super::generate_service;
+    use crate::render::hex_u64;
     use facet::Facet;
     use vox_types::{MethodDescriptorOptions, Rx, ServiceDescriptor, Tx, method_descriptor};
+
+    fn hex_bytes(bytes: &[u8]) -> String {
+        let mut out = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            out.push_str(&format!("{byte:02x}"));
+        }
+        out
+    }
 
     // A non-recursive composite (struct + scalar + string + list). NOTE: phon's
     // `from_shapes` has no cycle detection, so a self-referential type (via `Box` or
@@ -251,6 +260,16 @@ mod tests {
         value: u64,
         label: String,
         tags: Vec<String>,
+    }
+
+    #[derive(Facet)]
+    struct NestedInner {
+        value: u32,
+    }
+
+    #[derive(Facet)]
+    struct NestedOuter {
+        inner: NestedInner,
     }
 
     #[derive(Facet)]
@@ -387,14 +406,18 @@ mod tests {
     }
 
     #[test]
+    // r[verify schema.type-id]
+    // r[verify schema.format.self-contained]
+    // r[verify schema.tracking.transitive]
+    // r[verify schema.method-id]
     fn generated_typescript_uses_canonical_service_schemas() {
-        let recurse = method_descriptor::<(CompositeNode,), CompositeNode>(
+        let recurse = method_descriptor::<(NestedOuter,), NestedOuter>(
             "RecursiveSvc",
             "recurse",
             &["node"],
             &[None],
             MethodDescriptorOptions {
-                response_wire_shape: <Result<CompositeNode, vox_types::VoxError> as Facet>::SHAPE,
+                response_wire_shape: <Result<NestedOuter, vox_types::VoxError> as Facet>::SHAPE,
                 doc: None,
             },
         );
@@ -406,6 +429,25 @@ mod tests {
         };
 
         let generated = generate_service(&service);
+        let args_root = vox_phon::schema_id_for_shape(recurse.args_shape).expect("args schema id");
+        let response_root =
+            vox_phon::schema_id_for_shape(recurse.response_wire_shape).expect("response schema id");
+        let args_closure =
+            vox_phon::schema_bytes_for_shape(recurse.args_shape).expect("args schema closure");
+        let response_closure = vox_phon::schema_bytes_for_shape(recurse.response_wire_shape)
+            .expect("response schema closure");
+        let args_bundle = vox_phon::parse_schema_bytes(&args_closure).expect("args closure parses");
+        let nested_inner_id =
+            vox_phon::schema_id_for_shape(<NestedInner as Facet>::SHAPE).expect("inner schema id");
+
+        assert_eq!(args_bundle.root, args_root);
+        assert!(
+            args_bundle
+                .schemas
+                .iter()
+                .any(|schema| schema.id == nested_inner_id),
+            "args closure must carry transitively referenced NestedInner schema"
+        );
         // The phon service schemas: a per-method `{service}Methods` table of
         // `PhonMethodSchemas` over a phon `Registry` built from self-describing closure
         // bytes — not the legacy postcard `schema_registry`.
@@ -418,6 +460,32 @@ mod tests {
         assert!(
             !generated.contains("schema_registry"),
             "generated TypeScript must not include the legacy schema registry:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!("  \"{}\": {{", hex_u64(crate::method_id(recurse)))),
+            "generated TypeScript method table must use the canonical Vox method ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!("argsRoot: {}n", hex_u64(args_root.0))),
+            "generated TypeScript must use the phon args schema ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!("responseRoot: {}n", hex_u64(response_root.0))),
+            "generated TypeScript must use the phon response schema ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!(
+                "argsSchemaClosure: \"{}\"",
+                hex_bytes(&args_closure)
+            )),
+            "generated TypeScript must embed the self-contained phon args closure:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!(
+                "responseSchemaClosure: \"{}\"",
+                hex_bytes(&response_closure)
+            )),
+            "generated TypeScript must embed the self-contained phon response closure:\n{generated}"
         );
     }
 
