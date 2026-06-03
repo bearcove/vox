@@ -8,7 +8,6 @@ import {
   schemaId,
   handshakeSchemaClosure,
   type HandshakeMessage,
-  type ResumeKeyBytes,
 } from "./handshake.phon.generated.ts";
 
 // Re-export Metadata for downstream consumers that used to import it from here.
@@ -17,8 +16,6 @@ export type { Metadata } from "@bearcove/vox-wire";
 export interface HandshakeResult {
   localSettings: ConnectionSettings;
   peerSettings: ConnectionSettings;
-  sessionResumeKey: Uint8Array | null;
-  peerResumeKey: Uint8Array | null;
   peerMessageSchema: Uint8Array;
   peerMetadata: Metadata;
 }
@@ -73,46 +70,9 @@ function localMessagePayloadSchema(): number[] {
   return Array.from(hexToBytes(messageSchemaClosure));
 }
 
-function resumeKeyToBytes(key: Uint8Array | null): ResumeKeyBytes | null {
-  if (key === null) {
-    return null;
-  }
-  return { bytes: Array.from(key) };
-}
-
-function resumeKeyFromBytes(key: ResumeKeyBytes | null): Uint8Array | null {
-  if (key === null) {
-    return null;
-  }
-  return new Uint8Array(key.bytes);
-}
-
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  for (let i = 0; i < left.length; i++) {
-    if (left[i] !== right[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function randomSessionResumeKey(): Uint8Array {
-  const bytes = new Uint8Array(16);
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi) {
-    throw new Error("crypto.getRandomValues is unavailable");
-  }
-  cryptoApi.getRandomValues(bytes);
-  return bytes;
-}
-
 export async function handshakeAsInitiator(
   link: Link,
   settings: ConnectionSettings,
-  resumeKey: Uint8Array | null = null,
   metadata: Metadata = emptyMetadata(),
 ): Promise<HandshakeResult> {
   await sendHandshake(link, {
@@ -121,7 +81,7 @@ export async function handshakeAsInitiator(
       parity: settings.parity,
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
-      resume_key: resumeKeyToBytes(resumeKey),
+      resume_key: null,
       metadata,
     },
   });
@@ -141,8 +101,6 @@ export async function handshakeAsInitiator(
   return {
     localSettings: settings,
     peerSettings: helloYourself.value.connection_settings,
-    sessionResumeKey: resumeKeyFromBytes(helloYourself.value.resume_key),
-    peerResumeKey: null,
     peerMessageSchema: new Uint8Array(helloYourself.value.message_payload_schema),
     peerMetadata,
   };
@@ -151,8 +109,6 @@ export async function handshakeAsInitiator(
 export async function handshakeAsAcceptor(
   link: Link,
   settings: ConnectionSettings,
-  resumable: boolean = false,
-  expectedResumeKey: Uint8Array | null = null,
   metadata: Metadata = emptyMetadata(),
 ): Promise<HandshakeResult> {
   const first = await recvHandshake(link);
@@ -161,24 +117,12 @@ export async function handshakeAsAcceptor(
   }
   const hello = first;
 
-  if (expectedResumeKey) {
-    const actual = resumeKeyFromBytes(hello.value.resume_key);
-    if (!actual || !sameBytes(actual, expectedResumeKey)) {
-      await sendHandshake(link, {
-        tag: "Sorry",
-        value: { reason: "session resume key mismatch" },
-      });
-      throw new Error("session resume key mismatch");
-    }
-  }
-
-  const sessionResumeKey = resumable ? randomSessionResumeKey() : null;
   await sendHandshake(link, {
     tag: "HelloYourself",
     value: {
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
-      resume_key: resumeKeyToBytes(sessionResumeKey),
+      resume_key: null,
       metadata,
     },
   });
@@ -195,8 +139,6 @@ export async function handshakeAsAcceptor(
   return {
     localSettings: settings,
     peerSettings: hello.value.connection_settings,
-    sessionResumeKey,
-    peerResumeKey: resumeKeyFromBytes(hello.value.resume_key),
     peerMessageSchema: new Uint8Array(hello.value.message_payload_schema),
     peerMetadata,
   };

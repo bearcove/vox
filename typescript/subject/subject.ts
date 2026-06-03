@@ -340,11 +340,8 @@ async function runClient() {
   const scenario = process.env.CLIENT_SCENARIO ?? "echo";
   console.error(`client mode: connecting to ${addr}, scenario=${scenario}`);
 
-  // Enable session resumption when the peer supports it — this allows
-  // automatic reconnect and retry for idempotent/persist methods.
   const established = await session.initiator(makeConnector(addr), {
     metadata: voxServiceMetadata("Testbed"),
-    resumable: true,
   });
   const client = new TestbedClient(established.rootConnection().caller());
   const handle = established.handle();
@@ -756,11 +753,6 @@ async function runServerListen() {
 
   const established = await session.acceptorOn(acceptTcp(socket), {
     metadata: voxServiceMetadata("Testbed"),
-    // Provide a session resume key so Rust clients (which default to
-    // resumable=true) don't reject the handshake. The key is generated
-    // randomly; there is no session registry so reconnection won't work,
-    // but the key satisfies the protocol requirement.
-    resumable: true,
   });
   const driver = new Driver(
     established.rootConnection(),

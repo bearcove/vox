@@ -8,8 +8,6 @@ import {
   type Metadata,
   emptyMetadata,
   coerceMetadata,
- // parityEven,
- // parityOdd,
   messageAccept,
   messageConnect,
   messageGoodbye,
@@ -38,10 +36,6 @@ import { ClientMetadata } from "./metadata.ts";
 import type { Conduit } from "./conduit.ts";
 import { AsyncQueue } from "./internal/async_queue.ts";
 import { deferred, type Deferred } from "./internal/deferred.ts";
-// import {
-//   appendSessionResumeKeyMetadata,
-//   metadataSessionResumeKey,
-// } from "./session_resume.ts";
 import {
   firstIdForParity,
   oppositeParity,
@@ -52,7 +46,6 @@ import { BareConduit, buildMessageDecodePlan } from "./conduit.ts";
 import { voxLogger } from "./logger.ts";
 import { SchemaCompatibilityError, SchemaTracker, SchemaSendTracker } from "./schema_tracker.ts";
 import type { Link, LinkSource } from "./link.ts";
-// import { singleLinkSource } from "./link.ts";
 import {
   acceptTransportMode,
   requestTransportMode,
@@ -93,46 +86,16 @@ export interface IncomingCall {
   connectionEpoch: number;
 }
 
-/** Current connectivity state of a resumable session. */
-export type SessionConnectivity =
-  | "connected"
-  | "disconnected"
-  | "reconnecting"
-  | "failed";
-
-/** Policy controlling how a resumable session retries after a connection drop. */
-export interface ReconnectPolicy {
-  /**
-   * Maximum number of reconnect attempts before the session is permanently
-   * failed. Defaults to Infinity (retry forever). Set to a finite number to
-   * give up after that many attempts.
-   */
-  maxAttempts?: number;
-  /**
-   * Base delay in ms for the first retry. Subsequent retries use exponential
-   * backoff: baseDelay * 2^(attempt-1), capped at maxDelay.
-   * Defaults to 500 ms.
-   */
-  baseDelay?: number;
-  /**
-   * Maximum delay in ms between retries. Defaults to 30_000 (30 s).
-   */
-  maxDelay?: number;
-}
-
 export interface SessionBuilderOptions {
   maxConcurrentRequests?: number;
   channelCapacity?: number;
   metadata?: Metadata;
   onConnection?: (connection: ConnectionHandle) => void | Promise<void>;
-  resumable?: boolean;
-  /** Reconnect retry policy for resumable sessions. */
-  reconnect?: ReconnectPolicy;
   /**
    * If set, the session sends a Ping every `keepaliveIntervalMs` milliseconds
    * and expects a Pong back within `keepaliveTimeoutMs` (default: half the
-   * interval). If no Pong arrives in time the connection is considered dead
-   * and session recovery begins. Set to 0 or undefined to disable keepalive.
+   * interval). If no Pong arrives in time the session closes. Set to 0 or
+   * undefined to disable keepalive.
    *
    * Recommended for WebSocket connections where silent network drops are
    * common (proxies, mobile networks, etc.) and the underlying transport
@@ -144,61 +107,7 @@ export interface SessionBuilderOptions {
    * Defaults to half of `keepaliveIntervalMs` when not specified.
    */
   keepaliveTimeoutMs?: number;
-  /**
-   * Called after each failed reconnect attempt, while the session is waiting
-   * before the next retry.
-   *
-   * @param failedAttempt - Which attempt just failed (1-based).
-   * @param nextAttemptAt - When the next attempt is scheduled (absolute Date).
-   *   Display `Math.ceil((nextAttemptAt.getTime() - Date.now()) / 1000)` for
-   *   a "retrying in Ns" countdown.
-   * @param retryNow - Call this to cancel the wait and retry immediately.
-   *   Safe to call multiple times; subsequent calls are no-ops.
-   *
-   * @example
-   * onReconnecting: (failed, nextAt, retryNow) => {
-   *   const secs = Math.ceil((nextAt.getTime() - Date.now()) / 1000);
-   *   showBanner(`Reconnecting in ${secs}s`, { onRetry: retryNow });
-   * }
-   */
-  onReconnecting?: (
-    failedAttempt: number,
-    nextAttemptAt: Date,
-    retryNow: () => void,
-  ) => void;
-  /**
-   * Called after a successful reconnect. The session continues normally.
-   */
-  onReconnected?: () => void;
-  /**
-   * Called when the session gives up reconnecting (all attempts exhausted).
-   */
-  onReconnectFailed?: (error: Error) => void;
-  /**
-   * Called whenever the session connectivity changes.
-   */
-  onConnectivityChange?: (state: SessionConnectivity) => void;
 }
-
-export class SessionRegistry {
-  private readonly sessions = new Map<string, SessionHandle>();
-
-  get(key: Uint8Array): SessionHandle | undefined {
-    return this.sessions.get(sessionResumeKeyId(key));
-  }
-
-  insert(key: Uint8Array, handle: SessionHandle): void {
-    this.sessions.set(sessionResumeKeyId(key), handle);
-  }
-
-  remove(key: Uint8Array): void {
-    this.sessions.delete(sessionResumeKeyId(key));
-  }
-}
-
-export type SessionAcceptOutcome =
-  | { tag: "Established"; session: Session }
-  | { tag: "Resumed" };
 
 export interface SessionTransportOptions extends SessionBuilderOptions {
 }
@@ -219,22 +128,6 @@ function isLinkSource(value: SessionTransport): value is LinkSource {
   return typeof (value as LinkSource).nextLink === "function";
 }
 
-function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  for (let i = 0; i < left.length; i++) {
-    if (left[i] !== right[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function sessionResumeKeyId(key: Uint8Array): string {
-  return Array.from(key, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 function cloneMetadata(metadata: Metadata): Metadata {
   return new Map(metadata);
 }
@@ -242,7 +135,6 @@ function cloneMetadata(metadata: Metadata): Metadata {
 interface EstablishedTransport {
   conduit: Conduit<Message>;
   handshake: HandshakeResult;
-  recoverConduit?: () => Promise<Conduit<Message>>;
 }
 
 async function makeInitiatorEstablishedTransport(
@@ -261,104 +153,9 @@ async function makeInitiatorEstablishedTransport(
     const handshake = await handshakeAsInitiator(
       attachment.link,
       localSettings,
-      null,
       options.metadata ?? emptyMetadata(),
     );
     const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
-
-    // For resumable bare sessions: build a recoverConduit that reconnects,
-    // re-handshakes with the stored resume key, and returns a fresh conduit.
-    // Retries with exponential backoff according to the reconnect policy.
-    if (options.resumable && handshake.sessionResumeKey) {
-      // Use a mutable cell so recoverConduit always uses the latest key.
-      const keyCell: { value: Uint8Array | null } = {
-        value: handshake.sessionResumeKey,
-      };
-
-      const policy = options.reconnect ?? {};
-      const maxAttempts = policy.maxAttempts ?? Infinity;
-      const baseDelay = policy.baseDelay ?? 500;
-      const maxDelay = policy.maxDelay ?? 30_000;
-
-      const recoverConduit = async (): Promise<Conduit<Message>> => {
-        let lastError: Error = new Error("unknown reconnect failure");
-
-        options.onConnectivityChange?.("disconnected");
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          options.onConnectivityChange?.("reconnecting");
-          voxLogger()?.debug(`[vox:session] reconnect attempt ${attempt}`);
-
-          try {
-            const newAttachment = await (transport as LinkSource).nextLink();
-            await requestTransportMode(newAttachment.link);
-            const newHandshake = await handshakeAsInitiator(
-              newAttachment.link,
-              localSettings,
-              keyCell.value,
-              options.metadata ?? emptyMetadata(),
-            );
-            // Update the key for the next reconnect.
-            keyCell.value = newHandshake.sessionResumeKey;
-            options.onReconnected?.();
-            options.onConnectivityChange?.("connected");
-            voxLogger()?.debug(`[vox:session] reconnect succeeded on attempt ${attempt}`);
-            return new BareConduit(
-              newAttachment.link,
-              buildMessageDecodePlan(newHandshake.peerMessageSchema),
-            );
-          } catch (e) {
-            lastError = e instanceof Error ? e : new Error(String(e));
-            voxLogger()?.debug(
-              `[vox:session] reconnect attempt ${attempt} failed: ${lastError.message}`,
-            );
-
-            if (attempt < maxAttempts) {
-              const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-              const nextAttemptAt = new Date(Date.now() + delay);
-
-              // Interruptible sleep — retryNow() cancels the wait.
-              let interruptFired = false;
-              let interruptResolve: (() => void) | null = null;
-              const retryNow = (): void => {
-                if (interruptFired) return;
-                interruptFired = true;
-                interruptResolve?.();
-              };
-
-              const sleepPromise = new Promise<void>((resolve) => {
-                const timer = setTimeout(() => {
-                  interruptResolve = null;
-                  resolve();
-                }, delay);
-                interruptResolve = () => {
-                  clearTimeout(timer);
-                  resolve();
-                };
-              });
-
-              voxLogger()?.debug(
-                `[vox:session] retrying in ${delay}ms (next attempt at ${nextAttemptAt.toISOString()})`,
-              );
-              options.onReconnecting?.(attempt, nextAttemptAt, retryNow);
-
-              await sleepPromise;
-            }
-          }
-        }
-
-        options.onReconnectFailed?.(lastError);
-        options.onConnectivityChange?.("failed");
-        voxLogger()?.error(`[vox:session] all reconnect attempts exhausted`);
-        throw lastError;
-      };
-
-      return {
-        conduit: new BareConduit(attachment.link, messagePlan),
-        handshake,
-        recoverConduit,
-      };
-    }
 
     return {
       conduit: new BareConduit(attachment.link, messagePlan),
@@ -370,7 +167,6 @@ async function makeInitiatorEstablishedTransport(
   const handshake = await handshakeAsInitiator(
     transport,
     localSettings,
-    null,
     options.metadata ?? emptyMetadata(),
   );
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
@@ -399,8 +195,6 @@ async function makeAcceptorEstablishedTransport(
   const handshake = await handshakeAsAcceptor(
     attachment.link,
     localSettings,
-    options.resumable ?? false,
-    null,
     options.metadata ?? emptyMetadata(),
   );
   const messagePlan = buildMessageDecodePlan(handshake.peerMessageSchema);
@@ -410,8 +204,6 @@ async function makeAcceptorEstablishedTransport(
     handshake,
   };
 }
-
-
 
 export class SessionError extends Error {
   constructor(message: string) {
@@ -442,25 +234,15 @@ class SessionCore {
   private sendChain: Promise<void> = Promise.resolve();
   private nextConnectionId: bigint;
   private closed = false;
-  private disconnected = false;
   private closeError: SessionError | null = null;
   private rootConnectionValue: ConnectionHandle | null = null;
   private runPromise: Promise<void> | null = null;
-  private readonly resumable: boolean;
-  private sessionResumeKey: Uint8Array | null;
-  private readonly recoverConduit?: () => Promise<Conduit<Message>>;
-  private readonly onConnectivityChange?: (state: SessionConnectivity) => void;
   private readonly keepaliveIntervalMs: number;
   private readonly keepaliveTimeoutMs: number;
   private keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
   private keepalivePendingNonce: bigint | null = null;
   private keepalivePongTimer: ReturnType<typeof setTimeout> | null = null;
   private nextKeepaliveNonce = 1n;
-  private readonly pendingResumes: Array<{
-    conduit: Conduit<Message>;
-    result: Deferred<void>;
-  }> = [];
-  private resumeWaiter: ((request: { conduit: Conduit<Message>; result: Deferred<void> } | null) => void) | null = null;
   private readonly localRootSettings: ConnectionSettings;
   private readonly peerRootSettings: ConnectionSettings;
   private readonly onConnection?: (connection: ConnectionHandle) => void | Promise<void>;
@@ -469,24 +251,16 @@ class SessionCore {
     conduit: Conduit<Message>,
     localRootSettings: ConnectionSettings,
     peerRootSettings: ConnectionSettings,
-    resumable: boolean,
-    sessionResumeKey: Uint8Array | null,
-    recoverConduit: (() => Promise<Conduit<Message>>) | undefined,
     onConnection?: (connection: ConnectionHandle) => void | Promise<void>,
-    onConnectivityChange?: (state: SessionConnectivity) => void,
     keepaliveIntervalMs = 0,
     keepaliveTimeoutMs = 0,
   ) {
     this.conduit = conduit;
     this.localRootSettings = localRootSettings;
     this.peerRootSettings = peerRootSettings;
-    this.resumable = resumable;
-    this.sessionResumeKey = sessionResumeKey?.slice() ?? null;
-    this.recoverConduit = recoverConduit;
     this.nextConnectionId = firstIdForParity(localRootSettings.parity);
     this.sessionHandle = new SessionHandle(this);
     this.onConnection = onConnection;
-    this.onConnectivityChange = onConnectivityChange;
     this.keepaliveIntervalMs = keepaliveIntervalMs;
     this.keepaliveTimeoutMs =
       keepaliveTimeoutMs > 0 ? keepaliveTimeoutMs : Math.floor(keepaliveIntervalMs / 2);
@@ -494,10 +268,6 @@ class SessionCore {
 
   sessionHandleValue(): SessionHandle {
     return this.sessionHandle;
-  }
-
-  sessionResumeKeyValue(): Uint8Array | null {
-    return this.sessionResumeKey?.slice() ?? null;
   }
 
   defaultConnectionSettings(): ConnectionSettings {
@@ -519,12 +289,6 @@ class SessionCore {
       this.connections.set(0n, this.rootConnectionValue);
     }
     return this.rootConnectionValue;
-  }
-
-  notifyConnectionsResumed(): void {
-    for (const connection of this.connections.values()) {
-      connection.onSessionResumed();
-    }
   }
 
   failPendingAttempts(error: Error): void {
@@ -554,7 +318,7 @@ class SessionCore {
   }
 
   private sendKeepalivePing(): void {
-    if (this.closed || this.disconnected) {
+    if (this.closed) {
       this.scheduleKeepalive();
       return;
     }
@@ -596,7 +360,7 @@ class SessionCore {
     metadata: Metadata = emptyMetadata(),
   ): Promise<ConnectionHandle> {
     // r[impl connection.open]
-    this.assertConnected("resume before opening connections");
+    this.assertOpen();
     if (settings.initial_channel_credit <= 0) {
       throw SessionError.protocol("initial_channel_credit must be greater than zero");
     }
@@ -620,7 +384,7 @@ class SessionCore {
 
   async closeConnection(connectionId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
     // r[impl connection.close]
-    this.assertConnected("resume before closing connections");
+    this.assertOpen();
     if (connectionId === 0n) {
       throw new SessionError("cannot close root connection");
     }
@@ -636,7 +400,7 @@ class SessionCore {
   }
 
   async sendMessage(message: Message): Promise<void> {
-    this.assertConnected("resume before sending");
+    this.assertOpen();
 
     voxLogger()?.debug(
       `[vox:session] sendMessage: tag=${message.payload.tag} conn=${message.connection_id}`,
@@ -655,7 +419,6 @@ class SessionCore {
     this.closed = true;
     this.closeError = error;
     this.conduit.close();
-    this.rejectPendingResumes(error);
 
     for (const pending of this.pendingConnections.values()) {
       pending.result.reject(error);
@@ -675,13 +438,6 @@ class SessionCore {
   private assertOpen(): void {
     if (this.closed) {
       throw this.closeError ?? SessionError.closed();
-    }
-  }
-
-  private assertConnected(reason: string): void {
-    this.assertOpen();
-    if (this.disconnected) {
-      throw SessionError.protocol(`session is disconnected; ${reason}`);
     }
   }
 
@@ -705,133 +461,10 @@ class SessionCore {
       const message = await this.conduit.recv();
       if (!message) {
         this.clearKeepaliveTimers();
-        if (await this.handleConduitBreak()) {
-          // Reconnected — restart keepalive on the fresh connection.
-          if (this.keepaliveIntervalMs > 0) {
-            this.scheduleKeepalive();
-          }
-          continue;
-        }
+        this.failPendingAttempts(new SessionError("connection lost"));
         throw SessionError.closed();
       }
       await this.handleMessage(message);
-    }
-  }
-
-  async resume(conduit: Conduit<Message>): Promise<void> {
-    this.assertOpen();
-    if (!this.resumable) {
-      throw SessionError.protocol("session is not resumable");
-    }
-    if (!this.disconnected) {
-      throw SessionError.protocol("resume is only valid while the session is disconnected");
-    }
-    const result = deferred<void>();
-    this.enqueueResume({ conduit, result });
-    await result.promise;
-  }
-
-  async acceptResumedConduit(conduit: Conduit<Message>): Promise<void> {
-    this.assertOpen();
-    if (!this.resumable) {
-      throw SessionError.protocol("session is not resumable");
-    }
-    const result = deferred<void>();
-    this.enqueueResume({ conduit, result });
-    await result.promise;
-  }
-
-  private async handleConduitBreak(): Promise<boolean> {
-    if (this.closed) {
-      return false;
-    }
-    this.failPendingAttempts(new SessionError("connection lost"));
-    if (!this.resumable) {
-      return false;
-    }
-
-    if (this.recoverConduit) {
-      this.onConnectivityChange?.("disconnected");
-      try {
-        const conduit = await this.recoverConduit();
-        if (this.closed) {
-          conduit.close();
-          return false;
-        }
-        this.disconnected = true;
-        await this.resumeOnConduit(conduit);
-        this.disconnected = false;
-        this.notifyConnectionsResumed();
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    this.disconnected = true;
-    while (!this.closed) {
-      const pending = await this.nextResume();
-      if (!pending) {
-        return false;
-      }
-      try {
-        await this.resumeOnConduit(pending.conduit);
-        this.disconnected = false;
-        this.notifyConnectionsResumed();
-        pending.result.resolve();
-        return true;
-      } catch (error) {
-        pending.result.reject(
-          error instanceof SessionError ? error : new SessionError(String(error)),
-        );
-      }
-    }
-
-    return false;
-  }
-
-  private async resumeOnConduit(conduit: Conduit<Message>): Promise<void> {
-    if (!this.sessionResumeKey) {
-      throw SessionError.protocol("session is not resumable");
-    }
-
-    // CBOR handshake (including resume key exchange) is performed by the
-    // caller before the conduit is handed in. Just switch to the new conduit.
-    this.conduit = conduit;
-    for (const connection of this.connections.values()) {
-      connection.resetSchemas();
-    }
-  }
-
-  private enqueueResume(request: { conduit: Conduit<Message>; result: Deferred<void> }): void {
-    const waiter = this.resumeWaiter;
-    if (waiter) {
-      this.resumeWaiter = null;
-      waiter(request);
-      return;
-    }
-    this.pendingResumes.push(request);
-  }
-
-  private async nextResume(): Promise<{ conduit: Conduit<Message>; result: Deferred<void> } | null> {
-    const pending = this.pendingResumes.shift();
-    if (pending) {
-      return pending;
-    }
-    if (this.closed) {
-      return null;
-    }
-    return new Promise((resolve) => {
-      this.resumeWaiter = resolve;
-    });
-  }
-
-  private rejectPendingResumes(error: SessionError): void {
-    const waiter = this.resumeWaiter;
-    this.resumeWaiter = null;
-    waiter?.(null);
-    for (const pending of this.pendingResumes.splice(0)) {
-      pending.result.reject(error);
     }
   }
 
@@ -1103,18 +736,6 @@ export class SessionHandle {
     return this.core.closeConnection(connectionId, metadata);
   }
 
-  sessionResumeKey(): Uint8Array | null {
-    return this.core.sessionResumeKeyValue();
-  }
-
-  resume(conduit: Conduit<Message>): Promise<void> {
-    return this.core.resume(conduit);
-  }
-
-  acceptResumedConduit(conduit: Conduit<Message>): Promise<void> {
-    return this.core.acceptResumedConduit(conduit);
-  }
-
   shutdown(): void {
     this.core.shutdown();
   }
@@ -1190,12 +811,6 @@ export class ConnectionHandle {
     return this.epoch;
   }
 
-  resetSchemas(): void {
-    this.epoch += 1;
-    this.schemaTracker.reset();
-    this.schemaSendTracker.reset();
-  }
-
   isClosed(): boolean {
     return this.closed;
   }
@@ -1249,8 +864,7 @@ export class ConnectionHandle {
     const requestId = this.nextRequestId;
     this.nextRequestId += 2n;
     const responsePayload = await new Promise<Uint8Array>((resolve, reject) => {
-      // The args schema closure is advertised once per (method, connection); on
-      // resend after a reconnect the tracker has been reset and re-advertises.
+      // The args schema closure is advertised once per (method, connection).
       const computeSchemas: () => number[] = () =>
         this.getSchemaSendTracker().prepareSchemas(
           request.descriptor.id,
@@ -1449,13 +1063,6 @@ export class ConnectionHandle {
     }
   }
 
-  onSessionResumed(): void {
-    if (this.closed) {
-      return;
-    }
-    this.channelRegistry.closeAll();
-  }
-
   private clearPendingState(
     state: PendingResponse,
     options: { finalizeChannels?: boolean } = {},
@@ -1598,28 +1205,16 @@ export class Session {
     this.core = core;
   }
 
-  private resumeKey(): Uint8Array | null {
-    return this.core.sessionResumeKeyValue();
-  }
-
   static initiatorConduit(
     conduit: Conduit<Message>,
     handshake: HandshakeResult,
     options: SessionBuilderOptions = {},
-    recoverConduit?: () => Promise<Conduit<Message>>,
   ): Session {
-    if (options.resumable && !handshake.sessionResumeKey) {
-      throw SessionError.protocol("peer did not advertise session resumption");
-    }
     const core = new SessionCore(
       conduit,
       handshake.localSettings,
       handshake.peerSettings,
-      options.resumable ?? false,
-      handshake.sessionResumeKey,
-      recoverConduit,
       options.onConnection,
-      options.onConnectivityChange,
       options.keepaliveIntervalMs ?? 0,
       options.keepaliveTimeoutMs ?? 0,
     );
@@ -1643,47 +1238,6 @@ export class Session {
   }
 }
 
-class PrefetchedConduit implements Conduit<Message> {
-  private first: Message | null;
-  private readonly inner: Conduit<Message>;
-
-  constructor(first: Message, inner: Conduit<Message>) {
-    this.first = first;
-    this.inner = inner;
-  }
-
-  send(item: Message): Promise<void> {
-    return this.inner.send(item);
-  }
-
-  async recv(): Promise<Message | null> {
-    if (this.first) {
-      const first = this.first;
-      this.first = null;
-      return first;
-    }
-    return this.inner.recv();
-  }
-
-  close(): void {
-    this.inner.close();
-  }
-
-  isClosed(): boolean {
-    return this.inner.isClosed();
-  }
-}
-
-function randomSessionResumeKey(): Uint8Array {
-  const bytes = new Uint8Array(16);
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi) {
-    throw SessionError.protocol("crypto.getRandomValues is unavailable");
-  }
-  cryptoApi.getRandomValues(bytes);
-  return bytes;
-}
-
 export const session = {
   async initiator(
     transport: SessionTransport,
@@ -1693,11 +1247,7 @@ export const session = {
     return Session.initiatorConduit(
       established.conduit,
       established.handshake,
-      {
-        ...options,
-        resumable: options.resumable ?? false,
-      },
-      established.recoverConduit,
+      options,
     );
   },
 
@@ -1729,7 +1279,6 @@ export const session = {
     const handshake = await handshakeAsInitiator(
       link,
       localSettings,
-      null,
       options.metadata ?? emptyMetadata(),
     );
     return Session.initiatorConduit(
@@ -1751,8 +1300,6 @@ export const session = {
     const handshake = await handshakeAsAcceptor(
       link,
       localSettings,
-      false,
-      null,
       options.metadata ?? emptyMetadata(),
     );
     return Session.initiatorConduit(
@@ -1760,29 +1307,6 @@ export const session = {
       handshake,
       options,
     );
-  },
-
-  acceptorOrResume(
-    conduit: Conduit<Message>,
-    handshake: HandshakeResult,
-    registry: SessionRegistry,
-    options: SessionBuilderOptions = {},
-  ): SessionAcceptOutcome {
-    const resumeKey = handshake.peerResumeKey;
-    if (resumeKey) {
-      const handle = registry.get(resumeKey);
-      if (!handle) {
-        throw SessionError.protocol("unknown session resume key");
-      }
-      void handle.acceptResumedConduit(conduit);
-      return { tag: "Resumed" };
-    }
-    const s = session.acceptorConduit(conduit, handshake, options);
-    const establishedKey = handshake.sessionResumeKey;
-    if (establishedKey) {
-      registry.insert(establishedKey, s.handle());
-    }
-    return { tag: "Established", session: s };
   },
 
   async initiatorOn(
@@ -1793,11 +1317,7 @@ export const session = {
     return Session.initiatorConduit(
       established.conduit,
       established.handshake,
-      {
-        ...options,
-        resumable: false,
-      },
-      undefined,
+      options,
     );
   },
 
@@ -1805,31 +1325,12 @@ export const session = {
     transport: SessionTransport,
     options: SessionTransportOptions = {},
   ): Promise<Session> {
-    const established = await makeAcceptorEstablishedTransport(transport, {
-      ...options,
-      resumable: options.resumable ?? false,
-    });
+    const established = await makeAcceptorEstablishedTransport(transport, options);
     return Session.initiatorConduit(
       established.conduit,
       established.handshake,
-      {
-        ...options,
-        resumable: options.resumable ?? false,
-      },
-      undefined,
+      options,
     );
-  },
-
-  async acceptorOnOrResume(
-    transport: SessionTransport,
-    registry: SessionRegistry,
-    options: SessionTransportOptions = {},
-  ): Promise<SessionAcceptOutcome> {
-    const established = await makeAcceptorEstablishedTransport(transport, {
-      ...options,
-      resumable: options.resumable ?? false,
-    });
-    return session.acceptorOrResume(established.conduit, established.handshake, registry, options);
   },
 
   async initiatorTransport(
@@ -1843,31 +1344,12 @@ export const session = {
     transport: SessionTransport,
     options: SessionTransportOptions = {},
   ): Promise<Session> {
-    const established = await makeAcceptorEstablishedTransport(transport, {
-      ...options,
-      resumable: options.resumable ?? false,
-    });
+    const established = await makeAcceptorEstablishedTransport(transport, options);
     return Session.initiatorConduit(
       established.conduit,
       established.handshake,
-      {
-        ...options,
-        resumable: options.resumable ?? false,
-      },
-      undefined,
+      options,
     );
-  },
-
-  async acceptorTransportOrResume(
-    transport: SessionTransport,
-    registry: SessionRegistry,
-    options: SessionTransportOptions = {},
-  ): Promise<SessionAcceptOutcome> {
-    const established = await makeAcceptorEstablishedTransport(transport, {
-      ...options,
-      resumable: options.resumable ?? false,
-    });
-    return session.acceptorOrResume(established.conduit, established.handshake, registry, options);
   },
 
   rootSettings(
