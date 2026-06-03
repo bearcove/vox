@@ -16,6 +16,8 @@ specs (
             {
                 name swift
                 include (
+                    scripts/check-schema-compat.sh
+                    rust/vox-codegen/src/schema_compat.rs
                     swift/vox-runtime/**/*.swift
                     rust/vox-codegen/src/targets/swift/**/*.rs
                 )
@@ -23,6 +25,8 @@ specs (
             {
                 name typescript
                 include (
+                    scripts/check-schema-compat.sh
+                    rust/vox-codegen/src/schema_compat.rs
                     rust/vox-codegen/src/targets/typescript/**/*.rs
                     typescript/packages/vox-core/src/session.ts
                     typescript/packages/vox-core/src/conduit.ts
