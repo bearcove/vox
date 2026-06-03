@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   type ConnectionSettings,
+  emptyMetadata,
+  encodeMessage,
   type Message,
+  messageRequest,
+  messageResponse,
 } from "@bearcove/vox-wire";
 import { BareConduit } from "./conduit.ts";
 import { Driver, type Dispatcher } from "./driver.ts";
@@ -183,6 +187,64 @@ function descriptorFor(method: MethodDescriptor): ServiceDescriptor {
 }
 
 describe("session resumption", () => {
+  // r[verify schema.exchange.required]
+  it("tears down when a call arrives without an args schema binding", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const [clientSession, serverSession] = await withTimeout(
+      establishPair(clientLink, serverLink),
+      "session establishment",
+    );
+    const serverRoot = serverSession.rootConnection();
+
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(1n, ECHO_METHOD.id, new Uint8Array(), emptyMetadata(), [], 0n, []),
+      ),
+    );
+
+    await withTimeout(serverSession.closed(), "server protocol-error close");
+    expect(serverRoot.isClosed()).toBe(true);
+
+    clientLink.close();
+    serverLink.close();
+    clientSession.handle().shutdown();
+    serverSession.handle().shutdown();
+    await Promise.allSettled([clientSession.closed(), serverSession.closed()]);
+  });
+
+  // r[verify schema.exchange.required]
+  it("tears down when a response arrives without a response schema binding", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const [clientSession, serverSession] = await withTimeout(
+      establishPair(clientLink, serverLink),
+      "session establishment",
+    );
+    const clientRoot = clientSession.rootConnection();
+
+    const call = clientRoot.caller().call({
+      method: "Test.echo",
+      args: { value: 55 },
+      descriptor: ECHO_METHOD,
+      methodSchemas: ECHO_METHOD_SCHEMAS,
+      registry: resumeEchoRegistry,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await serverLink.send(
+      encodeMessage(messageResponse(1n, new Uint8Array(), emptyMetadata(), 0n, [])),
+    );
+
+    await withTimeout(clientSession.closed(), "client protocol-error close");
+    await expect(call).rejects.toBeInstanceOf(SessionError);
+    expect(clientRoot.isClosed()).toBe(true);
+
+    clientLink.close();
+    serverLink.close();
+    clientSession.handle().shutdown();
+    serverSession.handle().shutdown();
+    await Promise.allSettled([clientSession.closed(), serverSession.closed()]);
+  });
+
   it("fails an in-flight attempt across manual resume but accepts fresh calls", async () => {
     const [clientLink1, serverLink1] = memoryLinkPair();
     const started = makeDeferred<void>();

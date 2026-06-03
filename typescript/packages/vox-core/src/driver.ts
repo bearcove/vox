@@ -15,6 +15,7 @@ import {
 } from "./channeling/index.ts";
 import type { ServiceSendSchemas } from "./channeling/descriptor.ts";
 import type { PhonChannelMeta, PhonMethodSchemas } from "./schema_tracker.ts";
+import { SchemaCompatibilityError } from "./schema_tracker.ts";
 import { Extensions } from "./middleware.ts";
 import { RequestContext } from "./request_context.ts";
 import { type ServerCallOutcome, type ServerMiddleware } from "./server_middleware.ts";
@@ -50,6 +51,8 @@ class VoxCallImpl implements VoxCall {
 
   private readonly method: MethodDescriptor;
   private readonly requestId: bigint;
+  private readonly connection: ConnectionHandle;
+  private readonly connectionEpoch: number;
   private readonly taskSender: TaskSender;
   private readonly schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker;
   private readonly methodSchemas: PhonMethodSchemas;
@@ -58,6 +61,8 @@ class VoxCallImpl implements VoxCall {
   constructor(
     method: MethodDescriptor,
     requestId: bigint,
+    connection: ConnectionHandle,
+    connectionEpoch: number,
     taskSender: TaskSender,
     schemaSendTracker: import("./schema_tracker.ts").SchemaSendTracker,
     methodSchemas: PhonMethodSchemas,
@@ -65,6 +70,8 @@ class VoxCallImpl implements VoxCall {
   ) {
     this.method = method;
     this.requestId = requestId;
+    this.connection = connection;
+    this.connectionEpoch = connectionEpoch;
     this.taskSender = taskSender;
     this.schemaSendTracker = schemaSendTracker;
     this.methodSchemas = methodSchemas;
@@ -135,6 +142,9 @@ class VoxCallImpl implements VoxCall {
   }
 
   private sendPayload(payload: Uint8Array): void {
+    if (this.connection.currentEpoch() !== this.connectionEpoch) {
+      return;
+    }
     this.taskSender({
       kind: "response",
       requestId: this.requestId,
@@ -296,6 +306,9 @@ export class Driver {
     );
 
     const taskSender: TaskSender = (message) => {
+      if (this.connection.currentEpoch() !== incoming.connectionEpoch) {
+        return;
+      }
       this.taskQueue.push(message);
       this.signalWakeup();
     };
@@ -310,6 +323,8 @@ export class Driver {
     const call = new VoxCallImpl(
       method,
       incoming.requestId,
+      this.connection,
+      incoming.connectionEpoch,
       taskSender,
       this.connection.getSchemaSendTracker(),
       methodSchemas,
@@ -419,15 +434,22 @@ export class Driver {
     const registry = descriptor.registry;
 
     // Decode the args tuple using the peer's writer closure (recorded by
-    // the session in the `schemas:` field) against our `argsRoot` reader. A 0-arg
-    // method carries no bytes. Falls back to writer==reader when nothing was sent.
+    // the session in the `schemas:` field) against our `argsRoot` reader. The session
+    // receive path requires a binding even for 0-arg methods.
+    // r[impl schema.exchange.required]
     // r[impl schema.errors.call-level.callee]
+    this.connection.getSchemaTracker().requireReceived(method.id, "args");
     let values: unknown[] = [];
     if (incoming.args.length > 0) {
-      const decoder =
-        this.connection.getSchemaTracker().buildDecoder(method.id, "args", ms.argsRoot, registry) ??
-        ((bytes: Uint8Array) =>
-          decodeTyped(bytes, ms.argsRoot, ms.argsRoot, registry));
+      const decoder = this.connection.getSchemaTracker().buildDecoder(
+        method.id,
+        "args",
+        ms.argsRoot,
+        registry,
+      );
+      if (!decoder) {
+        throw new SchemaCompatibilityError(`missing args schema binding for method ${method.id}`);
+      }
       values = decoder(incoming.args) as unknown[];
     }
 

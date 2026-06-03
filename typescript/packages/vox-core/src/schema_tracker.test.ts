@@ -31,6 +31,23 @@ describe("SchemaSendTracker", () => {
 });
 
 describe("SchemaTracker", () => {
+  // r[verify schema.exchange.required]
+  it("requires a received method-direction binding before decode", () => {
+    const bytes = new Uint8Array([...leU64(1n), ...leU32(0)]);
+    const tracker = new SchemaTracker();
+
+    expect(() => tracker.requireReceived(7n, "args")).toThrow(
+      "sender must send schemas before data",
+    );
+
+    tracker.recordReceived(7n, "args", bytes);
+
+    expect(() => tracker.requireReceived(7n, "args")).not.toThrow();
+    expect(() => tracker.requireReceived(7n, "response")).toThrow(
+      "sender must send schemas before data",
+    );
+  });
+
   // r[verify schema.tracking.received]
   // r[verify schema.tracking.bindings]
   // r[verify schema.format.binding-roots]

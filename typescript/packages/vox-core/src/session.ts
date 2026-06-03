@@ -1,4 +1,4 @@
-import { encodeTyped, decodeTyped } from "@bearcove/phon-engine";
+import { encodeTyped } from "@bearcove/phon-engine";
 import {
   type ConnectionSettings,
   type RequestMessage,
@@ -50,7 +50,7 @@ import {
 } from "./internal/parity.ts";
 import { BareConduit, buildMessageDecodePlan } from "./conduit.ts";
 import { voxLogger } from "./logger.ts";
-import { SchemaTracker, SchemaSendTracker } from "./schema_tracker.ts";
+import { SchemaCompatibilityError, SchemaTracker, SchemaSendTracker } from "./schema_tracker.ts";
 import type { Link, LinkSource } from "./link.ts";
 // import { singleLinkSource } from "./link.ts";
 import {
@@ -90,6 +90,7 @@ export interface IncomingCall {
   args: Uint8Array;
   channels: bigint[];
   metadata: Metadata;
+  connectionEpoch: number;
 }
 
 /** Current connectivity state of a resumable session. */
@@ -1007,12 +1008,19 @@ class SessionCore {
             throw SessionError.protocol(error instanceof Error ? error.message : String(error));
           }
         }
+        try {
+          // r[impl schema.exchange.required]
+          connection.getSchemaTracker().requireReceived(request.body.value.method_id, "args");
+        } catch (error) {
+          throw SessionError.protocol(error instanceof Error ? error.message : String(error));
+        }
         connection.enqueueIncomingCall({
           requestId: request.id,
           methodId: request.body.value.method_id,
           args: request.body.value.args,
           channels: request.body.value.channels,
           metadata: coerceMetadata(request.body.value.metadata),
+          connectionEpoch: connection.currentEpoch(),
         });
         return;
       }
@@ -1028,6 +1036,14 @@ class SessionCore {
               "response",
               new Uint8Array(responseSchemas),
             );
+          } catch (error) {
+            throw SessionError.protocol(error instanceof Error ? error.message : String(error));
+          }
+        }
+        if (methodId !== undefined) {
+          try {
+            // r[impl schema.exchange.required]
+            connection.getSchemaTracker().requireReceived(methodId, "response");
           } catch (error) {
             throw SessionError.protocol(error instanceof Error ? error.message : String(error));
           }
@@ -1117,6 +1133,7 @@ export class ConnectionHandle {
   private readonly pendingResponses = new Map<bigint, PendingResponse>();
   private readonly schemaTracker = new SchemaTracker();
   private readonly schemaSendTracker = new SchemaSendTracker();
+  private epoch = 0;
   private nextRequestId: bigint;
   private closed = false;
   private flushPromise: Promise<void> | null = null;
@@ -1169,7 +1186,12 @@ export class ConnectionHandle {
     return this.schemaSendTracker;
   }
 
+  currentEpoch(): number {
+    return this.epoch;
+  }
+
   resetSchemas(): void {
+    this.epoch += 1;
     this.schemaTracker.reset();
     this.schemaSendTracker.reset();
   }
@@ -1260,18 +1282,23 @@ export class ConnectionHandle {
     });
 
     // Decode the response against the server's advertised `Result<T, VoxError<E>>`
-    // schema (received in the response's `schemas:` field). Writer == reader for
-    // the `{ tag: "Ok" | "Err", value }` structure the client then unwraps. A
-    // protocol error (UnknownMethod / Cancelled / Indeterminate / ...) carries no
-    // schema — those `Err(VoxError::…)` payloads are T/E-independent, so fall back
-    // to our own response root.
+    // schema binding. The session receive path enforces that the binding arrived
+    // before resolving this payload; reaching this point without it is a local invariant
+    // failure, not a same-schema shortcut.
     // r[impl schema.errors.call-level]
     // r[impl schema.errors.call-level.caller]
     // r[impl schema.errors.non-retryable]
-    const decoder =
-      this.getSchemaTracker().buildWriterDecoder(request.descriptor.id, "response", registry) ??
-      ((bytes: Uint8Array) =>
-        decodeTyped(bytes, methodSchemas.responseRoot, methodSchemas.responseRoot, registry));
+    this.getSchemaTracker().requireReceived(request.descriptor.id, "response");
+    const decoder = this.getSchemaTracker().buildWriterDecoder(
+      request.descriptor.id,
+      "response",
+      registry,
+    );
+    if (!decoder) {
+      throw new SchemaCompatibilityError(
+        `missing response schema binding for method ${request.descriptor.id}`,
+      );
+    }
     const decoded = decoder(responsePayload) as unknown as { tag: string; value?: unknown };
 
     if (decoded.tag === "Ok") {

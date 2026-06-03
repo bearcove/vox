@@ -89,6 +89,14 @@ export class SchemaTracker {
     return this.received.has(bindingKey(methodId, direction));
   }
 
+  // r[impl schema.exchange.required]
+  requireReceived(methodId: bigint, direction: BindingDirection): void {
+    if (this.hasReceived(methodId, direction)) return;
+    throw new SchemaCompatibilityError(
+      `missing ${direction} schema binding for method ${methodId}; sender must send schemas before data`,
+    );
+  }
+
   /**
    * Build (and cache) a compat decoder for `(methodId, direction)` producing the
    * reader type identified by `readerRoot`, resolved through `local` plus the
