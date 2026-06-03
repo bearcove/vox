@@ -1420,7 +1420,6 @@ impl Session {
         }
     }
 
-    // r[impl session.handshake.resume]
     fn resume_from_handshake(
         &mut self,
         tx: Arc<dyn DynConduitTx>,

@@ -202,17 +202,6 @@ weight = 11
 The transport prologue selects the conduit mode first. Session establishment
 starts only after that conduit has been selected and initialized.
 
-> r[session.outlives-conduit]
->
-> A session is not owned by any one conduit attachment. A session MAY survive
-> conduit failure and continue on a replacement conduit.
-
-> r[session.resumption.runtime-managed]
->
-> Session resumption is managed by the runtime. It MUST NOT require
-> application-level handlers, callers, or peer-specific user code to
-> collaborate in the resume protocol.
-
 > r[session.peer]
 >
 > When talking about peers, the local peer is simply called "peer" and the remote
@@ -329,8 +318,7 @@ starts only after that conduit has been selected and initialized.
 > r[session.handshake.protocol-schema.session-scoped]
 >
 > Protocol schemas are exchanged once per session during the handshake. They
-> are immutable for the session lifetime. Session resumption (new handshake)
-> re-exchanges protocol schemas.
+> are immutable for the session lifetime.
 
 > r[session.handshake.unversioned]
 >
@@ -338,18 +326,6 @@ starts only after that conduit has been selected and initialized.
 > through schema exchange: each peer describes its `Message` envelope and peers
 > build phon decode plans from the schema closures. If a peer's schema is
 > missing a variant the other peer requires, the handshake fails with `Sorry`.
-
-> r[session.handshake.resume]
->
-> After initial establishment, the runtime MAY bind a replacement conduit onto
-> the same session. Resumption preserves session-scoped state, including the
-> session's connection namespace. Protocol schemas are re-exchanged on
-> resumption (new handshake).
->
-> Session resumption preserves session-scoped state, but does not preserve
-> in-flight request attempts or in-flight response deliveries on the failed
-> attachment. A caller that wants to issue another request after recovery does
-> so as a new call with a fresh request attempt.
 
 > r[session.parity]
 >
@@ -423,9 +399,8 @@ starts only after that conduit has been selected and initialized.
 > runtime. In this mode, the runtime retries failed initial connection
 > attempts until a session is established or the waiting timeout expires.
 >
-> Initial connect waiting is distinct from session recovery. Session
-> recovery applies after a session exists and its conduit fails. Initial
-> connect waiting applies before any session has been established.
+> Initial connect waiting applies before any session has been established. It
+> does not define reconnect, replay, or recovery for an established session.
 
 > r[session.initial-connect-waiting.retryable]
 >

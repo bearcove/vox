@@ -81,7 +81,7 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 +------------------------+
 | Session                |  set of connections over a conduit
 +------------------------+
-| Conduit                |  serialization, replay, session-facing continuity
+| Conduit                |  phon serialization over a link
 +------------------------+
 | Transport Prologue     |  conduit mode request / accept / reject
 +------------------------+
@@ -89,14 +89,14 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 +------------------------+
 ```
 
-The layers have distinct continuity boundaries:
+The layers have distinct failure boundaries:
 
 - A **Link** is one concrete transport attachment.
 - A **Transport Prologue** selects which conduit protocol, if any, will run on
   that link attachment.
-- A **Conduit** may hide some link failures and replacement internally.
-- A **Session** is above any one conduit instance and may survive conduit
-  replacement.
+- A **Conduit** is bound to one link attachment. It does not hide link failure,
+  reconnect, replay, or preserve in-flight request attempts.
+- A **Session** runs above a conduit attachment.
 - A **Connection** is scoped to a session, not to an individual conduit.
 
 # Terminology: call, request attempt, and response
@@ -123,11 +123,10 @@ In summary:
 - one **call** creates one **request attempt**
 - each **request attempt** has at most one terminal **response**
 
-This distinction matters for continuity:
+This distinction matters for failure handling:
 
-- conduit continuity preserves **request-attempt continuity**
-- session resumption preserves **session-scoped state**
+- conduit failure abandons in-flight **request attempts** on that attachment
+- the conduit layer never retries or replays a request attempt
 
-Session resumption does not preserve in-flight request or response attempts on
-the failed attachment. A caller that wants to issue another request after
-recovery does so as a new call with a fresh request attempt.
+A caller that wants to issue another request after failure does so as a new
+call with a fresh request attempt.

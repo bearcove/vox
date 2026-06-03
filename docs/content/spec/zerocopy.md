@@ -185,8 +185,9 @@ insert_anchor_links = "left"
 >   already-encoded bytes through verbatim.
 > - **Incoming (`Message<'static>` inside `SelfRef`):** phon decodes the
 >   surrounding envelope and yields the payload as a byte slice borrowed from
->   the input backing (when stable) or owned bytes; the concrete payload type is
->   decoded later, once the method is known.
+>   the input backing when the decoded representation can borrow it, or owned
+>   bytes otherwise; the concrete payload type is decoded later, once the
+>   method is known.
 >
 > Conduit framing and link framing do not change this mapping contract; they
 > only add/remove their own framing around the same encoded payload bytes.
@@ -252,8 +253,8 @@ insert_anchor_links = "left"
 > |---------------|--------|-----------|-----------|------|--------|
 > | BareConduit   | yes    | yes       | yes       | yes  | yes    |
 >
-> BareConduit is the current conduit shape for every link. Recovery from a
-> failed attachment is session-level behavior, not conduit-level replay.
+> BareConduit is the only conduit shape for every link. Failed attachments are
+> not recovered by the conduit layer.
 
 ### End-to-end pipeline and lifetimes
 

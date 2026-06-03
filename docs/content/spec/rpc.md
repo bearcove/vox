@@ -382,8 +382,9 @@ registered on the session builder; otherwise they are rejected.
 >
 > Request-attempt accounting is attachment-local. When a conduit attachment
 > fails, in-flight request attempts on that failed attachment are no longer
-> live. If an unresolved operation is retransmitted after session
-> resumption, that later retransmission counts as a new request attempt.
+> live. The conduit layer MUST NOT preserve, replay, or retransmit those
+> attempts on a later attachment. A later call consumes its own fresh request
+> concurrency while that request attempt is live.
 
 > r[rpc.flow-control.max-concurrent-requests.default]
 >
