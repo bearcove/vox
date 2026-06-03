@@ -924,6 +924,7 @@ fn observe_optional_replenisher_channel(
 }
 
 /// Decode one channel item through phon.
+// r[impl schema.interaction.channels]
 // r[impl schema.exchange.channels]
 // r[impl schema.exchange.channels.rx-args]
 fn decode_channel_payload<T: Facet<'static>>(

@@ -121,7 +121,6 @@ impl point_v2::Geometry for V2GeometryService {
     }
 }
 
-// r[verify schema.interaction.channels]
 #[tokio::test]
 async fn v1_client_v2_server_fills_default() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -239,6 +238,7 @@ impl channel_rx_v2::EventSink for ChannelRxV2Service {
     }
 }
 
+// r[verify schema.interaction.channels]
 // r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.rx-args]
 #[tokio::test]
@@ -320,6 +320,7 @@ impl channel_tx_v2::EventSource for ChannelTxV2Service {
     }
 }
 
+// r[verify schema.interaction.channels]
 // r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.tx-args]
 #[tokio::test]
@@ -522,6 +523,7 @@ mod status_old {
     #[vox::service]
     pub trait Daemon {
         async fn status(&self) -> DaemonStatus;
+        async fn ping(&self) -> u32;
     }
 }
 
@@ -538,6 +540,7 @@ mod status_new {
     #[vox::service]
     pub trait Daemon {
         async fn status(&self) -> DaemonStatus;
+        async fn ping(&self) -> u32;
     }
 }
 
@@ -551,9 +554,94 @@ impl status_old::Daemon for OldDaemonService {
             listen: "local:///tmp/daemon.vox".into(),
         }
     }
+
+    async fn ping(&self) -> u32 {
+        42
+    }
+}
+
+// Incompatible request args: missing required field without default
+mod command_old {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Config {
+        pub limit: u32,
+    }
+
+    #[vox::service]
+    pub trait Control {
+        async fn configure(&self, config: Config) -> u32;
+        async fn ping(&self) -> u32;
+    }
+}
+
+mod command_new {
+    #[derive(Debug, Clone, PartialEq, facet::Facet)]
+    pub struct Config {
+        pub limit: u32,
+        pub mode: String,
+    }
+
+    #[vox::service]
+    pub trait Control {
+        async fn configure(&self, config: Config) -> u32;
+        async fn ping(&self) -> u32;
+    }
+}
+
+#[derive(Clone)]
+struct NewControlService;
+
+impl command_new::Control for NewControlService {
+    async fn configure(&self, config: command_new::Config) -> u32 {
+        config.limit + config.mode.len() as u32
+    }
+
+    async fn ping(&self) -> u32 {
+        7
+    }
+}
+
+// r[verify schema.errors.call-level]
+// r[verify schema.errors.call-level.callee]
+#[tokio::test]
+async fn callee_args_schema_error_is_call_level() {
+    let (client_conduit, server_conduit) = conduit_pair();
+
+    let server_task = tokio::task::spawn(async move {
+        let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("Control"))
+            .on_connection(command_new::ControlDispatcher::new(NewControlService))
+            .establish::<command_new::ControlClient>()
+            .await
+            .expect("server handshake failed");
+        std::future::pending::<()>().await;
+    });
+
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Control"))
+        .establish::<command_old::ControlClient>()
+        .await
+        .expect("client handshake failed");
+
+    let err = client
+        .configure(command_old::Config { limit: 5 })
+        .await
+        .expect_err("callee should reject incompatible request args");
+    assert!(
+        matches!(&err, VoxError::InvalidPayload(msg) if msg.contains("Incompatible")),
+        "expected InvalidPayload with a schema-incompatibility failure, got: {err:?}"
+    );
+
+    let pong = client
+        .ping()
+        .await
+        .expect("connection should remain open after callee decode failure");
+    assert_eq!(pong, 7);
+
+    server_task.abort();
 }
 
 // r[verify schema.errors.non-retryable]
+// r[verify schema.errors.call-level]
+// r[verify schema.errors.call-level.caller]
 // r[verify rpc.fallible.vox-error.retryable]
 #[tokio::test]
 async fn missing_required_field_is_non_retryable() {
@@ -590,6 +678,12 @@ async fn missing_required_field_is_non_retryable() {
         !err.is_retryable(),
         "schema incompatibility must be non-retryable"
     );
+
+    let pong = client
+        .ping()
+        .await
+        .expect("connection should remain open after caller decode failure");
+    assert_eq!(pong, 42);
 
     server_task.abort();
 }

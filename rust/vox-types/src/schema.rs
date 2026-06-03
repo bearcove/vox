@@ -97,11 +97,12 @@ impl std::error::Error for SchemaExtractError {}
 // SchemaSendTracker — outbound dedup, owned by SessionCore (no Arc, no Mutex)
 // ============================================================================
 
-/// Tracks which schemas have been sent on the current connection.
+/// Tracks which schema bindings have been sent on the current connection.
 ///
 /// Plain struct — owned by `SessionCore` behind the same Mutex as the
 /// conduit tx. Reset on reconnection.
 // r[impl schema.tracking.sent]
+// r[impl schema.tracking.bindings]
 // r[impl schema.type-id.per-connection]
 pub struct SchemaSendTracker {
     /// Per-method, per-direction bindings already sent on this connection. The first
@@ -154,6 +155,7 @@ impl SchemaSendTracker {
 
     /// The phon self-describing schema closure for a wire `shape` (root + reachable
     /// schemas), independent of per-connection send tracking.
+    // r[impl schema.principles.self-describing]
     pub fn plan_for_shape(shape: &'static Shape) -> Result<PreparedSchemaPlan, SchemaExtractError> {
         let bytes = vox_phon::schema_bytes_for_shape(shape)
             .map_err(|e| SchemaExtractError::Phon(e.to_string()))?;
@@ -163,6 +165,8 @@ impl SchemaSendTracker {
     /// The phon schema binding for a method's argument tuple, including channel
     /// element auxiliary roots for `Tx<T>`/`Rx<T>` args whose `T` is opaque to
     /// reflection.
+    // r[impl schema.principles.self-describing]
+    // r[impl schema.interaction.channels]
     pub fn plan_for_method_args(
         method: &MethodDescriptor,
     ) -> Result<PreparedSchemaPlan, SchemaExtractError> {
@@ -311,6 +315,7 @@ impl std::fmt::Debug for SchemaSendTracker {
 /// session recv loop and in-flight handler tasks. Created fresh on each
 /// connection — NOT reused across reconnections.
 // r[impl schema.tracking.received]
+// r[impl schema.tracking.bindings]
 // r[impl schema.type-id.per-connection]
 pub struct SchemaRecvTracker {
     /// Per (method, direction): the raw phon self-describing schema-closure bytes the
@@ -1666,6 +1671,9 @@ mod tests {
 
     // r[verify schema.tracking.transitive]
     // r[verify schema.tracking.sent]
+    // r[verify schema.tracking.bindings]
+    // r[verify schema.principles.sender-driven]
+    // r[verify schema.principles.no-roundtrips]
     // r[verify schema.format.self-contained]
     #[test]
     fn tracker_prepare_send_includes_transitive_deps() {

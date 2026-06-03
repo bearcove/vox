@@ -51,6 +51,7 @@ pub struct AuxiliaryRoot {
 /// [`Error`] if `T` cannot be lowered to a phon schema.
 // r[impl schema.format.delivery]
 // r[impl schema.format.self-contained]
+// r[impl schema.principles.once-per-type]
 pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
     let d = of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
     Ok(encode_bundle(d.root, &d.schemas))
@@ -63,6 +64,7 @@ pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
 /// [`Error`] if the shape cannot be lowered to a phon schema.
 // r[impl schema.format.delivery]
 // r[impl schema.format.self-contained]
+// r[impl schema.principles.once-per-type]
 pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
     let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
     Ok(encode_bundle(d.root, &d.schemas))
@@ -73,6 +75,7 @@ pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
 /// # Errors
 /// [`Error`] if any shape cannot be lowered to a phon schema.
 // r[impl schema.format.binding-roots]
+// r[impl schema.principles.once-per-type]
 pub fn schema_bytes_for_shape_with_auxiliary_roots(
     shape: &'static Shape,
     auxiliary_roots: &[(&str, &'static Shape)],
@@ -494,6 +497,7 @@ mod tests {
     #[test]
     // r[verify schema.format.delivery]
     // r[verify schema.format.self-contained]
+    // r[verify schema.principles.self-describing]
     fn schema_bundle_round_trips() {
         let bytes = schema_bytes::<Writer>().expect("schema bytes");
         let bundle = parse_schema_bytes(&bytes).expect("parse");

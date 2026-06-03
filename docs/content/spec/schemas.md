@@ -34,9 +34,10 @@ Incompatibilities surface early — when phon builds its decode plan
 
 > r[schema.principles.sender-driven]
 >
-> Each peer tracks which schemas it has sent to the other side. When a peer
-> is about to send data of a type the other side has not seen, it sends the
-> schema first. The receiver never requests schemas — the sender pushes them.
+> Each peer tracks which schema bindings it has established with the other
+> side. When a peer is about to send data for a method/direction binding the
+> other side has not seen, it sends the binding first. The receiver never
+> requests schemas — the sender pushes them.
 
 > r[schema.principles.self-describing]
 >
@@ -50,9 +51,11 @@ Incompatibilities surface early — when phon builds its decode plan
 
 > r[schema.principles.once-per-type]
 >
-> A schema for a given type ID MUST be sent at most once per connection.
-> Once a peer has sent a schema, it records the type ID as "sent" and does
-> not send it again for the lifetime of the connection.
+> Within one schema-closure carrier, a schema for a given type ID MUST appear
+> at most once. Across the connection, deduplication is binding-scoped: the
+> first carrier for each `(method_id, direction)` binding may repeat type
+> definitions that appeared in earlier bindings, because the receiver needs a
+> root type ID for this specific method/direction.
 
 # Type identity
 
@@ -204,25 +207,24 @@ Each peer maintains, per connection:
 
 > r[schema.tracking.sent]
 >
-> Each peer MUST track the set of type IDs for which it has sent schemas to
-> the other peer. This set starts empty and grows monotonically over the
-> connection lifetime.
+> Each peer MUST track the set of `(method_id, direction)` bindings for which
+> it has sent schema-binding bytes to the other peer. This set starts empty
+> and grows monotonically over the connection lifetime.
 
 > r[schema.tracking.received]
 >
-> Each peer MUST track the set of type IDs for which it has received schemas
-> from the other peer. This set starts empty and grows monotonically over
-> the connection lifetime. Receiving a schema for a type ID already received
-> is not an error — the receiver overwrites idempotently (the content hash
-> guarantees the definitions agree).
+> Each peer MUST track the schema-binding bytes it has received for each
+> `(method_id, direction)` binding from the other peer. Receiving the same
+> binding more than once is not an error — the receiver overwrites
+> idempotently.
 
 > r[schema.tracking.transitive]
 >
-> When a schema is sent, all type IDs transitively referenced by that schema
-> are also marked as sent. A schema closure is self-contained
-> (see `r[schema.format.self-contained]`), so sending a struct schema
-> implicitly sends the schemas of all its field types, their field types,
-> and so on.
+> When a schema binding is sent, its schema closure MUST include every type
+> transitively referenced by the root and auxiliary roots in that binding.
+> A schema closure is self-contained (see `r[schema.format.self-contained]`),
+> so sending a struct schema implicitly includes the schemas of all its field
+> types, their field types, and so on.
 
 > r[schema.tracking.bindings]
 >

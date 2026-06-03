@@ -640,6 +640,7 @@ async fn dropping_root_caller_shuts_down_session() {
 /// Regression test: schema recv tracker must be per-connection.
 /// If it were per-session, the second call (on the virtual connection) would
 /// fail because the response schemas overlap with the root connection's.
+// r[verify schema.type-id.per-connection]
 #[tokio::test]
 async fn schema_tracker_is_per_connection_not_per_session() {
     let (client_conduit, server_conduit) = message_conduit_pair();

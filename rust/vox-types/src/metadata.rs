@@ -14,6 +14,7 @@ use facet_value::{VArray, VBytes, VObject, VString, Value};
 
 /// Metadata is a self-describing [`Value`] — an object of string keys to values
 /// (string / bytes / `u64`), or null when empty.
+// r[impl schema.interaction.metadata]
 pub type Metadata = Value;
 
 /// Well-known metadata keys carrying per-key behavior flags. Each holds an array of
@@ -259,6 +260,7 @@ pub fn metadata_into_owned(metadata: Metadata) -> Metadata {
 mod tests {
     use super::*;
 
+    // r[verify schema.interaction.metadata]
     #[test]
     fn builder_and_accessors_round_trip() {
         let m = metadata()

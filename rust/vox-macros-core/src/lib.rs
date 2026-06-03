@@ -779,6 +779,8 @@ fn generate_dispatch_arm(
         }
     };
 
+    // r[impl schema.errors.call-level]
+    // r[impl schema.errors.call-level.callee]
     quote! {
         if method_id == #descriptor_fn_name().methods[#idx].id {
             // Channel binding: set guard so Tx<T>/Rx<T> deser binds through the binder.
@@ -974,6 +976,8 @@ fn generate_client_method(
         quote! { #( args.#tx_arg_indices.finish_retry_binding(); )* }
     };
 
+    // r[impl schema.errors.call-level]
+    // r[impl schema.errors.call-level.caller]
     if ok_uses_vox_lifetime {
         quote! {
             #method_doc

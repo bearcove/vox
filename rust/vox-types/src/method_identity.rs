@@ -141,6 +141,7 @@ pub fn shape_contains_channel(shape: &'static Shape) -> bool {
 mod tests {
     use super::*;
 
+    // r[verify schema.method-id]
     #[test]
     fn method_id_name_only_is_stable_across_case_variations() {
         let a = method_id_name_only("MyService", "DoThingFast");
