@@ -61,6 +61,8 @@ extension Driver {
             wireMsg = messageChannelClose(channelId: channelId)
         case .grantCredit(let channelId, let bytes):
             wireMsg = messageCredit(channelId: channelId, additional: bytes)
+        case .schema(let methodId, let direction, let schemas):
+            wireMsg = messageSchema(methodId: methodId, direction: direction, schemas: schemas)
         case .response(let requestId, let payload, let methodId, let responseSchemaClosure):
             // Advertise the response schema at THIS sequential send point (not in the
             // concurrent dispatch task): under pipelining many responses for a method

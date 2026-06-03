@@ -47,6 +47,7 @@ public enum TaskMessage: Sendable {
     case data(channelId: ChannelId, payload: [UInt8])
     case close(channelId: ChannelId)
     case grantCredit(channelId: ChannelId, bytes: UInt32)
+    case schema(methodId: UInt64, direction: SchemaBindingDirection, schemas: [UInt8])
     case response(
         requestId: UInt64,
         payload: [UInt8],

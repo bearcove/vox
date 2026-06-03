@@ -7,7 +7,9 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use vox_types::{MethodDescriptor, ServiceDescriptor, ShapeKind, classify_shape, is_rx, is_tx};
 
-use super::phon_service::{element_decode_closure, element_encode_closure, method_global_prefix};
+use super::phon_service::{
+    element_auxiliary_decode_closure, element_encode_closure, method_global_prefix,
+};
 use super::types::{format_doc, swift_type_base, swift_type_server_arg, swift_type_server_return};
 use crate::render::hex_u64;
 
@@ -212,13 +214,23 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
             // Handler SENDS → phon element ENCODE codec.
             let ser =
                 element_encode_closure(&elem_ty, &format!("{prefix}_{an}_ElementEncodeProgram"));
+            out.push_str("        // r[impl schema.exchange.channels.tx-args]\n");
             out.push_str(&format!(
-                "        let {an} = await bindServerTx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, serialize: {ser})\n"
+                "        let {an} = await bindServerTx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, methodId: {id}, argsSchemaClosure: {svc}Methods[{id}]!.argsSchemaClosure, schemaSendTracker: schemaSendTracker, serialize: {ser})\n"
             ));
         } else {
-            // Handler RECEIVES → phon element DECODE codec.
-            let de =
-                element_decode_closure(&elem_ty, &format!("{prefix}_{an}_ElementDecodeProgram"));
+            // Handler RECEIVES → phon element DECODE codec reconciled from the caller's
+            // advertised auxiliary element root.
+            let de = element_auxiliary_decode_closure(
+                &elem_ty,
+                "schemaReceiveTracker",
+                &id,
+                &format!("channel.arg.{i}.rx.element"),
+                &format!("{prefix}_{an}_ElementDescriptor"),
+                &format!("{prefix}_{an}_ElementDescriptorBlocks"),
+                &format!("{svc}Registry"),
+            );
+            out.push_str("        // r[impl schema.exchange.channels.rx-args]\n");
             out.push_str(&format!(
                 "        let {an} = await bindServerRx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, deserialize: {de})\n"
             ));

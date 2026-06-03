@@ -49,6 +49,25 @@ func messageResponse(
                 schemas: Data(schemas))))))
 }
 
+func messageSchema(
+    methodId: UInt64,
+    direction: SchemaBindingDirection,
+    schemas: [UInt8],
+    connectionId: UInt64 = 0
+) -> Message {
+    let wireDirection: BindingDirection
+    switch direction {
+    case .args: wireDirection = .args
+    case .response: wireDirection = .response
+    }
+    return Message(
+        connectionId: connectionId,
+        payload: .schemaMessage(SchemaMessage(
+            methodId: methodId,
+            direction: wireDirection,
+            schemas: Data(schemas))))
+}
+
 func messageCancel(
     requestId: UInt64,
     metadata: Metadata = .null,

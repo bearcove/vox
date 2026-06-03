@@ -20,8 +20,7 @@ public enum SchemaBindingDirection: Sendable, Hashable {
 }
 
 /// A channel argument's position + direction + element root + the element's phon
-/// schema-closure bytes (so the element's `elementRoot` resolves in the service
-/// registry and the typed element codec can be built). Emitted by codegen.
+/// schema-closure bytes. Emitted by codegen.
 public struct PhonChannelMeta: Sendable {
     public let index: Int
     public let isTx: Bool
@@ -103,9 +102,9 @@ public func buildServiceRegistry(_ methods: [UInt64: PhonMethodSchemas]) -> Regi
     for m in methods.values {
         if let a = try? parseSchemaClosure(m.argsSchemaClosure) { schemas += a.schemas }
         if let r = try? parseSchemaClosure(m.responseSchemaClosure) { schemas += r.schemas }
-        // Channel element schemas: the args/response closures don't reference the element
-        // type (a channel arg is a u32 wire index on the wire), so merge them explicitly
-        // — the typed element codec resolves `elementRoot` against this registry.
+        // Channel element schemas are also carried as args auxiliary roots in current
+        // generated services. The explicit element closure keeps older generated service
+        // tables resolvable and gives typed element encode programs a local registry.
         for ch in m.channels {
             if let e = try? parseSchemaClosure(ch.elementSchemaClosure) { schemas += e.schemas }
         }
@@ -118,13 +117,18 @@ private struct BindingKey: Hashable {
     let direction: SchemaBindingDirection
 }
 
+private struct ProgramKey: Hashable {
+    let binding: BindingKey
+    let role: String?
+}
+
 /// Tracks the writer schema closures a peer advertised, and builds compat decode
 /// programs against local reader descriptors.
 public final class SchemaTracker: @unchecked Sendable {
-    private var received: [BindingKey: (root: SchemaId, schemas: [Schema])] = [:]
+    private var received: [BindingKey: (root: SchemaId, schemas: [Schema], auxiliaryRoots: [String: SchemaId])] = [:]
     /// Cache of the reconciling programs (planning is amortized: built once per writer,
     /// reused for every decode). Invalidated when a binding's writer is re-advertised.
-    private var programs: [BindingKey: Lowered] = [:]
+    private var programs: [ProgramKey: Lowered] = [:]
     private let lock = NSLock()
 
     public init() {}
@@ -141,8 +145,16 @@ public final class SchemaTracker: @unchecked Sendable {
         guard !schemaBytes.isEmpty, let bundle = try? parseSchemaClosure(schemaBytes) else { return }
         let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }
-        received[key] = (bundle.root, bundle.schemas)
-        programs[key] = nil
+        var auxiliaryRoots: [String: SchemaId] = [:]
+        for root in bundle.auxiliaryRoots {
+            auxiliaryRoots[root.role] = root.root
+        }
+        received[key] = (
+            bundle.root,
+            bundle.schemas,
+            auxiliaryRoots
+        )
+        programs = programs.filter { $0.key.binding != key }
     }
 
     public func hasReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection) -> Bool {
@@ -159,12 +171,43 @@ public final class SchemaTracker: @unchecked Sendable {
         _ methodId: UInt64, _ direction: SchemaBindingDirection,
         readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
     ) -> Lowered? {
-        let key = BindingKey(methodId: methodId, direction: direction)
+        let binding = BindingKey(methodId: methodId, direction: direction)
+        let key = ProgramKey(binding: binding, role: nil)
         lock.lock(); defer { lock.unlock() }
         if let cached = programs[key] { return cached }
-        guard let writer = received[key],
+        guard let writer = received[binding],
             let program = try? lowerDecode(
                 writer.root, readerDescriptor, local.with(writer.schemas), readerBlocks)
+        else { return nil }
+        programs[key] = program
+        return program
+    }
+
+    public func auxiliaryRoot(
+        _ methodId: UInt64, _ direction: SchemaBindingDirection, role: String
+    ) -> SchemaId? {
+        lock.lock(); defer { lock.unlock() }
+        return received[BindingKey(methodId: methodId, direction: direction)]?.auxiliaryRoots[role]
+    }
+
+    /// The reconciling decode program for a channel item's named auxiliary writer root.
+    /// The role is generated as `channel.arg.N.{tx|rx}.element`, so the channel data
+    /// message can still be decoded through the method args schema binding that created
+    /// the channel.
+    /// r[impl schema.exchange.channels]
+    /// r[impl schema.exchange.channels.rx-args]
+    public func buildAuxiliaryDecodeProgram(
+        _ methodId: UInt64, _ direction: SchemaBindingDirection, role: String,
+        readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
+    ) -> Lowered? {
+        let binding = BindingKey(methodId: methodId, direction: direction)
+        let key = ProgramKey(binding: binding, role: role)
+        lock.lock(); defer { lock.unlock() }
+        if let cached = programs[key] { return cached }
+        guard let writer = received[binding],
+            let writerRoot = writer.auxiliaryRoots[role],
+            let program = try? lowerDecode(
+                writerRoot, readerDescriptor, local.with(writer.schemas), readerBlocks)
         else { return nil }
         programs[key] = program
         return program

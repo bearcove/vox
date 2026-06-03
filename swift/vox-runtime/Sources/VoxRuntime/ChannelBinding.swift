@@ -81,6 +81,67 @@ public func finalizeChannel<T>(_ rx: UnboundRx<T>) { rx.finishRetryBinding() }
 
 // MARK: - Server-side binding (the dispatcher creates the local handle)
 
+private final class ChannelSchemaTaskSender: @unchecked Sendable {
+    private let methodId: UInt64
+    private let argsSchemaClosure: [UInt8]
+    private let schemaSendTracker: SchemaSendTracker
+    private let taskTx: @Sendable (TaskMessage) -> Void
+    private let lock = NSLock()
+    private var advertised = false
+
+    init(
+        methodId: UInt64,
+        argsSchemaClosure: [UInt8],
+        schemaSendTracker: SchemaSendTracker,
+        taskTx: @escaping @Sendable (TaskMessage) -> Void
+    ) {
+        self.methodId = methodId
+        self.argsSchemaClosure = argsSchemaClosure
+        self.schemaSendTracker = schemaSendTracker
+        self.taskTx = taskTx
+    }
+
+    func send(_ message: TaskMessage) {
+        if case .data = message {
+            advertiseOnce()
+        }
+        taskTx(message)
+    }
+
+    private func advertiseOnce() {
+        let shouldAdvertise: Bool
+        lock.lock()
+        if advertised {
+            shouldAdvertise = false
+        } else {
+            advertised = true
+            shouldAdvertise = true
+        }
+        lock.unlock()
+        guard shouldAdvertise else { return }
+        // r[impl schema.exchange.channels.tx-args]
+        let schemas = schemaSendTracker.prepareSchemas(methodId, .args, argsSchemaClosure)
+        if !schemas.isEmpty {
+            taskTx(.schema(methodId: methodId, direction: .args, schemas: schemas))
+        }
+    }
+}
+
+private func schemaAdvertisingTaskSender(
+    methodId: UInt64,
+    argsSchemaClosure: [UInt8],
+    schemaSendTracker: SchemaSendTracker,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
+) -> @Sendable (TaskMessage) -> Void {
+    let sender = ChannelSchemaTaskSender(
+        methodId: methodId,
+        argsSchemaClosure: argsSchemaClosure,
+        schemaSendTracker: schemaSendTracker,
+        taskTx: taskTx
+    )
+    return { message in sender.send(message) }
+}
+
 /// Bind a server `Rx<T>` (the handler RECEIVES). Registers an incoming receiver on the
 /// server registry (so buffered/early data is delivered) and returns a bound `Rx`.
 public func bindServerRx<T: Sendable>(
@@ -105,11 +166,25 @@ public func bindServerTx<T: Sendable>(
     channelId: UInt64,
     registry: ChannelRegistry,
     taskTx: @escaping @Sendable (TaskMessage) -> Void,
+    methodId: UInt64? = nil,
+    argsSchemaClosure: [UInt8] = [],
+    schemaSendTracker: SchemaSendTracker? = nil,
     serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void
 ) async -> Tx<T> {
     let credit = await registry.registerOutgoing(
         channelId, initialCredit: defaultInitialChannelCredit)
+    let txTaskSender: @Sendable (TaskMessage) -> Void
+    if let methodId, let schemaSendTracker, !argsSchemaClosure.isEmpty {
+        txTaskSender = schemaAdvertisingTaskSender(
+            methodId: methodId,
+            argsSchemaClosure: argsSchemaClosure,
+            schemaSendTracker: schemaSendTracker,
+            taskTx: taskTx
+        )
+    } else {
+        txTaskSender = taskTx
+    }
     let tx = Tx<T>(serialize: serialize)
-    tx.bind(channelId: channelId, taskTx: taskTx, credit: credit)
+    tx.bind(channelId: channelId, taskTx: txTaskSender, credit: credit)
     return tx
 }

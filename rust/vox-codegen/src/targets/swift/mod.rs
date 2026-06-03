@@ -49,3 +49,71 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     out.push_str(&phon_server::generate_phon_server(service));
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use facet::Facet;
+    use vox_types::{MethodDescriptorOptions, Rx, ServiceDescriptor, Tx, method_descriptor};
+
+    use super::generate_service;
+
+    fn bytes_literal(text: &str) -> String {
+        text.as_bytes()
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    #[test]
+    // r[verify schema.exchange.channels]
+    fn generated_swift_emits_channel_schemas() {
+        let subscribe = method_descriptor::<(Tx<u32>, Rx<u32>), ()>(
+            "StreamSvc",
+            "subscribe",
+            &["output", "input"],
+            &[
+                Some(<u32 as facet::Facet>::SHAPE),
+                Some(<u32 as facet::Facet>::SHAPE),
+            ],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![subscribe].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "StreamSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+        assert!(
+            generated.contains("channel.arg.0.tx.element"),
+            "Tx<T> channel receive decode must use the named auxiliary root:\n{generated}"
+        );
+        assert!(
+            generated.contains("channel.arg.1.rx.element"),
+            "Rx<T> channel receive decode must use the named auxiliary root:\n{generated}"
+        );
+        assert!(
+            generated.contains(&bytes_literal("channel.arg.0.tx.element")),
+            "Tx<T> element root must be carried in argsSchemaClosure auxiliary roots:\n{generated}"
+        );
+        assert!(
+            generated.contains(&bytes_literal("channel.arg.1.rx.element")),
+            "Rx<T> element root must be carried in argsSchemaClosure auxiliary roots:\n{generated}"
+        );
+        assert!(
+            generated.contains("buildAuxiliaryDecodeProgram"),
+            "generated Swift must build channel item decode programs from advertised schemas:\n{generated}"
+        );
+        assert!(
+            !generated.contains("ElementDecodeProgram"),
+            "generated Swift must not emit local same-schema channel item decode programs:\n{generated}"
+        );
+    }
+}
