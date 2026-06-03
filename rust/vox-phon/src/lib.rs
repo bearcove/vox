@@ -10,14 +10,18 @@
 //! prefixes and alignment padding — and is deliberately NOT byte-compatible with
 //! the postcard wire it replaces. Swapping codecs breaks the old wire by design.
 //!
-//! Not yet here (follow-up): per-type descriptor/program caching.
-
-use std::mem::MaybeUninit;
+use std::{
+    collections::HashMap,
+    mem::MaybeUninit,
+    sync::{Arc, LazyLock, RwLock},
+};
 
 use facet::{Facet, PtrConst, Shape};
-use phon::derive::{Derived, of, of_shape};
+use phon::derive::{Derived, of_shape};
 use phon_engine::{Registry, typed};
 use phon_ir::Lowered;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use phon_ir::MemOp;
 
 pub mod schema;
 pub use schema::{
@@ -51,36 +55,173 @@ fn lower_derived(type_name: &str, derived: &Derived) -> Result<Lowered, Error> {
         .map_err(|e| Error(format!("lower {type_name}: {e:?}")))
 }
 
-unsafe fn encode_lowered(lowered: &Lowered, base: *const u8) -> Vec<u8> {
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+struct NativeEncodeProgram(phon_jit::native::NativeEncode);
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+struct NativeDecodeProgram(phon_jit::native::NativeDecode);
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Send for NativeEncodeProgram {}
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Sync for NativeEncodeProgram {}
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Send for NativeDecodeProgram {}
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Sync for NativeDecodeProgram {}
+
+struct TypedProgram {
+    lowered: Lowered,
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        let native = phon_jit::native::NativeEncode::compile_lowered(lowered);
-        unsafe { native.run(base) }
+    native_encode: Option<NativeEncodeProgram>,
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    native_decode: Option<NativeDecodeProgram>,
+}
+
+impl TypedProgram {
+    fn for_shape(shape: &'static Shape) -> Result<Self, Error> {
+        let type_name = shape.type_identifier;
+        let derived = of_shape(shape).map_err(|e| Error(format!("derive {type_name}: {e}")))?;
+        let lowered = lower_derived(type_name, &derived)?;
+
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            let native_encode = native_encode_supported(&lowered).then(|| {
+                NativeEncodeProgram(phon_jit::native::NativeEncode::compile_lowered(&lowered))
+            });
+            let native_decode = native_decode_supported(&lowered).then(|| {
+                NativeDecodeProgram(phon_jit::native::NativeDecode::compile_lowered(&lowered))
+            });
+            Ok(Self {
+                lowered,
+                native_encode,
+                native_decode,
+            })
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            Ok(Self { lowered })
+        }
     }
 
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    {
-        unsafe { typed::encode_with(lowered, base) }
+    unsafe fn encode(&self, base: *const u8) -> Vec<u8> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            if let Some(native) = &self.native_encode {
+                return unsafe { native.0.run(base) };
+            }
+        }
+        unsafe { typed::encode_with(&self.lowered, base) }
+    }
+
+    unsafe fn decode_into(
+        &self,
+        bytes: &[u8],
+        base: *mut u8,
+        type_name: &str,
+    ) -> Result<(), Error> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            if let Some(native) = &self.native_decode {
+                return unsafe { native.0.run(bytes, base) }
+                    .map_err(|e| Error(format!("decode {type_name}: {e:?}")));
+            }
+        }
+        unsafe { typed::decode_with(&self.lowered, bytes, base) }
+            .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+    }
+
+    #[cfg(test)]
+    fn uses_native_jit(&self) -> bool {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            self.native_encode.is_some() && self.native_decode.is_some()
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            false
+        }
     }
 }
 
-unsafe fn decode_lowered(
-    lowered: &Lowered,
-    bytes: &[u8],
-    base: *mut u8,
-    type_name: &str,
-) -> Result<(), Error> {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        let native = phon_jit::native::NativeDecode::compile_lowered(lowered);
-        unsafe { native.run(bytes, base) }.map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+// The lowered program and native executors are immutable after construction, and
+// thunk contexts inside the lowered IR are `'static` descriptor data.
+unsafe impl Send for TypedProgram {}
+unsafe impl Sync for TypedProgram {}
+
+static TYPED_PROGRAMS: LazyLock<RwLock<HashMap<usize, Arc<TypedProgram>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+fn typed_program_for_shape(shape: &'static Shape) -> Result<Arc<TypedProgram>, Error> {
+    let key = core::ptr::from_ref(shape) as usize;
+    if let Some(program) = TYPED_PROGRAMS.read().unwrap().get(&key) {
+        return Ok(Arc::clone(program));
     }
 
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    {
-        unsafe { typed::decode_with(lowered, bytes, base) }
-            .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+    let program = Arc::new(TypedProgram::for_shape(shape)?);
+    let mut cache = TYPED_PROGRAMS.write().unwrap();
+    if let Some(existing) = cache.get(&key) {
+        return Ok(Arc::clone(existing));
     }
+    cache.insert(key, Arc::clone(&program));
+    Ok(program)
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn native_decode_supported(lowered: &Lowered) -> bool {
+    decode_program_supported(&lowered.program)
+        && lowered
+            .blocks
+            .values()
+            .all(|block| decode_program_supported(block))
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn native_encode_supported(lowered: &Lowered) -> bool {
+    encode_program_supported(&lowered.program)
+        && lowered
+            .blocks
+            .values()
+            .all(|block| encode_program_supported(block))
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn decode_program_supported(program: &[MemOp]) -> bool {
+    program.iter().all(|op| match op {
+        MemOp::Scalar { .. }
+        | MemOp::Bytes(_)
+        | MemOp::Borrow(_)
+        | MemOp::Default(_)
+        | MemOp::SkipWire(_) => true,
+        MemOp::Sequence(s) => decode_program_supported(&s.element),
+        MemOp::Option(o) => decode_program_supported(&o.some),
+        MemOp::Enum(e) => e
+            .variants
+            .iter()
+            .all(|variant| decode_program_supported(&variant.payload)),
+        MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
+        MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
+        MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
+    })
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn encode_program_supported(program: &[MemOp]) -> bool {
+    program.iter().all(|op| match op {
+        MemOp::Scalar { .. } | MemOp::Bytes(_) | MemOp::Borrow(_) => true,
+        MemOp::Sequence(s) => encode_program_supported(&s.element),
+        MemOp::Option(o) => encode_program_supported(&o.some),
+        MemOp::Enum(e) => e
+            .variants
+            .iter()
+            .all(|variant| encode_program_supported(&variant.payload)),
+        MemOp::Map(m) => encode_program_supported(&m.key) && encode_program_supported(&m.value),
+        MemOp::Result(r) => encode_program_supported(&r.ok) && encode_program_supported(&r.err),
+        MemOp::SkipWire(_) | MemOp::Default(_) => false,
+        MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
+    })
 }
 
 /// Encode `value` to phon-compact bytes via its facet-derived schema.
@@ -90,11 +231,9 @@ unsafe fn decode_lowered(
 /// match it.
 // r[impl zerocopy.framing.value]
 pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
-    let type_name = T::SHAPE.type_identifier;
-    let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
-    let lowered = lower_derived(type_name, &derived)?;
-    // Safety: `value` is a live `T`; `lowered` was built from `T`'s descriptor.
-    Ok(unsafe { encode_lowered(&lowered, (value as *const T).cast::<u8>()) })
+    let program = typed_program_for_shape(T::SHAPE)?;
+    // Safety: `value` is a live `T`; `program` was built from `T`'s descriptor.
+    Ok(unsafe { program.encode((value as *const T).cast::<u8>()) })
 }
 
 /// Encode a type-erased value `(ptr, shape)` to phon-compact bytes via its
@@ -110,12 +249,10 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
 /// match it.
 // r[impl zerocopy.framing.value]
 pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>, Error> {
-    let type_name = shape.type_identifier;
-    let derived = of_shape(shape).map_err(|e| Error(format!("derive {type_name}: {e}")))?;
-    let lowered = lower_derived(type_name, &derived)?;
-    // Safety: `ptr` points to a live value of `shape`; `lowered` was built from
+    let program = typed_program_for_shape(shape)?;
+    // Safety: `ptr` points to a live value of `shape`; `program` was built from
     // that shape's descriptor.
-    Ok(unsafe { encode_lowered(&lowered, ptr.as_byte_ptr()) })
+    Ok(unsafe { program.encode(ptr.as_byte_ptr()) })
 }
 
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes` (zero-copy): `&str`,
@@ -130,14 +267,13 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
 // r[impl zerocopy.framing.value]
 pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
-    let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
-    let lowered = lower_derived(type_name, &derived)?;
+    let program = typed_program_for_shape(T::SHAPE)?;
     let mut slot = MaybeUninit::<T>::uninit();
-    // Safety: `lowered` was built from `T`'s descriptor; on `Ok`, decode has fully
+    // Safety: `program` was built from `T`'s descriptor; on `Ok`, decode has fully
     // initialized the slot. Borrowed fields point into `bytes`, which outlives the
     // returned `T` by the `'a` tie.
     unsafe {
-        decode_lowered(&lowered, bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
         Ok(slot.assume_init())
     }
 }
@@ -150,13 +286,12 @@ pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error
 // r[impl zerocopy.framing.value]
 pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
-    let derived = of::<T>().map_err(|e| Error(format!("derive {type_name}: {e}")))?;
-    let lowered = lower_derived(type_name, &derived)?;
+    let program = typed_program_for_shape(T::SHAPE)?;
     let mut slot = MaybeUninit::<T>::uninit();
-    // Safety: `lowered` was built from `T`'s descriptor; on `Ok`, decode has fully
+    // Safety: `program` was built from `T`'s descriptor; on `Ok`, decode has fully
     // initialized the slot.
     unsafe {
-        decode_lowered(&lowered, bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
         Ok(slot.assume_init())
     }
 }
@@ -165,6 +300,7 @@ pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
 mod tests {
     use super::*;
 
+    use phon::derive::of;
     use phon_engine::typed;
     use vox_types::{
         BindingDirection, ConnectionId, Message, MessagePayload, MethodId, Payload, RequestBody,
@@ -202,6 +338,37 @@ mod tests {
     {
         let bytes = to_vec(value).expect("encode");
         from_slice::<T>(&bytes).expect("decode")
+    }
+
+    #[test]
+    fn typed_program_cache_reuses_shape_program() {
+        let first = typed_program_for_shape(Person::SHAPE).expect("first program");
+        let second = typed_program_for_shape(Person::SHAPE).expect("second program");
+        assert!(Arc::ptr_eq(&first, &second));
+        assert_eq!(
+            first.uses_native_jit(),
+            cfg!(all(target_os = "macos", target_arch = "aarch64"))
+        );
+
+        let p = Person {
+            name: "Ada".to_string(),
+            age: 36,
+            email: Some("ada@example.com".to_string()),
+            tags: vec!["math".to_string(), "engine".to_string()],
+            home: Point { x: 10, y: 20 },
+            favorite: Shape::Rectangle {
+                width: 3.0,
+                height: 4.0,
+            },
+            big: 5_000_000_000,
+        };
+        let generic = to_vec(&p).expect("generic encode");
+        let erased = to_vec_for_shape(
+            PtrConst::new((&p as *const Person).cast::<u8>()),
+            Person::SHAPE,
+        )
+        .expect("shape encode");
+        assert_eq!(generic, erased);
     }
 
     #[test]
