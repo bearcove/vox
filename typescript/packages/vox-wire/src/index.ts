@@ -67,6 +67,7 @@ export {
   buildMessageDecoder,
   decodeMessageWith,
   parseSchemaClosure,
+  type AuxiliaryRoot,
   type MessageDecoder,
 } from "./codec.ts";
 

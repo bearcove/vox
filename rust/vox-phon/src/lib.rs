@@ -21,9 +21,10 @@ use phon_ir::Lowered;
 
 pub mod schema;
 pub use schema::{
-    DecodeProgram, SchemaBundle, build_decode_program, decode_compat, decode_owned_with_program,
-    decode_with_program, from_self_describing, parse_schema_bytes, recursive_schema_ids_for_shape,
-    schema_bytes, schema_bytes_for_shape, schema_id_for_shape, to_self_describing,
+    AuxiliaryRoot, DecodeProgram, SchemaBundle, build_decode_program, decode_compat,
+    decode_owned_with_program, decode_with_program, from_self_describing, parse_schema_bytes,
+    recursive_schema_ids_for_shape, schema_bytes, schema_bytes_for_shape,
+    schema_bytes_for_shape_with_auxiliary_roots, schema_id_for_shape, to_self_describing,
 };
 
 /// Opaque-passthrough sentinel: build an `OpaqueSerialize` that emits already-encoded

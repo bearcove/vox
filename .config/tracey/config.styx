@@ -24,6 +24,8 @@ specs (
                     typescript/packages/vox-core/src/schema_tracker.test.ts
                     typescript/packages/vox-core/src/channeling/registry.ts
                     typescript/packages/vox-core/src/channeling/registry.test.ts
+                    typescript/packages/vox-wire/src/codec.ts
+                    typescript/packages/vox-wire/src/codec.test.ts
                 )
             }
         )

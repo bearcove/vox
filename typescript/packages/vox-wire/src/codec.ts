@@ -51,11 +51,21 @@ export function decodeMessage(bytes: Uint8Array): Message {
 }
 
 /**
- * Parse a phon schema closure (`u64 root + u32 count + [u32 len + schema]*`,
- * vox-phon's `schema_bytes` framing) and merge its schemas into a registry that
- * also resolves the local refs.
+ * Parse a phon schema binding (`u64 primaryRoot + u32 count + [u32 len + schema]*`,
+ * optionally followed by auxiliary roots). Mirrors vox-phon's schema binding
+ * framing.
  */
-export function parseSchemaClosure(bytes: Uint8Array): { root: bigint; schemas: Schema[] } {
+export interface AuxiliaryRoot {
+  role: string;
+  root: bigint;
+}
+
+// r[impl schema.format.binding-roots]
+export function parseSchemaClosure(bytes: Uint8Array): {
+  root: bigint;
+  schemas: Schema[];
+  auxiliaryRoots: AuxiliaryRoot[];
+} {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let off = 0;
   const root = dv.getBigUint64(off, true);
@@ -70,7 +80,25 @@ export function parseSchemaClosure(bytes: Uint8Array): { root: bigint; schemas: 
     off += len;
     schemas.push(schemaFromBytes(slice));
   }
-  return { root, schemas };
+  const auxiliaryRoots: AuxiliaryRoot[] = [];
+  if (off < bytes.byteLength) {
+    const auxCount = dv.getUint32(off, true);
+    off += 4;
+    const decoder = new TextDecoder();
+    for (let i = 0; i < auxCount; i++) {
+      const roleLen = dv.getUint32(off, true);
+      off += 4;
+      const role = decoder.decode(bytes.subarray(off, off + roleLen));
+      off += roleLen;
+      const auxRoot = dv.getBigUint64(off, true);
+      off += 8;
+      auxiliaryRoots.push({ role, root: auxRoot });
+    }
+  }
+  if (off !== bytes.byteLength) {
+    throw new Error(`schema binding has ${bytes.byteLength - off} trailing bytes`);
+  }
+  return { root, schemas, auxiliaryRoots };
 }
 
 function mergeWriterSchemas(

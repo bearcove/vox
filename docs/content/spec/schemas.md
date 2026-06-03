@@ -178,6 +178,25 @@ connection).
 > `Result<T, VoxError<E>>`. Channel element roots (see
 > `r[schema.exchange.channels]`) are auxiliary roots because `Tx<T>` and
 > `Rx<T>` encode as opaque channel indices on the wire.
+>
+> The schema-binding byte framing is:
+>
+> ```text
+> u64 primary_root
+> u32 schema_count
+> repeated schema_count:
+>   u32 schema_len
+>   bytes schema
+> optional:
+>   u32 auxiliary_root_count
+>   repeated auxiliary_root_count:
+>     u32 role_len
+>     utf8 role
+>     u64 root
+> ```
+>
+> The auxiliary-root section is absent when the count would be zero, preserving
+> the compact single-root closure used by bindings without auxiliary roots.
 
 # Schema tracking
 

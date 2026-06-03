@@ -9,8 +9,11 @@
 //! the one program, `r[ir.inlining]`).
 //!
 //! Wire framing of a closure: `u64` root id, `u32` schema count, then each schema as
-//! `u32` length + its [`schema_to_bytes`] self-describing bytes.
+//! `u32` length + its [`schema_to_bytes`] self-describing bytes. Bindings that need
+//! payload-adjacent roots append `u32` auxiliary-root count, then each role as
+//! `u32` UTF-8 byte length + bytes, followed by the auxiliary `u64` root.
 
+use std::collections::BTreeSet;
 use std::mem::MaybeUninit;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use std::sync::Arc;
@@ -30,6 +33,14 @@ use crate::Error;
 pub struct SchemaBundle {
     pub root: SchemaId,
     pub schemas: Vec<Schema>,
+    pub auxiliary_roots: Vec<AuxiliaryRoot>,
+}
+
+/// An additional writer root carried by the same schema binding, keyed by role.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AuxiliaryRoot {
+    pub role: String,
+    pub root: SchemaId,
 }
 
 /// The phon schema closure of `T` (root id + every reachable composite schema),
@@ -55,6 +66,45 @@ pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
 pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
     let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
     Ok(encode_bundle(d.root, &d.schemas))
+}
+
+/// Build schema-binding bytes for a primary root plus payload-adjacent auxiliary roots.
+///
+/// # Errors
+/// [`Error`] if any shape cannot be lowered to a phon schema.
+// r[impl schema.format.binding-roots]
+pub fn schema_bytes_for_shape_with_auxiliary_roots(
+    shape: &'static Shape,
+    auxiliary_roots: &[(&str, &'static Shape)],
+) -> Result<Vec<u8>, Error> {
+    let primary =
+        of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    let mut schemas = primary.schemas;
+    let mut seen: BTreeSet<u64> = schemas.iter().map(|s| s.id.0).collect();
+    let mut roots = Vec::with_capacity(auxiliary_roots.len());
+
+    for &(role, aux_shape) in auxiliary_roots {
+        if role.is_empty() {
+            return Err(Error("auxiliary schema root role must not be empty".into()));
+        }
+        let derived = of_shape(aux_shape)
+            .map_err(|e| Error(format!("derive {}: {e}", aux_shape.type_identifier)))?;
+        for schema in derived.schemas {
+            if seen.insert(schema.id.0) {
+                schemas.push(schema);
+            }
+        }
+        roots.push(AuxiliaryRoot {
+            role: role.to_string(),
+            root: derived.root,
+        });
+    }
+
+    Ok(encode_bundle_with_auxiliary_roots(
+        primary.root,
+        &schemas,
+        &roots,
+    ))
 }
 
 /// The phon **content-derived** schema id of a shape's root — the canonical id
@@ -85,6 +135,14 @@ pub fn recursive_schema_ids_for_shape(
 
 /// Encode a `(root, schemas)` closure to self-describing bytes.
 fn encode_bundle(root: SchemaId, schemas: &[Schema]) -> Vec<u8> {
+    encode_bundle_with_auxiliary_roots(root, schemas, &[])
+}
+
+fn encode_bundle_with_auxiliary_roots(
+    root: SchemaId,
+    schemas: &[Schema],
+    auxiliary_roots: &[AuxiliaryRoot],
+) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(&root.0.to_le_bytes());
     out.extend_from_slice(&(schemas.len() as u32).to_le_bytes());
@@ -92,6 +150,15 @@ fn encode_bundle(root: SchemaId, schemas: &[Schema]) -> Vec<u8> {
         let b = schema_to_bytes(s);
         out.extend_from_slice(&(b.len() as u32).to_le_bytes());
         out.extend_from_slice(&b);
+    }
+    if !auxiliary_roots.is_empty() {
+        out.extend_from_slice(&(auxiliary_roots.len() as u32).to_le_bytes());
+        for root in auxiliary_roots {
+            let role = root.role.as_bytes();
+            out.extend_from_slice(&(role.len() as u32).to_le_bytes());
+            out.extend_from_slice(role);
+            out.extend_from_slice(&root.root.0.to_le_bytes());
+        }
     }
     out
 }
@@ -120,13 +187,45 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
             .map_err(|e| Error(format!("schema bundle entry body: {e:?}")))?;
         schemas.push(schema_from_bytes(slice).map_err(|e| Error(format!("schema decode: {e:?}")))?);
     }
+
+    let auxiliary_roots = if r.remaining() == 0 {
+        Vec::new()
+    } else {
+        let count = r
+            .read_u32()
+            .map_err(|e| Error(format!("schema bundle auxiliary root count: {e:?}")))?
+            as usize;
+        let mut roots = Vec::with_capacity(count.min(64));
+        for _ in 0..count {
+            let role_len = r
+                .read_u32()
+                .map_err(|e| Error(format!("schema bundle auxiliary role length: {e:?}")))?
+                as usize;
+            let role = r
+                .read_slice(role_len)
+                .map_err(|e| Error(format!("schema bundle auxiliary role body: {e:?}")))?;
+            let role = std::str::from_utf8(role)
+                .map_err(|e| Error(format!("schema bundle auxiliary role utf8: {e}")))?
+                .to_string();
+            let root = SchemaId(
+                r.read_u64()
+                    .map_err(|e| Error(format!("schema bundle auxiliary root: {e:?}")))?,
+            );
+            roots.push(AuxiliaryRoot { role, root });
+        }
+        roots
+    };
     if r.remaining() != 0 {
         return Err(Error(format!(
             "schema bundle has {} trailing bytes",
             r.remaining()
         )));
     }
-    Ok(SchemaBundle { root, schemas })
+    Ok(SchemaBundle {
+        root,
+        schemas,
+        auxiliary_roots,
+    })
 }
 
 /// A prebuilt compatibility decode program: the writer schema reconciled against the
@@ -348,6 +447,11 @@ mod tests {
         added: u32,
     }
 
+    #[derive(Facet)]
+    struct ChannelElement {
+        value: String,
+    }
+
     // r[verify zerocopy.framing.value.decode-plan]
     #[test]
     fn compat_decode_reconciles_writer_and_reader_drift() {
@@ -396,5 +500,35 @@ mod tests {
         let d = of::<Writer>().expect("derive");
         assert_eq!(bundle.root, d.root);
         assert_eq!(bundle.schemas.len(), d.schemas.len());
+        assert!(bundle.auxiliary_roots.is_empty());
+    }
+
+    #[test]
+    // r[verify schema.format.binding-roots]
+    fn schema_bundle_carries_auxiliary_roots() {
+        let bytes = schema_bytes_for_shape_with_auxiliary_roots(
+            Writer::SHAPE,
+            &[("channel.arg.0.tx.element", ChannelElement::SHAPE)],
+        )
+        .expect("schema bytes");
+        let bundle = parse_schema_bytes(&bytes).expect("parse");
+        let writer = of::<Writer>().expect("derive writer");
+        let element = of::<ChannelElement>().expect("derive element");
+
+        assert_eq!(bundle.root, writer.root);
+        assert_eq!(
+            bundle.auxiliary_roots,
+            vec![AuxiliaryRoot {
+                role: "channel.arg.0.tx.element".to_string(),
+                root: element.root,
+            }]
+        );
+        assert!(
+            bundle
+                .schemas
+                .iter()
+                .any(|schema| schema.id == element.root),
+            "auxiliary element schema must be carried in the binding"
+        );
     }
 }
