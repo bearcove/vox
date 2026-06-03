@@ -26,7 +26,6 @@ specs (
                     rust/vox-codegen/src/targets/typescript/**/*.rs
                     typescript/packages/vox-core/src/session.ts
                     typescript/packages/vox-core/src/conduit.ts
-                    typescript/packages/vox-core/src/stable_conduit.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
                     typescript/packages/vox-core/src/metadata.ts

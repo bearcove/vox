@@ -15,8 +15,7 @@ public struct Server {
         }
         FileHandle.standardError.write(Data("[subject-server] PEER_ADDR=\(peerAddr)\n".utf8))
 
-        let transport: ConduitKind =
-            ProcessInfo.processInfo.environment["SPEC_CONDUIT"] == "stable" ? .stable : .bare
+        let transport = ConduitKind.bare
         FileHandle.standardError.write(Data("[subject-server] transport=\(transport)\n".utf8))
 
         // r[impl transport.unix]

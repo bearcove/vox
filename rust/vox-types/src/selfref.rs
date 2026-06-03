@@ -111,7 +111,7 @@ impl<T: 'static> SelfRef<T> {
     /// Transform the contained value, keeping the same backing storage.
     ///
     /// Useful for projecting through wrapper types:
-    /// `SelfRef<Frame<T>>` → `SelfRef<T>` by extracting the inner item.
+    /// `SelfRef<Envelope<T>>` → `SelfRef<T>` by extracting the inner item.
     ///
     /// The closure receives the old value by move and returns the new value.
     /// Any references the new value holds into the backing storage (inherited

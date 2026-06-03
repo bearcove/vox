@@ -34,8 +34,7 @@ reject with `Sorry` during handshake.
 ## Schema tracking — two levels
 
 - **Per-session** tracker for protocol types. Exchanged once in the
-  handshake, immutable after `LetsGo`. Transparent reconnection
-  (StableConduit) doesn't affect it. Session resumption = new handshake
+  handshake, immutable after `LetsGo`. Session resumption = new handshake
   = re-exchange.
 
 - **Per-connection** trackers for user/service types. Exchanged lazily

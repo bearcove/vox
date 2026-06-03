@@ -137,9 +137,8 @@ func performAcceptorHandshake(
     let peerSchema = [UInt8](peerHello.messagePayloadSchema)
     try await requireIdentityMessageSchema(peerSchema, on: link)
 
-    // True protocol-level session resume / stable conduit was removed from
-    // the Swift runtime, so the peer's resume key is not used to look up an
-    // existing session.
+    // Protocol-level session resume is not part of the Swift runtime, so the
+    // peer's resume key is not used to look up an existing session.
     let _ = expectedResumeKey
 
     let ourSettings = ConnectionSettings(
@@ -203,8 +202,8 @@ func buildEstablishedConduit(
     recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil
 ) async throws -> any Conduit {
     let _ = role
+    let _ = transport
     let _ = recoverAttachment
-    // StableConduit was removed (had no real users); both kinds route to bare.
     return BareConduit(link: attachment.link, peerMessageSchema: peerMessageSchema)
 }
 

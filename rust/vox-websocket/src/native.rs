@@ -55,8 +55,7 @@ impl WsLink<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>> {
 
 /// A [`LinkSource`](vox_core::LinkSource) that connects to a WebSocket URL.
 ///
-/// Each call to `next_link` opens a fresh WebSocket connection, supporting
-/// reconnection via stable conduits.
+/// Each call to `next_link` opens a fresh WebSocket connection.
 pub struct WsLinkSource {
     url: String,
 }

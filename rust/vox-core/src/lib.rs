@@ -3,8 +3,8 @@
 //! This crate provides concrete implementations of the traits defined in
 //! [`vox_types`]. The only conduit shape is [`BareConduit`]: wraps a raw
 //! `Link` with phon serialization. No reconnect, no reliability —
-//! reconnect was removed (StableConduit deleted) because the abstraction
-//! had no real users.
+//! conduit-level reconnect/replay was removed because the abstraction had no
+//! real users.
 
 mod bare_conduit;
 pub use bare_conduit::*;

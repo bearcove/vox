@@ -22,11 +22,8 @@ Swift currently pays for the same data multiple times:
 - postcard and wire encoding are built around many small temporary arrays
 - decode paths also create avoidable copies
 
-Rust has some real costs too, but they are narrower and more intentional:
-
-- stable conduit duplicates frames for replay
-- stable receive duplicates payload bytes again before deserializing
-- persistent operation storage reserializes responses for the store
+Rust has some real costs too, but they are narrower than the Swift byte
+ownership mismatch and should be reassessed against the current transport path.
 
 The architectural mismatch in Swift is more serious than any one isolated copy.
 The system does not have a stable answer to "what owns bytes here?"
@@ -168,30 +165,6 @@ Architectural conclusion:
 - Swift inbound decode is not just parsing; it is also doing container churn.
 - The runtime currently treats copying as the normal way to cross decode layers.
 
-### 5. Rust stable conduit pays an explicit replay tax
-
-Rust's normal transport path is comparatively disciplined.
-
-The main non-SHM cost is in stable conduit.
-
-On send, the frame is written into the transport slot and then cloned into the
-replay buffer:
-
-- [rust/vox-core/src/stable_conduit/mod.rs](/Users/amos/bearcove/vox/rust/vox-core/src/stable_conduit/mod.rs#L747)
-
-On receive, the inner message bytes are cloned again before postcard
-deserialization:
-
-- [rust/vox-core/src/stable_conduit/mod.rs](/Users/amos/bearcove/vox/rust/vox-core/src/stable_conduit/mod.rs#L847)
-
-This is real overhead, but it is localized and tied to stable/replay semantics.
-
-Architectural conclusion:
-
-- Rust stable mode is paying for durability/replay behavior, not for a general
-  byte-ownership mismatch.
-- This is a targeted tax, not a systemic one.
-
 ## Highest-ROI Direction
 
 If the goal is to remove the most waste without discussing SHM, the ranking is:
@@ -200,7 +173,7 @@ If the goal is to remove the most waste without discussing SHM, the ranking is:
 2. Pick one primary Swift byte container and stop bouncing between `Data` and `[UInt8]`
 3. Replace Swift "return fresh `[UInt8]`" encoders with append-into-buffer APIs
 4. Revisit Swift decode APIs so parsing does not imply copying
-5. Only then worry about Rust stable/persistence copies
+5. Only then reassess Rust copies on the current bare transport path
 
 ## Bottom Line
 
@@ -208,6 +181,5 @@ The main problem is not that Swift has a few slow spots. The main problem is
 that Swift's runtime, codegen, and transport boundaries do not agree on byte
 ownership or schema attachment strategy.
 
-Rust's remaining waste is much narrower. Most of it comes from stable/replay
-and persistence features, where the extra copying is at least attached to a
-clear semantic reason.
+Rust's remaining waste is much narrower and should be measured against the
+current transport path rather than against removed replay machinery.

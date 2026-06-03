@@ -317,7 +317,7 @@ feature entirely.
     - Replaced `pub use vox_core::*` with curated, grouped explicit re-exports
     - Rewrote crate-level doc comment with `connect()` / `serve()` examples
     - Organized vox-core re-exports by category: session builders, connection management,
-      driver/caller, conduits, stable conduit, memory links, handshake, transport, operations
+      driver/caller, conduits, memory links, handshake, transport, operations
 14. Multi-listener support
     - Serve on multiple transports simultaneously (e.g. TCP + Unix socket + SHM)
     - Compose multiple `VoxListener`s into one

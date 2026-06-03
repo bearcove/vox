@@ -6,11 +6,7 @@ use crate::Backing;
 
 /// Requested conduit mode for the transport prologue.
 ///
-/// Historically this enum had a `Stable` variant for the reconnect /
-/// replay-buffer-backed `StableConduit`; that conduit shape was removed,
-/// leaving only `Bare`. The enum is preserved for now so the wire-level
-/// transport prologue remains backwards-compatible with peers that still
-/// negotiate it; new transports always select `Bare`.
+/// The current transport prologue defines one conduit mode: `Bare`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportMode {
     Bare,

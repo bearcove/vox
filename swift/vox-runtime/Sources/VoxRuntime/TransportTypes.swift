@@ -1,6 +1,5 @@
 public enum ConduitKind: Sendable {
     case bare
-    case stable
 }
 
 @available(*, deprecated, renamed: "ConduitKind")

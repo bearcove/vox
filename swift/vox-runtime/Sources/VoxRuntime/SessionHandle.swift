@@ -113,8 +113,8 @@ public final class SessionHandle: @unchecked Sendable {
                     rule: "peer root settings changed across session resume"
                 )
             }
-            // Session resume removed (StableConduit deletion). Any
-            // resume key the peer echoes back is ignored.
+            // Session resume is not part of this runtime. Any resume key the
+            // peer echoes back is ignored.
             let _ = handshake.sessionResumeKey
             let _ = sessionResumeKey
 

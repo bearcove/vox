@@ -25,10 +25,6 @@ public final class TcpAcceptor: SessionConnector, Sendable {
         TcpAcceptor(host: host, port: port, transport: .bare)
     }
 
-    public func stable() -> TcpAcceptor {
-        TcpAcceptor(host: host, port: port, transport: .stable)
-    }
-
     public func openAttachment() async throws -> LinkAttachment {
         let link = try await state.nextLink(host: host, port: port)
         return .fresh(link)

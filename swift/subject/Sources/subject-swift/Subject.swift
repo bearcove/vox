@@ -258,7 +258,7 @@ func log(_ message: String) {
 }
 
 func subjectConduit() -> ConduitKind {
-    ProcessInfo.processInfo.environment["SPEC_CONDUIT"] == "stable" ? .stable : .bare
+    .bare
 }
 
 func sameShape(_ lhs: Shape, _ rhs: Shape) -> Bool {

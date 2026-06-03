@@ -5,23 +5,23 @@ let transportVersion: UInt8 = 9
 let rejectUnsupportedMode: UInt8 = 1
 let defaultTransportPrologueTimeoutNs: UInt64 = 5_000_000_000
 
-func encodeTransportHello(_ conduit: ConduitKind) -> [UInt8] {
+func encodeTransportHello(_: ConduitKind) -> [UInt8] {
     [
         transportHelloMagic[0], transportHelloMagic[1], transportHelloMagic[2],
         transportHelloMagic[3],
         transportVersion,
-        conduit == .stable ? 1 : 0,
+        0,
         0,
         0,
     ]
 }
 
-public func encodeTransportAccept(_ conduit: ConduitKind) -> [UInt8] {
+public func encodeTransportAccept(_: ConduitKind) -> [UInt8] {
     [
         transportAcceptMagic[0], transportAcceptMagic[1], transportAcceptMagic[2],
         transportAcceptMagic[3],
         transportVersion,
-        conduit == .stable ? 1 : 0,
+        0,
         0,
         0,
     ]
@@ -51,8 +51,6 @@ public func decodeTransportHello(_ bytes: [UInt8]) throws -> ConduitKind {
     switch bytes[5] {
     case 0:
         return .bare
-    case 1:
-        return .stable
     default:
         throw TransportError.protocolViolation("unknown conduit mode \(bytes[5])")
     }
@@ -66,7 +64,10 @@ func validateTransportAccept(_ bytes: [UInt8], requested: ConduitKind) throws {
         guard bytes[4] == transportVersion else {
             throw TransportError.protocolViolation("unsupported transport version \(bytes[4])")
         }
-        let selected = bytes[5] == 1 ? ConduitKind.stable : ConduitKind.bare
+        guard bytes[5] == 0 else {
+            throw TransportError.protocolViolation("unknown conduit mode \(bytes[5])")
+        }
+        let selected = ConduitKind.bare
         guard selected == requested else {
             throw TransportError.protocolViolation(
                 "transport selected \(selected) for requested \(requested)")

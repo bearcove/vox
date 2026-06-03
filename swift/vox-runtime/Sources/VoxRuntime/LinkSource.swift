@@ -1,7 +1,6 @@
 public enum LinkAttachmentState: Sendable {
     case fresh
     case conduitNegotiated(ConduitKind)
-    case stableClientHello([UInt8])
 }
 
 public struct LinkAttachment: Sendable {
@@ -25,26 +24,13 @@ public struct LinkAttachment: Sendable {
         Self(link: link, state: .conduitNegotiated(conduit))
     }
 
-    public static func stableAccepted(_ link: any Link, clientHello: [UInt8]) -> Self {
-        Self(link: link, state: .stableClientHello(clientHello))
-    }
-
     public var negotiatedConduit: ConduitKind? {
         switch state {
         case .fresh:
             nil
         case .conduitNegotiated(let conduit):
             conduit
-        case .stableClientHello:
-            .stable
         }
-    }
-
-    public var stableClientHello: [UInt8]? {
-        guard case .stableClientHello(let clientHello) = state else {
-            return nil
-        }
-        return clientHello
     }
 }
 

@@ -18,10 +18,6 @@ public struct TcpConnector: SessionConnector, LinkSource, Sendable {
         Self(host: host, port: port, transport: .bare)
     }
 
-    public func stable() -> Self {
-        Self(host: host, port: port, transport: .stable)
-    }
-
     public func nextLink() async throws -> LinkAttachment {
         LinkAttachment.initiator(try await connectLink(host: host, port: port))
     }
@@ -42,10 +38,6 @@ public struct UnixConnector: SessionConnector, LinkSource, Sendable {
 
     public func bare() -> Self {
         Self(path: path, transport: .bare)
-    }
-
-    public func stable() -> Self {
-        Self(path: path, transport: .stable)
     }
 
     public func nextLink() async throws -> LinkAttachment {
@@ -71,17 +63,6 @@ func connect(
     prologueTimeoutNs: UInt64
 ) async throws -> any Conduit {
     let connector = UnixConnector(path: unixPath, transport: conduit)
-    if conduit == .bare {
-        let attachment = try await TimedTransportedLinkSource(
-            source: connector,
-            conduit: conduit,
-            timeoutNs: prologueTimeoutNs
-        ).nextLink()
-        return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
-    }
-
-    // .stable used to construct a StableConduit; that conduit shape was
-    // removed, so any non-bare request gets the same bare path.
     let attachment = try await TimedTransportedLinkSource(
         source: connector,
         conduit: conduit,
@@ -108,17 +89,6 @@ func connect(
     prologueTimeoutNs: UInt64
 ) async throws -> any Conduit {
     let connector = TcpConnector(host: host, port: port, transport: conduit)
-    if conduit == .bare {
-        let attachment = try await TimedTransportedLinkSource(
-            source: connector,
-            conduit: conduit,
-            timeoutNs: prologueTimeoutNs
-        ).nextLink()
-        return BareConduit(link: attachment.link, peerMessageSchema: [])  // raw connect(): no handshake yet, decoder inert until establishment
-    }
-
-    // .stable used to construct a StableConduit; that conduit shape was
-    // removed, so any non-bare request gets the same bare path.
     let attachment = try await TimedTransportedLinkSource(
         source: connector,
         conduit: conduit,

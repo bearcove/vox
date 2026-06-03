@@ -7,9 +7,6 @@ use vox_core::{TransportMode, initiator};
 use vox_stream::{local_link_source, tcp_link_source};
 
 fn requested_transport_mode() -> TransportMode {
-    // Only Bare remains; SPEC_CONDUIT is honoured for log compatibility but
-    // any value (including the historical "stable") maps to Bare.
-    let _ = std::env::var("SPEC_CONDUIT");
     TransportMode::Bare
 }
 

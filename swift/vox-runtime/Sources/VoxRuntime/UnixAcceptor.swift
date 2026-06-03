@@ -23,10 +23,6 @@ public final class UnixAcceptor: SessionConnector, Sendable {
         UnixAcceptor(path: path, transport: .bare)
     }
 
-    public func stable() -> UnixAcceptor {
-        UnixAcceptor(path: path, transport: .stable)
-    }
-
     public func openAttachment() async throws -> LinkAttachment {
         let link = try await state.nextLink(path: path)
         return .fresh(link)
