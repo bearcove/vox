@@ -6,15 +6,11 @@ use std::sync::{
 use facet::Facet;
 use vox_types::{
     Conduit, ConduitRx, ConnectionSettings, Handler, HandshakeResult, Message, MessageFamily,
-    MessagePayload, Parity, Payload, ReplySink, RequestCall, RequestResponse, SelfRef,
-    SessionResumeKey, SessionRole, Tx,
+    MessagePayload, Parity, Payload, ReplySink, RequestCall, RequestResponse, SelfRef, SessionRole,
+    Tx,
 };
 
 use crate::{BareConduit, DriverReplySink, memory_link_pair};
-
-pub(crate) fn test_resume_key() -> SessionResumeKey {
-    SessionResumeKey([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
-}
 
 pub(crate) fn test_acceptor_handshake() -> HandshakeResult {
     HandshakeResult {
@@ -29,8 +25,6 @@ pub(crate) fn test_acceptor_handshake() -> HandshakeResult {
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        session_resume_key: Some(test_resume_key()),
-        peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
         peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
@@ -50,8 +44,6 @@ pub(crate) fn test_initiator_handshake() -> HandshakeResult {
             max_concurrent_requests: 64,
             initial_channel_credit: 16,
         },
-        session_resume_key: Some(test_resume_key()),
-        peer_resume_key: None,
         our_schema: vec![],
         peer_schema: vec![],
         peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),

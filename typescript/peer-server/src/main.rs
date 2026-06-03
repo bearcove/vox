@@ -10,11 +10,10 @@ use spec_proto::{
 };
 use spec_proto::{Testbed, TestbedClient, TestbedDispatcher};
 use std::env;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use vox::{Rx, Tx};
-use vox_core::{SessionAcceptOutcome, SessionRegistry, acceptor_transport};
+use vox_core::acceptor_transport;
 use vox_websocket::WsLink;
 
 #[derive(Clone)]
@@ -53,9 +52,6 @@ async fn sum_post_reply_values(mut input: Rx<i32>, result: Tx<i64>) {
 
 impl Testbed for TestbedService {
     async fn echo(&self, message: String) -> String {
-        if message == "__vox_reconnect__" {
-            tokio::time::sleep(Duration::from_millis(250)).await;
-        }
         message
     }
 
@@ -276,8 +272,6 @@ async fn main() {
     // Print port on stdout for Playwright to parse
     println!("{}", port);
 
-    let registry = Arc::new(SessionRegistry::default());
-
     loop {
         let (stream, peer) = match listener.accept().await {
             Ok(conn) => conn,
@@ -288,7 +282,6 @@ async fn main() {
         };
 
         eprintln!("New connection from {}", peer);
-        let registry = Arc::clone(&registry);
 
         tokio::spawn(async move {
             let ws_link = match WsLink::server(stream).await {
@@ -299,10 +292,9 @@ async fn main() {
                 }
             };
 
-            let accepted = match acceptor_transport(ws_link)
-                .session_registry((*registry).clone())
+            let root_caller_guard = match acceptor_transport(ws_link)
                 .on_connection(TestbedDispatcher::new(TestbedService))
-                .establish_or_resume::<TestbedClient>()
+                .establish::<TestbedClient>()
                 .await
             {
                 Ok(v) => v,
@@ -312,16 +304,9 @@ async fn main() {
                 }
             };
 
-            match accepted {
-                SessionAcceptOutcome::Established(root_caller_guard) => {
-                    eprintln!("Connection established with {}", peer);
-                    let _root_caller_guard = root_caller_guard;
-                    std::future::pending::<()>().await;
-                }
-                SessionAcceptOutcome::Resumed => {
-                    eprintln!("Connection resumed with {}", peer);
-                }
-            }
+            eprintln!("Connection established with {}", peer);
+            let _root_caller_guard = root_caller_guard;
+            std::future::pending::<()>().await;
         });
     }
 }

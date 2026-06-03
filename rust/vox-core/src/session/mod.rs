@@ -14,8 +14,8 @@ use vox_types::{
     BoxFut, ChannelMessage, ConduitRx, ConduitTx, ConnectionAccept, ConnectionClose, ConnectionId,
     ConnectionOpen, ConnectionReject, ConnectionSettings, Handler, HandshakeResult, IdAllocator,
     MaybeSend, MaybeSync, Message, MessageFamily, MessagePayload, Metadata, Parity, RequestBody,
-    RequestId, RequestMessage, RequestResponse, SchemaMessage, SelfRef, SessionResumeKey,
-    SessionRole, TrySendError, VoxDebugSnapshot, VoxObserverHandle,
+    RequestId, RequestMessage, RequestResponse, SchemaMessage, SelfRef, SessionRole, TrySendError,
+    VoxDebugSnapshot, VoxObserverHandle,
 };
 use vox_types::{
     ConnectionCloseReason, ConnectionDebugSnapshot, ConnectionDebugState, DecodeErrorKind,
@@ -282,13 +282,6 @@ struct CloseRequest {
     result_tx: moire::sync::oneshot::Sender<Result<(), SessionError>>,
 }
 
-struct ResumeRequest {
-    tx: Arc<dyn DynConduitTx>,
-    rx: Box<dyn DynConduitRx>,
-    handshake_result: HandshakeResult,
-    result_tx: moire::sync::oneshot::Sender<Result<(), SessionError>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum DropControlRequest {
     Shutdown,
@@ -331,9 +324,7 @@ fn send_drop_control(
 pub struct SessionHandle {
     open_tx: mpsc::Sender<OpenRequest>,
     close_tx: mpsc::Sender<CloseRequest>,
-    resume_tx: mpsc::Sender<ResumeRequest>,
     control_tx: mpsc::UnboundedSender<DropControlRequest>,
-    resume_key: Option<SessionResumeKey>,
 }
 
 impl SessionHandle {
@@ -414,32 +405,6 @@ impl SessionHandle {
             .map_err(|_| SessionError::Protocol("session closed".into()))?
     }
 
-    pub(crate) async fn resume_parts(
-        &self,
-        tx: Arc<dyn DynConduitTx>,
-        rx: Box<dyn DynConduitRx>,
-        handshake_result: HandshakeResult,
-    ) -> Result<(), SessionError> {
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.resume_result");
-        self.resume_tx
-            .send(ResumeRequest {
-                tx,
-                rx,
-                handshake_result,
-                result_tx,
-            })
-            .await
-            .map_err(|_| SessionError::Protocol("session closed".into()))?;
-        result_rx
-            .await
-            .map_err(|_| SessionError::Protocol("session closed".into()))?
-    }
-
-    /// Returns the session resume key, if the session is resumable.
-    pub fn resume_key(&self) -> Option<&SessionResumeKey> {
-        self.resume_key.as_ref()
-    }
-
     /// Request shutdown of the entire session (root + all virtual connections).
     pub fn shutdown(&self) -> Result<(), SessionError> {
         send_drop_control(&self.control_tx, DropControlRequest::Shutdown)
@@ -469,8 +434,6 @@ pub struct Session {
     sess_core: Arc<SessionCore>,
     local_root_settings: ConnectionSettings,
     peer_root_settings: Option<ConnectionSettings>,
-    resumable: bool,
-    session_resume_key: Option<SessionResumeKey>,
 
     /// Connection state (active, pending inbound, pending outbound).
     conns: BTreeMap<ConnectionId, ConnectionSlot>,
@@ -489,21 +452,12 @@ pub struct Session {
     /// Receiver for close requests from SessionHandle.
     close_rx: mpsc::Receiver<CloseRequest>,
 
-    /// Receiver for resume requests from SessionHandle.
-    resume_rx: mpsc::Receiver<ResumeRequest>,
-
     /// Sender/receiver for drop-driven session/connection control requests.
     control_tx: mpsc::UnboundedSender<DropControlRequest>,
     control_rx: mpsc::UnboundedReceiver<DropControlRequest>,
 
     /// Optional proactive keepalive runtime config for connection ID 0.
     keepalive: Option<SessionKeepaliveConfig>,
-    resume_notifier: watch::Sender<u64>,
-    recoverer: Option<Box<dyn ConduitRecoverer>>,
-    recovery_timeout: Option<Duration>,
-    /// Whether this session was registered in a `SessionRegistry`, meaning
-    /// an external acceptor could route a reconnecting client to resume it.
-    registered_in_registry: bool,
 
     observer: Option<VoxObserverHandle>,
 }
@@ -826,7 +780,6 @@ pub struct ConnectionHandle {
     pub(crate) failures_rx: mpsc::UnboundedReceiver<(RequestId, FailureDisposition)>,
     pub(crate) control_tx: Option<mpsc::UnboundedSender<DropControlRequest>>,
     pub(crate) closed_rx: watch::Receiver<Option<ConnectionCloseReason>>,
-    pub(crate) resumed_rx: watch::Receiver<u64>,
     pub(crate) local_settings: ConnectionSettings,
     pub(crate) peer_settings: ConnectionSettings,
     /// The parity this side should use for allocating request/channel IDs.
@@ -949,7 +902,6 @@ pub async fn proxy_connections(
         failures_rx: _left_failures_rx,
         control_tx: left_control_tx,
         closed_rx: _left_closed_rx,
-        resumed_rx: _left_resumed_rx,
         local_settings: _left_local_settings,
         peer_settings: _left_peer_settings,
         parity: _left_parity,
@@ -961,7 +913,6 @@ pub async fn proxy_connections(
         failures_rx: _right_failures_rx,
         control_tx: right_control_tx,
         closed_rx: _right_closed_rx,
-        resumed_rx: _right_resumed_rx,
         local_settings: _right_local_settings,
         peer_settings: _right_peer_settings,
         parity: _right_parity,
@@ -1004,7 +955,6 @@ pub enum SessionError {
     Io(std::io::Error),
     Protocol(String),
     Rejected(Metadata),
-    NotResumable,
     ConnectTimeout,
 }
 
@@ -1015,10 +965,7 @@ impl SessionError {
     /// shortly. Protocol errors and explicit rejections are permanent for this
     /// peer address and will not resolve by retrying.
     pub fn is_retryable(&self) -> bool {
-        matches!(
-            self,
-            Self::Io(_) | Self::ConnectTimeout | Self::NotResumable
-        )
+        matches!(self, Self::Io(_) | Self::ConnectTimeout)
     }
 }
 
@@ -1028,7 +975,6 @@ impl std::fmt::Display for SessionError {
             Self::Io(e) => write!(f, "io error: {e}"),
             Self::Protocol(msg) => write!(f, "protocol error: {msg}"),
             Self::Rejected(_) => write!(f, "connection rejected"),
-            Self::NotResumable => write!(f, "session is not resumable"),
             Self::ConnectTimeout => write!(f, "connect timeout"),
         }
     }
@@ -1113,13 +1059,9 @@ impl Session {
         on_connection: Option<Arc<dyn ConnectionAcceptor>>,
         open_rx: mpsc::Receiver<OpenRequest>,
         close_rx: mpsc::Receiver<CloseRequest>,
-        resume_rx: mpsc::Receiver<ResumeRequest>,
         control_tx: mpsc::UnboundedSender<DropControlRequest>,
         control_rx: mpsc::UnboundedReceiver<DropControlRequest>,
         keepalive: Option<SessionKeepaliveConfig>,
-        resumable: bool,
-        recoverer: Option<Box<dyn ConduitRecoverer>>,
-        recovery_timeout: Option<Duration>,
         observer: Option<VoxObserverHandle>,
     ) -> Self
     where
@@ -1137,7 +1079,6 @@ impl Session {
             channel_gates: std::sync::Mutex::new(HashMap::new()),
         });
         spawn_outbound_worker(outbound_rx);
-        let (resume_notifier, _resume_rx) = watch::channel(0_u64);
         Session {
             rx: Box::new(rx),
             role: SessionRole::Initiator, // overwritten in establish_as_*
@@ -1149,28 +1090,17 @@ impl Session {
                 initial_channel_credit: 16,
             },
             peer_root_settings: None,
-            resumable,
-            session_resume_key: None,
             conns: BTreeMap::new(),
             root_closed_internal: false,
             conn_ids: IdAllocator::new(Parity::Odd), // overwritten in establish_as_*
             on_connection,
             open_rx,
             close_rx,
-            resume_rx,
             control_tx,
             control_rx,
             keepalive,
-            resume_notifier,
-            recoverer,
-            recovery_timeout,
-            registered_in_registry: false,
             observer,
         }
-    }
-
-    pub(crate) fn resume_key(&self) -> Option<SessionResumeKey> {
-        self.session_resume_key
     }
 
     // r[impl session.handshake]
@@ -1183,11 +1113,6 @@ impl Session {
         self.conn_ids = IdAllocator::new(result.our_settings.parity);
         self.local_root_settings = result.our_settings.clone();
         self.peer_root_settings = Some(result.peer_settings.clone());
-        self.session_resume_key = result.session_resume_key;
-
-        if self.resumable && self.session_resume_key.is_none() {
-            return Err(SessionError::NotResumable);
-        }
 
         Ok(self.make_root_handle(result.our_settings, result.peer_settings))
     }
@@ -1210,8 +1135,6 @@ impl Session {
         let (conn_tx, conn_rx) = mpsc::channel::<RecvMessage>(&label, 64);
         let (failures_tx, failures_rx) = mpsc::unbounded_channel(format!("{label}.failures"));
         let (closed_tx, closed_rx) = watch::channel(None);
-        let resumed_rx = self.resume_notifier.subscribe();
-
         let sender = ConnectionSender {
             connection_id: conn_id,
             sess_core: Arc::clone(&self.sess_core),
@@ -1245,7 +1168,6 @@ impl Session {
             failures_rx,
             control_tx: Some(self.control_tx.clone()),
             closed_rx,
-            resumed_rx,
             local_settings: handle_local_settings,
             peer_settings: handle_peer_settings,
             parity,
@@ -1267,11 +1189,6 @@ impl Session {
 
         loop {
             tokio::select! {
-                // biased: ensure conduit EOF is processed before any resume
-                // request. Without this, tokio's random branch selection can
-                // pick resume_rx when BOTH branches are simultaneously ready
-                // (fast client reconnect on Linux), causing the session to
-                // reject a valid resume while still in CONNECTED state.
                 biased;
 
                 msg = self.rx.recv_msg() => {
@@ -1285,11 +1202,8 @@ impl Session {
                         }
                         Ok(None) => {
                             vox_types::dlog!("[session {:?}] recv loop: conduit returned EOF", self.role);
-                            if !self.handle_conduit_break(&mut keepalive_runtime).await {
-                                vox_types::dlog!("[session {:?}] recv loop: breaking (not resumable)", self.role);
-                                self.close_all_connections(ConnectionCloseReason::Remote);
-                                break;
-                            }
+                            self.close_all_connections(ConnectionCloseReason::Remote);
+                            break;
                         }
                         Err(error) => {
                             let close_reason = classify_session_recv_error(&error);
@@ -1301,11 +1215,8 @@ impl Session {
                                 "session receive failed; closing connections if recovery is unavailable"
                             );
                             vox_types::dlog!("[session {:?}] recv loop: conduit recv error: {}", self.role, error);
-                            if !self.handle_conduit_break(&mut keepalive_runtime).await {
-                                vox_types::dlog!("[session {:?}] recv loop: breaking (not resumable)", self.role);
-                                self.close_all_connections(close_reason);
-                                break;
-                            }
+                            self.close_all_connections(close_reason);
+                            break;
                         }
                     }
                 }
@@ -1314,11 +1225,6 @@ impl Session {
                 }
                 Some(req) = self.close_rx.recv() => {
                     self.handle_close_request(req).await;
-                }
-                Some(req) = self.resume_rx.recv() => {
-                    let _ = req.result_tx.send(Err(SessionError::Protocol(
-                        "resume is only valid while the session is disconnected".into(),
-                    )));
                 }
                 Some(req) = self.control_rx.recv() => {
                     if !self.handle_drop_control_request(req).await {
@@ -1342,116 +1248,6 @@ impl Session {
         // Drop all connection slots so per-connection drivers exit immediately.
         self.close_all_connections(ConnectionCloseReason::SessionShutdown);
         trace!("session recv loop exited");
-    }
-
-    async fn handle_conduit_break(
-        &mut self,
-        keepalive_runtime: &mut Option<KeepaliveRuntime>,
-    ) -> bool {
-        // Recovery strategy:
-        // 1. If we have a recoverer (client-side auto-reconnect), use it.
-        // 2. If we're registered in a SessionRegistry (server-side), wait
-        //    for the registry to route a reconnecting client to us.
-        // 3. Otherwise, the session is done.
-
-        if let Some(recoverer) = self.recoverer.as_mut() {
-            let recovery_fut = recoverer.next_conduit(self.session_resume_key.as_ref());
-            let recovery_result = match self.recovery_timeout {
-                Some(timeout) => match vox_types::time::tokio::timeout(timeout, recovery_fut).await
-                {
-                    Ok(r) => r,
-                    Err(_) => return false,
-                },
-                None => recovery_fut.await,
-            };
-            match recovery_result {
-                Ok(recovered) => {
-                    let result =
-                        self.resume_from_handshake(recovered.tx, recovered.rx, recovered.handshake);
-                    match result {
-                        Ok(()) => {
-                            let next_generation = self.resume_notifier.borrow().wrapping_add(1);
-                            let _ = self.resume_notifier.send(next_generation);
-                            *keepalive_runtime = self.make_keepalive_runtime();
-                            return true;
-                        }
-                        Err(_) => return false,
-                    }
-                }
-                Err(_) => return false,
-            }
-        }
-
-        if !self.registered_in_registry {
-            return false;
-        }
-
-        loop {
-            tokio::select! {
-                Some(req) = self.resume_rx.recv() => {
-                    let result =
-                        self.resume_from_handshake(req.tx, req.rx, req.handshake_result);
-                    let ok = result.is_ok();
-                    let _ = req.result_tx.send(result);
-                    if ok {
-                        let next_generation = self.resume_notifier.borrow().wrapping_add(1);
-                        let _ = self.resume_notifier.send(next_generation);
-                        *keepalive_runtime = self.make_keepalive_runtime();
-                        return true;
-                    }
-                }
-                Some(req) = self.control_rx.recv() => {
-                    if !self.handle_drop_control_request(req).await {
-                        return false;
-                    }
-                }
-                Some(req) = self.open_rx.recv() => {
-                    let _ = req.result_tx.send(Err(SessionError::Protocol(
-                        "session is disconnected; resume before opening connections".into(),
-                    )));
-                }
-                Some(req) = self.close_rx.recv() => {
-                    let _ = req.result_tx.send(Err(SessionError::Protocol(
-                        "session is disconnected; resume before closing connections".into(),
-                    )));
-                }
-                else => return false,
-            }
-        }
-    }
-
-    fn resume_from_handshake(
-        &mut self,
-        tx: Arc<dyn DynConduitTx>,
-        rx: Box<dyn DynConduitRx>,
-        result: HandshakeResult,
-    ) -> Result<(), SessionError> {
-        let Some(peer_settings) = self.peer_root_settings.clone() else {
-            return Err(SessionError::Protocol("missing peer root settings".into()));
-        };
-
-        if result.our_settings != self.local_root_settings {
-            return Err(SessionError::Protocol(
-                "local root settings changed across session resume".into(),
-            ));
-        }
-
-        if result.peer_settings != peer_settings {
-            return Err(SessionError::Protocol(
-                "peer root settings changed across session resume".into(),
-            ));
-        }
-
-        self.session_resume_key = result.session_resume_key.or(self.session_resume_key);
-
-        self.sess_core.replace_tx_and_reset_schemas(tx);
-        self.rx = rx;
-        // Reset the root connection's recv tracker on reconnection —
-        // type IDs are per-connection and must not carry over.
-        if let Some(ConnectionSlot::Active(state)) = self.conns.get_mut(&ConnectionId::ROOT) {
-            state.schema_recv_tracker = Arc::new(vox_types::SchemaRecvTracker::new());
-        }
-        Ok(())
     }
 
     async fn handle_message(
@@ -3035,25 +2831,6 @@ impl SessionCore {
             prepared,
         })
     }
-
-    fn replace_tx_and_reset_schemas(&self, tx: Arc<dyn DynConduitTx>) {
-        let mut inner = self.inner.lock().expect("session core mutex poisoned");
-        inner.tx = tx;
-        inner.conns.clear();
-    }
-}
-
-pub(crate) struct RecoveredConduit {
-    pub tx: Arc<dyn DynConduitTx>,
-    pub rx: Box<dyn DynConduitRx>,
-    pub handshake: HandshakeResult,
-}
-
-pub(crate) trait ConduitRecoverer: MaybeSend {
-    fn next_conduit<'a>(
-        &'a mut self,
-        resume_key: Option<&'a SessionResumeKey>,
-    ) -> BoxFut<'a, Result<RecoveredConduit, SessionError>>;
 }
 
 pub trait DynConduitTx: MaybeSend + MaybeSync {
@@ -3222,11 +2999,9 @@ mod tests {
         let (tx, rx) = conduit.split();
         let (_open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open.test", 4);
         let (_close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close.test", 4);
-        let (_resume_tx, resume_rx) = mpsc::channel::<ResumeRequest>("session.resume.test", 1);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control.test");
         Session::pre_handshake(
-            tx, rx, None, open_rx, close_rx, resume_rx, control_tx, control_rx, None, false, None,
-            None, None,
+            tx, rx, None, open_rx, close_rx, control_tx, control_rx, None, None,
         )
     }
 
@@ -3235,8 +3010,6 @@ mod tests {
     ) -> (Session, ConnectionHandle) {
         let (_open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open.capture.test", 4);
         let (_close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close.capture.test", 4);
-        let (_resume_tx, resume_rx) =
-            mpsc::channel::<ResumeRequest>("session.resume.capture.test", 1);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control.capture.test");
         let mut session = Session::pre_handshake(
             CapturingTx { sent },
@@ -3244,17 +3017,13 @@ mod tests {
             None,
             open_rx,
             close_rx,
-            resume_rx,
             control_tx,
             control_rx,
-            None,
-            false,
-            None,
             None,
             None,
         );
         let handle = session
-            .establish_from_handshake(resumed_handshake(
+            .establish_from_handshake(test_handshake(
                 ConnectionSettings {
                     parity: Parity::Odd,
                     max_concurrent_requests: 64,
@@ -3270,7 +3039,7 @@ mod tests {
         (session, handle)
     }
 
-    fn resumed_handshake(
+    fn test_handshake(
         our_settings: ConnectionSettings,
         peer_settings: ConnectionSettings,
     ) -> HandshakeResult {
@@ -3278,8 +3047,6 @@ mod tests {
             role: SessionRole::Initiator,
             our_settings,
             peer_settings,
-            session_resume_key: Some(SessionResumeKey([7; 16])),
-            peer_resume_key: None,
             our_schema: vec![],
             peer_schema: vec![],
             peer_metadata: vox_types::Metadata::default(),
@@ -3673,100 +3440,6 @@ mod tests {
         assert!(
             open_result_rx.await.is_err(),
             "pending open result channel should be closed once the pending slot is removed"
-        );
-    }
-
-    #[test]
-    fn resume_rejects_changed_local_root_settings() {
-        let mut session = make_session();
-        let local_settings = ConnectionSettings {
-            parity: Parity::Odd,
-            max_concurrent_requests: 64,
-            initial_channel_credit: 16,
-        };
-        let peer_settings = ConnectionSettings {
-            parity: Parity::Even,
-            max_concurrent_requests: 64,
-            initial_channel_credit: 16,
-        };
-        let _root = session
-            .establish_from_handshake(resumed_handshake(
-                local_settings.clone(),
-                peer_settings.clone(),
-            ))
-            .expect("initial handshake should establish session");
-
-        let (link_a, _link_b) = crate::memory_link_pair(32);
-        let conduit = crate::BareConduit::new(link_a);
-        let (tx, rx) = conduit.split();
-
-        let result = session.resume_from_handshake(
-            Arc::new(tx),
-            Box::new(rx),
-            resumed_handshake(
-                ConnectionSettings {
-                    parity: Parity::Odd,
-                    max_concurrent_requests: 65,
-                    initial_channel_credit: 16,
-                },
-                peer_settings,
-            ),
-        );
-
-        assert!(
-            matches!(
-                &result,
-                Err(SessionError::Protocol(message))
-                    if message == "local root settings changed across session resume"
-            ),
-            "expected local-root-settings mismatch, got: {result:?}"
-        );
-    }
-
-    #[test]
-    fn resume_rejects_changed_peer_root_settings() {
-        let mut session = make_session();
-        let local_settings = ConnectionSettings {
-            parity: Parity::Odd,
-            max_concurrent_requests: 64,
-            initial_channel_credit: 16,
-        };
-        let peer_settings = ConnectionSettings {
-            parity: Parity::Even,
-            max_concurrent_requests: 64,
-            initial_channel_credit: 16,
-        };
-        let _root = session
-            .establish_from_handshake(resumed_handshake(
-                local_settings.clone(),
-                peer_settings.clone(),
-            ))
-            .expect("initial handshake should establish session");
-
-        let (link_a, _link_b) = crate::memory_link_pair(32);
-        let conduit = crate::BareConduit::new(link_a);
-        let (tx, rx) = conduit.split();
-
-        let result = session.resume_from_handshake(
-            Arc::new(tx),
-            Box::new(rx),
-            resumed_handshake(
-                local_settings,
-                ConnectionSettings {
-                    parity: Parity::Even,
-                    max_concurrent_requests: 65,
-                    initial_channel_credit: 16,
-                },
-            ),
-        );
-
-        assert!(
-            matches!(
-                &result,
-                Err(SessionError::Protocol(message))
-                    if message == "peer root settings changed across session resume"
-            ),
-            "expected peer-root-settings mismatch, got: {result:?}"
         );
     }
 }

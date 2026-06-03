@@ -211,7 +211,6 @@ private struct HandshakeHarness {
                     connectionSettings: ConnectionSettings(
                         parity: .even, maxConcurrentRequests: 64, initialChannelCredit: 16),
                     messagePayloadSchema: Data(MessageSchemaClosure),
-                    resumeKey: nil,
                     metadata: .null
                 )
             )

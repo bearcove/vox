@@ -77,8 +77,8 @@ the same ID. vox does not define its own hashing; it uses phon's.
 Content hashes give type IDs a universal meaning. A peer that receives a schema
 tagged with a content hash it has already seen — from this connection, a
 previous connection, or a persistent store — knows it already has that schema.
-This supports efficient schema tracking across connection resumes and local
-schema caches.
+This supports efficient schema tracking for later connections and local schema
+caches.
 
 > r[schema.type-id.per-connection]
 >

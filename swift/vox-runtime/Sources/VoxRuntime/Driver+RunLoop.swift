@@ -38,125 +38,13 @@ extension Driver {
         }
     }
 
-    /// Try to recover the conduit using the recovery callback.
-    ///
-    /// If the original session had a resume key, try a protocol-level resume
-    /// handshake. Otherwise do a plain fresh handshake. In-flight request
-    /// attempts fail when the conduit is lost; recovery only restores the
-    /// session for future traffic.
-    private func tryRecoverConduit() async -> (any Conduit)? {
-        guard let recoverAttachment, let localRootSettings, let peerRootSettings, let transport
-        else {
-            traceLog(.resume, "tryRecoverConduit: missing required fields")
-            return nil
-        }
-
-        do {
-            let attachment = try await recoverAttachment()
-            let freshFallback = {
-                traceLog(.resume, "trying recoverAttachment with fresh handshake fallback")
-                return try await recoverAttachment()
-            }
-
-            let establishedAttachment: LinkAttachment
-            if let sessionResumeKey {
-                // Try protocol-level resume first. If the peer has restarted and
-                // no longer recognizes the key, fall back to a fresh handshake.
-                traceLog(.resume, "trying recoverAttachment with session key")
-                do {
-                    let handshake = try await performInitiatorHandshake(
-                        link: attachment.link,
-                        maxPayloadSize: 1024 * 1024,
-                        maxConcurrentRequests: localRootSettings.maxConcurrentRequests,
-                        initialChannelCredit: localRootSettings.initialChannelCredit,
-                        resumable: true,
-                        resumeKey: sessionResumeKey
-                    )
-                    guard handshake.localRootSettings == localRootSettings else {
-                        throw ConnectionError.protocolViolation(
-                            rule: "local root settings changed across session resume"
-                        )
-                    }
-                    guard handshake.peerRootSettings == peerRootSettings else {
-                        throw ConnectionError.protocolViolation(
-                            rule: "peer root settings changed across session resume"
-                        )
-                    }
-                    establishedAttachment = attachment
-                } catch {
-                    traceLog(
-                        .resume,
-                        "resume handshake failed, retrying with fresh handshake: \(String(describing: error))"
-                    )
-                    let fallbackAttachment = try await freshFallback()
-                    _ = try await performInitiatorHandshake(
-                        link: fallbackAttachment.link,
-                        maxPayloadSize: 1024 * 1024,
-                        maxConcurrentRequests: localRootSettings.maxConcurrentRequests,
-                        initialChannelCredit: localRootSettings.initialChannelCredit,
-                        resumable: false
-                    )
-                    establishedAttachment = fallbackAttachment
-                }
-            } else {
-                // Fresh-session recovery: peer doesn't support resumption.
-                // Do a plain handshake for future traffic.
-                traceLog(.resume, "trying recoverAttachment with fresh handshake (no session key)")
-                _ = try await performInitiatorHandshake(
-                    link: attachment.link,
-                    maxPayloadSize: 1024 * 1024,
-                    maxConcurrentRequests: localRootSettings.maxConcurrentRequests,
-                    initialChannelCredit: localRootSettings.initialChannelCredit,
-                    resumable: false
-                )
-                establishedAttachment = attachment
-            }
-
-            let conduit = try await buildEstablishedConduit(
-                role: role,
-                transport: transport,
-                attachment: establishedAttachment,
-                peerMessageSchema: peerMessageSchema,
-                recoverAttachment: nil
-            )
-            traceLog(.resume, "recoverAttachment succeeded")
-            return conduit
-        } catch {
-            traceLog(.resume, "recoverAttachment failed: \(String(describing: error))")
-            return nil
-        }
-    }
-
-    /// Handle successful session resume.
-    /// FIXME: it's not so much "resume" as it is "another fresh session" in reality
-    private func handleSuccessfulResume(keepaliveRuntime: inout DriverKeepaliveRuntime?) async {
-        traceLog(.resume, "session resumed successfully")
-
-        // Reset schema tracker - type IDs are per-connection and must not carry over
-        schemaSendTracker.reset()
-
-        // Reset request ID allocator for the new connection.
-        self.handle.onConduitReset()
-
-        // r[impl rpc.channel.connection-closure] - Close all channels on resume.
-        // Channel handles become invalid on disconnect. Later calls allocate
-        // fresh channels and bind fresh handles.
-        await serverRegistry.closeAllChannels()
-        await handle.channelRegistry.closeAllChannels()
-
-        pendingCalls.removeAll()
-
-        // Reset keepalive
-        keepaliveRuntime = makeKeepaliveRuntime()
-    }
-
     /// Run the driver until connection closes.
     public func run() async throws {
         var keepaliveRuntime = makeKeepaliveRuntime()
         traceLog(.driver, "run start")
 
         let cont = eventContinuation
-        var readerTask = spawnReaderTask(for: conduit, continuation: cont)
+        let readerTask = spawnReaderTask(for: conduit, continuation: cont)
 
         let retryTask = Task {
             while !Task.isCancelled {
@@ -173,59 +61,8 @@ extension Driver {
             eventContinuation.finish()
         }
 
-        // State: are we currently connected or waiting for resume?
-        var isConnected = true
-        var needsRecoveryAttempt = false
-
         do {
             for await event in eventStream {
-                // Handle disconnected state
-                if !isConnected {
-                    switch event {
-                    case .resumeConduit(let newConduit):
-                        traceLog(.resume, "received resume conduit while disconnected")
-                        self.conduit = newConduit
-                        readerTask.cancel()
-                        await handleSuccessfulResume(keepaliveRuntime: &keepaliveRuntime)
-                        readerTask = spawnReaderTask(for: newConduit, continuation: cont)
-                        isConnected = true
-                        continue
-
-                    case .wake:
-                        // While disconnected, try recovery if we haven't yet
-                        if needsRecoveryAttempt {
-                            needsRecoveryAttempt = false
-                            if let recovered = await tryRecoverConduit() {
-                                traceLog(.resume, "recovery succeeded while disconnected")
-                                self.conduit = recovered
-                                readerTask.cancel()
-                                await handleSuccessfulResume(keepaliveRuntime: &keepaliveRuntime)
-                                readerTask = spawnReaderTask(for: recovered, continuation: cont)
-                                isConnected = true
-                                continue
-                            }
-                        }
-                        // Drain queues but reject new calls
-                        let commands = commandQueue.popAll()
-                        for command in commands {
-                            if case .call(_, _, _, _, _, _, let responseTx, _) = command {
-                                responseTx(.failure(.connectionClosed))
-                            }
-                        }
-
-                    case .retryTick:
-                        // Retry recovery on each tick while disconnected
-                        needsRecoveryAttempt = true
-                        cont.yield(.wake)
-
-                    case .incomingMessage, .conduitClosed, .conduitFailed:
-                        // These shouldn't happen while disconnected, ignore
-                        break
-                    }
-                    continue
-                }
-
-                // Connected state - normal processing
                 try await drainInjectedQueues()
                 try await flushPendingTaskMessages()
                 try await flushPendingCalls()
@@ -240,29 +77,10 @@ extension Driver {
                 case .retryTick:
                     try await handleKeepaliveTick(keepaliveRuntime: &keepaliveRuntime)
 
-                case .resumeConduit(let newConduit):
-                    // Resume received while connected - replace conduit
-                    traceLog(.resume, "received resume conduit while connected")
-                    self.conduit = newConduit
-                    readerTask.cancel()
-                    await handleSuccessfulResume(keepaliveRuntime: &keepaliveRuntime)
-                    readerTask = spawnReaderTask(for: newConduit, continuation: cont)
-
                 case .conduitClosed, .conduitFailed:
                     traceLog(.driver, "conduit broke")
-                    if resumable {
-                        await failAllPending()
-                        // Enter disconnected state
-                        isConnected = false
-                        needsRecoveryAttempt = true
-                        traceLog(.resume, "entered disconnected state; scheduling recovery")
-                        // Trigger a wake to attempt recovery
-                        cont.yield(.wake)
-                    } else {
-                        // Not resumable - exit
-                        await failAllPending()
-                        eventContinuation.finish()
-                    }
+                    await failAllPending()
+                    eventContinuation.finish()
                 }
             }
         } catch {

@@ -1,17 +1,10 @@
-use std::{
-    collections::HashMap,
-    future::Future,
-    pin::Pin,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use moire::sync::mpsc;
-use moire::time;
 use vox_types::{
     Conduit, ConnectionSettings, DEFAULT_INITIAL_CHANNEL_CREDIT, HandshakeResult, Link, MaybeSend,
-    MaybeSync, MessageFamily, Metadata, MetadataExt, Parity, SessionResumeKey, SplitLink,
-    VoxObserver, VoxObserverHandle, metadata_into_owned,
+    MaybeSync, MessageFamily, Metadata, MetadataExt, Parity, SplitLink, VoxObserver,
+    VoxObserverHandle, metadata_into_owned,
 };
 
 use crate::LinkSource;
@@ -21,8 +14,8 @@ use crate::{
 };
 
 use super::{
-    CloseRequest, ConduitRecoverer, ConnectionAcceptor, OpenRequest, Session, SessionError,
-    SessionHandle, SessionKeepaliveConfig,
+    CloseRequest, ConnectionAcceptor, OpenRequest, Session, SessionError, SessionHandle,
+    SessionKeepaliveConfig,
 };
 use crate::FromVoxSession;
 
@@ -103,7 +96,7 @@ where
 {
     let (tx, mut rx) = link.split();
     let handshake_result =
-        handshake_as_initiator(&tx, &mut rx, settings, None, vox_types::Metadata::default())
+        handshake_as_initiator(&tx, &mut rx, settings, vox_types::Metadata::default())
             .await
             .map_err(session_error_from_handshake)?;
     let message_plan =
@@ -125,16 +118,10 @@ where
     L::Rx: MaybeSend + 'static,
 {
     let (tx, mut rx) = link.split();
-    let handshake_result = handshake_as_acceptor(
-        &tx,
-        &mut rx,
-        settings,
-        false,
-        None,
-        vox_types::Metadata::default(),
-    )
-    .await
-    .map_err(session_error_from_handshake)?;
+    let handshake_result =
+        handshake_as_acceptor(&tx, &mut rx, settings, vox_types::Metadata::default())
+            .await
+            .map_err(session_error_from_handshake)?;
     let message_plan =
         crate::MessagePlan::from_handshake(&handshake_result).map_err(SessionError::Protocol)?;
     Ok(SessionAcceptorBuilder::new(
@@ -162,51 +149,14 @@ pub fn acceptor_transport<L: Link>(link: L) -> SessionTransportAcceptorBuilder<L
     acceptor_on(link)
 }
 
-#[derive(Clone, Default)]
-pub struct SessionRegistry {
-    inner: Arc<Mutex<HashMap<SessionResumeKey, SessionHandle>>>,
-}
-
-impl SessionRegistry {
-    fn get(&self, key: &SessionResumeKey) -> Option<SessionHandle> {
-        self.inner
-            .lock()
-            .expect("session registry poisoned")
-            .get(key)
-            .cloned()
-    }
-
-    fn insert(&self, key: SessionResumeKey, handle: SessionHandle) {
-        self.inner
-            .lock()
-            .expect("session registry poisoned")
-            .insert(key, handle);
-    }
-
-    fn remove(&self, key: &SessionResumeKey) {
-        self.inner
-            .lock()
-            .expect("session registry poisoned")
-            .remove(key);
-    }
-}
-
-pub enum SessionAcceptOutcome<Client> {
-    Established(Client),
-    Resumed,
-}
-
 /// Shared configuration for all session builders.
 pub struct SessionConfig {
     pub root_settings: ConnectionSettings,
     pub metadata: Metadata,
     pub on_connection: Option<Arc<dyn ConnectionAcceptor>>,
     pub keepalive: Option<SessionKeepaliveConfig>,
-    pub resumable: bool,
-    pub session_registry: Option<SessionRegistry>,
     pub spawn_fn: SpawnFn,
     pub connect_timeout: Option<std::time::Duration>,
-    pub recovery_timeout: Option<std::time::Duration>,
     pub observer: Option<VoxObserverHandle>,
 }
 
@@ -217,11 +167,8 @@ impl SessionConfig {
             metadata: vox_types::Metadata::default(),
             on_connection: None,
             keepalive: None,
-            resumable: true,
-            session_registry: None,
             spawn_fn: default_spawn_fn(),
             connect_timeout: None,
-            recovery_timeout: None,
             observer: None,
         }
     }
@@ -241,20 +188,16 @@ pub struct SessionInitiatorBuilder<C> {
     conduit: C,
     handshake_result: HandshakeResult,
     config: SessionConfig,
-    recoverer: Option<Box<dyn ConduitRecoverer>>,
 }
 
 impl<C> SessionInitiatorBuilder<C> {
     fn new(conduit: C, handshake_result: HandshakeResult) -> Self {
         let root_settings = handshake_result.our_settings.clone();
-        let mut config = SessionConfig::with_settings(root_settings);
-        // Conduit builders default to non-resumable — callers opt in with .resumable()
-        config.resumable = false;
+        let config = SessionConfig::with_settings(root_settings);
         Self {
             conduit,
             handshake_result,
             config,
-            recoverer: None,
         }
     }
 
@@ -290,27 +233,6 @@ impl<C> SessionInitiatorBuilder<C> {
         self
     }
 
-    pub fn recovery_timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.config.recovery_timeout = Some(timeout);
-        self
-    }
-
-    pub fn resumable(mut self) -> Self {
-        self.config.resumable = true;
-        self
-    }
-
-    /// Disable session resumability. Useful for IPC transports where
-    /// the peer is a process: when the process exits the connection
-    /// is gone for good, there's nothing to resume against, and
-    /// keeping the session alive in recovery mode just leaks
-    /// per-channel state (e.g. server-side `Tx<T>`s never observing
-    /// that the client disconnected).
-    pub fn non_resumable(mut self) -> Self {
-        self.config.resumable = false;
-        self
-    }
-
     /// Override the function used to spawn the session background task.
     /// Defaults to `tokio::spawn` on non-WASM and `wasm_bindgen_futures::spawn_local` on WASM.
     #[cfg(not(target_arch = "wasm32"))]
@@ -341,14 +263,12 @@ impl<C> SessionInitiatorBuilder<C> {
             conduit,
             mut handshake_result,
             config,
-            recoverer,
         } = self;
         validate_negotiated_root_settings(&config.root_settings, &handshake_result)?;
         let mut peer_metadata = std::mem::take(&mut handshake_result.peer_metadata);
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
-        let (resume_tx, resume_rx) = mpsc::channel::<super::ResumeRequest>("session.resume", 1);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control");
         let acceptor: Arc<dyn ConnectionAcceptor> =
             config.on_connection.unwrap_or_else(|| Arc::new(()));
@@ -358,23 +278,16 @@ impl<C> SessionInitiatorBuilder<C> {
             Some(acceptor.clone()),
             open_rx,
             close_rx,
-            resume_rx,
             control_tx.clone(),
             control_rx,
             config.keepalive,
-            config.resumable,
-            recoverer,
-            config.recovery_timeout,
             config.observer.clone(),
         );
         let handle = session.establish_from_handshake(handshake_result)?;
-        let resume_key = session.resume_key();
         let session_handle = SessionHandle {
             open_tx,
             close_tx,
-            resume_tx,
             control_tx,
-            resume_key,
         };
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
@@ -422,10 +335,7 @@ pub struct SessionSourceInitiatorBuilder<S> {
 
 impl<S> SessionSourceInitiatorBuilder<S> {
     fn new(source: S, mode: TransportMode) -> Self {
-        let config = SessionConfig {
-            resumable: false,
-            ..SessionConfig::default()
-        };
+        let config = SessionConfig::default();
         Self {
             source,
             mode,
@@ -485,27 +395,6 @@ impl<S> SessionSourceInitiatorBuilder<S> {
         self
     }
 
-    pub fn recovery_timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.config.recovery_timeout = Some(timeout);
-        self
-    }
-
-    pub fn resumable(mut self) -> Self {
-        self.config.resumable = true;
-        self
-    }
-
-    /// Disable session resumability. Useful for IPC transports where
-    /// the peer is a process: when the process exits the connection
-    /// is gone for good, there's nothing to resume against, and
-    /// keeping the session alive in recovery mode just leaks
-    /// per-channel state (e.g. server-side `Tx<T>`s never observing
-    /// that the client disconnected).
-    pub fn non_resumable(mut self) -> Self {
-        self.config.resumable = false;
-        self
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     pub fn spawn_fn(mut self, f: impl FnOnce(BoxSessionFuture) + Send + 'static) -> Self {
         self.config.spawn_fn = Box::new(f);
@@ -528,7 +417,7 @@ impl<S> SessionSourceInitiatorBuilder<S> {
         let connect_timeout = self.config.connect_timeout;
         let fut = self.establish_inner::<Client>();
         match connect_timeout {
-            Some(timeout) => time::timeout(timeout, fut)
+            Some(timeout) => vox_types::time::tokio::timeout(timeout, fut)
                 .await
                 .map_err(|_| SessionError::ConnectTimeout)?,
             None => fut.await,
@@ -560,7 +449,6 @@ impl<S> SessionSourceInitiatorBuilder<S> {
                     &link.tx,
                     &mut link.rx,
                     config.root_settings.clone(),
-                    None,
                     metadata_into_owned(config.metadata.clone()),
                 )
                 .await
@@ -571,19 +459,9 @@ impl<S> SessionSourceInitiatorBuilder<S> {
                     BareConduit::with_message_plan(link, message_plan),
                     handshake_result,
                 );
-                let recoverer = Box::new(BareSourceRecoverer {
-                    source,
-                    settings: config.root_settings.clone(),
-                    connect_timeout: config.connect_timeout,
-                    metadata: metadata_into_owned(config.metadata.clone()),
-                });
-                SessionTransportInitiatorBuilder::<S::Link>::apply_common_parts(
-                    builder,
-                    config,
-                    Some(recoverer),
-                )
-                .establish()
-                .await
+                SessionTransportInitiatorBuilder::<S::Link>::apply_common_parts(builder, config)
+                    .establish()
+                    .await
             }
         }
     }
@@ -597,10 +475,7 @@ pub struct SessionTransportInitiatorBuilder<L> {
 
 impl<L> SessionTransportInitiatorBuilder<L> {
     fn new(link: L, mode: TransportMode) -> Self {
-        let config = SessionConfig {
-            resumable: false,
-            ..SessionConfig::default()
-        };
+        let config = SessionConfig::default();
         Self { link, mode, config }
     }
 
@@ -653,27 +528,6 @@ impl<L> SessionTransportInitiatorBuilder<L> {
 
     pub fn connect_timeout(mut self, timeout: std::time::Duration) -> Self {
         self.config.connect_timeout = Some(timeout);
-        self
-    }
-
-    pub fn recovery_timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.config.recovery_timeout = Some(timeout);
-        self
-    }
-
-    pub fn resumable(mut self) -> Self {
-        self.config.resumable = true;
-        self
-    }
-
-    /// Disable session resumability. Useful for IPC transports where
-    /// the peer is a process: when the process exits the connection
-    /// is gone for good, there's nothing to resume against, and
-    /// keeping the session alive in recovery mode just leaks
-    /// per-channel state (e.g. server-side `Tx<T>`s never observing
-    /// that the client disconnected).
-    pub fn non_resumable(mut self) -> Self {
-        self.config.resumable = false;
         self
     }
 
@@ -762,7 +616,6 @@ impl<L> SessionTransportInitiatorBuilder<L> {
             &link.tx,
             &mut link.rx,
             config.root_settings.clone(),
-            None,
             metadata_into_owned(config.metadata.clone()),
         )
         .await
@@ -773,98 +626,16 @@ impl<L> SessionTransportInitiatorBuilder<L> {
             BareConduit::with_message_plan(link, message_plan),
             handshake_result,
         );
-        Self::apply_common_parts(builder, config, None)
-            .establish()
-            .await
+        Self::apply_common_parts(builder, config).establish().await
     }
 
     #[allow(clippy::too_many_arguments)]
     fn apply_common_parts<C>(
         mut builder: SessionInitiatorBuilder<C>,
         config: SessionConfig,
-        recoverer: Option<Box<dyn ConduitRecoverer>>,
     ) -> SessionInitiatorBuilder<C> {
         builder.config = config;
-        builder.recoverer = recoverer;
         builder
-    }
-}
-
-struct BareSourceRecoverer<S> {
-    source: S,
-    settings: ConnectionSettings,
-    connect_timeout: Option<Duration>,
-    metadata: Metadata,
-}
-
-const SOURCE_RECOVERY_BACKOFF_MIN: Duration = Duration::from_millis(100);
-const SOURCE_RECOVERY_BACKOFF_MAX: Duration = Duration::from_secs(5);
-
-impl<S> ConduitRecoverer for BareSourceRecoverer<S>
-where
-    S: LinkSource,
-    S::Link: Link + MaybeSend + 'static,
-    <S::Link as Link>::Tx: MaybeSend + MaybeSync + 'static,
-    <S::Link as Link>::Rx: MaybeSend + 'static,
-{
-    fn next_conduit<'a>(
-        &'a mut self,
-        resume_key: Option<&'a SessionResumeKey>,
-    ) -> vox_types::BoxFut<'a, Result<super::RecoveredConduit, SessionError>> {
-        Box::pin(async move {
-            let mut backoff = SOURCE_RECOVERY_BACKOFF_MIN;
-            let mut use_resume_key = resume_key.is_some();
-
-            loop {
-                let selected_resume_key = if use_resume_key { resume_key } else { None };
-
-                let attempt = async {
-                    let attachment = self.source.next_link().await.map_err(SessionError::Io)?;
-                    let mut link = initiate_transport(attachment.into_link(), TransportMode::Bare)
-                        .await
-                        .map_err(session_error_from_transport)?;
-                    let handshake_result = handshake_as_initiator(
-                        &link.tx,
-                        &mut link.rx,
-                        self.settings.clone(),
-                        selected_resume_key,
-                        metadata_into_owned(self.metadata.clone()),
-                    )
-                    .await
-                    .map_err(session_error_from_handshake)?;
-                    let conduit = BareConduit::<MessageFamily, _>::new(link);
-                    let (tx, rx) = conduit.split();
-                    Ok(super::RecoveredConduit {
-                        tx: Arc::new(tx) as Arc<dyn crate::DynConduitTx>,
-                        rx: Box::new(rx) as Box<dyn crate::DynConduitRx>,
-                        handshake: handshake_result,
-                    })
-                };
-
-                let result = match self.connect_timeout {
-                    Some(timeout) => match time::timeout(timeout, attempt).await {
-                        Ok(r) => r,
-                        Err(_) => Err(SessionError::ConnectTimeout),
-                    },
-                    None => attempt.await,
-                };
-
-                match result {
-                    Ok(conduit) => return Ok(conduit),
-                    Err(e) if !e.is_retryable() => return Err(e),
-                    Err(_) => {}
-                }
-
-                if use_resume_key {
-                    // If a resumption attempt is rejected once, continue trying without
-                    // a resume key so restart scenarios can establish a fresh session.
-                    use_resume_key = false;
-                }
-
-                time::sleep(backoff).await;
-                backoff = backoff.saturating_mul(2).min(SOURCE_RECOVERY_BACKOFF_MAX);
-            }
-        })
     }
 }
 
@@ -877,9 +648,7 @@ pub struct SessionAcceptorBuilder<C> {
 impl<C> SessionAcceptorBuilder<C> {
     fn new(conduit: C, handshake_result: HandshakeResult) -> Self {
         let root_settings = handshake_result.our_settings.clone();
-        let mut config = SessionConfig::with_settings(root_settings);
-        // Conduit builders default to non-resumable — callers opt in with .resumable()
-        config.resumable = false;
+        let config = SessionConfig::with_settings(root_settings);
         Self {
             conduit,
             handshake_result,
@@ -919,32 +688,6 @@ impl<C> SessionAcceptorBuilder<C> {
         self
     }
 
-    pub fn recovery_timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.config.recovery_timeout = Some(timeout);
-        self
-    }
-
-    pub fn resumable(mut self) -> Self {
-        self.config.resumable = true;
-        self
-    }
-
-    /// Disable session resumability. Useful for IPC transports where
-    /// the peer is a process: when the process exits the connection
-    /// is gone for good, there's nothing to resume against, and
-    /// keeping the session alive in recovery mode just leaks
-    /// per-channel state (e.g. server-side `Tx<T>`s never observing
-    /// that the client disconnected).
-    pub fn non_resumable(mut self) -> Self {
-        self.config.resumable = false;
-        self
-    }
-
-    pub fn session_registry(mut self, session_registry: SessionRegistry) -> Self {
-        self.config.session_registry = Some(session_registry);
-        self
-    }
-
     /// Override the function used to spawn the session background task.
     /// Defaults to `tokio::spawn` on non-WASM and `wasm_bindgen_futures::spawn_local` on WASM.
     #[cfg(not(target_arch = "wasm32"))]
@@ -978,7 +721,6 @@ impl<C> SessionAcceptorBuilder<C> {
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
-        let (resume_tx, resume_rx) = mpsc::channel::<super::ResumeRequest>("session.resume", 1);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control");
         let acceptor: Arc<dyn ConnectionAcceptor> =
             config.on_connection.unwrap_or_else(|| Arc::new(()));
@@ -988,28 +730,17 @@ impl<C> SessionAcceptorBuilder<C> {
             Some(acceptor.clone()),
             open_rx,
             close_rx,
-            resume_rx,
             control_tx.clone(),
             control_rx,
             config.keepalive,
-            config.resumable,
-            None,
-            config.recovery_timeout,
             config.observer.clone(),
         );
         let handle = session.establish_from_handshake(handshake_result)?;
-        let resume_key = session.resume_key();
         let session_handle = SessionHandle {
             open_tx,
             close_tx,
-            resume_tx,
             control_tx,
-            resume_key,
         };
-        if let (Some(registry), Some(key)) = (&config.session_registry, resume_key) {
-            registry.insert(key, session_handle.clone());
-            session.registered_in_registry = true;
-        }
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
         let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
@@ -1045,38 +776,6 @@ impl<C> SessionAcceptorBuilder<C> {
         let client = Client::from_vox_session(caller, Some(session_handle));
         (config.spawn_fn)(Box::pin(async move { session.run().await }));
         Ok(client)
-    }
-
-    #[moire::instrument]
-    pub async fn establish_or_resume<Client: FromVoxSession>(
-        self,
-    ) -> Result<SessionAcceptOutcome<Client>, SessionError>
-    where
-        C: Conduit<Msg = MessageFamily> + 'static,
-        C::Tx: MaybeSend + MaybeSync + 'static,
-        C::Rx: MaybeSend + 'static,
-    {
-        // With the CBOR handshake, resume detection happens at the link level
-        // before the conduit is created. If the peer sent a resume key in the Hello
-        // that matches a known session, we resume. Otherwise, we establish.
-        if let (Some(registry), Some(resume_key)) = (
-            &self.config.session_registry,
-            self.handshake_result.peer_resume_key,
-        ) && let Some(handle) = registry.get(&resume_key)
-        {
-            let (tx, rx) = self.conduit.split();
-            if let Err(error) = handle
-                .resume_parts(Arc::new(tx), Box::new(rx), self.handshake_result)
-                .await
-            {
-                registry.remove(&resume_key);
-                return Err(error);
-            }
-            return Ok(SessionAcceptOutcome::Resumed);
-        }
-
-        let client = self.establish().await?;
-        Ok(SessionAcceptOutcome::Established(client))
     }
 }
 
@@ -1144,32 +843,6 @@ impl<L: Link> SessionTransportAcceptorBuilder<L> {
         self
     }
 
-    pub fn recovery_timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.config.recovery_timeout = Some(timeout);
-        self
-    }
-
-    pub fn resumable(mut self) -> Self {
-        self.config.resumable = true;
-        self
-    }
-
-    /// Disable session resumability. Useful for IPC transports where
-    /// the peer is a process: when the process exits the connection
-    /// is gone for good, there's nothing to resume against, and
-    /// keeping the session alive in recovery mode just leaks
-    /// per-channel state (e.g. server-side `Tx<T>`s never observing
-    /// that the client disconnected).
-    pub fn non_resumable(mut self) -> Self {
-        self.config.resumable = false;
-        self
-    }
-
-    pub fn session_registry(mut self, session_registry: SessionRegistry) -> Self {
-        self.config.session_registry = Some(session_registry);
-        self
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     pub fn spawn_fn(mut self, f: impl FnOnce(BoxSessionFuture) + Send + 'static) -> Self {
         self.config.spawn_fn = Box::new(f);
@@ -1200,8 +873,6 @@ impl<L: Link> SessionTransportAcceptorBuilder<L> {
                     &link.tx,
                     &mut link.rx,
                     config.root_settings.clone(),
-                    config.resumable,
-                    None,
                     metadata_into_owned(config.metadata.clone()),
                 )
                 .await
@@ -1213,44 +884,6 @@ impl<L: Link> SessionTransportAcceptorBuilder<L> {
                     handshake_result,
                 );
                 Self::apply_common_parts(builder, config).establish().await
-            }
-        }
-    }
-
-    #[moire::instrument]
-    pub async fn establish_or_resume<Client: FromVoxSession>(
-        self,
-    ) -> Result<SessionAcceptOutcome<Client>, SessionError>
-    where
-        L: Link + MaybeSend + 'static,
-        L::Tx: MaybeSend + MaybeSync + 'static,
-        L::Rx: MaybeSend + 'static,
-    {
-        let Self { link, config } = self;
-        let (mode, mut link) = accept_transport(link)
-            .await
-            .map_err(session_error_from_transport)?;
-        match mode {
-            TransportMode::Bare => {
-                let handshake_result = handshake_as_acceptor(
-                    &link.tx,
-                    &mut link.rx,
-                    config.root_settings.clone(),
-                    config.resumable,
-                    None,
-                    metadata_into_owned(config.metadata.clone()),
-                )
-                .await
-                .map_err(session_error_from_handshake)?;
-                let message_plan = crate::MessagePlan::from_handshake(&handshake_result)
-                    .map_err(SessionError::Protocol)?;
-                let builder = SessionAcceptorBuilder::new(
-                    BareConduit::with_message_plan(link, message_plan),
-                    handshake_result,
-                );
-                Self::apply_common_parts(builder, config)
-                    .establish_or_resume()
-                    .await
             }
         }
     }
@@ -1290,7 +923,6 @@ fn session_error_from_handshake(error: crate::HandshakeError) -> SessionError {
         crate::HandshakeError::PeerClosed => {
             SessionError::Protocol("peer closed during handshake".into())
         }
-        crate::HandshakeError::NotResumable => SessionError::NotResumable,
         other => SessionError::Protocol(other.to_string()),
     }
 }

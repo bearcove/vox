@@ -595,7 +595,6 @@ fn codegen_swift_wire(workspace_root: &std::path::Path) -> Result<(), Box<dyn st
         .join("VoxRuntime")
         .join("HandshakeWire.swift");
     let hs_types = [
-        wire_type!("ResumeKeyBytes", rt::ResumeKeyBytes),
         wire_type!("Hello", rt::Hello),
         wire_type!("HelloYourself", rt::HelloYourself),
         wire_type!("LetsGo", rt::LetsGo),

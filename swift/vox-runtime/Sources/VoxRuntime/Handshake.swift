@@ -2,10 +2,10 @@ import Foundation
 import PhonEngine
 import PhonSchema
 
-// The handshake messages (HandshakeMessage / Hello / HelloYourself / LetsGo / Sorry
-// + ResumeKeyBytes) are generated in HandshakeWire.swift. Each is sent as one Link
-// frame in phon self-describing framing: [u32 schema_len LE][closure][value] — see
-// Messages.swift (encodeHandshakeFrame / decodeHandshakeFrame).
+// The handshake messages (HandshakeMessage / Hello / HelloYourself / LetsGo / Sorry)
+// are generated in HandshakeWire.swift. Each is sent as one Link frame in phon
+// self-describing framing: [u32 schema_len LE][closure][value] — see Messages.swift
+// (encodeHandshakeFrame / decodeHandshakeFrame).
 
 func sendHandshake(_ link: any Link, _ message: HandshakeMessage) async throws {
     traceLog(.handshake, "send")

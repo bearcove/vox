@@ -81,7 +81,6 @@ export async function handshakeAsInitiator(
       parity: settings.parity,
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
-      resume_key: null,
       metadata,
     },
   });
@@ -122,7 +121,6 @@ export async function handshakeAsAcceptor(
     value: {
       connection_settings: settings,
       message_payload_schema: localMessagePayloadSchema(),
-      resume_key: null,
       metadata,
     },
   });

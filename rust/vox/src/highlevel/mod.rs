@@ -126,7 +126,6 @@ pub struct ConnectBuilder<Client> {
     connect_timeout: Option<Duration>,
     channel_capacity: u32,
     observer: Option<VoxObserverHandle>,
-    resumable: bool,
     wait_for_service: Option<Duration>,
     _client: std::marker::PhantomData<Client>,
 }
@@ -140,7 +139,6 @@ impl<Client> ConnectBuilder<Client> {
             connect_timeout: Some(Duration::from_secs(5)),
             channel_capacity: DEFAULT_INITIAL_CHANNEL_CREDIT,
             observer: None,
-            resumable: false,
             wait_for_service: None,
             _client: std::marker::PhantomData,
         }
@@ -180,11 +178,6 @@ impl<Client> ConnectBuilder<Client> {
         self
     }
 
-    pub fn resumable(mut self) -> Self {
-        self.resumable = true;
-        self
-    }
-
     // r[impl session.initial-connect-waiting]
     /// Wait for the service to become reachable, retrying for up to `timeout`.
     ///
@@ -221,7 +214,6 @@ where
             connect_timeout,
             channel_capacity,
             observer,
-            resumable,
             wait_for_service,
             _client: _,
         } = self;
@@ -231,7 +223,6 @@ where
             service = Client::SERVICE_NAME,
             %addr,
             channel_capacity,
-            resumable,
             wait_for_service = wait_for_service.is_some(),
             "vox high-level connect starting"
         );
@@ -262,7 +253,6 @@ where
                         connect_timeout,
                         channel_capacity,
                         observer.clone(),
-                        resumable,
                     );
                     let result = match moire::time::timeout(remaining, attempt).await {
                         Ok(r) => r,
@@ -312,7 +302,6 @@ where
                     connect_timeout,
                     channel_capacity,
                     observer,
-                    resumable,
                 )
                 .await;
                 match &result {
@@ -338,7 +327,6 @@ where
         connect_timeout: Option<Duration>,
         channel_capacity: u32,
         observer: Option<VoxObserverHandle>,
-        resumable: bool,
     ) -> Result<Client, SessionError> {
         #[cfg(not(any(
             feature = "transport-tcp",
@@ -351,7 +339,6 @@ where
             &connect_timeout,
             channel_capacity,
             &observer,
-            resumable,
         );
 
         match parsed {
@@ -377,9 +364,6 @@ where
                 if let Some(observer) = observer.clone() {
                     builder = builder.observer_handle(observer);
                 }
-                if resumable {
-                    builder = builder.resumable();
-                }
                 builder.metadata(metadata).establish::<Client>().await
             }
             #[cfg(feature = "transport-local")]
@@ -403,9 +387,6 @@ where
                 builder = builder.channel_capacity(channel_capacity);
                 if let Some(observer) = observer.clone() {
                     builder = builder.observer_handle(observer);
-                }
-                if resumable {
-                    builder = builder.resumable();
                 }
                 builder.metadata(metadata).establish::<Client>().await
             }
@@ -433,9 +414,6 @@ where
                 builder = builder.channel_capacity(channel_capacity);
                 if let Some(observer) = observer {
                     builder = builder.observer_handle(observer);
-                }
-                if resumable {
-                    builder = builder.resumable();
                 }
                 builder.metadata(metadata).establish::<Client>().await
             }

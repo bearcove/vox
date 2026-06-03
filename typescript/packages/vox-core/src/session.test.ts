@@ -17,13 +17,13 @@ import {
 } from "./session.ts";
 import type { MethodDescriptor } from "./channeling/index.ts";
 import {
-  resumeEchoRegistry,
-  resumeEchoMethods,
-  RESUME_ECHO_METHOD_ID,
-} from "./resume_echo.fixture.ts";
+  sessionEchoRegistry,
+  sessionEchoMethods,
+  SESSION_ECHO_METHOD_ID,
+} from "./session_echo.fixture.ts";
 
-const ECHO_METHOD_KEY = `0x${RESUME_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
-const ECHO_METHOD_SCHEMAS = resumeEchoMethods[ECHO_METHOD_KEY]!;
+const ECHO_METHOD_KEY = `0x${SESSION_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
+const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
 
 class MemoryLink {
   private readonly queue: Uint8Array[] = [];
@@ -125,7 +125,7 @@ async function establishPair(
 
 const ECHO_METHOD: MethodDescriptor = {
   name: "echo",
-  id: RESUME_ECHO_METHOD_ID,
+  id: SESSION_ECHO_METHOD_ID,
 };
 
 describe("session", () => {
@@ -168,7 +168,7 @@ describe("session", () => {
       args: { value: 55 },
       descriptor: ECHO_METHOD,
       methodSchemas: ECHO_METHOD_SCHEMAS,
-      registry: resumeEchoRegistry,
+      registry: sessionEchoRegistry,
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 

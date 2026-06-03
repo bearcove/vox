@@ -2,22 +2,12 @@ import Foundation
 
 struct SessionHandshakeResult {
     let negotiated: Negotiated
-    let sessionResumeKey: [UInt8]?
     let localRootSettings: ConnectionSettings
     let peerRootSettings: ConnectionSettings
     let peerMetadata: Metadata
     /// The peer's advertised Message schema closure, used to build the conduit's
     /// compatibility decoder.
     let peerMessageSchema: [UInt8]
-}
-
-/// Generate a fresh 16-byte session resume key from the system CSPRNG.
-/// Matches the Rust acceptor's `fresh_resume_key` (`[u8; 16]` via getrandom)
-/// and the TypeScript acceptor's `randomSessionResumeKey` (16-byte
-/// `crypto.getRandomValues`).
-func freshResumeKey() -> [UInt8] {
-    var rng = SystemRandomNumberGenerator()
-    return (0..<16).map { _ in UInt8.random(in: UInt8.min...UInt8.max, using: &rng) }
 }
 
 func oppositeParity(_ parity: Parity) -> Parity {
@@ -52,11 +42,9 @@ func performInitiatorHandshake(
     maxPayloadSize: UInt32,
     maxConcurrentRequests: UInt32,
     initialChannelCredit: UInt32 = 16,
-    resumable: Bool,
-    resumeKey: [UInt8]? = nil,
     metadata: Metadata = .null
 ) async throws -> SessionHandshakeResult {
-    traceLog(.handshake, "initiator sending Hello resumable=\(resumable)")
+    traceLog(.handshake, "initiator sending Hello")
     let ourSettings = ConnectionSettings(
         parity: .odd, maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit)
@@ -64,7 +52,6 @@ func performInitiatorHandshake(
         parity: ourSettings.parity,
         connectionSettings: ourSettings,
         messagePayloadSchema: Data(localMessagePayloadSchema),
-        resumeKey: resumeKey.map { ResumeKeyBytes(bytes: Data($0)) },
         metadata: metadata
     )
     try await sendHandshake(link, .hello(hello))
@@ -83,11 +70,6 @@ func performInitiatorHandshake(
 
     let peerSchema = [UInt8](peerHello.messagePayloadSchema)
     try await requireIdentityMessageSchema(peerSchema, on: link)
-
-    let sessionResumeKey = peerHello.resumeKey.map { [UInt8]($0.bytes) }
-    // If we requested resumable but the peer doesn't echo a resume key, that's
-    // fine: we'll recover by establishing a fresh session and replaying in-flight
-    // requests, rather than doing a true protocol-level resume.
 
     try await sendHandshake(link, .letsGo(LetsGo()))
     traceLog(.handshake, "initiator sent LetsGo")
@@ -108,7 +90,6 @@ func performInitiatorHandshake(
 
     return SessionHandshakeResult(
         negotiated: negotiated,
-        sessionResumeKey: sessionResumeKey,
         localRootSettings: ourSettings,
         peerRootSettings: peerHello.connectionSettings,
         peerMetadata: peerHello.metadata,
@@ -121,14 +102,12 @@ func performAcceptorHandshake(
     maxPayloadSize: UInt32,
     maxConcurrentRequests: UInt32,
     initialChannelCredit: UInt32 = 16,
-    resumable: Bool,
-    expectedResumeKey: [UInt8]? = nil,
     metadata: Metadata = .null
 ) async throws -> SessionHandshakeResult {
     let peerHello: Hello
     switch try await recvHandshake(link) {
     case .hello(let hello):
-        traceLog(.handshake, "acceptor received Hello resumable=\(hello.resumeKey != nil)")
+        traceLog(.handshake, "acceptor received Hello")
         peerHello = hello
     default:
         throw ConnectionError.handshakeFailed("expected Hello")
@@ -137,28 +116,18 @@ func performAcceptorHandshake(
     let peerSchema = [UInt8](peerHello.messagePayloadSchema)
     try await requireIdentityMessageSchema(peerSchema, on: link)
 
-    // Protocol-level session resume is not part of the Swift runtime, so the
-    // peer's resume key is not used to look up an existing session.
-    let _ = expectedResumeKey
-
     let ourSettings = ConnectionSettings(
         parity: oppositeParity(peerHello.parity),
         maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit
     )
-    // Still advertise a fresh resume key when resumable, mirroring the Rust
-    // and TypeScript acceptors. Reference initiators that request resumption
-    // (the TS client rejects the handshake outright otherwise) require the
-    // acceptor to echo a key.
-    let sessionResumeKey: [UInt8]? = resumable ? freshResumeKey() : nil
     let helloYourself = HelloYourself(
         connectionSettings: ourSettings,
         messagePayloadSchema: Data(localMessagePayloadSchema),
-        resumeKey: sessionResumeKey.map { ResumeKeyBytes(bytes: Data($0)) },
         metadata: metadata
     )
     try await sendHandshake(link, .helloYourself(helloYourself))
-    traceLog(.handshake, "acceptor sent HelloYourself resumable=\(sessionResumeKey != nil)")
+    traceLog(.handshake, "acceptor sent HelloYourself")
 
     switch try await recvHandshake(link) {
     case .letsGo:
@@ -186,7 +155,6 @@ func performAcceptorHandshake(
 
     return SessionHandshakeResult(
         negotiated: negotiated,
-        sessionResumeKey: sessionResumeKey,
         localRootSettings: ourSettings,
         peerRootSettings: peerHello.connectionSettings,
         peerMetadata: peerHello.metadata,
@@ -198,12 +166,10 @@ func buildEstablishedConduit(
     role: Role,
     transport: ConduitKind,
     attachment: LinkAttachment,
-    peerMessageSchema: [UInt8],
-    recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil
+    peerMessageSchema: [UInt8]
 ) async throws -> any Conduit {
     let _ = role
     let _ = transport
-    let _ = recoverAttachment
     return BareConduit(link: attachment.link, peerMessageSchema: peerMessageSchema)
 }
 
@@ -216,10 +182,8 @@ func establishInitiator(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
-    recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     warnLog("[vox-establish] initiator: starting handshake")
     let ourMaxPayload = maxPayloadSize ?? (1024 * 1024)
     let handshake = try await performInitiatorHandshake(
@@ -227,7 +191,6 @@ func establishInitiator(
         maxPayloadSize: ourMaxPayload,
         maxConcurrentRequests: 64,
         initialChannelCredit: initialChannelCredit,
-        resumable: resumable,
         metadata: metadata
     )
     warnLog("[vox-establish] initiator: handshake done")
@@ -236,8 +199,7 @@ func establishInitiator(
         role: .initiator,
         transport: transport,
         attachment: attachment,
-        peerMessageSchema: handshake.peerMessageSchema,
-        recoverAttachment: recoverAttachment
+        peerMessageSchema: handshake.peerMessageSchema
     )
     try await conduit.setMaxFrameSize(Int(handshake.negotiated.maxPayloadSize) + 64)
 
@@ -248,15 +210,12 @@ func establishInitiator(
         negotiated: handshake.negotiated,
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
-        resumable: resumable,
-        sessionResumeKey: handshake.sessionResumeKey,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
         peerMessageSchema: handshake.peerMessageSchema,
-        transport: transport,
-        recoverAttachment: recoverAttachment
+        transport: transport
     )
-    return (connection, driver, handle, handshake.sessionResumeKey, handshake.peerMetadata)
+    return (connection, driver, handle, handshake.peerMetadata)
 }
 
 func establishInitiator(
@@ -267,10 +226,8 @@ func establishInitiator(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
-    recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishInitiator(
         attachment: .initiator(link),
         transport: transport,
@@ -279,8 +236,6 @@ func establishInitiator(
         maxPayloadSize: maxPayloadSize,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
-        resumable: resumable,
-        recoverAttachment: recoverAttachment,
         metadata: metadata
     )
 }
@@ -293,10 +248,8 @@ func establishInitiator(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
-    recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishInitiator(
         link: conduit,
         transport: transport,
@@ -305,8 +258,6 @@ func establishInitiator(
         maxPayloadSize: maxPayloadSize,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
-        resumable: resumable,
-        recoverAttachment: recoverAttachment,
         metadata: metadata
     )
 }
@@ -319,9 +270,8 @@ func establishAcceptor(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     warnLog("[vox-establish] acceptor: negotiatedConduit=\(String(describing: attachment.negotiatedConduit)) transport=\(transport)")
     if attachment.negotiatedConduit == nil {
         warnLog("[vox-establish] acceptor: running link prologue")
@@ -344,7 +294,6 @@ func establishAcceptor(
         maxPayloadSize: ourMaxPayload,
         maxConcurrentRequests: 64,
         initialChannelCredit: initialChannelCredit,
-        resumable: resumable,
         metadata: metadata
     )
 
@@ -363,15 +312,12 @@ func establishAcceptor(
         negotiated: handshake.negotiated,
         connectionAcceptor: connectionAcceptor,
         keepalive: keepalive,
-        resumable: resumable,
-        sessionResumeKey: handshake.sessionResumeKey,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
         peerMessageSchema: handshake.peerMessageSchema,
-        transport: transport,
-        recoverAttachment: nil
+        transport: transport
     )
-    return (connection, driver, handle, handshake.sessionResumeKey, handshake.peerMetadata)
+    return (connection, driver, handle, handshake.peerMetadata)
 }
 
 func establishAcceptor(
@@ -382,9 +328,8 @@ func establishAcceptor(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishAcceptor(
         attachment: .init(link: link),
         transport: transport,
@@ -393,7 +338,6 @@ func establishAcceptor(
         maxPayloadSize: maxPayloadSize,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
-        resumable: resumable,
         metadata: metadata
     )
 }
@@ -406,9 +350,8 @@ func establishAcceptor(
     maxPayloadSize: UInt32? = nil,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool = false,
     metadata: Metadata = .null
-) async throws -> (Connection, Driver, SessionHandle, [UInt8]?, Metadata) {
+) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishAcceptor(
         link: conduit,
         transport: transport,
@@ -417,7 +360,6 @@ func establishAcceptor(
         maxPayloadSize: maxPayloadSize,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
-        resumable: resumable,
         metadata: metadata
     )
 }

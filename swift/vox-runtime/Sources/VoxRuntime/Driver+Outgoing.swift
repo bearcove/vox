@@ -12,10 +12,6 @@ extension Driver {
         } catch TransportError.wouldBlock {
             pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
         } catch {
-            if resumable {
-                _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
-                return
-            }
             throw error
         }
     }
@@ -157,16 +153,6 @@ extension Driver {
                 pendingCalls.append(queuedCall)
                 return
             } catch {
-                if resumable {
-                    let pending = await state.claimPendingResponse(
-                        requestId,
-                        reason: "conduit-send-failed"
-                    )
-                    pending?.timeoutTask?.cancel()
-                    pending?.responseTx(.failure(.transportError(String(describing: error))))
-                    _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
-                    return
-                }
                 let pending = await state.claimPendingResponse(
                     requestId,
                     reason: "conduit-send-failed"
@@ -215,7 +201,6 @@ extension Driver {
             return
         }
 
-        traceLog(.resume, "flushPendingCalls: count=\(pendingCalls.count)")
         while let call = pendingCalls.first {
             // Advertise the args schema closure (at most once per method, deduped).
             // r[impl schema.exchange.caller]
@@ -236,25 +221,11 @@ extension Driver {
                 schemas: schemas
             )
 
-            traceLog(.resume, "flushPendingCalls: sending requestId=\(call.requestId) methodId=\(call.methodId)")
             do {
                 try await conduit.send(msg)
             } catch TransportError.wouldBlock {
-                traceLog(.resume, "flushPendingCalls: conduit would block requestId=\(call.requestId)")
                 return
             } catch {
-                if resumable {
-                    traceLog(.resume, "flushPendingCalls: send failed requestId=\(call.requestId) error=\(String(describing: error))")
-                    let pending = await state.claimPendingResponse(
-                        call.requestId,
-                        reason: "conduit-send-failed"
-                    )
-                    pending?.timeoutTask?.cancel()
-                    pending?.responseTx(.failure(.transportError(String(describing: error))))
-                    pendingCalls.removeFirst()
-                    _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
-                    return
-                }
                 let pending = await state.claimPendingResponse(
                     call.requestId,
                     reason: "conduit-send-failed"
@@ -312,10 +283,6 @@ extension Driver {
             } catch TransportError.wouldBlock {
                 return
             } catch {
-                if resumable {
-                    _ = eventContinuation.yield(.conduitFailed(String(describing: error)))
-                    return
-                }
                 await failAllPending()
                 eventContinuation.finish()
                 return

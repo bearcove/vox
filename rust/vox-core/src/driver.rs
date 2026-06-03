@@ -83,12 +83,6 @@ enum HandlerCompletion {
 
 type HandlerFut = Abortable<Pin<Box<dyn MaybeSendFuture<Output = HandlerCompletion> + 'static>>>;
 
-#[derive(Clone, Copy, Debug)]
-enum ChannelRuntimeTeardown {
-    DropOnly,
-    ConnectionClosed(ConnectionCloseReason),
-}
-
 #[derive(Clone)]
 struct RequestRuntimeDebug {
     method_id: vox_types::MethodId,
@@ -369,11 +363,6 @@ struct DriverShared {
     /// closed/reset, outbound sinks must reject further sends and inbound items
     /// must not be buffered forever.
     terminal_channels: SyncMutex<HashSet<ChannelId>>,
-    /// Channel IDs cleared during session resume. When handler tasks that owned
-    /// these channels are aborted, they may trigger `close_channel_on_drop`, which
-    /// would send a ChannelClose message for a channel the peer no longer knows about.
-    /// We suppress those Close messages by checking this set.
-    stale_close_channels: SyncMutex<std::collections::HashSet<ChannelId>>,
     channel_schema_roles: SyncMutex<
         HashMap<(vox_types::MethodId, vox_types::BindingDirection, String), Vec<ChannelId>>,
     >,
@@ -1956,8 +1945,6 @@ pub struct Driver<H: Handler<DriverReplySink>> {
     rx: mpsc::Receiver<crate::session::RecvMessage>,
     failures_rx: mpsc::UnboundedReceiver<(RequestId, FailureDisposition)>,
     closed_rx: watch::Receiver<Option<ConnectionCloseReason>>,
-    resumed_rx: watch::Receiver<u64>,
-    resume_processed_tx: watch::Sender<u64>,
     local_control_rx: mpsc::UnboundedReceiver<DriverLocalControl>,
     handler: Arc<H>,
     shared: Arc<DriverShared>,
@@ -2077,15 +2064,11 @@ impl ChannelCreditReplenisher for DriverChannelCreditReplenisher {
 
 impl<H: Handler<DriverReplySink>> Driver<H> {
     // r[impl rpc.channel.connection-closure]
-    fn close_all_channel_runtime_state(&self, teardown: ChannelRuntimeTeardown) {
+    fn close_all_channel_runtime_state(&self, close_reason: ConnectionCloseReason) {
         let mut credits = self.shared.channel_credits.lock();
         for semaphore in credits.values() {
             semaphore.close();
         }
-        // Track all outbound channel IDs that are being cleared so we can suppress
-        // ChannelClose messages triggered by aborted handler tasks dropping their Tx handles.
-        let mut stale = self.shared.stale_close_channels.lock();
-        stale.extend(credits.keys().copied());
         credits.clear();
         drop(credits);
 
@@ -2093,15 +2076,13 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             let mut senders = self.shared.channel_senders.lock();
             std::mem::take(&mut *senders)
         };
-        if let ChannelRuntimeTeardown::ConnectionClosed(reason) = teardown {
-            for (channel_id, sender) in channel_senders {
-                let _ = sender.force_send(IncomingChannelMessage::ConnectionClosed(reason));
-                self.shared
-                    .observe_channel(channel_id, None, |channel| ChannelEvent::Closed {
-                        channel,
-                        reason: ChannelCloseReason::ConnectionClosed,
-                    });
-            }
+        for (channel_id, sender) in channel_senders {
+            let _ = sender.force_send(IncomingChannelMessage::ConnectionClosed(close_reason));
+            self.shared
+                .observe_channel(channel_id, None, |channel| ChannelEvent::Closed {
+                    channel,
+                    reason: ChannelCloseReason::ConnectionClosed,
+                });
         }
         self.shared.channel_receivers.lock().clear();
         self.shared.channel_schema_roles.lock().clear();
@@ -2115,14 +2096,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         }
     }
 
-    fn abort_channel_handlers(&mut self) {
-        for in_flight in self.in_flight_handlers.values() {
-            if self.handler.args_have_channels(in_flight.method_id) {
-                in_flight.abort.abort();
-            }
-        }
-    }
-
     pub fn new(handle: ConnectionHandle, handler: H) -> Self {
         let conn_id = handle.connection_id();
         let ConnectionHandle {
@@ -2131,7 +2104,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             failures_rx,
             control_tx,
             closed_rx,
-            resumed_rx,
             local_settings,
             peer_settings,
             parity,
@@ -2139,14 +2111,11 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         } = handle;
         let drop_control_request = DropControlRequest::Close(conn_id);
         let (local_control_tx, local_control_rx) = mpsc::unbounded_channel("driver.local_control");
-        let (resume_processed_tx, _resume_processed_rx) = watch::channel(0_u64);
         Self {
             sender,
             rx,
             failures_rx,
             closed_rx,
-            resumed_rx,
-            resume_processed_tx,
             local_control_rx,
             handler: Arc::new(handler),
             shared: Arc::new(DriverShared {
@@ -2164,10 +2133,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 last_outbound_message_at: SyncMutex::new("driver.last_outbound_message_at", None),
                 close_reason: SyncMutex::new("driver.close_reason", None),
                 terminal_channels: SyncMutex::new("driver.terminal_channels", HashSet::new()),
-                stale_close_channels: SyncMutex::new(
-                    "driver.stale_close_channels",
-                    std::collections::HashSet::new(),
-                ),
                 channel_schema_roles: SyncMutex::new("driver.channel_schema_roles", HashMap::new()),
                 local_initial_channel_credit: local_settings.initial_channel_credit,
                 peer_initial_channel_credit: peer_settings.initial_channel_credit,
@@ -2252,28 +2217,10 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
     /// Handler calls run as spawned tasks — we don't block the driver
     /// loop waiting for a handler to finish.
     pub async fn run(&mut self) {
-        let mut resumed_rx = self.resumed_rx.clone();
-        let mut seen_resume_generation = *resumed_rx.borrow();
         loop {
             tracing::trace!("driver select loop top");
             tokio::select! {
                 biased;
-                changed = resumed_rx.changed() => {
-                    if changed.is_err() {
-                        tracing::trace!(
-                            conn_id = self.sender.connection_id().0,
-                            "resume notifier closed, exiting driver"
-                        );
-                        break;
-                    }
-                    let generation = *resumed_rx.borrow();
-                    if generation != seen_resume_generation {
-                        seen_resume_generation = generation;
-                        self.close_all_channel_runtime_state(ChannelRuntimeTeardown::DropOnly);
-                        self.abort_channel_handlers();
-                        let _ = self.resume_processed_tx.send(generation);
-                    }
-                }
                 Some(ctrl) = self.local_control_rx.recv() => {
                     self.handle_local_control(ctrl).await;
                 }
@@ -2402,22 +2349,12 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         // Connection is gone: drop channel runtime state so any registered Rx
         // receivers observe closure instead of hanging on recv(), and wake any
         // outbound Tx handles waiting for grant-credit.
-        self.close_all_channel_runtime_state(ChannelRuntimeTeardown::ConnectionClosed(
-            close_reason,
-        ));
+        self.close_all_channel_runtime_state(close_reason);
     }
 
     async fn handle_local_control(&mut self, control: DriverLocalControl) {
         match control {
             DriverLocalControl::CloseChannel { channel_id } => {
-                // Don't send Close for channels that were cleared during session resume.
-                // When handler tasks are aborted, their dropped Tx handles trigger
-                // close_channel_on_drop, but we should not send Close to the peer
-                // for channels the peer has also cleared.
-                if self.shared.stale_close_channels.lock().remove(&channel_id) {
-                    tracing::trace!(%channel_id, "suppressing ChannelClose for stale channel");
-                    return;
-                }
                 self.close_outbound_channel(channel_id);
                 self.shared
                     .observe_channel(channel_id, None, |channel| ChannelEvent::Closed {

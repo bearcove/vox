@@ -11,7 +11,6 @@ enum DriverEvent: Sendable {
     case retryTick
     case conduitClosed
     case conduitFailed(String)
-    case resumeConduit(any Conduit)
 }
 
 final class LockedQueue<T>: @unchecked Sendable {
@@ -116,13 +115,10 @@ func makeSessionDriverAndConnection(
     negotiated: Negotiated,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     keepalive: SessionKeepaliveConfig? = nil,
-    resumable: Bool,
-    sessionResumeKey: [UInt8]?,
     localRootSettings: ConnectionSettings,
     peerRootSettings: ConnectionSettings,
     peerMessageSchema: [UInt8],
-    transport: ConduitKind,
-    recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil
+    transport: ConduitKind
 ) -> (Connection, Driver, SessionHandle) {
     let commandQueue = LockedQueue<HandleCommand>()
     let taskQueue = LockedQueue<TaskMessage>()
@@ -172,23 +168,14 @@ func makeSessionDriverAndConnection(
         eventContinuation: continuation,
         commandQueue: commandQueue,
         taskQueue: taskQueue,
-        resumable: resumable,
         localRootSettings: localRootSettings,
         peerRootSettings: peerRootSettings,
         peerMessageSchema: peerMessageSchema,
-        transport: transport,
-        recoverAttachment: recoverAttachment,
-        sessionResumeKey: sessionResumeKey
+        transport: transport
     )
 
     let sessionHandle = SessionHandle(
-        eventContinuation: continuation,
-        role: role,
-        localRootSettings: localRootSettings,
-        peerRootSettings: peerRootSettings,
-        peerMessageSchema: peerMessageSchema,
-        transport: transport,
-        sessionResumeKey: sessionResumeKey
+        eventContinuation: continuation
     )
 
     return (Connection(handle: handle, schemaReceiveTracker: driver.schemaReceiveTracker), driver, sessionHandle)

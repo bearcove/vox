@@ -40,8 +40,7 @@ public struct Server {
                 connector,
                 dispatcher: dispatcher,
                 onConnection: acceptConnections
-                    ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
-                resumable: false
+                    ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil
             )
         } else {
             guard let colonIdx = peerAddr.lastIndex(of: ":") else {
@@ -67,8 +66,7 @@ public struct Server {
                 connector,
                 dispatcher: dispatcher,
                 onConnection: acceptConnections
-                    ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
-                resumable: false
+                    ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil
             )
         }
 

@@ -316,7 +316,6 @@ func runServer() async throws {
             dispatcher: dispatcher,
             onConnection: acceptConnections
                 ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
-            resumable: false,
             metadata: rootMetadata
         )
         (connection, driver) = (session.rootConnection, session.driver)
@@ -333,7 +332,6 @@ func runServer() async throws {
             dispatcher: dispatcher,
             onConnection: acceptConnections
                 ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
-            resumable: false,
             metadata: rootMetadata
         )
         (connection, driver) = (session.rootConnection, session.driver)
@@ -797,8 +795,7 @@ func runClient() async throws {
 
     let session = try await Session.initiator(
         connector,
-        dispatcher: dispatcher,
-        resumable: true
+        dispatcher: dispatcher
     )
 
     log("handshake complete")
@@ -828,8 +825,7 @@ func runServerListen() async throws {
         acceptor,
         dispatcher: dispatcher,
         onConnection: acceptConnections
-            ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
-        resumable: true
+            ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil
     )
     try await session.run()
 }

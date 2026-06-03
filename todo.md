@@ -41,9 +41,8 @@ However, the TS runtime still contains major stale assumptions that conflict wit
 - wire types
 - schema exchange
 - opaque payload framing
-- stable conduit integration
-- retry persistence / operation storage
-- channel continuity semantics
+- connection close/error semantics
+- channel closure semantics
 
 At the time of writing, TypeScript also has known compile/diagnostic failures in at least:
 
@@ -59,11 +58,10 @@ At the time of writing, TypeScript also has known compile/diagnostic failures in
 
 Canonical order:
 
-1. transport prologue selects `bare` or `stable`
+1. transport prologue selects the supported transport mode
 2. raw **CBOR session handshake**
 3. build `MessagePlan` from exchanged protocol schemas
 4. begin postcard `Message` traffic
-5. if using stable conduit, its own handshake/framing layer must be integrated in the same order Rust uses
 
 Important consequence:
 
@@ -86,8 +84,6 @@ The CBOR handshake exchanges the peer's schema for the postcard protocol layer.
 Specifically, Rust handshake messages carry:
 
 - `connection_settings`
-- retry support
-- resume key
 - `message_payload_schema`
 
 Purpose:
@@ -97,8 +93,7 @@ Purpose:
 Important rule:
 
 - protocol schemas are exchanged **during handshake**
-- transparent reconnect via `StableConduit` does **not** re-exchange protocol schemas
-- session resumption via **new handshake** does re-exchange them
+- each fresh session handshake establishes fresh protocol schema knowledge
 
 ### References
 
@@ -188,61 +183,6 @@ Important consequences:
 
 ---
 
-## 5. Session resumption
-
-Rust session resumption:
-
-- preserves session-scoped state
-- preserves operation ID scope
-- does **not** preserve in-flight request attempts on the failed attachment
-- does **not** preserve in-flight response deliveries on the failed attachment
-- in-flight request attempts fail; future calls use the resumed session
-
-On resume, Rust resets per-connection schema state:
-
-- send-side schema state reset
-- receive-side schema state reset
-- protocol schemas re-exchanged through new handshake
-- root settings must match
-
-### References
-
-- `rust/vox-core/src/session/mod.rs`
-- `docs/content/spec/conn.md`
-- `docs/content/spec/intro.md`
-
----
-
-## 6. Stable conduit semantics
-
-`StableConduit` is a lower layer than session resumption.
-
-It provides:
-
-- automatic reconnect over fresh links
-- packet sequence numbering
-- acknowledgements
-- replay of unacked frames
-- duplicate suppression
-- continuity of conduit traffic across link interruption
-
-It is **not** the same thing as session resumption.
-
-Important distinction:
-
-- stable conduit continuity and session resumption are separate layers
-- bare session resumption does not preserve in-flight request attempts
-
-Docs explicitly describe stable conduit reconnect as preserving state/channels across reconnect.
-
-### References
-
-- `rust/vox-core/src/stable_conduit/mod.rs`
-- `docs/content/spec/conn.md`
-- `docs/content/guides/rust.md` (`stable_conduit_reconnect`)
-
----
-
 ## Major parity gaps in TypeScript
 
 ## A. `vox-wire` still models stale handshake/message shapes
@@ -288,7 +228,6 @@ But Rust moved these to the raw CBOR handshake.
 - message switching on `"Hello"` / `"HelloYourself"`
 - use of `messageHello(...)`
 - use of `messageHelloYourself(...)`
-- old resume path assumptions
 - stale `SchemaMessage` handling
 
 ### Required direction
@@ -307,13 +246,8 @@ Match Rust:
 - [ ] Read/record inlined schema CBOR from `RequestCall.schemas` and `RequestResponse.schemas`
 - [ ] Attach schemas when sending first request/response for method+direction on a connection
 - [ ] Treat missing request/response schemas as `schema.exchange.required` protocol errors; remove same-schema decode fallbacks from TS request/response paths
-- [ ] Reset send/receive schema state correctly on session resumption
 - [ ] Mirror Rust session establishment model: handshake result first, then session
 - [ ] Rework or deprecate `Session.establishInitiator` / `Session.establishAcceptor` if they still imply old postcard handshake semantics
-- [ ] Distinguish clearly between:
-  - stable conduit reconnect
-  - session resumption
-- [ ] Remove old resume protocol based on postcard hello metadata if Rust no longer uses that path
 
 ### Files
 
@@ -368,89 +302,6 @@ This needs verification across all TS postcard encode/decode paths.
 - `typescript/packages/vox-postcard/...`
 - `typescript/packages/vox-wire/...`
 - any TS encode/decode helpers for payload-bearing messages
-
----
-
-## E. Stable conduit integration is not yet parity-complete
-
-### Problem
-
-TS has a `StableConduit`, but current session/transport integration is not fully aligned with Rust/spec.
-
-The current branch also explicitly throws for stable raw-handshake transport setup in some paths.
-
-### Required semantics
-
-Match Rust ordering and responsibilities:
-
-1. transport prologue chooses `stable`
-2. raw CBOR session handshake
-3. build message plan from handshake schema exchange
-4. stable conduit setup / replay / reconnect semantics
-5. continue postcard message traffic with continuity guarantees
-
-### TODO
-
-- [ ] Audit `typescript/packages/vox-core/src/stable_conduit.ts` against Rust stable conduit behavior
-- [ ] Verify packet framing details
-- [ ] Verify replay/ack trimming semantics
-- [ ] Verify duplicate suppression semantics
-- [ ] Verify reconnect handshake (`ClientHello` / `ServerHello`) ordering relative to session handshake
-- [ ] Ensure `StableConduit` carries post-handshake postcard `Message`s, not pre-handshake traffic
-- [ ] Integrate the phon compatibility decode plan with the stable conduit receive path if needed
-- [ ] Remove current `"stable not implemented yet"` transport-path placeholders once parity is implemented
-- [ ] Validate that stable reconnect preserves channel continuity as Rust/docs describe
-
-### Files
-
-- `typescript/packages/vox-core/src/stable_conduit.ts`
-- `typescript/packages/vox-core/src/session.ts`
-- `typescript/packages/vox-core/src/transport_prologue.ts`
-
----
-
-## F. Session resumption does not preserve channel continuity in TS
-
-### Problem
-
-Current TS `session.ts` explicitly closes all channels on session resume:
-
-- `this.channelRegistry.closeAll()`
-
-In-flight request attempts fail across session loss; future calls use the
-resumed session.
-
-That is not "seamless channel continuity."
-
-### Important distinction
-
-According to spec/Rust:
-
-- session resumption does not preserve in-flight request attempts
-- stable conduit reconnect is the place where transparent channel continuity is expected
-
-So the parity question here is layered:
-
-1. TS session resumption semantics must match spec
-2. TS stable conduit must provide its continuity story correctly
-3. TS should not blur the two layers
-
-### TODO
-
-- [ ] Audit current channel-closing-on-resume behavior against Rust/spec
-- [ ] Clarify what must happen for:
-  - bare + session resumption
-  - stable conduit reconnect
-  - stable + session resumption
-- [ ] Ensure TS does not incorrectly claim seamless channel continuity for bare session resumption
-- [ ] Ensure TS stable conduit path preserves channels/state the way Rust/docs intend
-- [ ] Update tests to distinguish stable reconnect continuity from bare session resumption
-
-### Files
-
-- `typescript/packages/vox-core/src/session.ts`
-- `typescript/packages/vox-core/src/stable_conduit.ts`
-- channeling runtime pieces under `typescript/packages/vox-core/src/channeling/`
 
 ---
 
@@ -544,7 +395,6 @@ Those tests are useful only if rewritten to validate the current protocol.
   - handshake messages
   - opaque payload framing
   - request/response schemas
-  - stable conduit reconnect behavior
 - [ ] Add parity tests against Rust subjects/harnesses where possible
 - [ ] Ensure browser/inprocess tests use current transport/session semantics
 
@@ -576,16 +426,10 @@ Those tests are useful only if rewritten to validate the current protocol.
 ## Phase 3 — Fix payload framing and schema exchange correctness
 - [ ] Audit opaque framing end-to-end
 - [ ] Add request/response schema send/receive logic that mirrors Rust
-- [ ] Add/reset per-connection schema trackers correctly across reconnect/resume
+- [ ] Add/reset per-connection schema trackers correctly for each fresh connection
 - [ ] Verify against Rust vectors/fixtures
 
-## Phase 4 — Stable conduit parity
-- [ ] Audit TS stable conduit against Rust stable conduit
-- [ ] Fix ordering with transport/session handshake
-- [ ] Verify replay/ack/reconnect semantics
-- [ ] Verify channel continuity guarantees
-
-## Phase 5 — Clean up stale API/tests/docs
+## Phase 4 — Clean up stale API/tests/docs
 - [ ] Remove or rewrite `connection.ts`-based old architecture
 - [ ] Update tests to current semantics
 - [ ] Update TS docs/examples once runtime is correct
@@ -600,7 +444,6 @@ These should happen first:
 - [ ] Remove stale hello/schema-message assumptions from `typescript/packages/vox-core/src/session.ts`
 - [ ] Move schema receive logic to inlined request/response `schemas`
 - [ ] Verify opaque framing in TS postcard implementation
-- [ ] Revisit `StableConduit` integration order after session handshake is corrected
 
 ---
 
@@ -614,9 +457,7 @@ These should happen first:
   - request/response payload schema
 - Rust sends payload schemas from `SessionCore::send(...)`.
 - Rust receives payload schemas in `Session::handle_message(...)` before routing.
-- Rust resets schema tracking on reconnect/resume because type IDs are per connection.
-- Rust/session resumption and stable conduit reconnect are separate layers.
-- TS currently closes channels on session resume; bare session resumption should fail in-flight attempts rather than preserve seamless continuity.
+- Rust treats schema tracking as per-connection state.
 
 ### Important caution
 
@@ -640,14 +481,13 @@ That would move it farther away from parity.
 - [x] Raw CBOR handshake receive path
 - [x] Handshake result model
 - [ ] Message plan bootstrap from handshake schema
-- [ ] Resume-key handling
 
 ### Schema exchange
 - [x] Send in `RequestCall.schemas` (codegen-driven CBOR from Rust Facet shapes)
 - [x] Send in `RequestResponse.schemas` (codegen-driven CBOR from Rust Facet shapes)
 - [x] Receive from incoming request/response
 - [ ] Duplicate type handling
-- [ ] Per-connection reset on reconnect
+- [ ] Per-connection reset
 
 ### Payload framing
 - [ ] Opaque `u32le` decode
@@ -655,19 +495,11 @@ That would move it farther away from parity.
 - [ ] Passthrough framing parity
 - [ ] Args/ret/item verification
 
-### Stable conduit
-- [ ] Stable handshake ordering
-- [ ] Seq/ack semantics
-- [ ] Replay buffer semantics
-- [ ] Duplicate suppression
-- [ ] Channel continuity parity
-
 ### Tests
 - [ ] Remove stale hello-exchange tests
 - [ ] Add handshake tests
 - [ ] Add schema exchange tests
 - [ ] Add opaque framing tests
-- [ ] Add stable reconnect continuity tests
 - [ ] Add parity tests against Rust
 
 ---

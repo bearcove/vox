@@ -1,6 +1,5 @@
 use vox_types::{
-    ConnectionSettings, HandshakeMessage, HandshakeResult, LinkRx, LinkTx, ResumeKeyBytes,
-    SessionResumeKey, SessionRole,
+    ConnectionSettings, HandshakeMessage, HandshakeResult, LinkRx, LinkTx, SessionRole,
 };
 
 const INITIAL_CHANNEL_CREDIT_ZERO_ERROR: &str = "initial_channel_credit must be greater than zero";
@@ -13,7 +12,6 @@ pub enum HandshakeError {
     PeerClosed,
     Protocol(String),
     Sorry(String),
-    NotResumable,
 }
 
 impl std::fmt::Display for HandshakeError {
@@ -25,7 +23,6 @@ impl std::fmt::Display for HandshakeError {
             Self::PeerClosed => write!(f, "peer closed during handshake"),
             Self::Protocol(msg) => write!(f, "handshake protocol error: {msg}"),
             Self::Sorry(reason) => write!(f, "handshake rejected: {reason}"),
-            Self::NotResumable => write!(f, "session is not resumable"),
         }
     }
 }
@@ -105,7 +102,6 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
     tx: &Tx,
     rx: &mut Rx,
     settings: ConnectionSettings,
-    resume_key: Option<&SessionResumeKey>,
     metadata: vox_types::Metadata,
 ) -> Result<HandshakeResult, HandshakeError> {
     validate_initial_channel_credit(&settings)?;
@@ -116,7 +112,6 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
         parity: settings.parity,
         connection_settings: settings.clone(),
         message_payload_schema: our_schema.clone(),
-        resume_key: resume_key.map(ResumeKeyBytes::from_key),
         metadata,
     };
 
@@ -150,14 +145,10 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
     // TODO: Compare schemas and send Sorry if incompatible
     send_handshake(tx, &HandshakeMessage::LetsGo(vox_types::LetsGo {})).await?;
 
-    let session_resume_key = hy.resume_key.as_ref().and_then(|k| k.to_key());
-
     Ok(HandshakeResult {
         role: SessionRole::Initiator,
         our_settings: settings,
         peer_settings: hy.connection_settings,
-        session_resume_key,
-        peer_resume_key: None, // initiator doesn't receive a peer resume key
         our_schema,
         peer_schema: hy.message_payload_schema,
         peer_metadata: hy.metadata,
@@ -176,8 +167,6 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     tx: &Tx,
     rx: &mut Rx,
     settings: ConnectionSettings,
-    resumable: bool,
-    expected_resume_key: Option<&SessionResumeKey>,
     metadata: vox_types::Metadata,
 ) -> Result<HandshakeResult, HandshakeError> {
     validate_initial_channel_credit(&settings)?;
@@ -199,36 +188,10 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
         return Err(HandshakeError::Protocol(reason));
     }
 
-    // Validate resume key if this is a resumption attempt
-    if let Some(expected) = expected_resume_key {
-        let actual = hello.resume_key.as_ref().and_then(|k| k.to_key());
-        match actual {
-            Some(actual) if actual == *expected => {} // OK
-            _ => {
-                let reason = "session resume key mismatch".to_string();
-                send_handshake(
-                    tx,
-                    &HandshakeMessage::Sorry(vox_types::Sorry {
-                        reason: reason.clone(),
-                    }),
-                )
-                .await?;
-                return Err(HandshakeError::Protocol(reason));
-            }
-        }
-    }
-
     // Acceptor adopts opposite parity
     let our_settings = ConnectionSettings {
         parity: hello.parity.other(),
         ..settings
-    };
-
-    // Generate resume key if we're resumable
-    let our_resume_key = if resumable {
-        Some(fresh_resume_key()?)
-    } else {
-        None
     };
 
     let our_schema = message_schema();
@@ -237,7 +200,6 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     let hy = vox_types::HelloYourself {
         connection_settings: our_settings.clone(),
         message_payload_schema: our_schema.clone(),
-        resume_key: our_resume_key.as_ref().map(ResumeKeyBytes::from_key),
         metadata,
     };
     send_handshake(tx, &HandshakeMessage::HelloYourself(hy)).await?;
@@ -250,26 +212,14 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
         _ => return Err(HandshakeError::Protocol("expected LetsGo or Sorry".into())),
     }
 
-    let peer_resume_key = hello.resume_key.as_ref().and_then(|k| k.to_key());
-
     Ok(HandshakeResult {
         role: SessionRole::Acceptor,
         our_settings,
         peer_settings: hello.connection_settings,
-        session_resume_key: our_resume_key,
-        peer_resume_key,
         our_schema,
         peer_schema: hello.message_payload_schema,
         peer_metadata: hello.metadata,
     })
-}
-
-fn fresh_resume_key() -> Result<SessionResumeKey, HandshakeError> {
-    let mut bytes = [0u8; 16];
-    getrandom::fill(&mut bytes).map_err(|error| {
-        HandshakeError::Protocol(format!("failed to generate session key: {error}"))
-    })?;
-    Ok(SessionResumeKey(bytes))
 }
 
 #[cfg(test)]
@@ -296,7 +246,6 @@ mod tests {
             &tx,
             &mut rx,
             settings(Parity::Odd, 0),
-            None,
             vox_types::Metadata::default(),
         )
         .await;
@@ -323,8 +272,6 @@ mod tests {
                 &server_tx,
                 &mut server_rx,
                 settings(Parity::Even, 16),
-                false,
-                None,
                 vox_types::Metadata::default(),
             )
             .await
@@ -336,7 +283,6 @@ mod tests {
                 parity: Parity::Odd,
                 connection_settings: settings(Parity::Odd, 0),
                 message_payload_schema: message_schema(),
-                resume_key: None,
                 metadata: vox_types::Metadata::default(),
             }),
         )

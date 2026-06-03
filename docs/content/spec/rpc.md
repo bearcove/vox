@@ -251,7 +251,7 @@ registered on the session builder; otherwise they are rejected.
 > Callers that loop on error MUST NOT retry non-retryable failures. In
 > particular, retrying a call that failed with `InvalidPayload` due to a schema
 > compatibility decode-plan error will always produce the same failure, because the remote
-> peer's schema does not change without a reconnect.
+> peer's schema does not change during the session.
 
 > r[rpc.error.scope]
 >

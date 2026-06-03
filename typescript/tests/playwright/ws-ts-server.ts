@@ -2,7 +2,6 @@ import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import {
   Driver,
   SessionError,
-  SessionRegistry,
   session,
   type Link,
   type Rx,
@@ -129,9 +128,6 @@ class TestbedService implements TestbedHandler {
   }
 
   async echo(message: string): Promise<string> {
-    if (message === "__vox_reconnect__") {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
     return message;
   }
 
@@ -336,7 +332,6 @@ export interface TsWsServerHandle {
 
 export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
   const wss = new WebSocketServer({ host: "127.0.0.1", port });
-  const registry = new SessionRegistry();
   const activeSessions = new Set<SessionHandle>();
   const activeDrivers = new Set<Promise<void>>();
 
@@ -344,13 +339,9 @@ export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
 
   wss.on("connection", (socket) => {
     const link = new NodeWsLink(socket);
-    void session.acceptorTransportOrResume(link, registry, { resumable: true }).then((accepted) => {
-      if (accepted.tag === "Resumed") {
-        return;
-      }
-
-      const established = accepted.session;
-      activeSessions.add(established.handle());
+    void session.acceptorTransport(link).then((established) => {
+      const handle = established.handle();
+      activeSessions.add(handle);
       const driver = new Driver(established.rootConnection(), dispatcher);
       const run = driver.run().catch((error) => {
         if (!(error instanceof SessionError)) {
@@ -358,7 +349,7 @@ export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
         }
       }).finally(() => {
         activeDrivers.delete(run);
-        activeSessions.delete(established.handle());
+        activeSessions.delete(handle);
       });
       activeDrivers.add(run);
     }).catch((error) => {

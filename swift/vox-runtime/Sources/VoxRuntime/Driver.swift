@@ -35,16 +35,10 @@ public final class Driver: @unchecked Sendable {
     var pendingTaskMessages: [DriverQueuedTaskMessage] = []
     var pendingCalls: [DriverQueuedCall] = []
 
-    // Session resumption support
-    let resumable: Bool
     let localRootSettings: ConnectionSettings?
     let peerRootSettings: ConnectionSettings?
-    /// The peer's advertised Message schema closure (from the handshake), persisted so a
-    /// resume rebuild uses the same envelope compatibility decode — never a same-schema fallback.
     let peerMessageSchema: [UInt8]
     let transport: ConduitKind?
-    let recoverAttachment: (@Sendable () async throws -> LinkAttachment)?
-    let sessionResumeKey: [UInt8]?
 
     init(
         conduit: any Conduit,
@@ -68,13 +62,10 @@ public final class Driver: @unchecked Sendable {
         self.schemaSendTracker = SchemaSendTracker()
         self.commandQueue = LockedQueue<HandleCommand>()
         self.taskQueue = LockedQueue<TaskMessage>()
-        self.resumable = false
         self.localRootSettings = nil
         self.peerRootSettings = nil
         self.peerMessageSchema = []
         self.transport = nil
-        self.recoverAttachment = nil
-        self.sessionResumeKey = nil
 
         // Create event stream
         var continuation: AsyncStream<DriverEvent>.Continuation!
@@ -98,13 +89,10 @@ public final class Driver: @unchecked Sendable {
         commandQueue: LockedQueue<HandleCommand>,
         taskQueue: LockedQueue<TaskMessage>,
         schemaSendTracker: SchemaSendTracker = SchemaSendTracker(),
-        resumable: Bool = false,
         localRootSettings: ConnectionSettings? = nil,
         peerRootSettings: ConnectionSettings? = nil,
         peerMessageSchema: [UInt8] = [],
-        transport: ConduitKind? = nil,
-        recoverAttachment: (@Sendable () async throws -> LinkAttachment)? = nil,
-        sessionResumeKey: [UInt8]? = nil
+        transport: ConduitKind? = nil
     ) {
         self.conduit = conduit
         self.dispatcher = dispatcher
@@ -121,12 +109,9 @@ public final class Driver: @unchecked Sendable {
         self.eventContinuation = eventContinuation
         self.commandQueue = commandQueue
         self.taskQueue = taskQueue
-        self.resumable = resumable
         self.localRootSettings = localRootSettings
         self.peerRootSettings = peerRootSettings
         self.peerMessageSchema = peerMessageSchema
         self.transport = transport
-        self.recoverAttachment = recoverAttachment
-        self.sessionResumeKey = sessionResumeKey
     }
 }

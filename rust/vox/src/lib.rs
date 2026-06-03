@@ -244,8 +244,7 @@ pub use vox_core::{acceptor_on_link, initiator_on_link};
 #[cfg(feature = "runtime")]
 pub use vox_core::{
     ConnectionHandle, ConnectionRequest, ConnectionState, PendingConnection, Session,
-    SessionAcceptOutcome, SessionConfig, SessionError, SessionHandle, SessionKeepaliveConfig,
-    SessionRegistry,
+    SessionConfig, SessionError, SessionHandle, SessionKeepaliveConfig,
 };
 
 // Connection acceptor

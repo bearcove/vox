@@ -33,9 +33,6 @@ pub struct ConnectionSettings {
     pub initial_channel_credit: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SessionResumeKey(pub [u8; 16]);
-
 impl<'payload> Message<'payload> {
     // Message has no methods on purpose. it's all just plain data.
     // Adding constructors or getters is forbidden.
