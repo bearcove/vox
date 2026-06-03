@@ -239,7 +239,7 @@ mod tests {
 
     use super::generate_service;
     use facet::Facet;
-    use vox_types::{Rx, ServiceDescriptor, Tx, method_descriptor};
+    use vox_types::{MethodDescriptorOptions, Rx, ServiceDescriptor, Tx, method_descriptor};
 
     // A non-recursive composite (struct + scalar + string + list). NOTE: phon's
     // `from_shapes` has no cycle detection, so a self-referential type (via `Box` or
@@ -352,20 +352,24 @@ mod tests {
             "echo",
             &["message"],
             &[None],
-            <Result<String, vox_types::VoxError> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<String, vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
             "TestSvc",
             "divide",
             &["lhs", "rhs"],
             &[None, None],
-            <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![echo, divide].into_boxed_slice());
         let service = ServiceDescriptor {
@@ -392,10 +396,12 @@ mod tests {
             "recurse",
             &["node"],
             &[None],
-            <Result<CompositeNode, vox_types::VoxError> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<CompositeNode, vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![recurse].into_boxed_slice());
         let service = ServiceDescriptor {
@@ -427,10 +433,12 @@ mod tests {
             "summarize",
             &["id"],
             &[None],
-            <Result<SessionSummary, vox_types::VoxError> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<SessionSummary, vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![summarize].into_boxed_slice());
         let service = ServiceDescriptor {
@@ -460,10 +468,12 @@ mod tests {
                 Some(<u32 as facet::Facet>::SHAPE),
                 Some(<u32 as facet::Facet>::SHAPE),
             ],
-            <Result<(), vox_types::VoxError> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
         let service = ServiceDescriptor {
@@ -494,10 +504,13 @@ mod tests {
             "subscribe",
             &[],
             &[],
-            <Result<SubscribeMessage, vox_types::VoxError> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape:
+                    <Result<SubscribeMessage, vox_types::VoxError> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![subscribe].into_boxed_slice());
         let service = ServiceDescriptor {
@@ -538,10 +551,12 @@ mod tests {
             "divide",
             &["lhs", "rhs"],
             &[None, None],
-            <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let methods = Box::leak(vec![divide].into_boxed_slice());
         let service = ServiceDescriptor {

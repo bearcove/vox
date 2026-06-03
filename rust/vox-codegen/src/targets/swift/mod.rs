@@ -2,8 +2,10 @@
 //!
 //! For a service, [`generate_service`] emits one module: the named type definitions,
 //! the per-service phon schemas/descriptors/lowered programs ([`phon_service`]), the
-//! typed client ([`phon_client`]) and server ([`phon_server`]). The Message/Handshake
-//! wire envelopes are emitted separately by [`phon_descriptor::generate_phon_wire`].
+//! typed client ([`phon_client`]) and server ([`phon_server`]).
+//!
+//! The Message/Handshake wire envelopes are emitted separately by
+//! [`phon_descriptor::generate_phon_wire`].
 
 pub mod phon_client;
 pub mod phon_descriptor;
@@ -25,8 +27,9 @@ pub struct WireType {
     pub shape: &'static Shape,
 }
 
-/// Generate a complete Swift module for a service, on the phon codec: the named types
-/// + the per-service phon schemas/descriptors/programs + the typed client and server.
+/// Generate a complete Swift module for a service on the phon codec, including
+/// named types, per-service phon schemas/descriptors/programs, and the typed
+/// client and server.
 /// This is the main entry point for Swift service code generation.
 pub fn generate_service(service: &ServiceDescriptor) -> String {
     let mut out = String::new();

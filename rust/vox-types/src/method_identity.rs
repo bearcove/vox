@@ -23,15 +23,19 @@ pub fn method_id_name_only(service_name: &str, method_name: &str) -> MethodId {
 }
 
 /// Build and leak a `MethodDescriptor`.
+pub struct MethodDescriptorOptions {
+    pub response_wire_shape: &'static Shape,
+    pub retry_persist: bool,
+    pub retry_idem: bool,
+    pub doc: Option<&'static str>,
+}
+
 pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     service_name: &'static str,
     method_name: &'static str,
     arg_names: &[&'static str],
     channel_elements: &[Option<&'static Shape>],
-    response_wire_shape: &'static Shape,
-    retry_persist: bool,
-    retry_idem: bool,
-    doc: Option<&'static str>,
+    options: MethodDescriptorOptions,
 ) -> &'static MethodDescriptor {
     assert!(
         !shape_contains_channel(R::SHAPE),
@@ -81,11 +85,11 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         args_shape: A::SHAPE,
         args,
         return_shape: R::SHAPE,
-        response_wire_shape,
+        response_wire_shape: options.response_wire_shape,
         args_have_channels,
-        retry_persist,
-        retry_idem,
-        doc,
+        retry_persist: options.retry_persist,
+        retry_idem: options.retry_idem,
+        doc: options.doc,
     }))
 }
 

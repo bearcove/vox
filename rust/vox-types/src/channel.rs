@@ -631,11 +631,19 @@ impl CoreSlot {
 
 // r[impl rpc.channel.pair]
 // r[impl rpc.observability.channel.context]
-/// Create a channel pair with shared state.
+/// Create a channel pair with shared state — a `Tx<T>` (sender) and `Rx<T>`
+/// (receiver) over one `ChannelCore`.
 ///
-/// Both ends hold an `Arc` reference to the same `ChannelCore`. The framework
-/// binds the handle that appears in args or return values, and the paired
-/// handle reads or takes the binding from the shared core.
+/// Channels **stream values within a call**: pass one end in a method's
+/// **arguments**. That is the *only* place a channel may appear — the `#[service]`
+/// macro rejects a `Tx`/`Rx` in return position ("channels are only allowed in
+/// method arguments"). The framework binds the handle that appears in the args, and
+/// the paired handle reads or takes the binding from the shared `ChannelCore`.
+///
+/// A channel is one-directional streaming, not a reply path: to hand a value *back*
+/// from the handler, take a `Tx<T>` (the handler holds it and sends → caller). For
+/// request/response over the same link, open a **virtual connection** on the session
+/// — do not simulate it by pairing two channels.
 #[track_caller]
 pub fn channel<T>() -> (Tx<T>, Rx<T>) {
     let caller = Location::caller();
@@ -1314,7 +1322,7 @@ impl<T> Tx<T> {
     }
 
     // r[impl rpc.channel.lifecycle]
-    pub async fn close<'value>(&self, metadata: Metadata) -> Result<(), TxError> {
+    pub async fn close(&self, metadata: Metadata) -> Result<(), TxError> {
         self.closed.store(true, Ordering::Release);
         let sink = if let Some(sink) = self.resolve_sink_now() {
             sink

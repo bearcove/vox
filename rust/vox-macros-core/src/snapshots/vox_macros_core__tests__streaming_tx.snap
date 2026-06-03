@@ -6,7 +6,31 @@ expression: "generate(quote!\n{\n    trait Streamer\n    { async fn count_up(&se
 pub fn streamer_service_descriptor() -> &'static ::vox::session::ServiceDescriptor {
     static DESCRIPTOR: std::sync::OnceLock<&'static ::vox::session::ServiceDescriptor> =
         std::sync::OnceLock::new();
-    DESCRIPTOR . get_or_init (|| { let methods : Vec < & 'static :: vox :: session :: MethodDescriptor > = vec ! [:: vox :: hash :: method_descriptor :: < (i32 , Tx < i32 > ,) , i32 > ("Streamer" , "count_up" , & ["start" , "output"] , & [None , Some (< i32 as :: vox :: facet :: Facet < 'static >> :: SHAPE)] , < Result < i32 , :: vox :: VoxError < :: core :: convert :: Infallible >> as :: vox :: facet :: Facet < 'static >> :: SHAPE , false , false , None ,)] ; Box :: leak (Box :: new (:: vox :: session :: ServiceDescriptor { service_name : "Streamer" , methods : Box :: leak (methods . into_boxed_slice ()) , doc : None , })) })
+    DESCRIPTOR.get_or_init(|| {
+        let methods: Vec<&'static ::vox::session::MethodDescriptor> =
+            vec![
+                ::vox::hash::method_descriptor::<(i32, Tx<i32>), i32>(
+                    "Streamer",
+                    "count_up",
+                    &["start", "output"],
+                    &[None, Some(<i32 as ::vox::facet::Facet<'static>>::SHAPE)],
+                    ::vox::hash::MethodDescriptorOptions {
+                        response_wire_shape: <Result<
+                            i32,
+                            ::vox::VoxError<::core::convert::Infallible>,
+                        > as ::vox::facet::Facet<'static>>::SHAPE,
+                        retry_persist: false,
+                        retry_idem: false,
+                        doc: None,
+                    },
+                ),
+            ];
+        Box::leak(Box::new(::vox::session::ServiceDescriptor {
+            service_name: "Streamer",
+            methods: Box::leak(methods.into_boxed_slice()),
+            doc: None,
+        }))
+    })
 }
 pub trait Streamer
 where

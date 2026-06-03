@@ -1388,16 +1388,20 @@ trait DriverChannelEndpoint {
     fn create_tx_credit_sink(
         &self,
         debug_context: Option<ChannelDebugContext>,
+        gate_until_declaring_call: bool,
     ) -> (ChannelId, Arc<CreditSink<DriverChannelSink>>) {
         let shared = self.endpoint_shared();
         let channel_id = shared.channel_ids.lock().alloc();
-        // r[impl rpc.channel.item] Register a CLOSED send-gate for this freshly-opened
-        // outbound channel BEFORE binding its sink, so an application `tx.send` that
-        // wakes when the sink binds parks until the declaring Call is enqueued — the
-        // Call must reach the wire before any item on the channel it opens.
-        self.endpoint_sender()
-            .sess_core
-            .register_channel_gate(channel_id);
+        if gate_until_declaring_call {
+            // r[impl rpc.channel.item] Register a CLOSED send-gate for this
+            // freshly-opened outbound channel BEFORE binding its sink, so an
+            // application `tx.send` that wakes when the sink binds parks until the
+            // declaring Call is enqueued — the Call must reach the wire before any
+            // item on the channel it opens.
+            self.endpoint_sender()
+                .sess_core
+                .register_channel_gate(channel_id);
+        }
         let sink = make_tx_channel_sink(
             self.endpoint_sender(),
             shared,
@@ -1412,7 +1416,7 @@ trait DriverChannelEndpoint {
         &self,
         debug_context: Option<ChannelDebugContext>,
     ) -> (ChannelId, Arc<dyn ChannelSink>) {
-        let (id, sink) = self.create_tx_credit_sink(debug_context);
+        let (id, sink) = self.create_tx_credit_sink(debug_context, true);
         (id, sink as Arc<dyn ChannelSink>)
     }
 
@@ -1546,7 +1550,7 @@ impl DriverCaller {
     /// The returned sink enforces credit; the semaphore is registered so
     /// `GrantCredit` messages can add permits.
     pub fn create_tx_channel(&self) -> (ChannelId, Arc<CreditSink<DriverChannelSink>>) {
-        self.create_tx_credit_sink(None)
+        self.create_tx_credit_sink(None, false)
     }
 
     /// Returns the underlying connection sender.

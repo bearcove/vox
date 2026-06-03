@@ -134,45 +134,6 @@ fn is_fixed_scalar(shape: &'static Shape) -> bool {
     )
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use facet::Facet;
-
-    #[test]
-    fn scalar_and_string() {
-        // A scalar / string has no recursion, so `descriptor_expr` exercises `access_expr`.
-        assert!(descriptor_expr(<u32 as Facet>::SHAPE).contains("access: .scalar"));
-        assert!(descriptor_expr(<String as Facet>::SHAPE).contains("witness: .string"));
-    }
-
-    #[test]
-    fn envelope_descriptor_emits() {
-        // Walk the real Message envelope — panics here name the unsupported shape.
-        let expr = descriptor_expr(<vox_types::Message<'static> as Facet>::SHAPE);
-        assert!(expr.contains("Descriptor("), "got: {expr}");
-        assert!(
-            expr.contains(".enumeration"),
-            "envelope should be an enum at the root payload"
-        );
-    }
-
-    #[test]
-    fn envelope_codec_module_emits() {
-        let module = generate_phon_codec(&[(
-            "Message".to_string(),
-            <vox_types::Message<'static> as Facet>::SHAPE,
-        )]);
-        assert!(module.contains("MessageSchemaClosure: [UInt8] = ["));
-        assert!(module.contains("public func encodeMessage(_ value: Message)"));
-        // The Descriptor + Registry are emitted (the runtime builds the reconciling
-        // decode from them); there is NO cached same-schema decode program/function.
-        assert!(module.contains("MessageDescriptor: Descriptor ="));
-        assert!(!module.contains("decodeMessage"));
-        assert!(!module.contains("MessageDecodeProgram"));
-    }
-}
-
 /// Recursion context for descriptor emission: which schema ids are cyclic (lower to
 /// callable blocks, not inline), the block-body expressions built so far (keyed by
 /// schema id), and the ids currently being built (to break a back-edge). Mirrors the
@@ -457,31 +418,31 @@ fn enum_access(
         // project: bind each associated value, store it into scratch at its offset.
         let binds: Vec<String> = (0..fields.len()).map(|k| format!("let f{k}")).collect();
         let mut proj = format!("case .{case}({}): ", binds.join(", "));
-        for k in 0..fields.len() {
+        for (k, ty) in tys.iter().enumerate() {
             proj.push_str(&format!(
                 "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).initialize(to: f{k}); ",
                 offset(k),
-                tys[k]
+                ty
             ));
         }
         project_cases.push_str(&format!("{proj}\n            "));
         // destroy: deinit each field at its offset.
         let mut des = format!("case {i}: ");
-        for k in 0..fields.len() {
+        for (k, ty) in tys.iter().enumerate() {
             des.push_str(&format!(
                 "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).deinitialize(count: 1); ",
                 offset(k),
-                tys[k]
+                ty
             ));
         }
         destroy_cases.push_str(&format!("{des}\n            "));
         // inject: move each field out of scratch, construct the case (labels for struct).
         let mut inj = format!("case {i}: ");
-        for k in 0..fields.len() {
+        for (k, ty) in tys.iter().enumerate() {
             inj.push_str(&format!(
                 "let f{k} = scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).move(); ",
                 offset(k),
-                tys[k]
+                ty
             ));
         }
         let args: Vec<String> = fields
@@ -528,4 +489,43 @@ fn result_access(ok: &'static Shape, err: &'static Shape, ctx: &mut RecCtx) -> S
         descriptor_node(ok, ctx),
         descriptor_node(err, ctx)
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use facet::Facet;
+
+    #[test]
+    fn scalar_and_string() {
+        // A scalar / string has no recursion, so `descriptor_expr` exercises `access_expr`.
+        assert!(descriptor_expr(<u32 as Facet>::SHAPE).contains("access: .scalar"));
+        assert!(descriptor_expr(<String as Facet>::SHAPE).contains("witness: .string"));
+    }
+
+    #[test]
+    fn envelope_descriptor_emits() {
+        // Walk the real Message envelope — panics here name the unsupported shape.
+        let expr = descriptor_expr(<vox_types::Message<'static> as Facet>::SHAPE);
+        assert!(expr.contains("Descriptor("), "got: {expr}");
+        assert!(
+            expr.contains(".enumeration"),
+            "envelope should be an enum at the root payload"
+        );
+    }
+
+    #[test]
+    fn envelope_codec_module_emits() {
+        let module = generate_phon_codec(&[(
+            "Message".to_string(),
+            <vox_types::Message<'static> as Facet>::SHAPE,
+        )]);
+        assert!(module.contains("MessageSchemaClosure: [UInt8] = ["));
+        assert!(module.contains("public func encodeMessage(_ value: Message)"));
+        // The Descriptor + Registry are emitted (the runtime builds the reconciling
+        // decode from them); there is NO cached same-schema decode program/function.
+        assert!(module.contains("MessageDescriptor: Descriptor ="));
+        assert!(!module.contains("decodeMessage"));
+        assert!(!module.contains("MessageDecodeProgram"));
+    }
 }

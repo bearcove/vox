@@ -324,9 +324,9 @@ pub fn swift_type_base(shape: &'static Shape) -> String {
         // its single param is the `User(E)` variant's payload. Without the arg, every
         // method would collapse to a bare `VoxError`, so emit `VoxError<E>` explicitly.
         ShapeKind::Enum(EnumInfo {
-            name: Some(name),
+            name: Some("VoxError"),
             variants,
-        }) if name == "VoxError" => {
+        }) => {
             let e = variants
                 .first()
                 .and_then(|v| v.data.fields.first())

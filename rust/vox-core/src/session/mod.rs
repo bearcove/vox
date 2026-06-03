@@ -2145,6 +2145,12 @@ struct OutboundBatch {
     result_tx: tokio_oneshot::Sender<std::io::Result<()>>,
 }
 
+type PreparedOutboundBatch = (
+    OutboundBatch,
+    tokio_oneshot::Receiver<std::io::Result<()>>,
+    Vec<vox_types::ChannelId>,
+);
+
 async fn run_outbound_worker(mut rx: tokio_mpsc::Receiver<OutboundBatch>) {
     while let Some(batch) = rx.recv().await {
         trace!(
@@ -2398,14 +2404,7 @@ impl SessionCore {
         mut msg: Message<'a>,
         binder: Option<&'a dyn vox_types::ChannelBinder>,
         forwarded_schemas: Option<&vox_types::SchemaRecvTracker>,
-    ) -> Result<
-        (
-            OutboundBatch,
-            tokio_oneshot::Receiver<std::io::Result<()>>,
-            Vec<vox_types::ChannelId>,
-        ),
-        (),
-    > {
+    ) -> Result<PreparedOutboundBatch, ()> {
         let conn_id = msg.connection_id;
         let (request_id, payload_kind) = match &msg.payload {
             MessagePayload::RequestMessage(req) => {
@@ -2643,10 +2642,10 @@ impl SessionCore {
         // r[impl rpc.channel.item] A channel item whose declaring Call hasn't been
         // enqueued yet can't go out (frame order); signal backpressure so the caller
         // retries — the async `send` path parks instead.
-        if let Some(channel_id) = gated_channel_id(&msg) {
-            if !self.channel_gate_open(channel_id) {
-                return Err(TrySendError::Full(()));
-            }
+        if let Some(channel_id) = gated_channel_id(&msg)
+            && !self.channel_gate_open(channel_id)
+        {
+            return Err(TrySendError::Full(()));
         }
         let (batch, _result_rx, gated_channels) = self
             .prepare_outbound_batch(msg, binder, forwarded_schemas)

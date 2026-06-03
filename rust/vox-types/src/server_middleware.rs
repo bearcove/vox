@@ -393,10 +393,12 @@ mod tests {
             "sum",
             &["left", "right"],
             &[None, None],
-            <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
-            false,
-            false,
-            None,
+            crate::MethodDescriptorOptions {
+                response_wire_shape: <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let metadata = crate::Metadata::default();
         let extensions = Extensions::new();

@@ -383,10 +383,12 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
                     #method_name_str,
                     &[#(#arg_name_strs),*],
                     &[#(#channel_elements),*],
-                    #response_wire_shape,
-                    #retry_persist,
-                    #retry_idem,
-                    #method_doc_expr,
+                    #vox::hash::MethodDescriptorOptions {
+                        response_wire_shape: #response_wire_shape,
+                        retry_persist: #retry_persist,
+                        retry_idem: #retry_idem,
+                        doc: #method_doc_expr,
+                    },
                 )
             }
         })

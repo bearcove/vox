@@ -391,7 +391,7 @@ fn test_deser_phon_borrowed() {
 
     // Decode zero-copy: the `&str` borrows the backing, kept alive by the SelfRef.
     let reply: SelfRef<Reply<'static>> =
-        SelfRef::try_new(backing, |b| vox_phon::from_slice_borrowed::<Reply>(b)).unwrap();
+        SelfRef::try_new(backing, vox_phon::from_slice_borrowed::<Reply>).unwrap();
     let reply = reply.map(|reply| reply.s.to_string());
     assert_eq!(reply.get(), "IAMA borrowed string AMA");
 }

@@ -211,16 +211,23 @@ mod tests {
         server.await.expect("server task");
 
         // Build a client with logging middleware
-        static METHOD: MethodDescriptor = MethodDescriptor {
-            id: MethodId(7),
-            service_name: "Audit",
-            method_name: "record",
-            args_shape: <() as facet::Facet<'static>>::SHAPE,
-            args: &[],
-            return_shape: <() as facet::Facet<'static>>::SHAPE,
-            args_have_channels: false,
-            doc: None,
-        };
+        static METHOD: MethodDescriptor =
+            MethodDescriptor {
+                id: MethodId(7),
+                service_name: "Audit",
+                method_name: "record",
+                args_shape: <() as facet::Facet<'static>>::SHAPE,
+                args: &[],
+                return_shape: <() as facet::Facet<'static>>::SHAPE,
+                response_wire_shape:
+                    <Result<(), crate::VoxError<std::convert::Infallible>> as facet::Facet<
+                        'static,
+                    >>::SHAPE,
+                args_have_channels: false,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            };
 
         static SERVICE: crate::ServiceDescriptor = crate::ServiceDescriptor {
             service_name: "Audit",

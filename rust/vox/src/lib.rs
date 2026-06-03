@@ -117,7 +117,9 @@ pub use facet_reflect::Peek;
 // Re-export method identity functions (generated code uses `vox::hash::method_descriptor`)
 // TODO: generated code should be updated to use vox::method_descriptor directly
 pub mod hash {
-    pub use vox_types::{method_descriptor, method_id_name_only, shape_contains_channel};
+    pub use vox_types::{
+        MethodDescriptorOptions, method_descriptor, method_id_name_only, shape_contains_channel,
+    };
 }
 
 // Re-export vox-types items used by generated code

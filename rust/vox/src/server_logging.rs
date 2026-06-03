@@ -256,16 +256,23 @@ mod tests {
         );
         let _guard = tracing::subscriber::set_default(subscriber);
 
-        static METHOD: crate::MethodDescriptor = crate::MethodDescriptor {
-            id: crate::MethodId(7),
-            service_name: "Audit",
-            method_name: "record",
-            args_shape: <() as facet::Facet<'static>>::SHAPE,
-            args: &[],
-            return_shape: <() as facet::Facet<'static>>::SHAPE,
-            args_have_channels: false,
-            doc: None,
-        };
+        static METHOD: crate::MethodDescriptor =
+            crate::MethodDescriptor {
+                id: crate::MethodId(7),
+                service_name: "Audit",
+                method_name: "record",
+                args_shape: <() as facet::Facet<'static>>::SHAPE,
+                args: &[],
+                return_shape: <() as facet::Facet<'static>>::SHAPE,
+                response_wire_shape:
+                    <Result<i32, crate::VoxError<std::convert::Infallible>> as facet::Facet<
+                        'static,
+                    >>::SHAPE,
+                args_have_channels: false,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            };
 
         let mut request_metadata = metadata().u64("attempt", 2).build();
         meta_set(
@@ -337,7 +344,13 @@ mod tests {
             args_shape: <(Vec<u32>, String) as facet::Facet<'static>>::SHAPE,
             args: &[],
             return_shape: <Vec<u32> as facet::Facet<'static>>::SHAPE,
+            response_wire_shape:
+                <Result<Vec<u32>, crate::VoxError<std::convert::Infallible>> as facet::Facet<
+                    'static,
+                >>::SHAPE,
             args_have_channels: false,
+            retry_persist: false,
+            retry_idem: false,
             doc: None,
         };
 

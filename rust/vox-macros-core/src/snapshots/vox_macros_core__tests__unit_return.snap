@@ -8,18 +8,23 @@ pub fn notifier_service_descriptor() -> &'static ::vox::session::ServiceDescript
         std::sync::OnceLock::new();
     DESCRIPTOR.get_or_init(|| {
         let methods: Vec<&'static ::vox::session::MethodDescriptor> =
-            vec![::vox::hash::method_descriptor::<(String,), ()>(
-                "Notifier",
-                "notify",
-                &["msg"],
-                &[None],
-                <Result<(), ::vox::VoxError<::core::convert::Infallible>> as ::vox::facet::Facet<
-                    'static,
-                >>::SHAPE,
-                false,
-                false,
-                None,
-            )];
+            vec![
+                ::vox::hash::method_descriptor::<(String,), ()>(
+                    "Notifier",
+                    "notify",
+                    &["msg"],
+                    &[None],
+                    ::vox::hash::MethodDescriptorOptions {
+                        response_wire_shape: <Result<
+                            (),
+                            ::vox::VoxError<::core::convert::Infallible>,
+                        > as ::vox::facet::Facet<'static>>::SHAPE,
+                        retry_persist: false,
+                        retry_idem: false,
+                        doc: None,
+                    },
+                ),
+            ];
         Box::leak(Box::new(::vox::session::ServiceDescriptor {
             service_name: "Notifier",
             methods: Box::leak(methods.into_boxed_slice()),

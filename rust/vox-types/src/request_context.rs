@@ -80,7 +80,7 @@ fn empty_extensions() -> &'static Extensions {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ConnectionId, Metadata, RequestId, method_descriptor};
+    use crate::{ConnectionId, Metadata, MethodDescriptorOptions, RequestId, method_descriptor};
 
     use super::RequestContext;
 
@@ -91,10 +91,12 @@ mod tests {
             "demo",
             &[],
             &[],
-            <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
-            false,
-            false,
-            None,
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<(), crate::VoxError> as facet::Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
         );
         let metadata = Metadata::default();
 

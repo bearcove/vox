@@ -12,6 +12,8 @@
 //! `u32` length + its [`schema_to_bytes`] self-describing bytes.
 
 use std::mem::MaybeUninit;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use std::sync::Arc;
 
 use facet::{Facet, Shape};
 use phon::derive::{of, of_shape};
@@ -126,8 +128,65 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
 /// A prebuilt compatibility decode program: the writer schema reconciled against the
 /// reader type `T`'s descriptor, lowered once. Build it per `(writer root, T)` and
 /// reuse it for every message — the reconciliation cost is paid here, not per decode.
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+struct NativeDecodeProgram(phon_jit::native::NativeDecode);
+
+// Safety: the compiled decode program is immutable after construction; all
+// pointers it carries either point at executable code/prog storage owned by the
+// program or at `'static` descriptor/thunk contexts.
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Send for NativeDecodeProgram {}
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+unsafe impl Sync for NativeDecodeProgram {}
+
 #[derive(Clone)]
-pub struct DecodeProgram(Lowered);
+pub struct DecodeProgram {
+    lowered: Lowered,
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    native: Arc<NativeDecodeProgram>,
+}
+
+impl DecodeProgram {
+    fn new(lowered: Lowered) -> Self {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            let native = Arc::new(NativeDecodeProgram(
+                phon_jit::native::NativeDecode::compile_lowered(&lowered),
+            ));
+            Self { lowered, native }
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            Self { lowered }
+        }
+    }
+
+    unsafe fn decode_into(
+        &self,
+        bytes: &[u8],
+        base: *mut u8,
+        type_name: &str,
+    ) -> Result<(), Error> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            let _lowered_kept_for_fallback_and_inspection = &self.lowered;
+            unsafe { self.native.0.run(bytes, base) }
+                .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            unsafe { typed::decode_with(&self.lowered, bytes, base) }
+                .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+        }
+    }
+
+    #[cfg(test)]
+    fn uses_native_jit(&self) -> bool {
+        cfg!(all(target_os = "macos", target_arch = "aarch64"))
+    }
+}
 
 // A built program is immutable, and its thunk `ctx` pointers are all `&'static`
 // references (facet defs / adapter defs) cast to `*const ()` — morally `Send + Sync`,
@@ -164,7 +223,7 @@ pub fn build_decode_program<'a, T: Facet<'a>>(
         &reg,
     )
     .map_err(|e| Error(format!("lower_decode {}: {e:?}", T::SHAPE.type_identifier)))?;
-    Ok(DecodeProgram(program))
+    Ok(DecodeProgram::new(program))
 }
 
 /// Decode `bytes` into `T` through a prebuilt compat [`DecodeProgram`], BORROWING
@@ -180,8 +239,11 @@ pub fn decode_with_program<'a, T: Facet<'a>>(
     // Safety: `program` was lowered for `T`'s descriptor; on `Ok`, `decode_with`
     // fully initializes the slot. Borrowed fields point into `bytes` (the `'a` tie).
     unsafe {
-        typed::decode_with(&program.0, bytes, slot.as_mut_ptr().cast::<u8>())
-            .map_err(|e| Error(format!("decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+        program.decode_into(
+            bytes,
+            slot.as_mut_ptr().cast::<u8>(),
+            T::SHAPE.type_identifier,
+        )?;
         Ok(slot.assume_init())
     }
 }
@@ -202,8 +264,11 @@ pub fn decode_owned_with_program<T: Facet<'static>>(
     // the descriptor is fully owned (no borrowed leaves), so the decoded value owns
     // its data and does not reference `bytes`.
     unsafe {
-        typed::decode_with(&program.0, bytes, slot.as_mut_ptr().cast::<u8>())
-            .map_err(|e| Error(format!("decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+        program.decode_into(
+            bytes,
+            slot.as_mut_ptr().cast::<u8>(),
+            T::SHAPE.type_identifier,
+        )?;
         Ok(slot.assume_init())
     }
 }
@@ -279,6 +344,7 @@ mod tests {
         added: u32,
     }
 
+    // r[verify zerocopy.framing.value.decode-plan]
     #[test]
     fn compat_decode_reconciles_writer_and_reader_drift() {
         // The writer sends its schema closure.
@@ -302,6 +368,18 @@ mod tests {
                 b: 22,
                 added: 0
             }
+        );
+    }
+
+    #[test]
+    fn compat_decode_program_compiles_native_jit_when_available() {
+        let writer_bytes = schema_bytes::<Writer>().expect("writer schema bytes");
+        let bundle = parse_schema_bytes(&writer_bytes).expect("parse bundle");
+        let program = build_decode_program::<Reader2>(&bundle).expect("build decode program");
+
+        assert_eq!(
+            program.uses_native_jit(),
+            cfg!(all(target_os = "macos", target_arch = "aarch64"))
         );
     }
 
