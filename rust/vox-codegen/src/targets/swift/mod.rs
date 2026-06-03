@@ -55,6 +55,8 @@ mod tests {
     use facet::Facet;
     use vox_types::{MethodDescriptorOptions, Rx, ServiceDescriptor, Tx, method_descriptor};
 
+    use crate::render::hex_u64;
+
     use super::generate_service;
 
     fn bytes_literal(text: &str) -> String {
@@ -63,6 +65,101 @@ mod tests {
             .map(u8::to_string)
             .collect::<Vec<_>>()
             .join(", ")
+    }
+
+    fn byte_array_literal(bytes: &[u8]) -> String {
+        bytes
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    #[derive(Facet)]
+    struct NestedInner {
+        value: u32,
+    }
+
+    #[derive(Facet)]
+    struct NestedOuter {
+        inner: NestedInner,
+    }
+
+    #[test]
+    // r[verify schema.type-id]
+    // r[verify schema.format.self-contained]
+    // r[verify schema.tracking.transitive]
+    // r[verify schema.method-id]
+    fn generated_swift_uses_phon_schema_closures_and_canonical_method_ids() {
+        let echo = method_descriptor::<(NestedOuter,), NestedOuter>(
+            "SchemaSvc",
+            "EchoNested",
+            &["value"],
+            &[Some(<NestedOuter as Facet>::SHAPE)],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<NestedOuter, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![echo].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "SchemaSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+        let args_root = vox_phon::schema_id_for_shape(echo.args_shape).expect("args schema id");
+        let response_root =
+            vox_phon::schema_id_for_shape(echo.response_wire_shape).expect("response schema id");
+        let args_closure =
+            vox_phon::schema_bytes_for_shape(echo.args_shape).expect("args schema closure");
+        let response_closure = vox_phon::schema_bytes_for_shape(echo.response_wire_shape)
+            .expect("response schema closure");
+        let args_bundle = vox_phon::parse_schema_bytes(&args_closure).expect("args closure parses");
+        let nested_inner_id =
+            vox_phon::schema_id_for_shape(<NestedInner as Facet>::SHAPE).expect("inner schema id");
+
+        assert_eq!(args_bundle.root, args_root);
+        assert!(
+            args_bundle
+                .schemas
+                .iter()
+                .any(|schema| schema.id == nested_inner_id),
+            "args closure must carry transitively referenced NestedInner schema"
+        );
+        assert!(
+            generated.contains(&format!(
+                "    {}: PhonMethodSchemas(",
+                hex_u64(crate::method_id(echo))
+            )),
+            "generated Swift method table must use the canonical Vox method ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!("argsRoot: SchemaId({})", hex_u64(args_root.0))),
+            "generated Swift must use the phon args schema ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!(
+                "responseRoot: SchemaId({})",
+                hex_u64(response_root.0)
+            )),
+            "generated Swift must use the phon response schema ID:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!(
+                "argsSchemaClosure: [{}]",
+                byte_array_literal(&args_closure)
+            )),
+            "generated Swift must embed the self-contained phon args closure:\n{generated}"
+        );
+        assert!(
+            generated.contains(&format!(
+                "responseSchemaClosure: [{}]",
+                byte_array_literal(&response_closure)
+            )),
+            "generated Swift must embed the self-contained phon response closure:\n{generated}"
+        );
     }
 
     #[test]
