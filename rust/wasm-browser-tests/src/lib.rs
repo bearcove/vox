@@ -8,7 +8,7 @@
 #![cfg(target_arch = "wasm32")]
 
 use spec_proto::{Color, LookupError, MathError, Message, Point, Rectangle, Shape, TestbedClient};
-use vox_core::{TransportMode, initiator_on};
+use vox_core::initiator_on;
 use vox_websocket::WsLink;
 use wasm_bindgen::prelude::*;
 
@@ -88,10 +88,7 @@ pub async fn run_tests(ws_url: &str) -> TestResults {
 
     console_log!("Connected! Performing handshake...");
 
-    let client = match initiator_on(link, TransportMode::Bare)
-        .establish::<TestbedClient>()
-        .await
-    {
+    let client = match initiator_on(link).establish::<TestbedClient>().await {
         Ok(result) => result,
         Err(e) => {
             console_error!("Handshake failed: {e:?}");

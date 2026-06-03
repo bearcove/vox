@@ -17,7 +17,7 @@ use crate::session::{
     SessionHandle, SessionKeepaliveConfig, acceptor_conduit, acceptor_on, initiator_conduit,
     initiator_on, proxy_connections,
 };
-use crate::{BareConduit, Driver, NoopClient, TransportMode, memory_link_pair};
+use crate::{BareConduit, Driver, NoopClient, memory_link_pair};
 
 // r[verify rpc.caller.liveness.refcounted]
 #[tokio::test]
@@ -353,7 +353,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
         ),
         tokio::time::timeout(
             Duration::from_secs(1),
-            initiator_on(client_link, TransportMode::Bare).establish::<NoopClient>(),
+            initiator_on(client_link).establish::<NoopClient>(),
         ),
     )
     .expect("session establishment timed out");

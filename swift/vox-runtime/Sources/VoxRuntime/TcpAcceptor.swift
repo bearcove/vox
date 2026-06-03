@@ -10,19 +10,13 @@ import Foundation
 public final class TcpAcceptor: SessionConnector, Sendable {
     public let host: String
     public let port: Int  // 0 = OS assigns port
-    public let transport: ConduitKind
 
     private let state: TcpAcceptorState
 
-    public init(host: String, port: Int = 0, transport: ConduitKind = .bare) {
+    public init(host: String, port: Int = 0) {
         self.host = host
         self.port = port
-        self.transport = transport
         self.state = TcpAcceptorState()
-    }
-
-    public func bare() -> TcpAcceptor {
-        TcpAcceptor(host: host, port: port, transport: .bare)
     }
 
     public func openAttachment() async throws -> LinkAttachment {

@@ -8,9 +8,7 @@ use vox_types::{
     IncomingChannelMessage, Metadata, MsgFamily, Payload, Rx, RxError, SelfRef, Tx, TxError,
 };
 
-use crate::{
-    BareConduit, MemoryLink, TransportMode, accept_transport, initiate_transport, memory_link_pair,
-};
+use crate::{BareConduit, MemoryLink, accept_transport, initiate_transport, memory_link_pair};
 
 mod credit_tests;
 mod driver_tests;
@@ -38,11 +36,9 @@ fn conduit_pair() -> (StringConduit, StringConduit) {
 #[tokio::test]
 async fn transport_prologue_accepts_bare_mode() {
     let (client, server) = memory_link_pair(16);
-    let acceptor = tokio::spawn(async move { accept_transport(server).await.unwrap().0 });
-    let _initiator = initiate_transport(client, TransportMode::Bare)
-        .await
-        .unwrap();
-    assert_eq!(acceptor.await.unwrap(), TransportMode::Bare);
+    let acceptor = tokio::spawn(async move { accept_transport(server).await.unwrap() });
+    let _initiator = initiate_transport(client).await.unwrap();
+    let _accepted = acceptor.await.unwrap();
 }
 
 #[tokio::test]

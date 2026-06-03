@@ -8,7 +8,6 @@
 
 mod bare_conduit;
 pub use bare_conduit::*;
-pub use vox_types::TransportMode;
 
 mod handshake;
 pub use handshake::*;

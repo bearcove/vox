@@ -71,7 +71,7 @@ async fn middleware_hooks_fire_in_order() {
             .expect("server establish")
     });
 
-    let client = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let client = vox::initiator_on(client_link)
         .establish::<EchoClient>()
         .await
         .expect("client establish");
@@ -151,7 +151,7 @@ async fn middleware_can_inject_metadata() {
             .expect("server establish")
     });
 
-    let client = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let client = vox::initiator_on(client_link)
         .establish::<MetadataProbeClient>()
         .await
         .expect("client establish");

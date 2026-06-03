@@ -1,6 +1,6 @@
 public enum LinkAttachmentState: Sendable {
     case fresh
-    case conduitNegotiated(ConduitKind)
+    case prologueComplete
 }
 
 public struct LinkAttachment: Sendable {
@@ -20,16 +20,16 @@ public struct LinkAttachment: Sendable {
         Self(link: link, state: .fresh)
     }
 
-    public static func negotiated(_ link: any Link, conduit: ConduitKind) -> Self {
-        Self(link: link, state: .conduitNegotiated(conduit))
+    public static func prologueComplete(_ link: any Link) -> Self {
+        Self(link: link, state: .prologueComplete)
     }
 
-    public var negotiatedConduit: ConduitKind? {
+    public var hasCompletedPrologue: Bool {
         switch state {
         case .fresh:
-            nil
-        case .conduitNegotiated(let conduit):
-            conduit
+            false
+        case .prologueComplete:
+            true
         }
     }
 }
@@ -94,23 +94,19 @@ public actor PrefetchedLinkSource<Base: LinkSource>: LinkSource {
 
 struct TransportedLinkSource<Base: LinkSource>: LinkSource {
     let source: Base
-    let conduit: ConduitKind
 
     func nextLink() async throws -> LinkAttachment {
         let attachment = try await source.nextLink()
-        guard attachment.negotiatedConduit == nil else {
+        guard !attachment.hasCompletedPrologue else {
             try? await attachment.link.close()
             throw TransportError.protocolViolation(
-                "initiator transport source cannot yield acceptor-prepared attachments"
+                "initiator transport source cannot yield prologue-complete attachments"
             )
         }
 
         do {
-            try await performInitiatorLinkPrologue(
-                link: attachment.link,
-                conduit: conduit
-            )
-            return .negotiated(attachment.link, conduit: conduit)
+            try await performInitiatorLinkPrologue(link: attachment.link)
+            return .prologueComplete(attachment.link)
         } catch {
             try? await attachment.link.close()
             throw error

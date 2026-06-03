@@ -72,7 +72,7 @@ struct TransportTests {
         let server = try await startLocalServer()
         do {
             let link = try await connectLink(host: "127.0.0.1", port: server.port)
-            try await performInitiatorLinkPrologue(link: link, conduit: .bare)
+            try await performInitiatorLinkPrologue(link: link)
             let keepalive = try await link.socketKeepaliveEnabled()
             #expect(keepalive)
             try? await link.close()
@@ -92,7 +92,6 @@ struct TransportTests {
                 _ = try await connect(
                     host: "127.0.0.1",
                     port: server.port,
-                    conduit: .bare,
                     prologueTimeoutNs: 50_000_000
                 )
                 Issue.record("connect unexpectedly succeeded without transport prologue response")

@@ -100,7 +100,7 @@ async fn main() -> Result<()> {
     let socket = tokio::net::TcpStream::connect(addr)
         .await
         .wrap_err("connecting client socket")?;
-    let _root_caller_guard = vox::initiator_on(StreamLink::tcp(socket), vox::TransportMode::Bare)
+    let _root_caller_guard = vox::initiator_on(StreamLink::tcp(socket))
         .establish::<vox::NoopClient>()
         .await
         .map_err(|e| eyre!("failed to establish initiator session: {e:?}"))?;

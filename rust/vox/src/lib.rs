@@ -201,7 +201,6 @@ pub use vox_types::{
     SinkCall,
     SourceLocation,
     TransportEvent,
-    TransportMode,
     TrySendError,
     // Channels
     Tx,

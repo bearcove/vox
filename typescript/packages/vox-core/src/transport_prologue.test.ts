@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  acceptTransportMode,
-  requestTransportMode,
+  performAcceptorTransportPrologue,
+  performInitiatorTransportPrologue,
 } from "./transport_prologue.ts";
 
 class MemoryLink {
@@ -64,10 +64,10 @@ function memoryLinkPair(): [MemoryLink, MemoryLink] {
 }
 
 describe("transport prologue", () => {
-  it("accepts bare mode", async () => {
+  it("accepts the transport prologue", async () => {
     const [initiator, acceptor] = memoryLinkPair();
-    const accepted = acceptTransportMode(acceptor);
-    await requestTransportMode(initiator);
+    const accepted = performAcceptorTransportPrologue(acceptor);
+    await performInitiatorTransportPrologue(initiator);
     await expect(accepted).resolves.toBeUndefined();
   });
 });

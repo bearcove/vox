@@ -9,8 +9,8 @@ use vox_types::{
 
 use crate::LinkSource;
 use crate::{
-    BareConduit, IntoConduit, TransportMode, accept_transport, handshake_as_acceptor,
-    handshake_as_initiator, initiate_transport,
+    BareConduit, IntoConduit, accept_transport, handshake_as_acceptor, handshake_as_initiator,
+    initiate_transport,
 };
 
 use super::{
@@ -67,11 +67,11 @@ pub fn initiator_conduit<I: IntoConduit>(
     SessionInitiatorBuilder::new(into_conduit.into_conduit(), handshake_result)
 }
 
-pub fn initiator<S>(source: S, mode: TransportMode) -> SessionSourceInitiatorBuilder<S>
+pub fn initiator<S>(source: S) -> SessionSourceInitiatorBuilder<S>
 where
     S: LinkSource,
 {
-    SessionSourceInitiatorBuilder::new(source, mode)
+    SessionSourceInitiatorBuilder::new(source)
 }
 
 pub fn acceptor_conduit<I: IntoConduit>(
@@ -130,15 +130,12 @@ where
     ))
 }
 
-pub fn initiator_on<L: Link>(link: L, mode: TransportMode) -> SessionTransportInitiatorBuilder<L> {
-    SessionTransportInitiatorBuilder::new(link, mode)
+pub fn initiator_on<L: Link>(link: L) -> SessionTransportInitiatorBuilder<L> {
+    SessionTransportInitiatorBuilder::new(link)
 }
 
-pub fn initiator_transport<L: Link>(
-    link: L,
-    mode: TransportMode,
-) -> SessionTransportInitiatorBuilder<L> {
-    initiator_on(link, mode)
+pub fn initiator_transport<L: Link>(link: L) -> SessionTransportInitiatorBuilder<L> {
+    initiator_on(link)
 }
 
 pub fn acceptor_on<L: Link>(link: L) -> SessionTransportAcceptorBuilder<L> {
@@ -329,18 +326,13 @@ impl<C> SessionInitiatorBuilder<C> {
 
 pub struct SessionSourceInitiatorBuilder<S> {
     source: S,
-    mode: TransportMode,
     config: SessionConfig,
 }
 
 impl<S> SessionSourceInitiatorBuilder<S> {
-    fn new(source: S, mode: TransportMode) -> Self {
+    fn new(source: S) -> Self {
         let config = SessionConfig::default();
-        Self {
-            source,
-            mode,
-            config,
-        }
+        Self { source, config }
     }
 
     pub fn parity(mut self, parity: Parity) -> Self {
@@ -433,16 +425,14 @@ impl<S> SessionSourceInitiatorBuilder<S> {
     {
         let Self {
             mut source,
-            mode,
             mut config,
         } = self;
         inject_service_metadata::<Client>(&mut config.metadata);
-        let _ = mode;
 
         {
             {
                 let attachment = source.next_link().await.map_err(SessionError::Io)?;
-                let mut link = initiate_transport(attachment.into_link(), TransportMode::Bare)
+                let mut link = initiate_transport(attachment.into_link())
                     .await
                     .map_err(session_error_from_transport)?;
                 let handshake_result = handshake_as_initiator(
@@ -469,14 +459,13 @@ impl<S> SessionSourceInitiatorBuilder<S> {
 
 pub struct SessionTransportInitiatorBuilder<L> {
     link: L,
-    mode: TransportMode,
     config: SessionConfig,
 }
 
 impl<L> SessionTransportInitiatorBuilder<L> {
-    fn new(link: L, mode: TransportMode) -> Self {
+    fn new(link: L) -> Self {
         let config = SessionConfig::default();
-        Self { link, mode, config }
+        Self { link, config }
     }
 
     pub fn parity(mut self, parity: Parity) -> Self {
@@ -567,14 +556,9 @@ impl<L> SessionTransportInitiatorBuilder<L> {
         L::Tx: MaybeSend + MaybeSync + 'static,
         L::Rx: MaybeSend + 'static,
     {
-        let Self {
-            link,
-            mode,
-            mut config,
-        } = self;
+        let Self { link, mut config } = self;
         inject_service_metadata::<Client>(&mut config.metadata);
-        let _ = mode;
-        let link = initiate_transport(link, TransportMode::Bare)
+        let link = initiate_transport(link)
             .await
             .map_err(session_error_from_transport)?;
         Self::finish_with_bare_parts(link, config).await
@@ -587,20 +571,12 @@ impl<L> SessionTransportInitiatorBuilder<L> {
         L::Tx: MaybeSend + MaybeSync + 'static,
         L::Rx: MaybeSend + 'static,
     {
-        let Self {
-            link,
-            mode,
-            mut config,
-        } = self;
+        let Self { link, mut config } = self;
         inject_service_metadata::<Client>(&mut config.metadata);
-        match mode {
-            TransportMode::Bare => {
-                let link = initiate_transport(link, TransportMode::Bare)
-                    .await
-                    .map_err(session_error_from_transport)?;
-                Self::finish_with_bare_parts(link, config).await
-            }
-        }
+        let link = initiate_transport(link)
+            .await
+            .map_err(session_error_from_transport)?;
+        Self::finish_with_bare_parts(link, config).await
     }
 
     async fn finish_with_bare_parts<Client: FromVoxSession>(
@@ -864,28 +840,24 @@ impl<L: Link> SessionTransportAcceptorBuilder<L> {
     {
         let Self { link, mut config } = self;
         inject_service_metadata::<Client>(&mut config.metadata);
-        let (mode, mut link) = accept_transport(link)
+        let mut link = accept_transport(link)
             .await
             .map_err(session_error_from_transport)?;
-        match mode {
-            TransportMode::Bare => {
-                let handshake_result = handshake_as_acceptor(
-                    &link.tx,
-                    &mut link.rx,
-                    config.root_settings.clone(),
-                    metadata_into_owned(config.metadata.clone()),
-                )
-                .await
-                .map_err(session_error_from_handshake)?;
-                let message_plan = crate::MessagePlan::from_handshake(&handshake_result)
-                    .map_err(SessionError::Protocol)?;
-                let builder = SessionAcceptorBuilder::new(
-                    BareConduit::with_message_plan(link, message_plan),
-                    handshake_result,
-                );
-                Self::apply_common_parts(builder, config).establish().await
-            }
-        }
+        let handshake_result = handshake_as_acceptor(
+            &link.tx,
+            &mut link.rx,
+            config.root_settings.clone(),
+            metadata_into_owned(config.metadata.clone()),
+        )
+        .await
+        .map_err(session_error_from_handshake)?;
+        let message_plan = crate::MessagePlan::from_handshake(&handshake_result)
+            .map_err(SessionError::Protocol)?;
+        let builder = SessionAcceptorBuilder::new(
+            BareConduit::with_message_plan(link, message_plan),
+            handshake_result,
+        );
+        Self::apply_common_parts(builder, config).establish().await
     }
 
     fn apply_common_parts<C>(

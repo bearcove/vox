@@ -77,7 +77,7 @@ async fn fd_pair() -> (FdVaultClient, vox::NoopClient) {
             .await
             .expect("server establish")
     });
-    let client = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let client = vox::initiator_on(client_link)
         .establish::<FdVaultClient>()
         .await
         .expect("client establish");
@@ -130,7 +130,7 @@ async fn non_fd_transport_refuses_to_carry_an_fd() {
     });
 
     let client_sock = tokio::net::TcpStream::connect(addr).await.unwrap();
-    let client = vox::initiator_on(StreamLink::tcp(client_sock), vox::TransportMode::Bare)
+    let client = vox::initiator_on(StreamLink::tcp(client_sock))
         .establish::<FdVaultClient>()
         .await
         .expect("client establish");

@@ -198,8 +198,8 @@ private struct HandshakeHarness {
             guard let transportHello else {
                 return nil
             }
-            let requested = try decodeTransportHello(transportHello)
-            try writeRawFrame(connFd, bytes: encodeTransportAccept(requested))
+            try validateTransportHello(transportHello)
+            try writeRawFrame(connFd, bytes: encodeTransportAccept())
 
             guard let helloBytes = try readRawFrame(connFd) else {
                 return nil

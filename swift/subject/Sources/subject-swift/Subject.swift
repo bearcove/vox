@@ -257,10 +257,6 @@ func log(_ message: String) {
     NSLog("%@", "[\(pid)] \(message)")
 }
 
-func subjectConduit() -> ConduitKind {
-    .bare
-}
-
 func sameShape(_ lhs: Shape, _ rhs: Shape) -> Bool {
     switch (lhs, rhs) {
     case (.point, .point):
@@ -293,11 +289,8 @@ func runServer() async throws {
         throw SubjectError.missingEnv
     }
 
-    let transport = subjectConduit()
     let acceptConnections = ProcessInfo.processInfo.environment["ACCEPT_CONNECTIONS"] != "0"
-    log(
-        "server mode: connecting to \(addr), transport=\(transport), acceptConnections=\(acceptConnections)"
-    )
+    log("server mode: connecting to \(addr), acceptConnections=\(acceptConnections)")
 
     var rootMetadata: Metadata = .null
     rootMetadata.metaSet("vox-service", .string("Testbed"))
@@ -310,7 +303,7 @@ func runServer() async throws {
             log("invalid PEER_ADDR format")
             throw SubjectError.invalidAddr
         }
-        let connector = UnixConnector(path: path, transport: transport)
+        let connector = UnixConnector(path: path)
         let session = try await Session.initiator(
             connector,
             dispatcher: dispatcher,
@@ -326,7 +319,7 @@ func runServer() async throws {
             throw SubjectError.invalidAddr
         }
         let host = String(parts[0])
-        let connector = TcpConnector(host: host, port: port, transport: transport)
+        let connector = TcpConnector(host: host, port: port)
         let session = try await Session.initiator(
             connector,
             dispatcher: dispatcher,
@@ -787,8 +780,7 @@ func runClient() async throws {
     }
     let host = String(parts[0])
 
-    let connector = TcpConnector(host: host, port: port, transport: subjectConduit())
-    log("connecting via \(connector.transport)")
+    let connector = TcpConnector(host: host, port: port)
 
     let handler = TestbedService()
     let dispatcher = TestbedDispatcher(handler: handler)
@@ -817,7 +809,7 @@ func runClient() async throws {
 
 func runServerListen() async throws {
     let listenPort = ProcessInfo.processInfo.environment["LISTEN_PORT"].flatMap(Int.init) ?? 0
-    let acceptor = TcpAcceptor(host: "127.0.0.1", port: listenPort, transport: subjectConduit())
+    let acceptor = TcpAcceptor(host: "127.0.0.1", port: listenPort)
     let acceptConnections = ProcessInfo.processInfo.environment["ACCEPT_CONNECTIONS"] == "1"
     let handler = TestbedService()
     let dispatcher = TestbedDispatcher(handler: handler)

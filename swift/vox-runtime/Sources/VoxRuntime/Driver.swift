@@ -38,7 +38,6 @@ public final class Driver: @unchecked Sendable {
     let localRootSettings: ConnectionSettings?
     let peerRootSettings: ConnectionSettings?
     let peerMessageSchema: [UInt8]
-    let transport: ConduitKind?
 
     init(
         conduit: any Conduit,
@@ -65,7 +64,6 @@ public final class Driver: @unchecked Sendable {
         self.localRootSettings = nil
         self.peerRootSettings = nil
         self.peerMessageSchema = []
-        self.transport = nil
 
         // Create event stream
         var continuation: AsyncStream<DriverEvent>.Continuation!
@@ -91,8 +89,7 @@ public final class Driver: @unchecked Sendable {
         schemaSendTracker: SchemaSendTracker = SchemaSendTracker(),
         localRootSettings: ConnectionSettings? = nil,
         peerRootSettings: ConnectionSettings? = nil,
-        peerMessageSchema: [UInt8] = [],
-        transport: ConduitKind? = nil
+        peerMessageSchema: [UInt8] = []
     ) {
         self.conduit = conduit
         self.dispatcher = dispatcher
@@ -112,6 +109,5 @@ public final class Driver: @unchecked Sendable {
         self.localRootSettings = localRootSettings
         self.peerRootSettings = peerRootSettings
         self.peerMessageSchema = peerMessageSchema
-        self.transport = transport
     }
 }

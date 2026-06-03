@@ -164,19 +164,16 @@ func performAcceptorHandshake(
 
 func buildEstablishedConduit(
     role: Role,
-    transport: ConduitKind,
     attachment: LinkAttachment,
     peerMessageSchema: [UInt8]
 ) async throws -> any Conduit {
     let _ = role
-    let _ = transport
     return BareConduit(link: attachment.link, peerMessageSchema: peerMessageSchema)
 }
 
 
 func establishInitiator(
     attachment: LinkAttachment,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -197,7 +194,6 @@ func establishInitiator(
 
     let conduit = try await buildEstablishedConduit(
         role: .initiator,
-        transport: transport,
         attachment: attachment,
         peerMessageSchema: handshake.peerMessageSchema
     )
@@ -212,15 +208,13 @@ func establishInitiator(
         keepalive: keepalive,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
-        peerMessageSchema: handshake.peerMessageSchema,
-        transport: transport
+        peerMessageSchema: handshake.peerMessageSchema
     )
     return (connection, driver, handle, handshake.peerMetadata)
 }
 
 func establishInitiator(
     link: any Link,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -230,7 +224,6 @@ func establishInitiator(
 ) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishInitiator(
         attachment: .initiator(link),
-        transport: transport,
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
@@ -242,7 +235,6 @@ func establishInitiator(
 
 func establishInitiator(
     conduit: any Link,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -252,7 +244,6 @@ func establishInitiator(
 ) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishInitiator(
         link: conduit,
-        transport: transport,
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
@@ -264,7 +255,6 @@ func establishInitiator(
 
 func establishAcceptor(
     attachment: LinkAttachment,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -272,19 +262,11 @@ func establishAcceptor(
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
 ) async throws -> (Connection, Driver, SessionHandle, Metadata) {
-    warnLog("[vox-establish] acceptor: negotiatedConduit=\(String(describing: attachment.negotiatedConduit)) transport=\(transport)")
-    if attachment.negotiatedConduit == nil {
+    warnLog("[vox-establish] acceptor: prologueComplete=\(attachment.hasCompletedPrologue)")
+    if !attachment.hasCompletedPrologue {
         warnLog("[vox-establish] acceptor: running link prologue")
-        let negotiatedTransport = try await performAcceptorLinkPrologue(
-            link: attachment.link,
-            supportedConduit: transport
-        )
-        warnLog("[vox-establish] acceptor: prologue done, negotiated=\(negotiatedTransport)")
-        guard negotiatedTransport == transport else {
-            throw TransportError.protocolViolation(
-                "transport negotiated \(negotiatedTransport) for requested \(transport)"
-            )
-        }
+        try await performAcceptorLinkPrologue(link: attachment.link)
+        warnLog("[vox-establish] acceptor: prologue done")
     }
 
     let ourMaxPayload = maxPayloadSize ?? (1024 * 1024)
@@ -299,7 +281,6 @@ func establishAcceptor(
 
     let conduit = try await buildEstablishedConduit(
         role: .acceptor,
-        transport: transport,
         attachment: attachment,
         peerMessageSchema: handshake.peerMessageSchema
     )
@@ -314,15 +295,13 @@ func establishAcceptor(
         keepalive: keepalive,
         localRootSettings: handshake.localRootSettings,
         peerRootSettings: handshake.peerRootSettings,
-        peerMessageSchema: handshake.peerMessageSchema,
-        transport: transport
+        peerMessageSchema: handshake.peerMessageSchema
     )
     return (connection, driver, handle, handshake.peerMetadata)
 }
 
 func establishAcceptor(
     link: any Link,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -332,7 +311,6 @@ func establishAcceptor(
 ) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishAcceptor(
         attachment: .init(link: link),
-        transport: transport,
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
@@ -344,7 +322,6 @@ func establishAcceptor(
 
 func establishAcceptor(
     conduit: any Link,
-    transport: ConduitKind = .bare,
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
@@ -354,7 +331,6 @@ func establishAcceptor(
 ) async throws -> (Connection, Driver, SessionHandle, Metadata) {
     try await establishAcceptor(
         link: conduit,
-        transport: transport,
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,

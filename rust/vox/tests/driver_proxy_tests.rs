@@ -69,7 +69,7 @@ async fn proxy_connections_forwards_calls() {
     });
 
     // host <-> guest-b root session
-    let _host_to_b = vox::initiator_on(host_b_link, vox::TransportMode::Bare)
+    let _host_to_b = vox::initiator_on(host_b_link)
         .establish::<vox::NoopClient>()
         .await
         .expect("host<->guest-b establish");
@@ -89,7 +89,7 @@ async fn proxy_connections_forwards_calls() {
     });
 
     // guest-a <-> host root session
-    let _guest_a_root = vox::initiator_on(guest_a_link, vox::TransportMode::Bare)
+    let _guest_a_root = vox::initiator_on(guest_a_link)
         .establish::<vox::NoopClient>()
         .await
         .expect("guest-a establish");

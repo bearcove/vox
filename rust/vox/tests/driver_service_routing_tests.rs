@@ -57,7 +57,7 @@ async fn root_connect_sends_vox_service_and_factory_sees_it() {
             .expect("server establish")
     });
 
-    let root = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let root = vox::initiator_on(client_link)
         .establish::<vox::NoopClient>()
         .await
         .expect("client establish");
@@ -117,7 +117,7 @@ async fn service_factory_routes_virtual_connections() {
             .expect("server establish")
     });
 
-    let root = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let root = vox::initiator_on(client_link)
         .establish::<vox::NoopClient>()
         .await
         .expect("client establish");
@@ -182,7 +182,7 @@ async fn service_factory_rejects_unknown_service() {
             .expect("server establish")
     });
 
-    let root = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let root = vox::initiator_on(client_link)
         .establish::<vox::NoopClient>()
         .await
         .expect("client establish");

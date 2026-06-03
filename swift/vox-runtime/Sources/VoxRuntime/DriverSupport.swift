@@ -117,8 +117,7 @@ func makeSessionDriverAndConnection(
     keepalive: SessionKeepaliveConfig? = nil,
     localRootSettings: ConnectionSettings,
     peerRootSettings: ConnectionSettings,
-    peerMessageSchema: [UInt8],
-    transport: ConduitKind
+    peerMessageSchema: [UInt8]
 ) -> (Connection, Driver, SessionHandle) {
     let commandQueue = LockedQueue<HandleCommand>()
     let taskQueue = LockedQueue<TaskMessage>()
@@ -170,8 +169,7 @@ func makeSessionDriverAndConnection(
         taskQueue: taskQueue,
         localRootSettings: localRootSettings,
         peerRootSettings: peerRootSettings,
-        peerMessageSchema: peerMessageSchema,
-        transport: transport
+        peerMessageSchema: peerMessageSchema
     )
 
     let sessionHandle = SessionHandle(

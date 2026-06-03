@@ -9,18 +9,12 @@ import Foundation
 /// and keeps accepting connections across multiple `openAttachment()` calls.
 public final class UnixAcceptor: SessionConnector, Sendable {
     public let path: String
-    public let transport: ConduitKind
 
     private let state: AcceptorState
 
-    public init(path: String, transport: ConduitKind = .bare) {
+    public init(path: String) {
         self.path = path
-        self.transport = transport
         self.state = AcceptorState()
-    }
-
-    public func bare() -> UnixAcceptor {
-        UnixAcceptor(path: path, transport: .bare)
     }
 
     public func openAttachment() async throws -> LinkAttachment {

@@ -1,4 +1,4 @@
-//! Tests for different transport modes (bare, stable, CBOR handshake).
+//! Tests for transport prologue plus bare conduit session setup.
 
 use vox::memory_link_pair;
 
@@ -28,7 +28,7 @@ async fn call_through_cbor_handshake_reaches_handler() {
             .expect("server establish")
     });
 
-    let client = vox::initiator_on(client_link, vox::TransportMode::Bare)
+    let client = vox::initiator_on(client_link)
         .establish::<EchoClient>()
         .await
         .expect("client establish");

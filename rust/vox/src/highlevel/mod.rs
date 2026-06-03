@@ -3,16 +3,16 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use vox_core::{
-    ConnectionAcceptor, ConnectionRequest, FromVoxSession, NoopClient, PendingConnection,
-    SessionError,
-};
 #[cfg(any(
     feature = "transport-tcp",
     feature = "transport-local",
     feature = "transport-websocket"
 ))]
-use vox_core::{TransportMode, initiator};
+use vox_core::initiator;
+use vox_core::{
+    ConnectionAcceptor, ConnectionRequest, FromVoxSession, NoopClient, PendingConnection,
+    SessionError,
+};
 use vox_types::{
     DEFAULT_INITIAL_CHANNEL_CREDIT, Link, MaybeSend, MaybeSync, Metadata, VoxObserver,
     VoxObserverHandle, metadata_into_owned,
@@ -343,10 +343,7 @@ where
                     %host,
                     "vox high-level connect attempt"
                 );
-                let mut builder = initiator(
-                    vox_stream::tcp_link_source(host.clone()),
-                    TransportMode::Bare,
-                );
+                let mut builder = initiator(vox_stream::tcp_link_source(host.clone()));
                 if let Some(acceptor) = on_connection.clone() {
                     builder = builder.on_connection(AcceptorRef(acceptor));
                 }
@@ -367,10 +364,7 @@ where
                     %host,
                     "vox high-level connect attempt"
                 );
-                let mut builder = initiator(
-                    vox_stream::local_link_source(host.clone()),
-                    TransportMode::Bare,
-                );
+                let mut builder = initiator(vox_stream::local_link_source(host.clone()));
                 if let Some(acceptor) = on_connection.clone() {
                     builder = builder.on_connection(AcceptorRef(acceptor));
                 }
@@ -394,10 +388,7 @@ where
                     %url,
                     "vox high-level connect attempt"
                 );
-                let mut builder = initiator(
-                    vox_websocket::ws_link_source(url.clone()),
-                    TransportMode::Bare,
-                );
+                let mut builder = initiator(vox_websocket::ws_link_source(url.clone()));
                 if let Some(acceptor) = on_connection {
                     builder = builder.on_connection(AcceptorRef(acceptor));
                 }

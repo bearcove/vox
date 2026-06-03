@@ -203,7 +203,7 @@ mod tests {
         });
 
         // Client side: establish with the logging middleware
-        let caller = crate::initiator_on(link_a, crate::TransportMode::Bare)
+        let caller = crate::initiator_on(link_a)
             .establish::<crate::NoopClient>()
             .await
             .expect("client establish");

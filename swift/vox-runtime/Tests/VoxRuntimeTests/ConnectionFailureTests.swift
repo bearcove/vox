@@ -100,7 +100,7 @@ private actor ScriptedTransport: Link {
         self.autoRespondPing = autoRespondPing
         if let initialHandshake {
             if case .hello = initialHandshake {
-                inboundQueue.append(.frame(encodeTransportHello(.bare)))
+                inboundQueue.append(.frame(encodeTransportHello()))
             }
             inboundQueue.append(.frame(encodeHandshakeFrame(initialHandshake)))
             if case .hello = initialHandshake {
@@ -286,7 +286,7 @@ func acceptorSessionExposesPeerHandshakeMetadata() async throws {
 @Test func acceptorSessionConsumesTransportPrologueBeforeHandshake() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
     let link = ScriptedTransport(initialHandshake: nil)
-    await link.enqueueRaw(encodeTransportHello(.bare))
+    await link.enqueueRaw(encodeTransportHello())
     await link.enqueueHandshake(
         .hello(
             Hello(

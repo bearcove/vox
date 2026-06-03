@@ -47,8 +47,8 @@ import { voxLogger } from "./logger.ts";
 import { SchemaCompatibilityError, SchemaTracker, SchemaSendTracker } from "./schema_tracker.ts";
 import type { Link, LinkSource } from "./link.ts";
 import {
-  acceptTransportMode,
-  requestTransportMode,
+  performAcceptorTransportPrologue,
+  performInitiatorTransportPrologue,
 } from "./transport_prologue.ts";
 import {
   handshakeAsAcceptor,
@@ -149,7 +149,7 @@ async function makeInitiatorEstablishedTransport(
 
   if (isLinkSource(transport)) {
     const attachment = await transport.nextLink();
-    await requestTransportMode(attachment.link);
+    await performInitiatorTransportPrologue(attachment.link);
     const handshake = await handshakeAsInitiator(
       attachment.link,
       localSettings,
@@ -163,7 +163,7 @@ async function makeInitiatorEstablishedTransport(
     };
   }
 
-  await requestTransportMode(transport);
+  await performInitiatorTransportPrologue(transport);
   const handshake = await handshakeAsInitiator(
     transport,
     localSettings,
@@ -184,7 +184,7 @@ async function makeAcceptorEstablishedTransport(
   const attachment = isLinkSource(transport)
     ? await transport.nextLink()
     : { link: transport };
-  await acceptTransportMode(attachment.link);
+  await performAcceptorTransportPrologue(attachment.link);
 
   const localSettings: ConnectionSettings = {
     parity: { tag: "Even" },

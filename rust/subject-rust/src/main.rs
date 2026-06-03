@@ -3,12 +3,8 @@
 use spec_proto::{Color, MathError, TestbedClient, TestbedDispatcher};
 use subject_rust::TestbedService;
 use tracing::info;
-use vox_core::{TransportMode, initiator};
+use vox_core::initiator;
 use vox_stream::{local_link_source, tcp_link_source};
-
-fn requested_transport_mode() -> TransportMode {
-    TransportMode::Bare
-}
 
 fn main() -> Result<(), String> {
     tracing_subscriber::fmt()
@@ -76,7 +72,6 @@ async fn listen_and_serve() -> Result<(), String> {
 async fn connect_and_serve() -> Result<(), String> {
     let addr = std::env::var("PEER_ADDR").map_err(|_| "PEER_ADDR env var not set".to_string())?;
     info!("connecting to {addr}");
-    let mode = requested_transport_mode();
     let dispatcher = TestbedDispatcher::new(TestbedService);
     let (scheme, host) = match addr.split_once("://") {
         Some((scheme, host)) => (scheme, host.to_string()),
@@ -84,12 +79,12 @@ async fn connect_and_serve() -> Result<(), String> {
     };
 
     let root_caller_guard = match scheme {
-        "tcp" => initiator(tcp_link_source(host), mode)
+        "tcp" => initiator(tcp_link_source(host))
             .on_connection(dispatcher.clone())
             .establish::<TestbedClient>()
             .await
             .map_err(|e| format!("handshake failed: {e}"))?,
-        "local" => initiator(local_link_source(host), mode)
+        "local" => initiator(local_link_source(host))
             .on_connection(dispatcher.clone())
             .establish::<TestbedClient>()
             .await
@@ -107,7 +102,7 @@ async fn run_client() -> Result<(), String> {
     let scenario = std::env::var("CLIENT_SCENARIO").unwrap_or_else(|_| "echo".to_string());
     info!("client mode: connecting to {addr}, scenario={scenario}");
 
-    let client = initiator(tcp_link_source(addr), requested_transport_mode())
+    let client = initiator(tcp_link_source(addr))
         .on_connection(TestbedDispatcher::new(TestbedService))
         .establish::<TestbedClient>()
         .await

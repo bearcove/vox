@@ -92,7 +92,6 @@ public final class Session: @unchecked Sendable {
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
                 attachment: attachment,
-                transport: connector.transport,
                 dispatcher: dispatcher,
                 connectionAcceptor: onConnection,
                 keepalive: keepalive,
@@ -118,7 +117,6 @@ public final class Session: @unchecked Sendable {
         let attachment = try await connector.openAttachment()
         return try await acceptFreshAttachment(
             attachment,
-            conduit: connector.transport,
             expecting: ExpectedClient.self,
             dispatcher: dispatcher,
             onConnection: onConnection,
@@ -146,7 +144,6 @@ public final class Session: @unchecked Sendable {
 
     public static func establishOverFreshLink(
         _ link: any Link,
-        conduit: ConduitKind = .bare,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil
@@ -154,7 +151,6 @@ public final class Session: @unchecked Sendable {
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
                 attachment: .fresh(link),
-                transport: conduit,
                 dispatcher: dispatcher,
                 connectionAcceptor: onConnection,
                 keepalive: keepalive
@@ -170,20 +166,17 @@ public final class Session: @unchecked Sendable {
 
     public static func acceptFreshAttachment<ExpectedClient: ExpectedRootClient>(
         _ attachment: LinkAttachment,
-        conduit: ConduitKind? = nil,
         expecting _: ExpectedClient.Type,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
         metadata: Metadata = .null
     ) async throws -> Session {
-        let selectedConduit = conduit ?? attachment.negotiatedConduit ?? .bare
         let metadata = injectExpectedRootService(
             metadata, serviceName: ExpectedClient.voxServiceName)
         let (connection, driver, handle, peerMetadata) =
             try await establishAcceptor(
                 attachment: attachment,
-                transport: selectedConduit,
                 dispatcher: dispatcher,
                 connectionAcceptor: onConnection,
                 keepalive: keepalive,
@@ -200,7 +193,6 @@ public final class Session: @unchecked Sendable {
 
     public static func acceptFreshAttachment(
         _ attachment: LinkAttachment,
-        conduit: ConduitKind? = nil,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
@@ -208,7 +200,6 @@ public final class Session: @unchecked Sendable {
     ) async throws -> Session {
         try await acceptFreshAttachment(
             attachment,
-            conduit: conduit,
             expecting: NoopClient.self,
             dispatcher: dispatcher,
             onConnection: onConnection,
@@ -219,7 +210,6 @@ public final class Session: @unchecked Sendable {
 
     public static func acceptFreshLink<ExpectedClient: ExpectedRootClient>(
         _ link: any Link,
-        conduit: ConduitKind = .bare,
         expecting _: ExpectedClient.Type,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
@@ -228,7 +218,6 @@ public final class Session: @unchecked Sendable {
     ) async throws -> Session {
         try await acceptFreshAttachment(
             .fresh(link),
-            conduit: conduit,
             expecting: ExpectedClient.self,
             dispatcher: dispatcher,
             onConnection: onConnection,
@@ -239,7 +228,6 @@ public final class Session: @unchecked Sendable {
 
     public static func acceptFreshLink(
         _ link: any Link,
-        conduit: ConduitKind = .bare,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil,
@@ -247,7 +235,6 @@ public final class Session: @unchecked Sendable {
     ) async throws -> Session {
         try await acceptFreshLink(
             link,
-            conduit: conduit,
             expecting: NoopClient.self,
             dispatcher: dispatcher,
             onConnection: onConnection,
