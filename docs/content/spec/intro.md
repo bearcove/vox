@@ -83,7 +83,7 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 +------------------------+
 | Conduit                |  phon serialization over a link
 +------------------------+
-| Transport Prologue     |  conduit mode request / accept / reject
+| Transport Prologue     |  vox protocol/version gate
 +------------------------+
 | Link                   |  TCP, WebSocket, etc.
 +------------------------+
@@ -92,8 +92,8 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 The layers have distinct failure boundaries:
 
 - A **Link** is one concrete transport attachment.
-- A **Transport Prologue** selects which conduit protocol, if any, will run on
-  that link attachment.
+- A **Transport Prologue** validates that the peer is speaking a compatible
+  vox transport protocol on that link attachment.
 - A **Conduit** is bound to one link attachment. It does not hide link failure,
   reconnect, replay, or preserve in-flight request attempts.
 - A **Session** runs above a conduit attachment.

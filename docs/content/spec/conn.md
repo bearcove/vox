@@ -125,7 +125,7 @@ weight = 11
 > r[transport.prologue]
 >
 > Every fresh link attachment begins with a **transport prologue** before any
-> conduit-specific traffic is sent.
+> conduit traffic is sent.
 
 > r[transport.prologue.first-payload]
 >
@@ -139,32 +139,18 @@ weight = 11
 >
 >   * a transport-prologue magic number
 >   * a transport-prologue version
->   * the requested conduit mode
-
-> r[transport.prologue.requested-mode]
->
-> The requested conduit mode is an exact request, not a preference list. This
-> spec defines one conduit mode:
->
->   * `bare`
 
 > r[transport.prologue.accept]
 >
 > The acceptor MUST reply with either:
 >
->   * `TransportAccept`, acknowledging the requested conduit mode, or
+>   * `TransportAccept`, acknowledging a supported transport prologue, or
 >   * `TransportReject`, refusing the request
-
-> r[transport.prologue.no-fallback]
->
-> If the acceptor does not support the requested conduit mode, it MUST reject
-> the transport prologue. It MUST NOT silently fall back to a different conduit
-> mode.
 
 > r[transport.prologue.post-accept]
 >
 > After `TransportAccept`, all subsequent payloads on that link attachment are
-> interpreted according to the selected conduit mode.
+> interpreted as `BareConduit` payloads.
 
 > r[transport.prologue.reject-close]
 >
@@ -189,7 +175,7 @@ weight = 11
 >
 > `BareConduit` does not provide any feature on top of
 > serialization/deserialization. It begins immediately after the transport
-> prologue has accepted `bare`.
+> prologue has accepted the link attachment.
 
 # Sessions
 
@@ -199,8 +185,8 @@ weight = 11
 > any number of connections, on which calls (requests) can be made, and data can be
 > exchanged over channels.
 
-The transport prologue selects the conduit mode first. Session establishment
-starts only after that conduit has been selected and initialized.
+The transport prologue completes first. Session establishment starts only after
+the `BareConduit` has been initialized on the accepted link attachment.
 
 > r[session.peer]
 >
