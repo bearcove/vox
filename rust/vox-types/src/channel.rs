@@ -1390,6 +1390,8 @@ impl<T> Drop for Tx<T> {
 impl<T> TryFrom<&Tx<T>> for ChannelId {
     type Error = String;
 
+    // r[impl rpc.channel.binding.caller-args]
+    // r[impl rpc.channel.binding.caller-args.tx]
     fn try_from(value: &Tx<T>) -> Result<Self, Self::Error> {
         // Case 1: Caller passes Tx in args (callee sends, caller receives).
         // Allocate a channel ID and store the receiver binding in the shared
@@ -1411,6 +1413,8 @@ impl<T> TryFrom<&Tx<T>> for ChannelId {
 impl<T> TryFrom<ChannelId> for Tx<T> {
     type Error = String;
 
+    // r[impl rpc.channel.binding.callee-args]
+    // r[impl rpc.channel.binding.callee-args.tx]
     fn try_from(channel_id: ChannelId) -> Result<Self, Self::Error> {
         let debug_context = ChannelDebugContext {
             type_name: Some(std::any::type_name::<T>()),
@@ -1716,6 +1720,8 @@ impl<T> Drop for Rx<T> {
 impl<T> TryFrom<&Rx<T>> for ChannelId {
     type Error = String;
 
+    // r[impl rpc.channel.binding.caller-args]
+    // r[impl rpc.channel.binding.caller-args.rx]
     fn try_from(value: &Rx<T>) -> Result<Self, Self::Error> {
         // Case 2: Caller passes Rx in args (callee receives, caller sends).
         // Allocate a channel ID and store the sink binding in the shared
@@ -1738,6 +1744,8 @@ impl<T> TryFrom<&Rx<T>> for ChannelId {
 impl<T> TryFrom<ChannelId> for Rx<T> {
     type Error = String;
 
+    // r[impl rpc.channel.binding.callee-args]
+    // r[impl rpc.channel.binding.callee-args.rx]
     fn try_from(channel_id: ChannelId) -> Result<Self, Self::Error> {
         let debug_context = ChannelDebugContext {
             type_name: Some(std::any::type_name::<T>()),
@@ -2303,6 +2311,8 @@ mod tests {
     // Encoding the Tx allocates a channel ID via create_rx(), records it in the
     // out-of-band collector (RequestCall.channels), and stores the receiver in
     // the shared logical core so the kept Rx can survive retries.
+    // r[verify rpc.channel.binding.caller-args]
+    // r[verify rpc.channel.binding.caller-args.tx]
     #[tokio::test]
     async fn case1_serialize_tx_allocates_and_binds_paired_rx() {
         use facet::Facet;
@@ -2341,6 +2351,8 @@ mod tests {
     // Case 2: Caller passes Rx in args, keeps paired Tx.
     // Encoding the Rx allocates a channel ID via create_tx(), records it
     // out-of-band, and stores the sink in the shared core so the kept Tx can use it.
+    // r[verify rpc.channel.binding.caller-args]
+    // r[verify rpc.channel.binding.caller-args.rx]
     #[test]
     fn case2_serialize_rx_allocates_and_binds_paired_tx() {
         use facet::Facet;
@@ -2373,6 +2385,8 @@ mod tests {
 
     // Case 3: Callee deserializes Tx from args. The handle's inline index selects
     // its channel id from the provided out-of-band list, then binds via bind_tx().
+    // r[verify rpc.channel.binding.callee-args]
+    // r[verify rpc.channel.binding.callee-args.tx]
     #[test]
     fn case3_deserialize_tx_binds_via_binder() {
         use facet::Facet;
@@ -2411,6 +2425,8 @@ mod tests {
     }
 
     // Case 4: Callee deserializes Rx from args, binding via register_rx().
+    // r[verify rpc.channel.binding.callee-args]
+    // r[verify rpc.channel.binding.callee-args.rx]
     #[test]
     fn case4_deserialize_rx_binds_via_binder() {
         use facet::Facet;
@@ -2449,6 +2465,7 @@ mod tests {
     // Round-trip: encode with caller binder + collector, decode with callee binder
     // + provided list. Verifies the channel ID allocated at encode is the one the
     // decoded handle re-associates by index.
+    // r[verify rpc.channel.binding]
     #[test]
     fn channel_id_round_trips_through_ser_deser() {
         use facet::Facet;

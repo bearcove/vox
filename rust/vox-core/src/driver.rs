@@ -1721,12 +1721,14 @@ impl DriverCaller {
         );
 
         // r[impl schema.exchange.caller]
-        // r[impl schema.exchange.channels]
+        // r[depends schema.exchange.channels]
         // Schemas are attached by SessionCore::send() when it sees a Call
         // with Payload::Value — no separate prepare step needed.
         //
         // Channel binding happens during serialization via the thread-local
-        // ChannelBinder — no post-hoc walk needed.
+        // ChannelBinder. Channel element schemas are recorded in method
+        // descriptors, but channel item reconciliation still needs those
+        // writer element roots threaded into Rx construction.
         self.shared.mark_outbound_progress();
         tracing::debug!(
             conn_id = ?self.sender.connection_id(),
