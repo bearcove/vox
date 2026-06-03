@@ -37,6 +37,11 @@ interface OperationSignature {
   args: Uint8Array;
 }
 
+export interface SealedOperationResponse {
+  payload: Uint8Array;
+  responseSchemaClosure: string;
+}
+
 /**
  * Interface for operation state backing — mirrors Rust's `OperationStore` trait.
  *
@@ -52,7 +57,11 @@ export interface OperationStore {
     requestId: bigint,
   ): OperationAdmit;
 
-  seal(operationId: bigint, ownerRequestId: bigint, payload: Uint8Array): bigint[];
+  seal(
+    operationId: bigint,
+    ownerRequestId: bigint,
+    response: SealedOperationResponse,
+  ): bigint[];
 
   failWithoutReply(operationId: bigint, ownerRequestId: bigint): bigint[];
 
@@ -84,7 +93,7 @@ interface IndeterminateOperation {
 interface SealedOperation {
   kind: "sealed";
   stored: StoredOperation;
-  payload: Uint8Array;
+  response: SealedOperationResponse;
 }
 
 type OperationState =
@@ -96,7 +105,7 @@ type OperationState =
 type OperationAdmit =
   | { kind: "start" }
   | { kind: "attached" }
-  | { kind: "replay"; payload: Uint8Array }
+  | { kind: "replay"; response: SealedOperationResponse }
   | { kind: "conflict" }
   | { kind: "indeterminate" };
 
@@ -174,7 +183,13 @@ export class InMemoryOperationStore implements OperationStore {
         if (!sameSignature(existing.stored.signature, methodId, args)) {
           return { kind: "conflict" };
         }
-        return { kind: "replay", payload: existing.payload.slice() };
+        return {
+          kind: "replay",
+          response: {
+            payload: existing.response.payload.slice(),
+            responseSchemaClosure: existing.response.responseSchemaClosure,
+          },
+        };
       case "released":
       case "indeterminate":
         if (!sameSignature(existing.stored.signature, methodId, args) || !existing.stored.retry.idem) {
@@ -193,7 +208,11 @@ export class InMemoryOperationStore implements OperationStore {
     }
   }
 
-  seal(operationId: bigint, ownerRequestId: bigint, payload: Uint8Array): bigint[] {
+  seal(
+    operationId: bigint,
+    ownerRequestId: bigint,
+    response: SealedOperationResponse,
+  ): bigint[] {
     const existing = this.states.get(operationId);
     if (!existing || existing.kind !== "live" || existing.ownerRequestId !== ownerRequestId) {
       return [];
@@ -204,7 +223,10 @@ export class InMemoryOperationStore implements OperationStore {
     this.states.set(operationId, {
       kind: "sealed",
       stored: existing.stored,
-      payload: payload.slice(),
+      response: {
+        payload: response.payload.slice(),
+        responseSchemaClosure: response.responseSchemaClosure,
+      },
     });
     return [...existing.waiters];
   }
@@ -357,7 +379,12 @@ class VoxCallImpl implements VoxCall {
       });
       return;
     }
-    const waiters = this.operations.seal(this.operationId, this.requestId, payload);
+    // r[impl schema.interaction.retry]
+    const response: SealedOperationResponse = {
+      payload,
+      responseSchemaClosure: this.methodSchemas.responseSchemaClosure,
+    };
+    const waiters = this.operations.seal(this.operationId, this.requestId, response);
     for (const waiter of waiters) {
       this.taskSender({
         kind: "response",
@@ -530,9 +557,22 @@ export class Driver {
       switch (admit.kind) {
         case "attached":
           return;
-        case "replay":
-          await this.connection.sendResponse(incoming.requestId, admit.payload);
+        case "replay": {
+          // r[impl schema.interaction.retry]
+          const schemas = this.connection.getSchemaSendTracker().prepareSchemas(
+            method.id,
+            "response",
+            admit.response.responseSchemaClosure,
+          );
+          await this.connection.sendResponse(
+            incoming.requestId,
+            admit.response.payload,
+            emptyMetadata(),
+            [],
+            schemas,
+          );
           return;
+        }
         case "conflict":
           await this.connection.sendResponse(incoming.requestId, encodeInvalidPayload(descriptor));
           return;
