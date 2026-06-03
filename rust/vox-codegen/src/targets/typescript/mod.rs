@@ -238,6 +238,8 @@ fn generate_request_response_types(
 mod tests {
     #![allow(dead_code)]
 
+    use std::collections::BTreeSet;
+
     use super::generate_service;
     use crate::render::hex_u64;
     use facet::Facet;
@@ -249,6 +251,23 @@ mod tests {
             out.push_str(&format!("{byte:02x}"));
         }
         out
+    }
+
+    fn parse_self_describing_unique_bundle(
+        bytes: &[u8],
+        expected_root: u64,
+    ) -> vox_phon::SchemaBundle {
+        let bundle = vox_phon::parse_schema_bytes(bytes).expect("schema closure parses");
+        assert_eq!(bundle.root.0, expected_root);
+        let mut seen = BTreeSet::new();
+        for schema in &bundle.schemas {
+            assert!(
+                seen.insert(schema.id.0),
+                "schema closure must not repeat type ID {:#x}",
+                schema.id.0
+            );
+        }
+        bundle
     }
 
     // A non-recursive composite (struct + scalar + string + list). NOTE: phon's
@@ -407,6 +426,8 @@ mod tests {
 
     #[test]
     // r[verify schema.type-id]
+    // r[verify schema.principles.self-describing]
+    // r[verify schema.principles.once-per-type]
     // r[verify schema.format.self-contained]
     // r[verify schema.tracking.transitive]
     // r[verify schema.method-id]
@@ -436,7 +457,9 @@ mod tests {
             vox_phon::schema_bytes_for_shape(recurse.args_shape).expect("args schema closure");
         let response_closure = vox_phon::schema_bytes_for_shape(recurse.response_wire_shape)
             .expect("response schema closure");
-        let args_bundle = vox_phon::parse_schema_bytes(&args_closure).expect("args closure parses");
+        let args_bundle = parse_self_describing_unique_bundle(&args_closure, args_root.0);
+        let _response_bundle =
+            parse_self_describing_unique_bundle(&response_closure, response_root.0);
         let nested_inner_id =
             vox_phon::schema_id_for_shape(<NestedInner as Facet>::SHAPE).expect("inner schema id");
 
