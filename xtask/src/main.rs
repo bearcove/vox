@@ -56,6 +56,10 @@ enum Commands {
         #[facet(args::named, default)]
         swift_wire: bool,
     },
+    /// Emit built-in schema compatibility snapshots as JSON.
+    SchemaCompatSnapshot,
+    /// Compare built-in schema snapshots and enforce acknowledged breaks.
+    SchemaCompatCheck,
 }
 
 fn main() -> ExitCode {
@@ -123,6 +127,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             println!(">>> cargo xtask test");
             cmd!(sh, "cargo xtask test").run()?;
+
+            println!("\n>>> cargo xtask schema-compat-check");
+            cmd!(sh, "cargo xtask schema-compat-check").run()?;
 
             println!("\n>>> cargo xtask clippy");
             cmd!(sh, "cargo xtask clippy").run()?;
@@ -221,8 +228,129 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 codegen_swift_wire(&workspace_root)?;
             }
         }
+        Commands::SchemaCompatSnapshot => {
+            emit_schema_compat_snapshot()?;
+        }
+        Commands::SchemaCompatCheck => {
+            check_schema_compat_policy()?;
+        }
     }
 
+    Ok(())
+}
+
+#[derive(Facet)]
+struct NamedSchemaCompatSnapshots {
+    snapshots: Vec<NamedSchemaCompatSnapshot>,
+}
+
+#[derive(Facet)]
+struct NamedSchemaCompatSnapshot {
+    name: String,
+    snapshot: vox_codegen::schema_compat::SchemaCompatSnapshot,
+}
+
+fn built_in_schema_compat_snapshots() -> Result<
+    (
+        vox_codegen::schema_compat::SchemaCompatSnapshot,
+        vox_codegen::schema_compat::SchemaCompatSnapshot,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    let canonical_services = spec_proto::all_services();
+    let canonical = vox_codegen::schema_compat::snapshot_services(&canonical_services)?;
+    let evolved_services = [spec_proto::evolved::testbed_service_descriptor()];
+    let evolved = vox_codegen::schema_compat::snapshot_services(&evolved_services)?;
+    let canonical = vox_codegen::schema_compat::method_intersection_snapshot(&canonical, &evolved);
+    Ok((canonical, evolved))
+}
+
+fn emit_schema_compat_snapshot() -> Result<(), Box<dyn std::error::Error>> {
+    let (canonical, evolved) = built_in_schema_compat_snapshots()?;
+    let snapshots = NamedSchemaCompatSnapshots {
+        snapshots: vec![
+            NamedSchemaCompatSnapshot {
+                name: "spec-proto".to_string(),
+                snapshot: canonical,
+            },
+            NamedSchemaCompatSnapshot {
+                name: "spec-proto-evolved".to_string(),
+                snapshot: evolved,
+            },
+        ],
+    };
+    println!("{}", facet_json::to_string_pretty(&snapshots)?);
+    Ok(())
+}
+
+fn built_in_schema_compat_policy() -> vox_codegen::schema_compat::SchemaCompatPolicy {
+    use vox_codegen::schema_compat::{
+        SchemaCompatAcknowledgement, SchemaCompatComparisonDirection, SchemaCompatPolicy,
+    };
+
+    SchemaCompatPolicy {
+        acknowledged_breaking: vec![
+            SchemaCompatAcknowledgement {
+                service_name: "Testbed".to_string(),
+                method_name: "echo_measurement".to_string(),
+                direction: SchemaCompatComparisonDirection::Args,
+            },
+            SchemaCompatAcknowledgement {
+                service_name: "Testbed".to_string(),
+                method_name: "echo_measurement".to_string(),
+                direction: SchemaCompatComparisonDirection::Response,
+            },
+        ],
+    }
+}
+
+fn check_schema_compat_policy() -> Result<(), Box<dyn std::error::Error>> {
+    use vox_codegen::schema_compat::{SchemaCompatStatus, compare_snapshots, enforce_policy};
+
+    let (canonical, evolved) = built_in_schema_compat_snapshots()?;
+    let report = compare_snapshots(&canonical, &evolved)?;
+    for comparison in &report.comparisons {
+        println!(
+            "{}.{} {:?}: {:?}",
+            comparison.service_name,
+            comparison.method_name,
+            comparison.direction,
+            comparison.status
+        );
+    }
+
+    let outcome = enforce_policy(&report, &built_in_schema_compat_policy());
+    if !outcome.is_ok() {
+        if !outcome.unacknowledged_breaking.is_empty() {
+            eprintln!("unacknowledged schema compatibility breaks:");
+            for comparison in &outcome.unacknowledged_breaking {
+                eprintln!(
+                    "  {}.{} {:?}: {:?}",
+                    comparison.service_name,
+                    comparison.method_name,
+                    comparison.direction,
+                    comparison.status
+                );
+            }
+        }
+        if !outcome.stale_acknowledgements.is_empty() {
+            eprintln!("stale schema compatibility acknowledgements:");
+            for ack in &outcome.stale_acknowledgements {
+                eprintln!(
+                    "  {}.{} {:?}",
+                    ack.service_name, ack.method_name, ack.direction
+                );
+            }
+        }
+        return Err("schema compatibility policy failed".into());
+    }
+
+    let breaking_count = report
+        .comparisons
+        .iter()
+        .filter(|comparison| comparison.status == SchemaCompatStatus::Incompatible)
+        .count();
+    println!("schema compatibility policy ok ({breaking_count} acknowledged breaking changes)");
     Ok(())
 }
 

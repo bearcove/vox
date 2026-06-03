@@ -53,6 +53,9 @@ jobs:
       - name: Test workspace (Rust-only)
         run: cargo nextest run --workspace -E 'not test(/lang_.*(typescript|swift)/)'
 
+      - name: Check schema compatibility policy
+        run: bash scripts/check-schema-compat.sh
+
   rust-doc:
     name: Rust / Documentation
     runs-on: bearcove-ubuntu-24.04
