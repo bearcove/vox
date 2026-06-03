@@ -202,10 +202,6 @@ weight = 11
 Its own stable-conduit handshake is separate from, and ordered after, the
 transport prologue.
 
-`StableConduit` continuity does not, by itself, answer what happens to an RPC
-whose outcome is now ambiguous. Operation-level retry and session resumption
-semantics are defined in [Retry](./retry/).
-
 > r[conduit.split]
 >
 > Conduits can be passed around whole, but before use, they MUST be split into

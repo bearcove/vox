@@ -232,7 +232,6 @@ describe("retry operation identity", () => {
     await Promise.allSettled([serverRun, clientRun]);
   });
 
-  // r[verify schema.interaction.retry]
   it("attaches live duplicates and replays sealed outcomes for the same operation id", async () => {
     const [clientLink, serverLink] = memoryLinkPair();
     const clientConduit = new BareConduit(clientLink);

@@ -77,8 +77,8 @@ the same ID. vox does not define its own hashing; it uses phon's.
 Content hashes give type IDs a universal meaning. A peer that receives a schema
 tagged with a content hash it has already seen — from this connection, a
 previous connection, or a persistent store — knows it already has that schema.
-This is critical for operation stores (see `r[schema.interaction.retry]`) and
-for efficient schema tracking across connection resumes.
+This supports efficient schema tracking across connection resumes and local
+schema caches.
 
 > r[schema.type-id.per-connection]
 >
@@ -446,22 +446,6 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 > the same way they apply to request/response payloads. The writer root for a
 > channel item is the channel element auxiliary root recorded when the channel
 > handle was bound, not the receiver's local element root.
-
-> r[schema.interaction.retry]
->
-> Operation stores MUST store schemas alongside serialized payloads.
-> A sealed operation contains phon-encoded bytes that are only
-> meaningful together with the schemas that describe them. When replaying
-> a sealed response, the replaying peer MUST send schemas for the
-> response types on the current connection if they have not already been
-> sent, just as it would for a live response.
->
-> Because type IDs are content hashes, the operation store does not need
-> a per-connection schema ID namespace. The stored schemas use the same
-> content hashes regardless of which connection originally produced them
-> or which connection replays them. A disk-backed operation store that
-> survives process restarts can use content hashes as stable keys for
-> its schema cache.
 
 > r[schema.interaction.metadata]
 >

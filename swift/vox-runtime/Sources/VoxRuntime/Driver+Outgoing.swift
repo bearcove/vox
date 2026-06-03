@@ -92,7 +92,6 @@ extension Driver {
             } else {
                 checkedPayload = payload
             }
-            // r[impl schema.interaction.retry]
             let sealedResponse = SealedOperationResponse(
                 payload: checkedPayload,
                 responseSchemaClosure: responseSchemaClosure

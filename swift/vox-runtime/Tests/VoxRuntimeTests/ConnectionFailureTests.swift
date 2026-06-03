@@ -649,7 +649,6 @@ struct ConnectionFailureTests {
         }
     }
 
-    // r[verify schema.interaction.retry]
     @Test func duplicateOperationIdAttachesLiveAndReplaysSealedOutcome() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(

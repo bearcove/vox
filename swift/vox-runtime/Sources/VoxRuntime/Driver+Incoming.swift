@@ -232,7 +232,6 @@ extension Driver {
             case .attached:
                 return
             case .replay(let replayResponse):
-                // r[impl schema.interaction.retry]
                 taskTx(
                     .response(
                         requestId: requestId,

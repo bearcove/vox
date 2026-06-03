@@ -383,7 +383,6 @@ class VoxCallImpl implements VoxCall {
       });
       return;
     }
-    // r[impl schema.interaction.retry]
     const response: SealedOperationResponse = {
       payload,
       responseSchemaClosure: this.methodSchemas.responseSchemaClosure,
@@ -569,7 +568,6 @@ export class Driver {
         case "attached":
           return;
         case "replay": {
-          // r[impl schema.interaction.retry]
           const schemas = this.connection.getSchemaSendTracker().prepareSchemas(
             method.id,
             "response",
