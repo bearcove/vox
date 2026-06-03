@@ -159,7 +159,36 @@ func schemaTrackerDoesNotShareReceivedBindingsAcrossInstances() {
 }
 
 @Test
+// r[verify schema.errors.call-level]
+func schemaTrackerDecodePlanFailureIsBindingLocal() {
+    let tracker = SchemaTracker()
+
+    tracker.recordReceived(7, .response, schemaClosure(root: 0xdead_beef_cafe_babe))
+    #expect(tracker.hasReceived(7, .response))
+    let invalidProgram = tracker.buildDecodeProgram(
+        7,
+        .response,
+        readerDescriptor: MessageDescriptor,
+        readerBlocks: MessageDescriptorBlocks,
+        local: MessageRegistry
+    )
+    #expect(invalidProgram == nil)
+
+    tracker.recordReceived(9, .response, MessageSchemaClosure)
+    let validProgram = tracker.buildDecodeProgram(
+        9,
+        .response,
+        readerDescriptor: MessageDescriptor,
+        readerBlocks: MessageDescriptorBlocks,
+        local: MessageRegistry
+    )
+    #expect(validProgram != nil)
+    #expect(tracker.hasReceived(7, .response))
+}
+
+@Test
 // r[verify schema.exchange.caller]
+// r[verify schema.exchange.required]
 func callerAdvertisesArgsSchemaWithFirstRequestOnConnection() async throws {
     let conduit = RecordingConduit()
     let (_, driver) = makeDriverAndConnection(
@@ -219,6 +248,7 @@ func callerAdvertisesArgsSchemaWithFirstRequestOnConnection() async throws {
 
 @Test
 // r[verify schema.exchange.callee]
+// r[verify schema.exchange.required]
 func calleeAdvertisesResponseSchemaWithFirstResponseOnConnection() async throws {
     let conduit = RecordingConduit()
     let (_, driver) = makeDriverAndConnection(

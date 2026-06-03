@@ -186,6 +186,62 @@ mod tests {
     }
 
     #[test]
+    // r[verify schema.errors.call-level.callee]
+    // r[verify schema.errors.call-level.caller]
+    // r[verify schema.errors.non-retryable]
+    fn generated_swift_maps_schema_decode_failures_to_call_errors() {
+        let echo = method_descriptor::<(NestedOuter,), NestedOuter>(
+            "SchemaSvc",
+            "EchoNested",
+            &["value"],
+            &[Some(<NestedOuter as Facet>::SHAPE)],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<NestedOuter, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![echo].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "SchemaSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+
+        assert!(
+            generated.contains("guard let argsProgram = schemaReceiveTracker.buildDecodeProgram"),
+            "generated Swift server must build a caller->callee args decode plan:\n{generated}"
+        );
+        assert!(
+            generated.contains("encodeVoxError(.invalidPayload(\"no args schema advertised\"))"),
+            "generated Swift server must reject missing args decode plans as call errors:\n{generated}"
+        );
+        assert!(
+            generated.contains("do { args = try decodeTyped(argsProgram, payload) } catch {")
+                && generated.contains("encodeVoxError(.invalidPayload(\"decode args\"))"),
+            "generated Swift server must turn args decode failures into InvalidPayload responses:\n{generated}"
+        );
+        assert!(
+            generated.contains(
+                "guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram"
+            ),
+            "generated Swift client must build a callee->caller response decode plan:\n{generated}"
+        );
+        assert!(
+            generated.contains(
+                "throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")",
+            ),
+            "generated Swift client must surface response decode-plan failure on the call:\n{generated}"
+        );
+        assert_eq!(
+            generated.matches("connection.call(").count(),
+            1,
+            "generated Swift client must issue one request attempt and not retry after local decode failure:\n{generated}"
+        );
+    }
+
+    #[test]
     // r[verify schema.exchange.channels]
     fn generated_swift_emits_channel_schemas() {
         let subscribe = method_descriptor::<(Tx<u32>, Rx<u32>), ()>(
