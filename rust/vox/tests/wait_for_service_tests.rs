@@ -17,9 +17,6 @@ impl Echo for EchoService {
     }
 }
 
-// r[verify session.initial-connect-waiting]
-// r[verify session.initial-connect-waiting.retryable]
-// r[verify session.initial-connect-waiting.timeout]
 #[cfg(unix)]
 #[tokio::test]
 async fn wait_for_service_retries_until_service_appears() {
@@ -50,11 +47,6 @@ async fn wait_for_service_retries_until_service_appears() {
     server.abort();
 }
 
-// r[verify session.initial-connect-waiting]
-// r[verify session.initial-connect-waiting.retryable]
-// r[verify session.initial-connect-waiting.timeout]
-// r[verify session.initial-connect-waiting.backoff]
-// r[verify session.initial-connect-waiting.no-session]
 #[tokio::test]
 async fn wait_for_service_times_out_when_service_never_starts() {
     // Bind to get a free port then drop the listener so nothing is listening.
@@ -80,7 +72,6 @@ async fn wait_for_service_times_out_when_service_never_starts() {
     );
 }
 
-// r[verify session.initial-connect-waiting.timeout]
 #[tokio::test]
 async fn wait_for_service_deadline_caps_individual_attempt() {
     // Verifies that a single slow attempt cannot exceed the waiting timeout.
@@ -117,7 +108,6 @@ async fn wait_for_service_deadline_caps_individual_attempt() {
     );
 }
 
-// r[verify session.initial-connect-waiting.non-retryable]
 #[tokio::test]
 async fn wait_for_service_fails_immediately_on_protocol_error() {
     // Server that immediately closes the connection without speaking vox.

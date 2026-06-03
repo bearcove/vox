@@ -234,8 +234,8 @@ registered on the session builder; otherwise they are rejected.
 >   * `UnknownMethod` — no handler recognized the method ID
 >   * `InvalidPayload` — the arguments could not be deserialized
 >   * `Cancelled` — the call was cancelled before completion
->   * `Indeterminate` — recovery completed, but the runtime could not safely
->     determine whether the request attempt reached a terminal outcome
+>   * `Indeterminate` — the runtime could not safely determine whether the
+>     request attempt reached a terminal outcome
 
 > r[rpc.fallible.vox-error.retryable]
 >
@@ -375,8 +375,8 @@ registered on the session builder; otherwise they are rejected.
 > r[rpc.flow-control.max-concurrent-requests.counting]
 >
 > `max_concurrent_requests` counts live request attempts. A later call issued
-> after recovery consumes its own unit of request concurrency while that
-> request attempt is live.
+> after an earlier attachment failure consumes its own unit of request
+> concurrency while that request attempt is live.
 
 > r[rpc.flow-control.max-concurrent-requests.attachment-loss]
 >

@@ -178,7 +178,6 @@ impl<Client> ConnectBuilder<Client> {
         self
     }
 
-    // r[impl session.initial-connect-waiting]
     /// Wait for the service to become reachable, retrying for up to `timeout`.
     ///
     /// Only transient failures (I/O errors, connect timeouts) are retried.
@@ -230,14 +229,11 @@ where
         let metadata = metadata_into_owned(metadata);
 
         match wait_for_service {
-            // r[impl session.initial-connect-waiting]
-            // r[impl session.initial-connect-waiting.no-session]
             Some(service_timeout) => {
                 let deadline = Instant::now() + service_timeout;
                 let mut backoff = INITIAL_CONNECT_BACKOFF_MIN;
 
                 loop {
-                    // r[impl session.initial-connect-waiting.timeout]
                     // Cap each attempt by the remaining waiting budget so a single
                     // slow attempt cannot exceed the caller-supplied timeout.
                     let now = Instant::now();
@@ -267,14 +263,11 @@ where
                             );
                             return Ok(client);
                         }
-                        // r[impl session.initial-connect-waiting.non-retryable]
                         Err(e)
                             if !matches!(e, SessionError::Io(_) | SessionError::ConnectTimeout) =>
                         {
                             return Err(e);
                         }
-                        // r[impl session.initial-connect-waiting.retryable]
-                        // r[impl session.initial-connect-waiting.backoff]
                         Err(e) => {
                             let now = Instant::now();
                             if now >= deadline {
