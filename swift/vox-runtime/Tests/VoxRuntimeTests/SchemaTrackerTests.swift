@@ -48,6 +48,68 @@ private final class TaskInbox: @unchecked Sendable {
     }
 }
 
+private actor RecordingConduit: Conduit {
+    private var messages: [Message] = []
+
+    func send(_ message: Message) async throws {
+        messages.append(message)
+    }
+
+    func recv() async throws -> Message? {
+        nil
+    }
+
+    func setMaxFrameSize(_: Int) async throws {}
+
+    func close() async throws {}
+
+    func snapshot() -> [Message] {
+        messages
+    }
+}
+
+private struct NoopDispatcher: ServiceDispatcher {
+    func encodeVoxError(_: VoxRuntimeError) -> [UInt8] {
+        []
+    }
+
+    func preregister(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        channels _: [UInt64],
+        registry _: ChannelRegistry
+    ) async {}
+
+    func dispatch(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        requestId _: UInt64,
+        channels _: [UInt64],
+        registry _: ChannelRegistry,
+        schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
+        taskTx _: @escaping @Sendable (TaskMessage) -> Void
+    ) async {}
+}
+
+private func testClientSchemaInfo(
+    argsSchemaClosure: [UInt8],
+    responseSchemaClosure: [UInt8] = []
+) -> ClientSchemaInfo {
+    let methodSchemas = PhonMethodSchemas(
+        argsRoot: MessageRootId,
+        argsSchemaClosure: argsSchemaClosure,
+        argsDescriptor: MessageDescriptor,
+        argsDescriptorBlocks: MessageDescriptorBlocks,
+        okRoot: MessageRootId,
+        responseRoot: MessageRootId,
+        responseSchemaClosure: responseSchemaClosure,
+        responseDescriptor: MessageDescriptor,
+        responseDescriptorBlocks: MessageDescriptorBlocks
+    )
+    return ClientSchemaInfo(methodSchemas: methodSchemas, registry: MessageRegistry)
+}
+
 @Test
 // r[verify schema.format.delivery]
 // r[verify schema.tracking.sent]
@@ -81,6 +143,131 @@ func schemaTrackerRecordsChannelAuxiliaryRoots() {
 
     #expect(tracker.auxiliaryRoot(7, .args, role: "channel.arg.0.rx.element") == SchemaId(2))
     #expect(tracker.auxiliaryRoot(7, .args, role: "channel.arg.1.rx.element") == nil)
+}
+
+@Test
+// r[verify schema.type-id.per-connection]
+func schemaTrackerDoesNotShareReceivedBindingsAcrossInstances() {
+    let closure = schemaClosure(root: 1)
+    let firstConnection = SchemaTracker()
+    let secondConnection = SchemaTracker()
+
+    firstConnection.recordReceived(7, .args, closure)
+
+    #expect(firstConnection.hasReceived(7, .args))
+    #expect(!secondConnection.hasReceived(7, .args))
+}
+
+@Test
+// r[verify schema.exchange.caller]
+func callerAdvertisesArgsSchemaWithFirstRequestOnConnection() async throws {
+    let conduit = RecordingConduit()
+    let (_, driver) = makeDriverAndConnection(
+        conduit: conduit,
+        dispatcher: NoopDispatcher(),
+        role: .initiator,
+        negotiated: Negotiated(
+            maxPayloadSize: 1024,
+            initialCredit: 16,
+            maxConcurrentRequests: UInt32.max
+        )
+    )
+    let schemas: [UInt8] = [1, 2, 3]
+    let schemaInfo = testClientSchemaInfo(argsSchemaClosure: schemas)
+
+    await driver.handleCommand(.call(
+        requestId: 1,
+        methodId: 77,
+        metadata: .null,
+        payload: [9],
+        channels: [],
+        timeout: nil,
+        responseTx: { _ in },
+        schemaInfo: schemaInfo
+    ))
+    await driver.handleCommand(.call(
+        requestId: 3,
+        methodId: 77,
+        metadata: .null,
+        payload: [10],
+        channels: [],
+        timeout: nil,
+        responseTx: { _ in },
+        schemaInfo: schemaInfo
+    ))
+
+    let sent = await conduit.snapshot()
+    #expect(sent.count == 2)
+    guard sent.count == 2 else { return }
+
+    guard case .requestMessage(let firstRequest) = sent[0].payload,
+        case .call(let firstCall) = firstRequest.body
+    else {
+        Issue.record("first sent message was not a call request")
+        return
+    }
+    #expect([UInt8](firstCall.schemas) == schemas)
+
+    guard case .requestMessage(let secondRequest) = sent[1].payload,
+        case .call(let secondCall) = secondRequest.body
+    else {
+        Issue.record("second sent message was not a call request")
+        return
+    }
+    #expect(secondCall.schemas.isEmpty)
+}
+
+@Test
+// r[verify schema.exchange.callee]
+func calleeAdvertisesResponseSchemaWithFirstResponseOnConnection() async throws {
+    let conduit = RecordingConduit()
+    let (_, driver) = makeDriverAndConnection(
+        conduit: conduit,
+        dispatcher: NoopDispatcher(),
+        role: .acceptor,
+        negotiated: Negotiated(
+            maxPayloadSize: 1024,
+            initialCredit: 16,
+            maxConcurrentRequests: UInt32.max
+        )
+    )
+    let schemas: [UInt8] = [4, 5, 6]
+
+    #expect(await driver.state.addInFlight(9, connectionId: 0, responseMetadata: .null))
+    try await driver.handleTaskMessage(.response(
+        requestId: 9,
+        payload: [7],
+        methodId: 77,
+        responseSchemaClosure: schemas
+    ))
+
+    #expect(await driver.state.addInFlight(11, connectionId: 0, responseMetadata: .null))
+    try await driver.handleTaskMessage(.response(
+        requestId: 11,
+        payload: [8],
+        methodId: 77,
+        responseSchemaClosure: schemas
+    ))
+
+    let sent = await conduit.snapshot()
+    #expect(sent.count == 2)
+    guard sent.count == 2 else { return }
+
+    guard case .requestMessage(let firstRequest) = sent[0].payload,
+        case .response(let firstResponse) = firstRequest.body
+    else {
+        Issue.record("first sent message was not a response")
+        return
+    }
+    #expect([UInt8](firstResponse.schemas) == schemas)
+
+    guard case .requestMessage(let secondRequest) = sent[1].payload,
+        case .response(let secondResponse) = secondRequest.body
+    else {
+        Issue.record("second sent message was not a response")
+        return
+    }
+    #expect(secondResponse.schemas.isEmpty)
 }
 
 @Test
