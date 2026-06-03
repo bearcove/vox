@@ -365,6 +365,28 @@ impl SchemaRecvTracker {
             .cloned()
     }
 
+    pub fn writer_auxiliary_schema_bundle(
+        &self,
+        method_id: MethodId,
+        direction: BindingDirection,
+        role: &str,
+    ) -> Result<Option<vox_phon::SchemaBundle>, String> {
+        let Some(bytes) = self.writer_schema_bytes(method_id, direction) else {
+            return Ok(None);
+        };
+        let mut bundle = vox_phon::parse_schema_bytes(&bytes).map_err(|e| e.to_string())?;
+        let Some(root) = bundle
+            .auxiliary_roots
+            .iter()
+            .find(|root| root.role == role)
+            .map(|root| root.root)
+        else {
+            return Ok(None);
+        };
+        bundle.root = root;
+        Ok(Some(bundle))
+    }
+
     /// Look up a cached plan by key, downcasting to `T`.
     pub fn get_cached_plan<T: Send + Sync + 'static>(
         &self,

@@ -1333,6 +1333,7 @@ fn register_rx_channel_impl(
             receiver: rx,
             liveness,
             replenisher: None,
+            writer_schema: None,
         };
     }
 
@@ -1348,6 +1349,7 @@ fn register_rx_channel_impl(
             local_control_tx,
             shared.observer.clone(),
         )) as ChannelCreditReplenisherHandle),
+        writer_schema: None,
     }
 }
 

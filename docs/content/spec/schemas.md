@@ -278,21 +278,39 @@ for the entire service interface up front.
 > r[schema.exchange.channels]
 >
 > Channel element types are included in schema exchange. If a method's
-> arguments contain `Tx<T>` or `Rx<T>`, the schema for the element type `T`
-> MUST be reachable from the caller's advertised schemas. On the wire a
-> channel handle is opaque (`r[rpc.channel.payload-encoding]`); its element
-> schema therefore travels as an auxiliary root of the method's argument schema
-> binding (see `r[schema.format.binding-roots]`), keyed by the generated
-> per-method channel metadata:
+> arguments contain top-level `Tx<T>` or `Rx<T>` handles, the schema for each
+> element type `T` MUST be reachable from the caller's advertised argument
+> schemas. On the wire a channel handle is opaque
+> (`r[rpc.channel.payload-encoding]`); its element schema therefore travels as
+> an auxiliary root of the method's argument schema binding (see
+> `r[schema.format.binding-roots]`), keyed by the generated per-method channel
+> metadata:
 >
 >   * Argument index.
 >   * Channel direction (`Tx` or `Rx` from the holder's point of view).
->   * Writer element root ID for that argument's `T`.
+>   * Element root ID for that argument's `T`.
 >
-> The receiver MUST store this channel-element writer root alongside the
-> bound channel handle so that each incoming item is decoded through phon's
-> compatibility plan against the local element type. Channels MUST NOT appear
-> in return types (see `r[rpc.channel.placement]`).
+> The item receiver MUST store the applicable channel-element writer root
+> alongside the bound channel handle so that each incoming item is decoded
+> through phon's compatibility plan against the local element type. Channels
+> MUST NOT appear in return types (see `r[rpc.channel.placement]`).
+
+> r[schema.exchange.channels.rx-args]
+>
+> For an argument `Rx<T>`, the caller is the channel item writer and the callee
+> is the channel item receiver. The callee MUST bind its `Rx<T>` with the
+> caller's `channel.arg.N.rx.element` auxiliary root from the method's argument
+> schema binding, and MUST decode every incoming item through a phon
+> compatibility plan from that writer root to the callee's local `T`.
+
+> r[schema.exchange.channels.tx-args]
+>
+> For an argument `Tx<T>`, the callee is the channel item writer and the caller
+> is the channel item receiver. Before the callee sends the first item on that
+> channel, the caller MUST have received the callee's
+> `channel.arg.N.tx.element` writer root for the same method/argument role, so
+> the caller's paired `Rx<T>` can decode incoming items through a phon
+> compatibility plan from the callee's writer root to the caller's local `T`.
 
 > r[schema.exchange.required]
 >
@@ -420,11 +438,12 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 >
 > Channels are unaffected by schema exchange beyond their element types.
 > Channel semantics (creation, flow control, close, reset) are unchanged.
-> The element type's schema is exchanged as part of the method's argument
-> schemas (see `r[schema.exchange.channels]`), and decode plans apply to
-> channel items the same way they apply to request/response payloads. The
-> writer root for a channel item is the channel element auxiliary root recorded
-> when the channel handle was bound, not the receiver's local element root.
+> Channel element writer roots are exchanged according to
+> `r[schema.exchange.channels.rx-args]` and
+> `r[schema.exchange.channels.tx-args]`, and decode plans apply to channel items
+> the same way they apply to request/response payloads. The writer root for a
+> channel item is the channel element auxiliary root recorded when the channel
+> handle was bound, not the receiver's local element root.
 
 > r[schema.interaction.retry]
 >

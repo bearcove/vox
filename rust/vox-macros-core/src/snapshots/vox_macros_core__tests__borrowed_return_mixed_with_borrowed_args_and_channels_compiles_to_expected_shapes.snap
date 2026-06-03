@@ -174,11 +174,16 @@ where
         if method_id == word_lab_service_descriptor().methods[0usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(&'_ str,), _> =
-                ::vox::provide_channels(request_call.channels.clone(), || {
-                    ::vox::schema_deser::schema_deserialize_args_borrowed(
-                        args_bytes, method_id, &schemas,
-                    )
-                });
+                ::vox::provide_channels_for_method(
+                    request_call.channels.clone(),
+                    word_lab_service_descriptor().methods[0usize],
+                    &schemas,
+                    || {
+                        ::vox::schema_deser::schema_deserialize_args_borrowed(
+                            args_bytes, method_id, &schemas,
+                        )
+                    },
+                );
             drop(_binder_guard);
             let args: (&'_ str,) = match deser_result {
                 Ok(v) => v,
@@ -231,11 +236,16 @@ where
         if method_id == word_lab_service_descriptor().methods[1usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(String,), _> =
-                ::vox::provide_channels(request_call.channels.clone(), || {
-                    ::vox::schema_deser::schema_deserialize_args_borrowed(
-                        args_bytes, method_id, &schemas,
-                    )
-                });
+                ::vox::provide_channels_for_method(
+                    request_call.channels.clone(),
+                    word_lab_service_descriptor().methods[1usize],
+                    &schemas,
+                    || {
+                        ::vox::schema_deser::schema_deserialize_args_borrowed(
+                            args_bytes, method_id, &schemas,
+                        )
+                    },
+                );
             drop(_binder_guard);
             let args: (String,) = match deser_result {
                 Ok(v) => v,
@@ -287,11 +297,16 @@ where
         if method_id == word_lab_service_descriptor().methods[2usize].id {
             let _binder_guard = reply.channel_binder().map(::vox::set_channel_binder);
             let deser_result: ::core::result::Result<(&'_ str, Rx<String>, Tx<String>), _> =
-                ::vox::provide_channels(request_call.channels.clone(), || {
-                    ::vox::schema_deser::schema_deserialize_args_borrowed(
-                        args_bytes, method_id, &schemas,
-                    )
-                });
+                ::vox::provide_channels_for_method(
+                    request_call.channels.clone(),
+                    word_lab_service_descriptor().methods[2usize],
+                    &schemas,
+                    || {
+                        ::vox::schema_deser::schema_deserialize_args_borrowed(
+                            args_bytes, method_id, &schemas,
+                        )
+                    },
+                );
             drop(_binder_guard);
             let args: (&'_ str, Rx<String>, Tx<String>) = match deser_result {
                 Ok(v) => v,

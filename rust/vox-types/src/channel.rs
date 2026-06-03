@@ -14,7 +14,10 @@ use moire::sync::{Notify, Semaphore};
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::TryAcquireError;
 
-use crate::{Backing, ChannelClose, ChannelItem, ChannelReset, Metadata, Payload, SelfRef};
+use crate::{
+    Backing, BindingDirection, ChannelClose, ChannelItem, ChannelReset, Metadata, MethodDescriptor,
+    Payload, SchemaRecvTracker, SelfRef,
+};
 use crate::{
     ChannelCloseReason, ChannelDebugContext, ChannelEvent, ChannelEventContext, ChannelResetReason,
     ChannelSendOutcome, ChannelTrySendOutcome, ConnectionCloseReason, SourceLocation,
@@ -100,10 +103,20 @@ struct ChannelCollector {
     seen: std::collections::HashMap<usize, u32>,
 }
 
+struct ChannelSource {
+    ids: Vec<ChannelId>,
+    writer_schemas: Vec<Result<Option<Arc<vox_phon::SchemaBundle>>, String>>,
+}
+
+struct ProvidedChannel {
+    id: ChannelId,
+    writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
+}
+
 std::thread_local! {
     static CHANNEL_COLLECTOR: std::cell::RefCell<Option<ChannelCollector>> =
         const { std::cell::RefCell::new(None) };
-    static CHANNEL_SOURCE: std::cell::RefCell<Option<Vec<ChannelId>>> =
+    static CHANNEL_SOURCE: std::cell::RefCell<Option<ChannelSource>> =
         const { std::cell::RefCell::new(None) };
 }
 
@@ -139,13 +152,59 @@ pub fn collect_channels<R>(f: impl FnOnce() -> R) -> (R, Vec<ChannelId>) {
 /// claims one by index. Wrap the args decode with this — together with a
 /// [`ChannelBinder`] (the index is looked up here, the binder binds it).
 pub fn provide_channels<R>(channels: Vec<ChannelId>, f: impl FnOnce() -> R) -> R {
-    struct Restore(Option<Vec<ChannelId>>);
+    struct Restore(Option<ChannelSource>);
     impl Drop for Restore {
         fn drop(&mut self) {
             CHANNEL_SOURCE.with(|c| *c.borrow_mut() = self.0.take());
         }
     }
-    let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(channels)));
+    let source = ChannelSource {
+        ids: channels,
+        writer_schemas: Vec::new(),
+    };
+    let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(source)));
+    f()
+}
+
+pub fn provide_channels_for_method<R>(
+    channels: Vec<ChannelId>,
+    method: &MethodDescriptor,
+    schemas: &SchemaRecvTracker,
+    f: impl FnOnce() -> R,
+) -> R {
+    struct Restore(Option<ChannelSource>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            CHANNEL_SOURCE.with(|c| *c.borrow_mut() = self.0.take());
+        }
+    }
+
+    let writer_schemas = method
+        .args
+        .iter()
+        .enumerate()
+        .filter_map(|(index, arg)| {
+            if is_tx(arg.shape) {
+                return Some(Ok(None));
+            }
+            if !is_rx(arg.shape) {
+                return None;
+            }
+            // r[impl schema.exchange.channels.rx-args]
+            let role = format!("channel.arg.{index}.rx.element");
+            Some(
+                schemas
+                    .writer_auxiliary_schema_bundle(method.id, BindingDirection::Args, &role)
+                    .map(|bundle| bundle.map(Arc::new)),
+            )
+        })
+        .collect();
+
+    let source = ChannelSource {
+        ids: channels,
+        writer_schemas,
+    };
+    let _restore = Restore(CHANNEL_SOURCE.with(|c| c.borrow_mut().replace(source)));
     f()
 }
 
@@ -169,7 +228,7 @@ fn collect_channel(key: usize, channel_id: ChannelId) -> u32 {
 }
 
 /// Look up channel `index` from the active source (the request's channel list).
-fn take_channel(index: u32) -> Result<ChannelId, String> {
+fn take_channel(index: u32) -> Result<ProvidedChannel, String> {
     if index == CHANNEL_NOT_COLLECTED {
         return Err(
             "channel handle was encoded without a channel id (no collector installed)".to_string(),
@@ -180,9 +239,18 @@ fn take_channel(index: u32) -> Result<ChannelId, String> {
         let vec = slot
             .as_ref()
             .ok_or_else(|| "channel decoded with no channel source installed".to_string())?;
-        vec.get(index as usize)
-            .copied()
-            .ok_or_else(|| format!("channel wire index {index} out of range ({})", vec.len()))
+        let id = vec.ids.get(index as usize).copied().ok_or_else(|| {
+            format!(
+                "channel wire index {index} out of range ({})",
+                vec.ids.len()
+            )
+        })?;
+        let writer_schema = match vec.writer_schemas.get(index as usize) {
+            Some(Ok(writer_schema)) => writer_schema.clone(),
+            Some(Err(error)) => return Err(error.clone()),
+            None => None,
+        };
+        Ok(ProvidedChannel { id, writer_schema })
     })
 }
 
@@ -439,6 +507,7 @@ pub struct BoundChannelReceiver {
     pub receiver: ChannelMailboxReceiver<IncomingChannelMessage>,
     pub liveness: Option<ChannelLivenessHandle>,
     pub replenisher: Option<ChannelCreditReplenisherHandle>,
+    pub writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
 }
 
 struct LogicalReceiverState {
@@ -741,18 +810,35 @@ fn observe_optional_replenisher_channel(
 }
 
 /// Decode one channel item through phon.
-///
-/// FIXME(channel-compat): this decodes single-schema (the item is decoded against
-/// `T`'s own descriptor), inheriting the pre-existing identity-plan behavior. Proper
-/// `r[zerocopy.framing.value.decode-plan]` for channel elements needs the *writer's* element schema
-/// threaded from the channel-establishing method's schema closure down to the `Rx`
-/// at construction — there is no method/tracker context here. Until then a channel
-/// element type that evolved between peers will not reconcile (same gap as before).
-fn decode_channel_payload<T: Facet<'static>>(bytes: &'static [u8]) -> Result<T, RxError> {
-    vox_phon::from_slice_borrowed::<T>(bytes).map_err(|e| RxError::Deserialize(e.to_string()))
+// r[impl schema.exchange.channels.rx-args]
+fn decode_channel_payload<T: Facet<'static>>(
+    bytes: &'static [u8],
+    decoder: &mut ChannelElementDecoderSlot,
+) -> Result<T, RxError> {
+    let Some(writer) = decoder.writer.as_ref() else {
+        return vox_phon::from_slice_borrowed::<T>(bytes)
+            .map_err(|e| RxError::Deserialize(e.to_string()));
+    };
+    if decoder.program.is_none() {
+        decoder.program = Some(
+            vox_phon::build_decode_program::<T>(writer)
+                .map_err(|e| RxError::Deserialize(e.to_string()))?,
+        );
+    }
+    vox_phon::decode_with_program::<T>(
+        decoder
+            .program
+            .as_ref()
+            .expect("channel decode program just built"),
+        bytes,
+    )
+    .map_err(|e| RxError::Deserialize(e.to_string()))
 }
 
-fn decode_channel_item<T>(msg: SelfRef<ChannelItem<'static>>) -> Result<Option<SelfRef<T>>, RxError>
+fn decode_channel_item<T>(
+    msg: SelfRef<ChannelItem<'static>>,
+    decoder: &mut ChannelElementDecoderSlot,
+) -> Result<Option<SelfRef<T>>, RxError>
 where
     T: Facet<'static>,
 {
@@ -762,7 +848,7 @@ where
                 "incoming channel item payload was not Incoming".into(),
             ));
         };
-        decode_channel_payload(bytes)
+        decode_channel_payload(bytes, decoder)
     })
     .map(Some)
 }
@@ -772,6 +858,7 @@ fn handle_incoming_channel_message<T>(
     replenisher: Option<&ChannelCreditReplenisherHandle>,
     debug_context: ChannelDebugContext,
     closed: &AtomicBool,
+    decoder: &mut ChannelElementDecoderSlot,
 ) -> Result<Option<SelfRef<T>>, RxError>
 where
     T: Facet<'static>,
@@ -818,7 +905,7 @@ where
             Err(RxError::Reset)
         }
         Some(IncomingChannelMessage::Item(msg)) => {
-            let value = decode_channel_item(msg);
+            let value = decode_channel_item(msg, decoder);
             if value.is_ok() {
                 observe_optional_replenisher_channel(replenisher, debug_context, |channel| {
                     ChannelEvent::ItemConsumed { channel }
@@ -1101,6 +1188,22 @@ pub(crate) struct ReplenisherSlot {
 impl ReplenisherSlot {
     pub(crate) fn empty() -> Self {
         Self { inner: None }
+    }
+}
+
+#[derive(Facet)]
+#[facet(opaque)]
+pub(crate) struct ChannelElementDecoderSlot {
+    pub(crate) writer: Option<Arc<vox_phon::SchemaBundle>>,
+    pub(crate) program: Option<vox_phon::DecodeProgram>,
+}
+
+impl ChannelElementDecoderSlot {
+    pub(crate) fn empty() -> Self {
+        Self {
+            writer: None,
+            program: None,
+        }
     }
 }
 
@@ -1475,8 +1578,8 @@ impl<T> FacetOpaqueAdapter for TxChannelAdapter<T> {
         };
         let index =
             vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Tx channel index: {e}"))?;
-        let channel_id = take_channel(index)?;
-        <Tx<T>>::try_from(channel_id)
+        let channel = take_channel(index)?;
+        <Tx<T>>::try_from(channel.id)
     }
 }
 
@@ -1541,6 +1644,7 @@ pub struct Rx<T> {
     pub(crate) core: CoreSlot,
     pub(crate) liveness: LivenessSlot,
     pub(crate) replenisher: ReplenisherSlot,
+    pub(crate) decoder: ChannelElementDecoderSlot,
     debug_context: ChannelDebugContext,
     closed: AtomicBool,
     /// Scratch the adapter points `OpaqueSerialize` at: the index assigned by the
@@ -1573,6 +1677,7 @@ impl<T> Rx<T> {
             core: CoreSlot::empty(),
             liveness: LivenessSlot::empty(),
             replenisher: ReplenisherSlot::empty(),
+            decoder: ChannelElementDecoderSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
             wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
@@ -1590,6 +1695,7 @@ impl<T> Rx<T> {
             core: CoreSlot { inner: Some(core) },
             liveness: LivenessSlot::empty(),
             replenisher: ReplenisherSlot::empty(),
+            decoder: ChannelElementDecoderSlot::empty(),
             debug_context,
             closed: AtomicBool::new(false),
             wire_index: AtomicU32::new(CHANNEL_NOT_COLLECTED),
@@ -1634,6 +1740,7 @@ impl<T> Rx<T> {
                             replenisher.as_ref(),
                             self.debug_context,
                             &self.closed,
+                            &mut self.decoder,
                         )
                     }
                     None => handle_incoming_channel_message(
@@ -1641,6 +1748,7 @@ impl<T> Rx<T> {
                         None,
                         self.debug_context,
                         &self.closed,
+                        &mut self.decoder,
                     ),
                 };
             }
@@ -1652,6 +1760,8 @@ impl<T> Rx<T> {
                 self.receiver.inner = Some(bound.receiver);
                 self.liveness.inner = bound.liveness;
                 self.replenisher.inner = bound.replenisher;
+                self.decoder.writer = bound.writer_schema;
+                self.decoder.program = None;
             }
 
             if let Some(receiver) = self.receiver.inner.as_mut() {
@@ -1660,6 +1770,7 @@ impl<T> Rx<T> {
                     self.replenisher.inner.as_ref(),
                     self.debug_context,
                     &self.closed,
+                    &mut self.decoder,
                 );
             }
 
@@ -1747,6 +1858,15 @@ impl<T> TryFrom<ChannelId> for Rx<T> {
     // r[impl rpc.channel.binding.callee-args]
     // r[impl rpc.channel.binding.callee-args.rx]
     fn try_from(channel_id: ChannelId) -> Result<Self, Self::Error> {
+        Self::from_channel_id_with_writer(channel_id, None)
+    }
+}
+
+impl<T> Rx<T> {
+    fn from_channel_id_with_writer(
+        channel_id: ChannelId,
+        writer_schema: Option<Arc<vox_phon::SchemaBundle>>,
+    ) -> Result<Self, String> {
         let debug_context = ChannelDebugContext {
             type_name: Some(std::any::type_name::<T>()),
             ..ChannelDebugContext::default()
@@ -1762,6 +1882,8 @@ impl<T> TryFrom<ChannelId> for Rx<T> {
             rx.receiver.inner = Some(bound.receiver);
             rx.liveness.inner = bound.liveness;
             rx.replenisher.inner = bound.replenisher;
+            rx.decoder.writer = writer_schema.or(bound.writer_schema);
+            rx.decoder.program = None;
             Ok(())
         })?;
 
@@ -1801,8 +1923,8 @@ impl<T> FacetOpaqueAdapter for RxChannelAdapter<T> {
         };
         let index =
             vox_phon::from_slice::<u32>(bytes).map_err(|e| format!("Rx channel index: {e}"))?;
-        let channel_id = take_channel(index)?;
-        <Rx<T>>::try_from(channel_id)
+        let channel = take_channel(index)?;
+        Rx::from_channel_id_with_writer(channel.id, channel.writer_schema)
     }
 }
 
@@ -2208,6 +2330,7 @@ mod tests {
             receiver: rx_inner,
             liveness: None,
             replenisher: Some(replenisher.clone()),
+            writer_schema: None,
         });
 
         let rx = Rx::<u32>::paired(core);
@@ -2225,6 +2348,7 @@ mod tests {
             receiver: rx_inner,
             liveness: None,
             replenisher: Some(replenisher.clone()),
+            writer_schema: None,
         });
 
         let mut rx = Rx::<u32>::paired(core);
@@ -2288,6 +2412,7 @@ mod tests {
                     receiver: rx,
                     liveness: None,
                     replenisher: None,
+                    writer_schema: None,
                 },
             )
         }
@@ -2303,6 +2428,7 @@ mod tests {
                 receiver: rx,
                 liveness: None,
                 replenisher: None,
+                writer_schema: None,
             }
         }
     }
@@ -2460,6 +2586,174 @@ mod tests {
             args.rx.is_bound(),
             "deserialized Rx should be bound via register_rx()"
         );
+    }
+
+    // r[verify schema.exchange.channels.rx-args]
+    #[tokio::test]
+    async fn rx_recv_uses_method_channel_auxiliary_writer_schema() {
+        use facet::Facet;
+
+        #[derive(Facet)]
+        struct Writer {
+            a: u32,
+            gone: String,
+            b: u32,
+        }
+
+        #[derive(Debug, Facet, PartialEq)]
+        struct Reader {
+            a: u32,
+            b: u32,
+            #[facet(default)]
+            added: u32,
+        }
+        unsafe impl crate::Reborrow for Reader {
+            type Ref<'a> = Reader;
+        }
+
+        #[derive(Facet)]
+        struct WriterArgs {
+            rx: Rx<Writer>,
+        }
+
+        #[derive(Facet)]
+        struct ReaderArgs {
+            rx: Rx<Reader>,
+        }
+
+        let writer_method = crate::method_descriptor::<WriterArgs, ()>(
+            "StreamService",
+            "push",
+            &["rx"],
+            &[Some(Writer::SHAPE)],
+            crate::MethodDescriptorOptions {
+                response_wire_shape: <() as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
+        );
+        let reader_method = crate::method_descriptor::<ReaderArgs, ()>(
+            "StreamService",
+            "push",
+            &["rx"],
+            &[Some(Reader::SHAPE)],
+            crate::MethodDescriptorOptions {
+                response_wire_shape: <() as Facet>::SHAPE,
+                retry_persist: false,
+                retry_idem: false,
+                doc: None,
+            },
+        );
+        assert_eq!(writer_method.id, reader_method.id);
+
+        let prepared =
+            crate::SchemaSendTracker::plan_for_method_args(writer_method).expect("schema plan");
+        let tracker = crate::SchemaRecvTracker::new();
+        tracker.record_received(
+            writer_method.id,
+            BindingDirection::Args,
+            prepared.bytes.clone(),
+        );
+
+        let (_kept_tx, rx) = channel::<Writer>();
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&WriterArgs { rx }).expect("serialize writer args")
+            })
+        });
+
+        struct RegisterRxBinder {
+            sender: std::sync::Mutex<Option<ChannelMailboxSender<IncomingChannelMessage>>>,
+        }
+
+        impl ChannelBinder for RegisterRxBinder {
+            fn create_tx(&self) -> (ChannelId, Arc<dyn ChannelSink>) {
+                (ChannelId(900), Arc::new(CountingSink::new()))
+            }
+
+            fn create_rx(&self) -> (ChannelId, BoundChannelReceiver) {
+                let (sender, receiver) =
+                    channel_mailbox("vox_types.channel.test.schema_rx_create", 8);
+                *self.sender.lock().expect("sender mutex poisoned") = Some(sender);
+                (
+                    ChannelId(902),
+                    BoundChannelReceiver {
+                        receiver,
+                        liveness: None,
+                        replenisher: None,
+                        writer_schema: None,
+                    },
+                )
+            }
+
+            fn bind_tx(&self, _channel_id: ChannelId) -> Arc<dyn ChannelSink> {
+                Arc::new(CountingSink::new())
+            }
+
+            fn register_rx(&self, _channel_id: ChannelId) -> BoundChannelReceiver {
+                let (sender, receiver) =
+                    channel_mailbox("vox_types.channel.test.schema_rx_register", 8);
+                *self.sender.lock().expect("sender mutex poisoned") = Some(sender);
+                BoundChannelReceiver {
+                    receiver,
+                    liveness: None,
+                    replenisher: None,
+                    writer_schema: None,
+                }
+            }
+        }
+
+        let callee_binder = RegisterRxBinder {
+            sender: std::sync::Mutex::new(None),
+        };
+        let mut args: ReaderArgs =
+            provide_channels_for_method(channels, reader_method, &tracker, || {
+                with_channel_binder(&callee_binder, || {
+                    vox_phon::from_slice(&bytes).expect("deserialize reader args")
+                })
+            });
+        assert!(args.rx.decoder.writer.is_some());
+
+        let item_bytes = vox_phon::to_vec(&Writer {
+            a: 11,
+            gone: "discard".to_string(),
+            b: 22,
+        })
+        .expect("serialize writer item");
+        let item = SelfRef::owning(
+            Backing::Boxed(Box::<[u8]>::default()),
+            ChannelItem {
+                item: Payload::Encoded(Box::leak(item_bytes.into_boxed_slice())),
+            },
+        );
+        let sender = callee_binder
+            .sender
+            .lock()
+            .expect("sender mutex poisoned")
+            .clone()
+            .expect("register_rx should store sender");
+        sender
+            .send(IncomingChannelMessage::Item(item))
+            .await
+            .expect("send channel item");
+
+        let decoded = args
+            .rx
+            .recv()
+            .await
+            .expect("recv should compat decode")
+            .expect("expected channel item");
+        assert_eq!(
+            *decoded.get(),
+            Reader {
+                a: 11,
+                b: 22,
+                added: 0
+            }
+        );
+        assert!(args.rx.decoder.program.is_some());
     }
 
     // Round-trip: encode with caller binder + collector, decode with callee binder
