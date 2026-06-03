@@ -360,7 +360,7 @@ difference.
 # Decode plans and error reporting
 
 When a peer must deserialize a remote type into a local type, it asks phon to
-build a **compatibility decode plan** that reconciles the remote (writer) schema
+build a **compatibility decode plan** from the remote (writer) schema
 against the local (reader) type — matching fields by name, reordering, skipping
 writer-only fields, and defaulting reader-only fields. The mechanics of that
 plan — field matching, enum-by-name, defaulting, the early-detection of

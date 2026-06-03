@@ -144,9 +144,9 @@ func messagePong(nonce: UInt64, connectionId: UInt64 = 0) -> Message {
     Message(connectionId: connectionId, payload: .pong(Pong(nonce: nonce)))
 }
 
-// MARK: - Message decoder (writer ⋈ reader — the ONE decode path)
+// MARK: - Message decoder (writer to reader — the ONE decode path)
 
-/// A decoder that reconciles the peer's advertised (writer) Message schema against the
+/// A decoder that builds from the peer's advertised (writer) Message schema to the
 /// local reader. There is no same-schema fast path: when writer ≡ reader the SAME
 /// `lowerDecode` degenerates to the fused identity. Not `@Sendable`: it captures a
 /// (non-Sendable) `MemProgram`; the conduit that holds it is `@unchecked Sendable` and
@@ -154,17 +154,18 @@ func messagePong(nonce: UInt64, connectionId: UInt64 = 0) -> Message {
 public typealias MessageDecoder = ([UInt8]) throws -> Message
 
 /// Build the Message decoder for a peer from its advertised `message_payload_schema`
-/// closure (exchanged in the handshake; always present). The decode ALWAYS reconciles
+/// closure (exchanged in the handshake; always present). The decode ALWAYS uses
 /// the peer's writer root against the local Message reader — never a cached local-only
 /// program. A missing/unparseable closure yields a decoder that throws (loud), not a
 /// same-schema fallback.
+/// r[impl conduit.typeplan]
 public func buildMessageDecoder(peerMessageSchema: [UInt8]) -> MessageDecoder {
     guard let bundle = try? parseSchemaClosure(peerMessageSchema),
         let program = try? lowerDecode(bundle.root, MessageDescriptor, MessageRegistry.with(bundle.schemas))
     else {
         return { _ in
             throw ConnectionError.handshakeFailed(
-                "no peer Message schema to reconcile against (closure missing/unparseable)")
+                "no peer Message schema for compatibility decode (closure missing/unparseable)")
         }
     }
     return { bytes -> Message in try decodeTyped(program, bytes) }
@@ -193,7 +194,7 @@ func decodeHandshakeFrame(_ bytes: [UInt8]) throws -> HandshakeMessage {
     guard bytes.count >= 4 + len else { throw ConnectionError.handshakeFailed("handshake frame truncated") }
     let closure = Array(bytes[4..<(4 + len)])
     let value = Array(bytes[(4 + len)...])
-    // ALWAYS reconcile the writer (closure, always present in the frame) against the
+    // ALWAYS use the writer (closure, always present in the frame) against the
     // local HandshakeMessage reader — the one decode path.
     let bundle = try parseSchemaClosure(closure)
     let reg = HandshakeMessageRegistry.with(bundle.schemas)

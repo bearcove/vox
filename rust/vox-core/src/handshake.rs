@@ -65,8 +65,9 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
 }
 
 /// Receive and decode a self-describing handshake message from a raw link. The
-/// embedded writer schema is reconciled against the local `HandshakeMessage`
-/// (`r[zerocopy.framing.value.decode-plan]`), so even the bootstrap message survives version skew.
+/// embedded writer schema feeds the compatibility decode program for the local
+/// `HandshakeMessage` (`r[zerocopy.framing.value.decode-plan]`), so even the bootstrap
+/// message survives version skew.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()

@@ -897,6 +897,7 @@ class SessionCore {
     const connection = this.getConnection(connectionId);
     const direction = schemaMessage.direction.tag === "Args" ? "args" : "response";
     try {
+      // r[impl schema.tracking.received]
       connection.getSchemaTracker().recordReceived(
         schemaMessage.method_id,
         direction,
@@ -996,6 +997,7 @@ class SessionCore {
         const callSchemas = request.body.value.schemas;
         if (callSchemas && callSchemas.length > 0) {
           try {
+            // r[impl schema.tracking.received]
             connection.getSchemaTracker().recordReceived(
               request.body.value.method_id,
               "args",
@@ -1020,6 +1022,7 @@ class SessionCore {
         const responseSchemas = request.body.value.schemas;
         if (methodId !== undefined && responseSchemas && responseSchemas.length > 0) {
           try {
+            // r[impl schema.tracking.received]
             connection.getSchemaTracker().recordReceived(
               methodId,
               "response",
@@ -1262,6 +1265,9 @@ export class ConnectionHandle {
     // protocol error (UnknownMethod / Cancelled / Indeterminate / ...) carries no
     // schema — those `Err(VoxError::…)` payloads are T/E-independent, so fall back
     // to our own response root.
+    // r[impl schema.errors.call-level]
+    // r[impl schema.errors.call-level.caller]
+    // r[impl schema.errors.non-retryable]
     const decoder =
       this.getSchemaTracker().buildWriterDecoder(request.descriptor.id, "response", registry) ??
       ((bytes: Uint8Array) =>
@@ -1453,6 +1459,7 @@ export class ConnectionHandle {
     state.requestIds.add(requestId);
 
     try {
+      // r[impl schema.exchange.caller]
       const schemas = state.computeSchemas?.();
       voxLogger()?.debug(
         `[vox:session] sendPendingRequest: req=${requestId} method=${state.methodId} payload=${state.payload.length} channels=${state.channels.length} schemas=${schemas?.length ?? 0}`,

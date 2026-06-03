@@ -1,6 +1,7 @@
-//! Payload decode: reconcile the **writer's** schema (received via the `schemas`
-//! binding) against the **reader's** type and decode through phon's `lower_decode`
-//! compatibility path (`r[zerocopy.framing.value.decode-plan]`, `r[schema.exchange.required]`).
+//! Payload decode: build a compatibility decode program from the **writer's** schema
+//! (received via the `schemas` binding) to the **reader's** type and decode through
+//! phon's `lower_decode` compatibility path (`r[zerocopy.framing.value.decode-plan]`,
+//! `r[schema.exchange.required]`).
 //!
 //! There is no same-version shortcut: every args/response decode goes through a
 //! compat [`DecodeProgram`](vox_phon::DecodeProgram), built once per (method,
@@ -92,7 +93,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn schema_deserialize_args_reconciles_writer_and_reader() {
+    fn schema_deserialize_args_uses_writer_and_reader_schema() {
         // The writer sends `((i32, String),)`; the reader decodes the same shape.
         let method_id = MethodId(1);
         let writer_bytes =

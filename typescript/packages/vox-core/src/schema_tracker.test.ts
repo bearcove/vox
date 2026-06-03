@@ -15,6 +15,11 @@ const leU64 = (value: bigint): number[] => {
 
 describe("SchemaSendTracker", () => {
   // r[verify schema.format.delivery]
+  // r[verify schema.tracking.sent]
+  // r[verify schema.tracking.bindings]
+  // r[verify schema.exchange.idempotent]
+  // r[verify schema.principles.sender-driven]
+  // r[verify schema.principles.no-roundtrips]
   it("advertises a method-direction binding once", () => {
     const tracker = new SchemaSendTracker();
     const closure = "010203";
@@ -26,6 +31,9 @@ describe("SchemaSendTracker", () => {
 });
 
 describe("SchemaTracker", () => {
+  // r[verify schema.tracking.received]
+  // r[verify schema.tracking.bindings]
+  // r[verify schema.format.binding-roots]
   // r[verify schema.exchange.channels]
   it("records channel auxiliary roots from a schema binding", () => {
     const role = new TextEncoder().encode("channel.arg.0.rx.element");

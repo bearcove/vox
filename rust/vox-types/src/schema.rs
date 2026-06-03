@@ -329,7 +329,7 @@ pub struct SchemaRecvTracker {
     plan_cache: Mutex<HashMap<PlanCacheKey, Box<dyn std::any::Any + Send + Sync>>>,
 }
 
-/// Cache key for resolved translation plans.
+/// Cache key for resolved compatibility decode plans.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PlanCacheKey {
     pub method_id: MethodId,

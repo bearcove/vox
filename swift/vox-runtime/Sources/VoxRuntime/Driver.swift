@@ -40,7 +40,7 @@ public final class Driver: @unchecked Sendable {
     let localRootSettings: ConnectionSettings?
     let peerRootSettings: ConnectionSettings?
     /// The peer's advertised Message schema closure (from the handshake), persisted so a
-    /// resume rebuild reconciles the envelope against it — never a same-schema fallback.
+    /// resume rebuild uses the same envelope compatibility decode — never a same-schema fallback.
     let peerMessageSchema: [UInt8]
     let transport: ConduitKind?
     let recoverAttachment: (@Sendable () async throws -> LinkAttachment)?

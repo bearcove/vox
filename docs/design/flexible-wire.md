@@ -13,14 +13,14 @@ Four message types, all CBOR-encoded structs (not part of the enum):
 - **Sorry** (either direction): structured CBOR rejection with detailed
   schema diff — "here's what I need, here's what you have, here's the gap"
 
-Three-way handshake. After `LetsGo`, both sides have translation plans
+Three-way handshake. After `LetsGo`, both sides have compatibility decode plans
 for each other's `MessagePayload`.
 
 ## Post-handshake (postcard)
 
 Everything is one postcard-encoded enum (`MessagePayload`) whose schema
-was exchanged during handshake. Both sides deserialize through translation
-plans. Protocol evolves the same way user types evolve — add variants,
+was exchanged during handshake. Both sides deserialize through compatibility
+decode plans. Protocol evolves the same way user types evolve — add variants,
 add fields, reorder — all handled by plans.
 
 The sender MUST NOT send a variant the receiver doesn't have in their

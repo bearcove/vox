@@ -167,7 +167,7 @@ insert_anchor_links = "left"
 > r[zerocopy.framing.value.decode-plan]
 >
 > Every incoming `Message` is decoded through a phon compatibility plan that
-> reconciles the writer's `Message` schema (exchanged in the handshake) against
+> maps the writer's `Message` schema (exchanged in the handshake) onto
 > the local `Message` type — phon's plan-first path (`phon r[compat.plan-first]`).
 > There is no single-schema fast path: even when writer and reader schemas are
 > identical, decoding goes through the same compat plan, so envelope evolution

@@ -7,10 +7,12 @@ import PhonSchema
 //
 // A peer advertises its type for a (method, direction) binding as a phon schema
 // closure (self-describing bytes) in the `schemas:` wire field. The receiver records
-// the writer closure and builds a compatibility decode program reconciling it against
+// the writer closure and builds a compatibility decode program against
 // the local reader DESCRIPTOR (the Swift typed path needs the reader's memory layout —
 // supplied by codegen — not just a reader root). Field matching/reordering/defaulting
-// is phon's `lowerDecode`. `r[impl schema.tracking.received]`
+// is phon's `lowerDecode`.
+// r[impl schema.principles.self-describing]
+// r[impl schema.tracking.received]
 
 /// Args vs. response binding direction (the generated `BindingDirection` wire enum
 /// is the on-wire form; this is the tracker's local key).
@@ -21,6 +23,7 @@ public enum SchemaBindingDirection: Sendable, Hashable {
 
 /// A channel argument's position + direction + element root + the element's phon
 /// schema-closure bytes. Emitted by codegen.
+/// r[impl schema.format.binding-roots]
 public struct PhonChannelMeta: Sendable {
     public let index: Int
     public let isTx: Bool
@@ -35,8 +38,10 @@ public struct PhonChannelMeta: Sendable {
 }
 
 /// Per-method schema data emitted by vox-codegen (`{service}Methods`). Carries both
-/// the content roots + closures (for advertising / reconciliation) and the Swift
+/// the content roots + closures (for advertising / compatibility decode) and the Swift
 /// typed-path descriptors (for the concrete memory decode).
+/// r[impl schema.type-id]
+/// r[impl schema.format.binding-roots]
 public struct PhonMethodSchemas: @unchecked Sendable {
     public let argsRoot: SchemaId
     public let argsSchemaClosure: [UInt8]
@@ -124,9 +129,11 @@ private struct ProgramKey: Hashable {
 
 /// Tracks the writer schema closures a peer advertised, and builds compat decode
 /// programs against local reader descriptors.
+/// r[impl schema.tracking.received]
+/// r[impl schema.type-id.per-connection]
 public final class SchemaTracker: @unchecked Sendable {
     private var received: [BindingKey: (root: SchemaId, schemas: [Schema], auxiliaryRoots: [String: SchemaId])] = [:]
-    /// Cache of the reconciling programs (planning is amortized: built once per writer,
+    /// Cache of compatibility decode programs (planning is amortized: built once per writer,
     /// reused for every decode). Invalidated when a binding's writer is re-advertised.
     private var programs: [ProgramKey: Lowered] = [:]
     private let lock = NSLock()
@@ -141,6 +148,7 @@ public final class SchemaTracker: @unchecked Sendable {
 
     /// Record the peer's phon schema-closure bytes for a binding (best-effort,
     /// idempotent: a later advertisement overwrites and drops the cached program).
+    /// r[impl schema.tracking.bindings]
     public func recordReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection, _ schemaBytes: [UInt8]) {
         guard !schemaBytes.isEmpty, let bundle = try? parseSchemaClosure(schemaBytes) else { return }
         let key = BindingKey(methodId: methodId, direction: direction)
@@ -162,11 +170,12 @@ public final class SchemaTracker: @unchecked Sendable {
         return received[BindingKey(methodId: methodId, direction: direction)] != nil
     }
 
-    /// The reconciling decode program for `(methodId, direction)` producing the reader
+    /// The compatibility decode program for `(methodId, direction)` producing the reader
     /// type described by `readerDescriptor`, resolved through `local` + the writer's
     /// exchanged schemas — `lowerDecode(writer → reader)`, the ONLY decode path. Built
     /// once and cached. Returns nil only when no writer schema was advertised (a
     /// protocol error for the caller to surface — never a same-schema fallback).
+    /// r[impl schema.errors.call-level]
     public func buildDecodeProgram(
         _ methodId: UInt64, _ direction: SchemaBindingDirection,
         readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
@@ -190,7 +199,7 @@ public final class SchemaTracker: @unchecked Sendable {
         return received[BindingKey(methodId: methodId, direction: direction)]?.auxiliaryRoots[role]
     }
 
-    /// The reconciling decode program for a channel item's named auxiliary writer root.
+    /// The compatibility decode program for a channel item's named auxiliary writer root.
     /// The role is generated as `channel.arg.N.{tx|rx}.element`, so the channel data
     /// message can still be decoded through the method args schema binding that created
     /// the channel.
@@ -215,7 +224,9 @@ public final class SchemaTracker: @unchecked Sendable {
 }
 
 /// Tracks which (method, direction) schema closures have been advertised on a
-/// connection, so each is sent at most once (`r[schema.exchange.idempotent]`).
+/// connection, so each is sent at most once.
+/// r[impl schema.tracking.sent]
+/// r[impl schema.tracking.bindings]
 public final class SchemaSendTracker: @unchecked Sendable {
     private var sent: Set<BindingKey> = []
     private let lock = NSLock()
@@ -230,6 +241,9 @@ public final class SchemaSendTracker: @unchecked Sendable {
     /// The phon schema-closure bytes to advertise for `(methodId, direction)`, or `[]`
     /// when already sent.
     // r[impl schema.format.delivery]
+    // r[impl schema.exchange.idempotent]
+    // r[impl schema.principles.sender-driven]
+    // r[impl schema.principles.no-roundtrips]
     public func prepareSchemas(_ methodId: UInt64, _ direction: SchemaBindingDirection, _ closure: [UInt8]) -> [UInt8] {
         let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }

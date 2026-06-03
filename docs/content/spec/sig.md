@@ -28,7 +28,7 @@ This means:
 - Renaming a service or method changes the ID (breaking change)
 - Case variations normalize to the same ID (`loadTemplate` = `load_template`)
 - Changing argument or return types does NOT change the method ID —
-  schema translation handles type evolution (see the
+  phon compatibility decode plans handle type evolution (see the
   [schema exchange specification](../schemas/))
 
 ## Signature Hash

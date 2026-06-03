@@ -3,7 +3,7 @@ import PhonSchema
 
 public final class Connection: @unchecked Sendable {
     let handle: ConnectionHandle
-    /// Writer schema closures the peer advertised — the generated client reconciles the
+    /// Writer schema closures the peer advertised — the generated client uses them for
     /// response decode against the server's advertised response schema through this.
     public let schemaReceiveTracker: SchemaTracker
 

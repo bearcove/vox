@@ -27,7 +27,7 @@ extension Message {
     static func pong(_ pong: Pong) -> Message { messagePong(nonce: pong.nonce) }
 
     func encode() -> [UInt8] { encodeMessage(self) }
-    // Decode reconciles against our own advertised Message schema (writer ≡ reader here).
+    // Decode uses our own advertised Message schema (writer == reader here).
     static func decode(fromBytes bytes: [UInt8]) throws -> Message {
         try buildMessageDecoder(peerMessageSchema: MessageSchemaClosure)(bytes)
     }

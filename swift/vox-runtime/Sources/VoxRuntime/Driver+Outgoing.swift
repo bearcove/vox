@@ -69,6 +69,7 @@ extension Driver {
             // dispatch-time decision races — a schema-less response could be written
             // first. prepareSchemas is idempotent, so only the first send advertises.
             // r[impl schema.exchange.required]
+            // r[impl schema.exchange.callee]
             let schemas: [UInt8]
             if let methodId, !responseSchemaClosure.isEmpty {
                 schemas = schemaSendTracker.prepareSchemas(
@@ -133,6 +134,7 @@ extension Driver {
             }
 
             // Advertise the args schema closure (at most once per method, deduped).
+            // r[impl schema.exchange.caller]
             let schemas: [UInt8]
             if let schemaInfo {
                 schemas = schemaSendTracker.prepareSchemas(
@@ -216,6 +218,7 @@ extension Driver {
         traceLog(.resume, "flushPendingCalls: count=\(pendingCalls.count)")
         while let call = pendingCalls.first {
             // Advertise the args schema closure (at most once per method, deduped).
+            // r[impl schema.exchange.caller]
             let schemas: [UInt8]
             if let schemaInfo = call.schemaInfo {
                 schemas = schemaSendTracker.prepareSchemas(

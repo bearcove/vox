@@ -2,11 +2,12 @@
 //
 // A peer advertises its type for a (method, direction) binding as a phon
 // schema-closure (self-describing bytes) in the `schemas:` field. The receiver
-// records the writer closure and builds a compatibility decoder reconciling it
+// records the writer closure and builds a compatibility decoder
 // against the local reader type. Field matching, reordering, and defaulting are
 // phon's compatibility plan; vox only records the
 // writer closure and asks phon to build the decoder.
 //
+// r[impl schema.principles.self-describing]
 // r[impl schema.tracking.received]
 
 import { type Registry, type Schema, hexToBytes } from "@bearcove/phon-schema";
@@ -51,6 +52,8 @@ interface ReceivedBinding {
  * Tracks the writer schema closures a peer advertised, and builds compat decoders
  * against local reader roots.
  */
+// r[impl schema.tracking.received]
+// r[impl schema.type-id.per-connection]
 export class SchemaTracker {
   private received = new Map<string, ReceivedBinding>();
   // Cache of built decoders, keyed by (method, direction, readerRoot).
@@ -65,6 +68,7 @@ export class SchemaTracker {
    * Record the peer's phon schema-closure bytes for a binding. Best-effort and
    * idempotent — receiving a schema again simply overwrites (best-effort).
    */
+  // r[impl schema.tracking.bindings]
   recordReceived(methodId: bigint, direction: BindingDirection, schemaBytes: Uint8Array): void {
     if (schemaBytes.length === 0) return;
     const parsed = parseSchemaClosure(schemaBytes);
@@ -90,6 +94,7 @@ export class SchemaTracker {
    * reader type identified by `readerRoot`, resolved through `local` plus the
    * writer's exchanged schemas. Returns null when no writer schema was received.
    */
+  // r[impl schema.errors.call-level]
   buildDecoder(
     methodId: bigint,
     direction: BindingDirection,
@@ -159,17 +164,19 @@ export class SchemaTracker {
   }
 }
 
-export class SchemaTranslationError extends Error {
+export class SchemaCompatibilityError extends Error {
   constructor(message: string) {
-    super(`Schema translation error: ${message}`);
-    this.name = "SchemaTranslationError";
+    super(`Schema compatibility error: ${message}`);
+    this.name = "SchemaCompatibilityError";
   }
 }
 
 /**
  * Tracks which (method, direction) schema closures have been advertised on a
- * connection, so each is sent at most once (`r[schema.exchange.idempotent]`).
+ * connection, so each is sent at most once.
  */
+// r[impl schema.tracking.sent]
+// r[impl schema.tracking.bindings]
 export class SchemaSendTracker {
   private sent = new Set<string>();
 
@@ -183,6 +190,9 @@ export class SchemaSendTracker {
    * closure hex comes from the generated `{service}Methods` table.
    */
   // r[impl schema.format.delivery]
+  // r[impl schema.exchange.idempotent]
+  // r[impl schema.principles.sender-driven]
+  // r[impl schema.principles.no-roundtrips]
   prepareSchemas(methodId: bigint, direction: BindingDirection, closureHex: string): number[] {
     const key = bindingKey(methodId, direction);
     if (this.sent.has(key)) return [];

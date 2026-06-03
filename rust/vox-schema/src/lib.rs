@@ -777,7 +777,7 @@ impl SchemaBytes {
 }
 
 /// Lookup table mapping TypeSchemaId → Schema, used for resolving type
-/// references during deserialization with translation plans.
+/// references during deserialization with compatibility decode plans.
 pub type SchemaRegistry = HashMap<SchemaHash, Schema>;
 
 /// Build a SchemaRegistry from a list of schemas.

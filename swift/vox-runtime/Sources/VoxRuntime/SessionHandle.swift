@@ -11,7 +11,7 @@ public final class SessionHandle: @unchecked Sendable {
     private let localRootSettings: ConnectionSettings
     private let peerRootSettings: ConnectionSettings
     /// The peer's advertised Message schema closure, persisted so a resume rebuild
-    /// reconciles the envelope against it.
+    /// uses the same envelope compatibility decode.
     private let peerMessageSchema: [UInt8]
     private let transport: ConduitKind
     let sessionResumeKey: [UInt8]?

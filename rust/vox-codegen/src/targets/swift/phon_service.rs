@@ -22,6 +22,7 @@ fn ok_shape(return_shape: &'static Shape) -> &'static Shape {
 }
 
 /// The content-derived phon root id for a shape.
+// r[impl schema.type-id]
 fn root_id(shape: &'static Shape) -> u64 {
     vox_phon::schema_id_for_shape(shape)
         .expect("phon schema id")
@@ -29,6 +30,10 @@ fn root_id(shape: &'static Shape) -> u64 {
 }
 
 /// A shape's schema closure bytes as a Swift `[UInt8]` literal body.
+// r[impl schema.principles.once-per-type]
+// r[impl schema.format.self-contained]
+// r[impl schema.tracking.transitive]
+// r[impl schema.format.binding-roots]
 fn closure_bytes(shape: &'static Shape, auxiliary_roots: &[(String, &'static Shape)]) -> String {
     let auxiliary_roots: Vec<(&str, &'static Shape)> = auxiliary_roots
         .iter()
@@ -131,6 +136,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     ));
     for m in service.methods {
         let mname = m.method_name.to_lower_camel_case();
+        // r[impl schema.method-id]
         let method_id = crate::method_id(m);
         let args_root = root_id(m.args_shape);
         let ok_root = root_id(ok_shape(m.return_shape));

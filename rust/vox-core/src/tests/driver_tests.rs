@@ -289,12 +289,12 @@ async fn cancel_aborts_in_flight_handler() {
     );
 }
 
-/// Verify that a `MessagePlan` built from identical schemas (the drift-free
+/// Verify that a `MessagePlan` built from identical schemas (the schema-identical
 /// degenerate of the envelope compat path) can round-trip a message.
 #[test]
 fn message_plan_from_identical_schemas_round_trips() {
     // The handshake carries the peer's Message schema as phon bytes; here it is
-    // our own (identical), so the compat program reconciles writer==reader.
+    // our own (identical), so the compat program takes the schema-identical path.
     let our_schema = vox_phon::schema_bytes::<Message<'static>>().expect("schema bytes");
     let handshake_result = HandshakeResult {
         role: SessionRole::Initiator,

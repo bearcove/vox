@@ -57,9 +57,9 @@ weight = 12
 >
 > Changing argument types, return types, or the structure of types used in
 > method signatures may or may not be breaking, depending on whether the
-> schema translation layer can bridge the difference (see the
-> [schema exchange specification](../schemas/) for details on translation
-> plans and compatibility rules).
+> phon compatibility decode plan can bridge the difference (see the
+> [schema exchange specification](../schemas/) for details on decode plans
+> and compatibility rules).
 
 > r[rpc.one-service-per-connection]
 >
@@ -250,7 +250,7 @@ registered on the session builder; otherwise they are rejected.
 >
 > Callers that loop on error MUST NOT retry non-retryable failures. In
 > particular, retrying a call that failed with `InvalidPayload` due to a schema
-> translation error will always produce the same failure, because the remote
+> compatibility decode-plan error will always produce the same failure, because the remote
 > peer's schema does not change without a reconnect.
 
 > r[rpc.error.scope]

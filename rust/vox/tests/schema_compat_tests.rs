@@ -4,7 +4,7 @@
 //! and method names but different field types. Because method IDs are
 //! name-only (not type-dependent), the two versions route to the same
 //! handler. Schema exchange sends type metadata before payloads, and
-//! translation plans handle the schema differences.
+//! compatibility decode plans handle the schema differences.
 
 use vox_core::{BareConduit, MemoryLink, acceptor_conduit, initiator_conduit, memory_link_pair};
 use vox_types::{
@@ -667,7 +667,7 @@ async fn missing_required_field_is_non_retryable() {
     // (non-default) reader fields up front (r[zerocopy.framing.value.decode-plan]).
     let err = client.status().await.expect_err("call should fail");
 
-    // The error must be InvalidPayload (schema reconciliation failure).
+    // The error must be InvalidPayload (schema compatibility failure).
     assert!(
         matches!(&err, VoxError::InvalidPayload(msg) if msg.contains("Incompatible")),
         "expected InvalidPayload with a schema-incompatibility failure, got: {err:?}"

@@ -20,6 +20,7 @@ fn ok_shape(return_shape: &'static Shape) -> &'static Shape {
 }
 
 /// The content-derived phon root id for a single shape.
+// r[impl schema.type-id]
 fn root_id(shape: &'static Shape) -> u64 {
     phon_codegen::Module::from_shapes(&[shape])
         .expect("derive phon schema")
@@ -72,6 +73,9 @@ fn channel_auxiliary_roots(method: &vox_types::MethodDescriptor) -> Vec<(String,
 }
 
 /// Generate the `{service}` phon registry + per-method schema table.
+// r[impl schema.principles.once-per-type]
+// r[impl schema.format.self-contained]
+// r[impl schema.tracking.transitive]
 pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     let name = lower_camel(service.service_name);
 
@@ -107,6 +111,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         "export const {name}Methods: {{ [methodId: string]: import(\"@bearcove/vox-core\").PhonMethodSchemas }} = {{\n"
     ));
     for m in service.methods {
+        // r[impl schema.method-id]
         let method_id = crate::method_id(m);
         let args_root = root_id(m.args_shape);
         let ok_root = root_id(ok_shape(m.return_shape));

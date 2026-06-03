@@ -1,9 +1,11 @@
 // Wire codec for the vox `Message` envelope, on the phon engine.
 //
-// The envelope is an evolvable wire type like any other: decode reconciles the
+// The envelope is an evolvable wire type like any other: decode uses the
 // peer's `Message` schema (exchanged in the handshake) against our own via phon's
 // compatibility plan (`r[zerocopy.framing.value.decode-plan]`). With no peer schema it degenerates
 // to writer==reader — the same plan, not a shortcut.
+// r[impl conduit.typeplan]
+// r[impl schema.type-id]
 
 import {
   type Registry,
@@ -28,9 +30,10 @@ export type MessageDecoder = (bytes: Uint8Array) => Message;
 /**
  * Build a decoder for incoming `Message`s. `peerSchemaBytes` is the peer's
  * envelope schema closure (phon self-describing schema bytes) from the handshake;
- * when absent, our own schema is the writer (drift-free degenerate of the one
+ * when absent, our own schema is the writer (schema-identical degenerate of the one
  * compat path).
  */
+// r[impl conduit.typeplan]
 export function buildMessageDecoder(peerSchemaBytes?: Uint8Array): MessageDecoder {
   if (!peerSchemaBytes || peerSchemaBytes.length === 0) {
     return (bytes) =>
@@ -60,6 +63,7 @@ export interface AuxiliaryRoot {
   root: bigint;
 }
 
+// r[impl schema.principles.self-describing]
 // r[impl schema.format.binding-roots]
 export function parseSchemaClosure(bytes: Uint8Array): {
   root: bigint;

@@ -1837,7 +1837,7 @@ impl DriverCaller {
         //
         // Channel binding happens during serialization via the thread-local
         // ChannelBinder. Channel element schemas are recorded in method
-        // descriptors, but channel item reconciliation still needs those
+        // descriptors, but channel item compatibility still needs those
         // writer element roots threaded into Rx construction.
         self.shared.mark_outbound_progress();
         tracing::debug!(

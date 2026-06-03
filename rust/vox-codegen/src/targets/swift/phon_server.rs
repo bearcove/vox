@@ -163,6 +163,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     ));
 
     // Decode args (reconciling the peer's writer schema when advertised).
+    // r[impl schema.errors.call-level.callee]
     if arity == 0 {
         // No args to decode.
     } else {

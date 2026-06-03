@@ -23,7 +23,7 @@ func recvHandshake(_ link: any Link) async throws -> HandshakeMessage {
 }
 
 /// Whether the peer's advertised Message schema closure is usable. phon ids are
-/// content-addressed and the conduit reconciles writer→reader, so any parseable
+/// content-addressed and the conduit builds writer→reader compatibility decode, so any parseable
 /// closure is accepted (a true incompatibility surfaces later as a decode error).
 func handshakeMessageSchemasMatch(_ peerSchema: [UInt8]) -> Bool {
     (try? parseSchemaClosure(peerSchema)) != nil

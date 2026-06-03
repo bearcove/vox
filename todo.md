@@ -22,7 +22,7 @@ Tests are validation, not the target.
 - Prefer removing stale TypeScript-era assumptions over preserving old behavior.
 - Do not preserve legacy postcard-handshake logic just because old TS code/tests reference it.
 - Track parity at the protocol level first, then update tests/helpers/docs.
-- Avoid "compat shims" unless Rust/spec explicitly requires compatibility behavior.
+- Avoid ad hoc schema-compatibility shims unless Rust/spec explicitly requires them.
 
 ---
 
@@ -260,7 +260,7 @@ belong to postcard `Message`.
 
 But Rust moved these to the raw CBOR handshake.
 
-`types.generated.ts` also no longer exports the types that `types.ts` expects, causing drift and diagnostics.
+`types.generated.ts` also no longer exports the types that `types.ts` expects, causing mismatch and diagnostics.
 
 ### TODO
 
@@ -306,6 +306,7 @@ Match Rust:
 - [ ] Remove standalone `SchemaMessage` handling from session runtime
 - [ ] Read/record inlined schema CBOR from `RequestCall.schemas` and `RequestResponse.schemas`
 - [ ] Attach schemas when sending first request/response for method+direction on a connection
+- [ ] Treat missing request/response schemas as `schema.exchange.required` protocol errors; remove same-schema decode fallbacks from TS request/response paths
 - [ ] Reset send/receive schema state correctly on session resumption
 - [ ] Mirror Rust session establishment model: handshake result first, then session
 - [ ] Rework or deprecate `Session.establishInitiator` / `Session.establishAcceptor` if they still imply old postcard handshake semantics
@@ -396,7 +397,7 @@ Match Rust ordering and responsibilities:
 - [ ] Verify duplicate suppression semantics
 - [ ] Verify reconnect handshake (`ClientHello` / `ServerHello`) ordering relative to session handshake
 - [ ] Ensure `StableConduit` carries post-handshake postcard `Message`s, not pre-handshake traffic
-- [ ] Integrate message translation plan with stable conduit receive path if needed
+- [ ] Integrate the phon compatibility decode plan with the stable conduit receive path if needed
 - [ ] Remove current `"stable not implemented yet"` transport-path placeholders once parity is implemented
 - [ ] Validate that stable reconnect preserves channel continuity as Rust/docs describe
 

@@ -35,7 +35,7 @@ public protocol VoxConnection: Sendable {
     var taskSender: TaskSender { get }
 
     /// The peer's advertised (writer) schema closures, by which the generated client
-    /// reconciles its response decode against the server's response type.
+    /// builds response compatibility decode against the server's response type.
     var schemaReceiveTracker: SchemaTracker { get }
 }
 

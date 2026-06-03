@@ -7,7 +7,7 @@ struct SessionHandshakeResult {
     let peerRootSettings: ConnectionSettings
     let peerMetadata: Metadata
     /// The peer's advertised Message schema closure, used to build the conduit's
-    /// reconciling decoder.
+    /// compatibility decoder.
     let peerMessageSchema: [UInt8]
 }
 
@@ -38,7 +38,7 @@ func requireIdentityMessageSchema(
     on link: any Link
 ) async throws {
     guard handshakeMessageSchemasMatch(peerMessageSchema) else {
-        let reason = "unsupported message schema translation"
+        let reason = "unsupported message compatibility plan"
         await sendHandshakeSorry(link, reason: reason)
         throw ConnectionError.handshakeFailed(reason)
     }

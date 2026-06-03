@@ -50,6 +50,11 @@ private final class TaskInbox: @unchecked Sendable {
 
 @Test
 // r[verify schema.format.delivery]
+// r[verify schema.tracking.sent]
+// r[verify schema.tracking.bindings]
+// r[verify schema.exchange.idempotent]
+// r[verify schema.principles.sender-driven]
+// r[verify schema.principles.no-roundtrips]
 func schemaSendTrackerAdvertisesBindingOncePerDirection() {
     let tracker = SchemaSendTracker()
     let closure: [UInt8] = [1, 2, 3]
@@ -60,6 +65,9 @@ func schemaSendTrackerAdvertisesBindingOncePerDirection() {
 }
 
 @Test
+// r[verify schema.tracking.received]
+// r[verify schema.tracking.bindings]
+// r[verify schema.format.binding-roots]
 // r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.rx-args]
 func schemaTrackerRecordsChannelAuxiliaryRoots() {

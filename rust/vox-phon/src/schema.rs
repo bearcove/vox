@@ -2,10 +2,10 @@
 //!
 //! A peer describes its types to the other side as phon **self-describing** schema
 //! bytes (this is what CBOR used to carry). The receiver parses that closure into a
-//! [`SchemaBundle`], then builds a compatibility decode program reconciling the
-//! *writer's* schema against the *reader's* derived descriptor — phon's
+//! [`SchemaBundle`], then builds a compatibility decode program from the
+//! *writer's* schema to the *reader's* derived descriptor — phon's
 //! `lower_decode` (`r[zerocopy.framing.value.decode-plan]`). Every decode goes through this; there is
-//! no same-version shortcut (the drift-free case is just the degenerate output of
+//! no same-version shortcut (the schema-identical case is just the degenerate output of
 //! the one program, `r[ir.inlining]`).
 //!
 //! Wire framing of a closure: `u64` root id, `u32` schema count, then each schema as
@@ -231,9 +231,9 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
     })
 }
 
-/// A prebuilt compatibility decode program: the writer schema reconciled against the
+/// A prebuilt compatibility decode program: the writer schema matched against the
 /// reader type `T`'s descriptor, lowered once. Build it per `(writer root, T)` and
-/// reuse it for every message — the reconciliation cost is paid here, not per decode.
+/// reuse it for every message — the compatibility-plan cost is paid here, not per decode.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 struct NativeDecodeProgram(phon_jit::native::NativeDecode);
 
@@ -302,13 +302,13 @@ impl DecodeProgram {
 unsafe impl Send for DecodeProgram {}
 unsafe impl Sync for DecodeProgram {}
 
-/// Build the compat decode program reconciling `writer`'s schema against `T`'s
+/// Build the compat decode program from `writer`'s schema against `T`'s
 /// derived descriptor (`r[zerocopy.framing.value.decode-plan]`). Fails if the schemas are
 /// incompatible — before any bytes are touched.
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be derived, the writer root is unknown, or the schemas
-/// cannot be reconciled.
+/// cannot produce a compatibility decode program.
 pub fn build_decode_program<'a, T: Facet<'a>>(
     writer: &SchemaBundle,
 ) -> Result<DecodeProgram, Error> {
@@ -407,9 +407,9 @@ pub fn to_self_describing<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error>
 }
 
 /// Decode a self-contained message produced by [`to_self_describing`] into an OWNED
-/// `T`: parse the embedded writer schema closure, reconcile it against `T`
+/// `T`: parse the embedded writer schema closure, build a compatibility decode program against `T`
 /// (`r[zerocopy.framing.value.decode-plan]`), and decode the value. The handshake decode — so even the
-/// bootstrap message reconciles writer↔reader rather than assuming same-version.
+/// bootstrap message uses writer→reader planning rather than assuming same-version.
 ///
 /// # Errors
 /// [`Error`] for malformed framing, an undecodable schema, or incompatible schemas.
@@ -431,9 +431,9 @@ pub fn from_self_describing<T: Facet<'static>>(bytes: &[u8]) -> Result<T, Error>
 mod tests {
     use super::*;
 
-    // Writer and reader drift: the writer struct has an extra field the reader
+    // Writer and reader compatibility: the writer struct has an extra field the reader
     // lacks (skipped), and the reader has a defaulted field the writer lacks
-    // (defaulted). The decode reconciles both — the compat path, exercised end to end
+    // (defaulted). The compatibility decode handles both — the compat path, exercised end to end
     // over a real schema exchange.
     #[derive(Facet)]
     struct Writer {
@@ -457,7 +457,7 @@ mod tests {
 
     // r[verify zerocopy.framing.value.decode-plan]
     #[test]
-    fn compat_decode_reconciles_writer_and_reader_drift() {
+    fn compat_decode_bridges_writer_and_reader_changes() {
         // The writer sends its schema closure.
         let writer_bytes = schema_bytes::<Writer>().expect("writer schema bytes");
         let bundle = parse_schema_bytes(&writer_bytes).expect("parse bundle");
@@ -470,7 +470,7 @@ mod tests {
         };
         let wire = crate::to_vec(&value).expect("encode writer value");
 
-        // The reader reconciles the writer schema against its own type and decodes.
+        // The reader builds a compatibility decode program from the writer schema and decodes.
         let decoded: Reader2 = decode_compat(&wire, &bundle).expect("compat decode");
         assert_eq!(
             decoded,

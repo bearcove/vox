@@ -77,6 +77,7 @@ pub fn generate_phon_wire() -> String {
 }
 
 /// Generate method IDs as a TypeScript constant record.
+// r[impl schema.method-id]
 pub fn generate_method_ids(methods: &[&MethodDescriptor]) -> String {
     use crate::render::{fq_name, hex_u64};
 

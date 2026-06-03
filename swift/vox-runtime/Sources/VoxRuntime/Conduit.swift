@@ -8,8 +8,9 @@ public protocol Conduit: Sendable {
 }
 
 /// A conduit over a raw `Link`: the envelope rides phon (`encodeMessage` /
-/// `decodeMessage`). The decoder reconciles the peer's advertised Message schema
+/// `decodeMessage`). The decoder uses the peer's advertised Message schema
 /// (from the handshake) against the local reader.
+/// r[impl conduit.bare]
 public final class BareConduit: Conduit, @unchecked Sendable {
     public let link: any Link
     private let decode: MessageDecoder

@@ -124,6 +124,7 @@ class VoxCallImpl implements VoxCall {
    * binding, or undefined when already sent on this connection
    * (`r[schema.exchange.idempotent]`).
    */
+  // r[impl schema.exchange.callee]
   private prepareResponseSchemas(): Uint8Array | undefined {
     const nums = this.schemaSendTracker.prepareSchemas(
       this.method.id,
@@ -319,6 +320,8 @@ export class Driver {
 
     try {
       await this.runPreHooks(context);
+      // r[impl schema.errors.call-level]
+      // r[impl schema.errors.call-level.callee]
       const args = this.decodeArgs(
         descriptor,
         method,
@@ -415,9 +418,10 @@ export class Driver {
     }
     const registry = descriptor.registry;
 
-    // Decode the args tuple, reconciling the peer's writer closure (recorded by
+    // Decode the args tuple using the peer's writer closure (recorded by
     // the session in the `schemas:` field) against our `argsRoot` reader. A 0-arg
     // method carries no bytes. Falls back to writer==reader when nothing was sent.
+    // r[impl schema.errors.call-level.callee]
     let values: unknown[] = [];
     if (incoming.args.length > 0) {
       const decoder =
