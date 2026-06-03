@@ -20,9 +20,14 @@ private struct LiveOperation: Sendable {
     var waiters: [UInt64]
 }
 
+struct SealedOperationResponse: Sendable {
+    let payload: [UInt8]
+    let responseSchemaClosure: [UInt8]
+}
+
 private struct SealedOperation: Sendable {
     let stored: StoredOperation
-    let payload: [UInt8]
+    let response: SealedOperationResponse
 }
 
 private enum OperationState: Sendable {
@@ -35,7 +40,7 @@ private enum OperationState: Sendable {
 enum OperationAdmit: Sendable {
     case start
     case attached
-    case replay([UInt8])
+    case replay(SealedOperationResponse)
     case conflict
     case indeterminate
 }
@@ -84,7 +89,7 @@ actor OperationRegistry {
             guard sealed.stored.signature.matches(methodId: methodId, args: args) else {
                 return .conflict
             }
-            return .replay(sealed.payload)
+            return .replay(sealed.response)
         case .released(let stored), .indeterminate(let stored):
             guard stored.signature.matches(methodId: methodId, args: args) else {
                 return .conflict
@@ -104,7 +109,7 @@ actor OperationRegistry {
         }
     }
 
-    func seal(ownerRequestId: UInt64, payload: [UInt8]) -> [UInt64] {
+    func seal(ownerRequestId: UInt64, response: SealedOperationResponse) -> [UInt64] {
         guard let operationId = requestToOperation[ownerRequestId],
             let existing = states[operationId]
         else {
@@ -119,7 +124,7 @@ actor OperationRegistry {
         states[operationId] = .sealed(
             SealedOperation(
                 stored: live.stored,
-                payload: payload
+                response: response
             )
         )
         return live.waiters

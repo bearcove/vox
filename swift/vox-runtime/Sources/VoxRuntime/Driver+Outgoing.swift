@@ -90,7 +90,12 @@ extension Driver {
             } else {
                 checkedPayload = payload
             }
-            let waiters = await operations.seal(ownerRequestId: requestId, payload: checkedPayload)
+            // r[impl schema.interaction.retry]
+            let sealedResponse = SealedOperationResponse(
+                payload: checkedPayload,
+                responseSchemaClosure: responseSchemaClosure
+            )
+            let waiters = await operations.seal(ownerRequestId: requestId, response: sealedResponse)
             if !waiters.isEmpty {
                 for waiter in waiters {
                     guard let replay = await responseMessage(requestId: waiter, payload: checkedPayload, schemas: schemas) else {

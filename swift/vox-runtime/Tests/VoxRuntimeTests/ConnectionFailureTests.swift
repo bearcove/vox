@@ -357,6 +357,7 @@ private actor BlockingDispatchProbe {
 
 private struct BlockingResponseDispatcher: ServiceDispatcher {
     let probe: BlockingDispatchProbe
+    let responseSchemaClosure: [UInt8]
 
     func retryPolicy(methodId _: UInt64) -> RetryPolicy {
         .persistIdem
@@ -370,7 +371,7 @@ private struct BlockingResponseDispatcher: ServiceDispatcher {
     ) async {}
 
     func dispatch(
-        methodId _: UInt64,
+        methodId: UInt64,
         payload _: [UInt8],
         requestId: UInt64,
         channels _: [UInt64],
@@ -380,7 +381,13 @@ private struct BlockingResponseDispatcher: ServiceDispatcher {
         taskTx: @escaping @Sendable (TaskMessage) -> Void
     ) async {
         await probe.waitForRelease()
-        taskTx(.response(requestId: requestId, payload: [0x42]))
+        taskTx(
+            .response(
+                requestId: requestId,
+                payload: [0x42],
+                methodId: methodId,
+                responseSchemaClosure: responseSchemaClosure
+            ))
     }
 }
 
@@ -461,6 +468,28 @@ private func awaitResponsePayload(
                 request.id == requestId
             {
                 return Array(response.ret)
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
+private func awaitResponseSchemas(
+    _ transport: ScriptedTransport,
+    requestId: UInt64,
+    timeoutMs: UInt64 = 1_000
+) async -> [UInt8]? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent {
+            if case .requestMessage(let request) = message.payload,
+                case .response(let response) = request.body,
+                request.id == requestId
+            {
+                return Array(response.schemas)
             }
         }
         try? await Task.sleep(nanoseconds: 5_000_000)
@@ -618,6 +647,7 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify schema.interaction.retry]
     @Test func duplicateOperationIdAttachesLiveAndReplaysSealedOutcome() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(
@@ -629,9 +659,13 @@ struct ConnectionFailureTests {
                     metadata: appendRetrySupportMetadata(.null)
                 )))
         let probe = BlockingDispatchProbe()
+        let responseSchemaClosure: [UInt8] = [0xFE, 0xED, 0xFA, 0xCE]
         let (_, driver, _, _, _) = try await establishAcceptor(
             conduit: transport,
-            dispatcher: BlockingResponseDispatcher(probe: probe)
+            dispatcher: BlockingResponseDispatcher(
+                probe: probe,
+                responseSchemaClosure: responseSchemaClosure
+            )
         )
         let driverTask = Task {
             try await driver.run()
@@ -679,6 +713,8 @@ struct ConnectionFailureTests {
             #expect(await awaitResponsePayload(transport, requestId: 11) == [0x42])
             #expect(await awaitResponsePayload(transport, requestId: 13) == [0x42])
 
+            driver.schemaSendTracker.reset()
+
             await transport.enqueueMessage(
                 .request(
                     connId: 0,
@@ -690,6 +726,7 @@ struct ConnectionFailureTests {
             )
 
             #expect(await awaitResponsePayload(transport, requestId: 15) == [0x42])
+            #expect(await awaitResponseSchemas(transport, requestId: 15) == responseSchemaClosure)
             #expect(await probe.count() == 1)
         }
     }

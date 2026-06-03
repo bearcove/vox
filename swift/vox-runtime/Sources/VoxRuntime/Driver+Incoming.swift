@@ -231,8 +231,16 @@ extension Driver {
                 break
             case .attached:
                 return
-            case .replay(let replayPayload):
-                taskTx(.response(requestId: requestId, payload: replayPayload))
+            case .replay(let replayResponse):
+                // r[impl schema.interaction.retry]
+                taskTx(
+                    .response(
+                        requestId: requestId,
+                        payload: replayResponse.payload,
+                        methodId: methodId,
+                        responseSchemaClosure: replayResponse.responseSchemaClosure
+                    )
+                )
                 return
             case .conflict:
                 taskTx(
