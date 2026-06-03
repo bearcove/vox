@@ -130,10 +130,11 @@ enum BindingDirection {
 }
 ```
 
-A schema closure is self-describing and self-contained: it begins with the root
-type's schema ID and includes every composite schema the receiver needs, so the
-receiver can rebuild a phon registry and a decode plan from the closure alone
-(plus any composites already received on this connection).
+A schema binding is self-describing and self-contained: it identifies the root
+type IDs that matter for the binding and includes every composite schema the
+receiver needs, so the receiver can rebuild a phon registry and decode plans
+from the binding alone (plus any composites already received on this
+connection).
 
 > r[schema.format.self-contained]
 >
@@ -146,13 +147,12 @@ receiver can rebuild a phon registry and a decode plan from the closure alone
 > r[schema.format.delivery]
 >
 > A binding carrier (the `schemas` field of a `RequestCall`/`RequestResponse`,
-> or a standalone `SchemaMessage`) MUST carry phon schema-closure bytes that
+> or a standalone `SchemaMessage`) MUST carry phon schema-binding bytes that
 > include:
 >
 >   * All schemas for the method's types that have not been previously sent on
 >     this connection, and
->   * The root type ID for one `(method_id, direction)` binding (the first entry
->     of the closure framing).
+>   * The primary root type ID for one `(method_id, direction)` binding.
 >
 > The root type for a response is always the full `Result<T, VoxError<E>>` wire
 > type, regardless of whether the handler succeeded or failed.
@@ -163,6 +163,21 @@ receiver can rebuild a phon registry and a decode plan from the closure alone
 > be established the first time this `(method_id, direction)` pair is introduced
 > on the connection, so the receiver knows which type ID is the root for this
 > method.
+
+> r[schema.format.binding-roots]
+>
+> A schema binding MUST identify exactly one **primary** root for the
+> `(method_id, direction)` pair and MAY identify auxiliary roots used by
+> payload-adjacent values that are not reachable from the primary wire shape.
+> Auxiliary roots are part of the same binding, not independent method
+> bindings. Each auxiliary root MUST be keyed by a stable semantic role so the
+> receiver can choose the correct writer root when building a decode plan.
+>
+> For request arguments, the primary root is the argument tuple's wire shape.
+> For responses, the primary root is the full response wire shape
+> `Result<T, VoxError<E>>`. Channel element roots (see
+> `r[schema.exchange.channels]`) are auxiliary roots because `Tx<T>` and
+> `Rx<T>` encode as opaque channel indices on the wire.
 
 # Schema tracking
 
@@ -247,9 +262,18 @@ for the entire service interface up front.
 > arguments contain `Tx<T>` or `Rx<T>`, the schema for the element type `T`
 > MUST be reachable from the caller's advertised schemas. On the wire a
 > channel handle is opaque (`r[rpc.channel.payload-encoding]`); its element
-> schema travels as part of the method's argument schema closure, keyed in the
-> generated per-method channel metadata. Channels MUST NOT appear in return
-> types (see `r[rpc.channel.placement]`).
+> schema therefore travels as an auxiliary root of the method's argument schema
+> binding (see `r[schema.format.binding-roots]`), keyed by the generated
+> per-method channel metadata:
+>
+>   * Argument index.
+>   * Channel direction (`Tx` or `Rx` from the holder's point of view).
+>   * Writer element root ID for that argument's `T`.
+>
+> The receiver MUST store this channel-element writer root alongside the
+> bound channel handle so that each incoming item is decoded through phon's
+> compatibility plan against the local element type. Channels MUST NOT appear
+> in return types (see `r[rpc.channel.placement]`).
 
 > r[schema.exchange.required]
 >
@@ -379,7 +403,9 @@ Schema exchange is designed to be transparent to the rest of the protocol.
 > Channel semantics (creation, flow control, close, reset) are unchanged.
 > The element type's schema is exchanged as part of the method's argument
 > schemas (see `r[schema.exchange.channels]`), and decode plans apply to
-> channel items the same way they apply to request/response payloads.
+> channel items the same way they apply to request/response payloads. The
+> writer root for a channel item is the channel element auxiliary root recorded
+> when the channel handle was bound, not the receiver's local element root.
 
 > r[schema.interaction.retry]
 >

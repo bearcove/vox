@@ -20,6 +20,8 @@ specs (
                     typescript/packages/vox-core/src/session.ts
                     typescript/packages/vox-core/src/stable_conduit.ts
                     typescript/packages/vox-core/src/driver.ts
+                    typescript/packages/vox-core/src/schema_tracker.ts
+                    typescript/packages/vox-core/src/schema_tracker.test.ts
                     typescript/packages/vox-core/src/channeling/registry.ts
                     typescript/packages/vox-core/src/channeling/registry.test.ts
                 )

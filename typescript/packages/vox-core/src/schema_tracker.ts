@@ -134,6 +134,7 @@ export class SchemaSendTracker {
    * to advertise for `(methodId, direction)`, or `[]` when already sent. The
    * closure hex comes from the generated `{service}Methods` table.
    */
+  // r[impl schema.format.delivery]
   prepareSchemas(methodId: bigint, direction: BindingDirection, closureHex: string): number[] {
     const key = bindingKey(methodId, direction);
     if (this.sent.has(key)) return [];

@@ -205,6 +205,7 @@ impl SchemaSendTracker {
     // r[impl schema.exchange.idempotent]
     // r[impl schema.principles.sender-driven]
     // r[impl schema.principles.no-roundtrips]
+    // r[impl schema.format.delivery]
     pub fn attach_schemas_for_shape_if_needed(
         &mut self,
         method_id: MethodId,
@@ -1524,6 +1525,7 @@ mod tests {
 
     // r[verify schema.principles.once-per-type]
     // r[verify schema.exchange.idempotent]
+    // r[verify schema.format.delivery]
     #[test]
     fn tracker_prepare_send_returns_payload_then_empty() {
         let mut tracker = SchemaSendTracker::new();
@@ -1549,6 +1551,7 @@ mod tests {
 
     // r[verify schema.tracking.transitive]
     // r[verify schema.tracking.sent]
+    // r[verify schema.format.self-contained]
     #[test]
     fn tracker_prepare_send_includes_transitive_deps() {
         // A nested *composite* (`Inner`) is a real transitive dependency: the phon

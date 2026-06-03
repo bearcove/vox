@@ -186,6 +186,7 @@ public final class SchemaSendTracker: @unchecked Sendable {
 
     /// The phon schema-closure bytes to advertise for `(methodId, direction)`, or `[]`
     /// when already sent.
+    // r[impl schema.format.delivery]
     public func prepareSchemas(_ methodId: UInt64, _ direction: SchemaBindingDirection, _ closure: [UInt8]) -> [UInt8] {
         let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }
