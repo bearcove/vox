@@ -257,6 +257,40 @@ func log(_ message: String) {
     NSLog("%@", "[\(pid)] \(message)")
 }
 
+let defaultSubjectInactivityTimeoutSecs: UInt64 = 60
+
+func subjectInactivityTimeoutNanoseconds() -> UInt64? {
+    let raw = ProcessInfo.processInfo.environment["SUBJECT_INACTIVITY_TIMEOUT_SECS"]
+    let secs = raw.flatMap(UInt64.init) ?? defaultSubjectInactivityTimeoutSecs
+    if secs == 0 {
+        return nil
+    }
+    return secs * 1_000_000_000
+}
+
+func runWithSubjectTimeout(
+    mode: String,
+    operation: @Sendable () async throws -> Void
+) async throws {
+    guard let timeout = subjectInactivityTimeoutNanoseconds() else {
+        try await operation()
+        return
+    }
+
+    let timeoutTask = Task {
+        try? await Task.sleep(nanoseconds: timeout)
+        if !Task.isCancelled {
+            log("subject \(mode) timed out after \(timeout / 1_000_000_000)s without exiting")
+            exit(124)
+        }
+    }
+    defer {
+        timeoutTask.cancel()
+    }
+
+    try await operation()
+}
+
 func sameShape(_ lhs: Shape, _ rhs: Shape) -> Bool {
     switch (lhs, rhs) {
     case (.point, .point):
@@ -295,8 +329,7 @@ func runServer() async throws {
     var rootMetadata: Metadata = .null
     rootMetadata.metaSet("vox-service", .string("Testbed"))
     rootMetadata.metaSet("vox-connection-kind", .string("root"))
-    let connection: Connection
-    let driver: Driver
+    let session: Session
     if addr.hasPrefix("local://") {
         let path = String(addr.dropFirst("local://".count))
         guard !path.isEmpty else {
@@ -304,14 +337,13 @@ func runServer() async throws {
             throw SubjectError.invalidAddr
         }
         let connector = UnixConnector(path: path)
-        let session = try await Session.initiator(
+        session = try await Session.initiator(
             connector,
             dispatcher: dispatcher,
             onConnection: acceptConnections
                 ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
             metadata: rootMetadata
         )
-        (connection, driver) = (session.rootConnection, session.driver)
     } else {
         let parts = addr.split(separator: ":")
         guard parts.count == 2, let port = Int(parts[1]) else {
@@ -320,19 +352,24 @@ func runServer() async throws {
         }
         let host = String(parts[0])
         let connector = TcpConnector(host: host, port: port)
-        let session = try await Session.initiator(
+        session = try await Session.initiator(
             connector,
             dispatcher: dispatcher,
             onConnection: acceptConnections
                 ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil,
             metadata: rootMetadata
         )
-        (connection, driver) = (session.rootConnection, session.driver)
     }
 
-    let rootConnection = connection
+    let rootConnection = session.rootConnection
     _ = rootConnection
-    try await driver.run()
+    do {
+        try await session.run()
+    } catch {
+        session.handle.shutdown()
+        throw error
+    }
+    session.handle.shutdown()
 }
 
 // MARK: - Client Mode
@@ -793,7 +830,7 @@ func runClient() async throws {
     log("handshake complete")
 
     // Spawn driver
-    Task {
+    let driverTask = Task {
         do {
             try await session.run()
         } catch {
@@ -804,7 +841,15 @@ func runClient() async throws {
     // Create client
     let client = TestbedClient(connection: session.connection)
     let scenario = ProcessInfo.processInfo.environment["CLIENT_SCENARIO"] ?? "echo"
-    try await runClientScenario(client: client, scenario: scenario)
+    do {
+        try await runClientScenario(client: client, scenario: scenario)
+    } catch {
+        session.handle.shutdown()
+        await driverTask.value
+        throw error
+    }
+    session.handle.shutdown()
+    await driverTask.value
 }
 
 func runServerListen() async throws {
@@ -819,7 +864,13 @@ func runServerListen() async throws {
         onConnection: acceptConnections
             ? DefaultConnectionAcceptor(dispatcher: dispatcher) : nil
     )
-    try await session.run()
+    do {
+        try await session.run()
+    } catch {
+        session.handle.shutdown()
+        throw error
+    }
+    session.handle.shutdown()
 }
 
 // MARK: - Errors
@@ -840,16 +891,18 @@ struct SubjectMain {
         log("subject-swift starting in \(mode) mode")
 
         do {
-            switch mode {
-            case "server":
-                try await runServer()
-            case "server-listen":
-                try await runServerListen()
-            case "client":
-                try await runClient()
-            default:
-                log("unknown SUBJECT_MODE: \(mode)")
-                exit(1)
+            try await runWithSubjectTimeout(mode: mode) {
+                switch mode {
+                case "server":
+                    try await runServer()
+                case "server-listen":
+                    try await runServerListen()
+                case "client":
+                    try await runClient()
+                default:
+                    log("unknown SUBJECT_MODE: \(mode)")
+                    exit(1)
+                }
             }
         } catch {
             log("error: \(error)")

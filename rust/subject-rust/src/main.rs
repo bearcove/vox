@@ -1,10 +1,15 @@
 //! Rust subject binary for the vox compliance suite.
 
+use std::future::Future;
+use std::time::Duration;
+
 use spec_proto::{Color, MathError, TestbedClient, TestbedDispatcher};
 use subject_rust::TestbedService;
 use tracing::info;
 use vox_core::initiator;
 use vox_stream::{local_link_source, tcp_link_source};
+
+const DEFAULT_SUBJECT_INACTIVITY_TIMEOUT_SECS: u64 = 60;
 
 fn main() -> Result<(), String> {
     tracing_subscriber::fmt()
@@ -22,10 +27,38 @@ fn main() -> Result<(), String> {
 
     let mode = std::env::var("SUBJECT_MODE").unwrap_or_else(|_| "server".to_string());
     match mode.as_str() {
-        "server" => rt.block_on(connect_and_serve()),
-        "client" => rt.block_on(run_client()),
-        "server-listen" => rt.block_on(listen_and_serve()),
+        "server" => rt.block_on(run_with_subject_timeout(&mode, connect_and_serve())),
+        "client" => rt.block_on(run_with_subject_timeout(&mode, run_client())),
+        "server-listen" => rt.block_on(run_with_subject_timeout(&mode, listen_and_serve())),
         other => Err(format!("unknown SUBJECT_MODE: {other}")),
+    }
+}
+
+fn subject_inactivity_timeout() -> Option<Duration> {
+    let secs = std::env::var("SUBJECT_INACTIVITY_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(DEFAULT_SUBJECT_INACTIVITY_TIMEOUT_SECS);
+    if secs == 0 {
+        None
+    } else {
+        Some(Duration::from_secs(secs))
+    }
+}
+
+async fn run_with_subject_timeout<F>(mode: &str, future: F) -> Result<(), String>
+where
+    F: Future<Output = Result<(), String>>,
+{
+    let Some(timeout) = subject_inactivity_timeout() else {
+        return future.await;
+    };
+
+    tokio::select! {
+        result = future => result,
+        _ = tokio::time::sleep(timeout) => {
+            Err(format!("subject {mode} timed out after {timeout:?} without exiting"))
+        }
     }
 }
 
@@ -59,13 +92,16 @@ async fn listen_and_serve() -> Result<(), String> {
         .map_err(|e| format!("accept: {e}"))?;
     stream.set_nodelay(true).ok();
 
-    let _client = acceptor_on(vox_stream::StreamLink::tcp(stream))
+    let client = acceptor_on(vox_stream::StreamLink::tcp(stream))
         .on_connection(TestbedDispatcher::new(TestbedService))
         .establish::<TestbedClient>()
         .await
         .map_err(|e| format!("handshake: {e}"))?;
 
-    std::future::pending::<()>().await;
+    client.caller.closed().await;
+    if let Some(session) = client.session.as_ref() {
+        session.shutdown().ok();
+    }
     Ok(())
 }
 
@@ -92,8 +128,10 @@ async fn connect_and_serve() -> Result<(), String> {
         _ => return Err(format!("unsupported PEER_ADDR scheme: {scheme}")),
     };
 
-    let _root_caller_guard = root_caller_guard;
-    std::future::pending::<()>().await;
+    root_caller_guard.caller.closed().await;
+    if let Some(session) = root_caller_guard.session.as_ref() {
+        session.shutdown().ok();
+    }
     Ok(())
 }
 
@@ -634,5 +672,11 @@ async fn run_client() -> Result<(), String> {
         other => return Err(format!("unknown CLIENT_SCENARIO: {other}")),
     }
 
+    if let Some(session) = client.session.as_ref() {
+        session.shutdown().ok();
+    }
+    tokio::time::timeout(Duration::from_secs(1), client.caller.closed())
+        .await
+        .ok();
     Ok(())
 }

@@ -45,6 +45,40 @@ setVoxLogger({
   error: (...args) => console.error(...args),
 });
 
+const DEFAULT_SUBJECT_INACTIVITY_TIMEOUT_SECS = 60;
+
+function subjectInactivityTimeoutMs(): number | null {
+  const raw = process.env.SUBJECT_INACTIVITY_TIMEOUT_SECS;
+  const secs = raw === undefined ? DEFAULT_SUBJECT_INACTIVITY_TIMEOUT_SECS : Number(raw);
+  if (!Number.isFinite(secs) || secs <= 0) {
+    return null;
+  }
+  return secs * 1000;
+}
+
+async function withSubjectTimeout<T>(mode: string, run: () => Promise<T>): Promise<T> {
+  const timeoutMs = subjectInactivityTimeoutMs();
+  if (timeoutMs === null) {
+    return run();
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`subject ${mode} timed out after ${timeoutMs}ms without exiting`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 // Service implementation
 class TestbedService implements TestbedHandler {
   private async streamValues(count: number, output: Tx<number>): Promise<void> {
@@ -319,6 +353,7 @@ async function runServer() {
   });
   const root = established.rootConnection();
   const driver = new Driver(root, new TestbedDispatcher(new TestbedService()));
+  const handle = established.handle();
 
   try {
     await driver.run();
@@ -328,6 +363,8 @@ async function runServer() {
       return;
     }
     throw e;
+  } finally {
+    handle.shutdown();
   }
 }
 
@@ -758,25 +795,30 @@ async function runServerListen() {
     established.rootConnection(),
     new TestbedDispatcher(new TestbedService()),
   );
+  const handle = established.handle();
 
   try {
     await driver.run();
   } catch (e) {
     if (e instanceof SessionError) return;
     throw e;
+  } finally {
+    handle.shutdown();
   }
 }
 
 async function main() {
   const mode = process.env.SUBJECT_MODE ?? "server";
 
-  if (mode === "client") {
-    await runClient();
-  } else if (mode === "server-listen") {
-    await runServerListen();
-  } else {
-    await runServer();
-  }
+  await withSubjectTimeout(mode, async () => {
+    if (mode === "client") {
+      await runClient();
+    } else if (mode === "server-listen") {
+      await runServerListen();
+    } else {
+      await runServer();
+    }
+  });
 }
 
 main().catch((e) => {

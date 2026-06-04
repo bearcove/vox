@@ -428,6 +428,57 @@ where
     });
 }
 
+async fn wait_for_child_exit(child: &mut Child, reason: &str, timeout: Duration) -> bool {
+    let pid = child.id().unwrap_or_default();
+    match child.try_wait() {
+        Ok(Some(status)) => {
+            eprintln!("[subject:{pid}] exited during {reason}: {status}");
+            return true;
+        }
+        Ok(None) => {}
+        Err(err) => {
+            eprintln!("[subject:{pid}] try_wait failed during {reason}: {err}");
+        }
+    }
+
+    match tokio::time::timeout(timeout, child.wait()).await {
+        Ok(Ok(status)) => {
+            eprintln!("[subject:{pid}] exited during {reason}: {status}");
+            true
+        }
+        Ok(Err(err)) => {
+            eprintln!("[subject:{pid}] wait failed during {reason}: {err}");
+            false
+        }
+        Err(_) => false,
+    }
+}
+
+async fn terminate_child(child: &mut Child, reason: &str) {
+    let pid = child.id().unwrap_or_default();
+    if wait_for_child_exit(child, reason, Duration::from_millis(0)).await {
+        return;
+    }
+
+    eprintln!("[subject:{pid}] terminating: {reason}");
+    if let Err(err) = child.start_kill() {
+        eprintln!("[subject:{pid}] start_kill failed during {reason}: {err}");
+        return;
+    }
+
+    match tokio::time::timeout(Duration::from_secs(2), child.wait()).await {
+        Ok(Ok(status)) => {
+            eprintln!("[subject:{pid}] reaped after termination: {status}");
+        }
+        Ok(Err(err)) => {
+            eprintln!("[subject:{pid}] wait after termination failed: {err}");
+        }
+        Err(_) => {
+            eprintln!("[subject:{pid}] timed out waiting to reap after termination");
+        }
+    }
+}
+
 async fn spawn_subject_cmd_with_env(
     cmd: &str,
     peer_addr: &str,
@@ -458,6 +509,7 @@ async fn spawn_subject_cmd_with_env(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    command.kill_on_drop(true);
     for (k, v) in extra_env {
         command.env(k, v);
     }
@@ -503,21 +555,44 @@ pub async fn accept_subject_ws(cmd: &str) -> Result<(TestbedClient, Child, Sessi
     let child = spawn_subject_cmd_with_env(cmd, &ws_url, &[]).await?;
 
     // Use a timeout to catch subjects that fail to connect.
-    let (tcp_stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
-        .await
-        .map_err(|_| "timed out waiting for WebSocket subject to connect".to_string())?
-        .map_err(|e| format!("accept: {e}"))?;
+    let mut child = child;
+    let (tcp_stream, _) =
+        match tokio::time::timeout(Duration::from_secs(5), listener.accept()).await {
+            Ok(Ok(accepted)) => accepted,
+            Ok(Err(err)) => {
+                terminate_child(&mut child, "WebSocket accept failed").await;
+                return Err(format!("accept: {err}"));
+            }
+            Err(_) => {
+                terminate_child(
+                    &mut child,
+                    "timed out waiting for WebSocket subject to connect",
+                )
+                .await;
+                return Err("timed out waiting for WebSocket subject to connect".to_string());
+            }
+        };
     tcp_stream.set_nodelay(true).ok();
 
-    let ws = WsLink::server(tcp_stream)
-        .await
-        .map_err(|e| format!("WebSocket upgrade: {e}"))?;
+    let ws = match WsLink::server(tcp_stream).await {
+        Ok(ws) => ws,
+        Err(err) => {
+            terminate_child(&mut child, "WebSocket upgrade failed").await;
+            return Err(format!("WebSocket upgrade: {err}"));
+        }
+    };
 
-    let client = acceptor_on(ws)
+    let client = match acceptor_on(ws)
         .on_connection(TestbedDispatcher::new(TestbedService::new()))
         .establish::<TestbedClient>()
         .await
-        .map_err(|e| format!("handshake: {e}"))?;
+    {
+        Ok(client) => client,
+        Err(err) => {
+            terminate_child(&mut child, "WebSocket handshake failed").await;
+            return Err(format!("handshake: {err}"));
+        }
+    };
     let sh = client.session.clone().unwrap();
 
     Ok((client, child, sh))
@@ -571,32 +646,32 @@ where
         SubjectTestTransport::Ws => accept_subject_ws(cmd).await?,
     };
 
-    // Monitor the child process — if it dies, drop the session handle
-    // so pending RPCs fail immediately.
     let child_pid = child.id().unwrap_or_default();
-    let (child_died_tx, child_died_rx) = tokio::sync::oneshot::channel::<String>();
-    let monitor = tokio::task::spawn(async move {
-        let status = child.wait().await;
-        let msg = match status {
-            Ok(s) => format!("subject (pid={child_pid}) exited: {s}"),
-            Err(e) => format!("subject (pid={child_pid}) wait error: {e}"),
-        };
-        eprintln!("[harness] {msg}");
-        // Drop the session handle to close the session, which unblocks
-        // any pending RPCs on the client.
-        drop(session_handle);
-        let _ = child_died_tx.send(msg);
-    });
-
-    let result = tokio::select! {
-        result = f(&client) => result,
-        Ok(msg) = child_died_rx => {
-            Err(format!("subject died during test: {msg}"))
+    let mut child_waited = false;
+    let result = {
+        let child_wait = child.wait();
+        tokio::pin!(child_wait);
+        tokio::select! {
+            result = f(&client) => result,
+            status = &mut child_wait => {
+                child_waited = true;
+                let msg = match status {
+                    Ok(status) => format!("subject (pid={child_pid}) exited: {status}"),
+                    Err(err) => format!("subject (pid={child_pid}) wait error: {err}"),
+                };
+                eprintln!("[harness] {msg}");
+                Err(format!("subject died during test: {msg}"))
+            }
         }
     };
 
-    // Clean up: abort the monitor and kill the child if still alive.
-    monitor.abort();
+    drop(client);
+    drop(session_handle);
+    if !child_waited
+        && !wait_for_child_exit(&mut child, "session close", Duration::from_millis(500)).await
+    {
+        terminate_child(&mut child, "test completed before subject exited").await;
+    }
 
     result
 }
@@ -644,6 +719,7 @@ pub async fn spawn_server_subject(spec: SubjectSpec) -> Result<(String, Child), 
         .stdin(Stdio::null())
         .stdout(Stdio::piped()) // we read this ourselves
         .stderr(Stdio::piped()); // pumped after addr is read
+    command.kill_on_drop(true);
 
     let mut child = command
         .spawn()
@@ -653,8 +729,14 @@ pub async fn spawn_server_subject(spec: SubjectSpec) -> Result<(String, Child), 
 
     // Read stdout until we see LISTEN_ADDR=.  We must do this before
     // handing stdout to the log pump, because the pump would consume it.
-    let mut stdout = child.stdout.take().ok_or("no stdout from server subject")?;
-    let addr = tokio::time::timeout(Duration::from_secs(10), async {
+    let mut stdout = match child.stdout.take() {
+        Some(stdout) => stdout,
+        None => {
+            terminate_child(&mut child, "server subject had no stdout").await;
+            return Err("no stdout from server subject".to_string());
+        }
+    };
+    let addr = match tokio::time::timeout(Duration::from_secs(10), async {
         use tokio::io::AsyncBufReadExt;
         let mut reader = tokio::io::BufReader::new(&mut stdout);
         let mut line = String::new();
@@ -676,7 +758,27 @@ pub async fn spawn_server_subject(spec: SubjectSpec) -> Result<(String, Child), 
         }
     })
     .await
-    .map_err(|_| "timed out waiting for server subject to announce listen address".to_string())??;
+    {
+        Ok(Ok(addr)) => addr,
+        Ok(Err(err)) => {
+            terminate_child(
+                &mut child,
+                "server subject failed before announcing address",
+            )
+            .await;
+            return Err(err);
+        }
+        Err(_) => {
+            terminate_child(
+                &mut child,
+                "timed out waiting for server subject to announce listen address",
+            )
+            .await;
+            return Err(
+                "timed out waiting for server subject to announce listen address".to_string(),
+            );
+        }
+    };
 
     // Hand the rest of stdout and all of stderr to the log pump.
     spawn_subject_log_pump(stdout, pid, "stdout");
@@ -709,19 +811,43 @@ pub fn run_cross_language_scenario(
         let (server_addr, mut server_child) = spawn_server_subject(server_spec).await?;
 
         let client_cmd = subject_cmd_for_language(client_spec.language);
-        let mut client_child = spawn_subject_cmd_with_env(
+        let mut client_child = match spawn_subject_cmd_with_env(
             &client_cmd,
             &server_addr,
             &[("SUBJECT_MODE", "client"), ("CLIENT_SCENARIO", &scenario)],
         )
-        .await?;
+        .await
+        {
+            Ok(child) => child,
+            Err(err) => {
+                terminate_child(&mut server_child, "client subject failed to spawn").await;
+                return Err(err);
+            }
+        };
 
-        let status = tokio::time::timeout(Duration::from_secs(15), client_child.wait())
-            .await
-            .map_err(|_| format!("cross-language scenario `{scenario}` timed out"))?
-            .map_err(|e| format!("wait on client subject: {e}"))?;
+        let status = match tokio::time::timeout(Duration::from_secs(15), client_child.wait()).await
+        {
+            Ok(Ok(status)) => status,
+            Ok(Err(err)) => {
+                terminate_child(&mut server_child, "client subject wait failed").await;
+                return Err(format!("wait on client subject: {err}"));
+            }
+            Err(_) => {
+                terminate_child(&mut client_child, "cross-language client timed out").await;
+                terminate_child(&mut server_child, "cross-language scenario timed out").await;
+                return Err(format!("cross-language scenario `{scenario}` timed out"));
+            }
+        };
 
-        server_child.kill().await.ok();
+        if !wait_for_child_exit(
+            &mut server_child,
+            "cross-language client exit",
+            Duration::from_millis(500),
+        )
+        .await
+        {
+            terminate_child(&mut server_child, "cross-language scenario completed").await;
+        }
 
         if status.success() {
             Ok(())
@@ -791,13 +917,21 @@ async fn run_subject_client_scenario_tcp(
         }
     });
 
-    let status = tokio::time::timeout(Duration::from_secs(10), child.wait())
-        .await
-        .map_err(|_| format!("subject client scenario `{scenario}` timed out"))?
-        .map_err(|e| format!("wait on subject process: {e}"))?;
+    let status = match tokio::time::timeout(Duration::from_secs(10), child.wait()).await {
+        Ok(Ok(status)) => status,
+        Ok(Err(err)) => {
+            accept_task.abort();
+            terminate_child(&mut child, "subject client wait failed").await;
+            return Err(format!("wait on subject process: {err}"));
+        }
+        Err(_) => {
+            accept_task.abort();
+            terminate_child(&mut child, "subject client scenario timed out").await;
+            return Err(format!("subject client scenario `{scenario}` timed out"));
+        }
+    };
 
     accept_task.abort();
-
     if status.success() {
         Ok(())
     } else {
@@ -858,13 +992,23 @@ async fn run_subject_client_scenario_ws(
         }
     });
 
-    let status = tokio::time::timeout(Duration::from_secs(10), child.wait())
-        .await
-        .map_err(|_| format!("subject client scenario (ws) `{scenario}` timed out"))?
-        .map_err(|e| format!("wait on subject process: {e}"))?;
+    let status = match tokio::time::timeout(Duration::from_secs(10), child.wait()).await {
+        Ok(Ok(status)) => status,
+        Ok(Err(err)) => {
+            accept_task.abort();
+            terminate_child(&mut child, "WebSocket subject client wait failed").await;
+            return Err(format!("wait on subject process: {err}"));
+        }
+        Err(_) => {
+            accept_task.abort();
+            terminate_child(&mut child, "WebSocket subject client scenario timed out").await;
+            return Err(format!(
+                "subject client scenario (ws) `{scenario}` timed out"
+            ));
+        }
+    };
 
     accept_task.abort();
-
     if status.success() {
         Ok(())
     } else {
@@ -1019,7 +1163,13 @@ async fn accept_subject_tcp(cmd: &str) -> Result<(TestbedClient, Child, SessionH
     let (stream, _) = loop {
         tokio::select! {
             accepted = listener.accept() => {
-                break accepted.map_err(|e| format!("accept: {e}"))?;
+                match accepted {
+                    Ok(accepted) => break accepted,
+                    Err(err) => {
+                        terminate_child(&mut child, "TCP accept failed").await;
+                        return Err(format!("accept: {err}"));
+                    }
+                }
             }
             status = child.wait() => {
                 let status = status.map_err(|e| format!("wait on subject process: {e}"))?;
@@ -1032,6 +1182,7 @@ async fn accept_subject_tcp(cmd: &str) -> Result<(TestbedClient, Child, SessionH
                 {
                     return Err(format!("subject exited before connecting: {status}"));
                 }
+                terminate_child(&mut child, "subject did not connect within 5s").await;
                 return Err(format!(
                     "subject did not connect within 5s (pid={pid}, addr={addr}, elapsed={:?})",
                     wait_started.elapsed()
@@ -1053,11 +1204,17 @@ async fn accept_subject_tcp(cmd: &str) -> Result<(TestbedClient, Child, SessionH
     };
     stream.set_nodelay(true).unwrap();
 
-    let client = acceptor_transport(StreamLink::tcp(stream))
+    let client = match acceptor_transport(StreamLink::tcp(stream))
         .on_connection(NoopHandler)
         .establish::<TestbedClient>()
         .await
-        .map_err(|e| format!("handshake: {e}"))?;
+    {
+        Ok(client) => client,
+        Err(err) => {
+            terminate_child(&mut child, "TCP handshake failed").await;
+            return Err(format!("handshake: {err}"));
+        }
+    };
     let sh = client.session.clone().unwrap();
 
     Ok((client, child, sh))
