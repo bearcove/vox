@@ -105,9 +105,9 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
         taskTx?(.close(channelId: channelId))
     }
 
-    func finishRetryBinding() {
+    func finishCallBinding() {
         close()
-        (pairedRx as? AnyRetryFinalizableChannel)?.finishRetryBinding()
+        (pairedRx as? AnyCallBindingFinalizableChannel)?.finishCallBinding()
     }
 
     private func waitForSendBinding() async throws
@@ -159,7 +159,7 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var bindingWaiters: [CheckedContinuation<Void, Never>] = []
     private var receivers: [ChannelReceiver] = []
-    private var retryFinalized = false
+    private var callBindingFinalized = false
 
     // Weak reference to paired Tx
     weak var pairedTx: AnyObject?
@@ -220,7 +220,7 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
                     if let head = receivers.first, head === receiver {
                         receivers.removeFirst()
                     }
-                    return retryFinalized && receivers.isEmpty
+                    return callBindingFinalized && receivers.isEmpty
                 }
                 if shouldEnd {
                     return nil
@@ -228,13 +228,13 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
                 continue
             }
 
-            let shouldEnd = lock.withLock { retryFinalized && receivers.isEmpty }
+            let shouldEnd = lock.withLock { callBindingFinalized && receivers.isEmpty }
             if shouldEnd {
                 return nil
             }
             await withCheckedContinuation { continuation in
                 let shouldResumeImmediately = lock.withLock { () -> Bool in
-                    if !receivers.isEmpty || (retryFinalized && receivers.isEmpty) {
+                    if !receivers.isEmpty || (callBindingFinalized && receivers.isEmpty) {
                         return true
                     }
                     bindingWaiters.append(continuation)
@@ -247,9 +247,9 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
         }
     }
 
-    func finishRetryBinding() {
+    func finishCallBinding() {
         let waiters = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
-            retryFinalized = true
+            callBindingFinalized = true
             let waiters = bindingWaiters
             bindingWaiters.removeAll()
             return waiters
@@ -364,8 +364,8 @@ protocol AnyUnboundTxSender: AnyObject {
     )
 }
 
-protocol AnyRetryFinalizableChannel: AnyObject {
-    func finishRetryBinding()
+protocol AnyCallBindingFinalizableChannel: AnyObject {
+    func finishCallBinding()
 }
 
 extension UnboundTx: AnyUnboundTxSender {
@@ -378,7 +378,7 @@ extension UnboundTx: AnyUnboundTxSender {
     }
 }
 
-extension UnboundTx: AnyRetryFinalizableChannel {}
+extension UnboundTx: AnyCallBindingFinalizableChannel {}
 
 protocol AnyUnboundRxReceiver: AnyObject {
     func bindForReceiving(channelId: ChannelId, receiver: ChannelReceiver)
@@ -390,4 +390,4 @@ extension UnboundRx: AnyUnboundRxReceiver {
     }
 }
 
-extension UnboundRx: AnyRetryFinalizableChannel {}
+extension UnboundRx: AnyCallBindingFinalizableChannel {}

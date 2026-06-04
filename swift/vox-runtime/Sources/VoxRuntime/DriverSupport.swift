@@ -8,7 +8,7 @@ struct InFlightResponseContext: Sendable {
 enum DriverEvent: Sendable {
     case incomingMessage(Message)
     case wake
-    case retryTick
+    case keepaliveTick
     case conduitClosed
     case conduitFailed(String)
 }

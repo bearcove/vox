@@ -39,10 +39,15 @@ specs (
                     typescript/packages/vox-core/src/metadata.test.ts
                     typescript/packages/vox-core/src/schema_tracker.ts
                     typescript/packages/vox-core/src/schema_tracker.test.ts
+                    typescript/packages/vox-core/src/channeling/allocator.ts
                     typescript/packages/vox-core/src/channeling/binding.ts
                     typescript/packages/vox-core/src/channeling/binding.test.ts
+                    typescript/packages/vox-core/src/channeling/pair.ts
                     typescript/packages/vox-core/src/channeling/registry.ts
                     typescript/packages/vox-core/src/channeling/registry.test.ts
+                    typescript/packages/vox-core/src/channeling/rx.ts
+                    typescript/packages/vox-core/src/channeling/tx.ts
+                    typescript/packages/vox-core/src/channeling/types.ts
                     typescript/packages/vox-wire/src/codec.ts
                     typescript/packages/vox-wire/src/codec.test.ts
                 )

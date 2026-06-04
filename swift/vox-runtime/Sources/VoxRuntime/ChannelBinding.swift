@@ -75,10 +75,10 @@ extension VoxConnection {
 }
 
 /// Finalize a bound channel handle when its call settles (mirrors TS `finalize`):
-/// completes any retry binding so the paired `Rx`'s receive loop terminates instead
-/// of blocking for a retry that will never come.
-public func finalizeChannel<T>(_ tx: UnboundTx<T>) { tx.finishRetryBinding() }
-public func finalizeChannel<T>(_ rx: UnboundRx<T>) { rx.finishRetryBinding() }
+/// closes or finalizes the paired call-bound endpoint so the receive loop can
+/// terminate once no further items can arrive for that call binding.
+public func finalizeChannel<T>(_ tx: UnboundTx<T>) { tx.finishCallBinding() }
+public func finalizeChannel<T>(_ rx: UnboundRx<T>) { rx.finishCallBinding() }
 
 // MARK: - Server-side binding (the dispatcher creates the local handle)
 

@@ -679,7 +679,7 @@ impl ChannelCore {
         }
     }
 
-    pub fn bind_retryable_receiver(self: &Arc<Self>, bound: BoundChannelReceiver) {
+    pub fn bind_logical_receiver(self: &Arc<Self>, bound: BoundChannelReceiver) {
         #[cfg(not(target_arch = "wasm32"))]
         if tokio::runtime::Handle::try_current().is_err() {
             self.set_binding(ChannelBinding::Receiver(bound));
@@ -768,7 +768,7 @@ impl ChannelCore {
             })
     }
 
-    pub fn finish_retry_binding(&self) {
+    pub fn finish_logical_receiver_binding(&self) {
         let mut guard = self
             .logical_receiver
             .lock()
@@ -1583,9 +1583,9 @@ impl<T> Tx<T> {
     }
 
     #[doc(hidden)]
-    pub fn finish_retry_binding(&self) {
+    pub fn finish_call_binding(&self) {
         if let Some(core) = &self.core.inner {
-            core.finish_retry_binding();
+            core.finish_logical_receiver_binding();
         }
     }
 }
@@ -1630,7 +1630,7 @@ impl<T> TryFrom<&Tx<T>> for ChannelId {
             };
             let (channel_id, bound) = binder.create_rx_with_context(Some(value.debug_context));
             if let Some(core) = &value.core.inner {
-                core.bind_retryable_receiver(bound);
+                core.bind_logical_receiver(bound);
             }
             Ok(channel_id)
         })
@@ -2533,7 +2533,7 @@ mod tests {
         let (_tx, rx_inner) = channel_mailbox("vox_types.channel.test.logical_rx_drop", 1);
         let replenisher = Arc::new(CountingReplenisher::new());
         let core = Arc::new(ChannelCore::new(ChannelDebugContext::default()));
-        core.bind_retryable_receiver(BoundChannelReceiver {
+        core.bind_logical_receiver(BoundChannelReceiver {
             receiver: rx_inner,
             liveness: None,
             replenisher: Some(replenisher.clone()),
@@ -2551,7 +2551,7 @@ mod tests {
         let (tx, rx_inner) = channel_mailbox("vox_types.channel.test.rx5", 1);
         let replenisher = Arc::new(CountingReplenisher::new());
         let core = Arc::new(ChannelCore::new(ChannelDebugContext::default()));
-        core.bind_retryable_receiver(BoundChannelReceiver {
+        core.bind_logical_receiver(BoundChannelReceiver {
             receiver: rx_inner,
             liveness: None,
             replenisher: Some(replenisher.clone()),
@@ -2610,7 +2610,7 @@ mod tests {
         }
 
         fn create_rx(&self) -> (ChannelId, BoundChannelReceiver) {
-            let (tx, rx) = channel_mailbox("vox_types.channel.test.bind_retryable1", 8);
+            let (tx, rx) = channel_mailbox("vox_types.channel.test.bind_logical1", 8);
             // Keep the sender alive by leaking it — test only.
             std::mem::forget(tx);
             (
@@ -2629,7 +2629,7 @@ mod tests {
         }
 
         fn register_rx(&self, _channel_id: ChannelId) -> BoundChannelReceiver {
-            let (tx, rx) = channel_mailbox("vox_types.channel.test.bind_retryable2", 8);
+            let (tx, rx) = channel_mailbox("vox_types.channel.test.bind_logical2", 8);
             std::mem::forget(tx);
             BoundChannelReceiver {
                 receiver: rx,
@@ -2643,7 +2643,8 @@ mod tests {
     // Case 1: Caller passes Tx in args, keeps paired Rx.
     // Encoding the Tx allocates a channel ID via create_rx(), records it in the
     // out-of-band collector (RequestCall.channels), and stores the receiver in
-    // the shared logical core so the kept Rx can survive retries.
+    // the shared logical core so the kept Rx can receive without appearing in
+    // the serialized args payload.
     // r[verify rpc.channel.binding.caller-args]
     // r[verify rpc.channel.binding.caller-args.tx]
     #[tokio::test]

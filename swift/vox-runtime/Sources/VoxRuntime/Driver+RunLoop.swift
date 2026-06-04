@@ -46,16 +46,16 @@ extension Driver {
         let cont = eventContinuation
         let readerTask = spawnReaderTask(for: conduit, continuation: cont)
 
-        let retryTask = Task {
+        let keepaliveTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 10_000_000)
-                cont.yield(.retryTick)
+                cont.yield(.keepaliveTick)
             }
         }
 
         defer {
             readerTask.cancel()
-            retryTask.cancel()
+            keepaliveTask.cancel()
             commandQueue.close()
             taskQueue.close()
             eventContinuation.finish()
@@ -74,7 +74,7 @@ extension Driver {
                 case .wake:
                     break
 
-                case .retryTick:
+                case .keepaliveTick:
                     try await handleKeepaliveTick(keepaliveRuntime: &keepaliveRuntime)
 
                 case .conduitClosed, .conduitFailed:

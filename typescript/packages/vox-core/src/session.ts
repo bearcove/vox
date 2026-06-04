@@ -116,6 +116,8 @@ const DEFAULT_CHANNEL_CAPACITY = 16;
 
 function channelCapacityFromOptions(options: SessionBuilderOptions): number {
   const channelCapacity = options.channelCapacity ?? DEFAULT_CHANNEL_CAPACITY;
+  // r[impl rpc.flow-control.credit.initial.high-level]
+  // r[impl rpc.flow-control.credit.initial.zero]
   if (channelCapacity <= 0) {
     throw SessionError.protocol("initial_channel_credit must be greater than zero");
   }
@@ -1361,6 +1363,8 @@ export const session = {
     maxConcurrentRequests = 64,
     channelCapacity = DEFAULT_CHANNEL_CAPACITY,
   ): ConnectionSettings {
+    // r[impl rpc.flow-control.credit.initial.high-level]
+    // r[impl rpc.flow-control.credit.initial.zero]
     if (channelCapacity <= 0) {
       throw SessionError.protocol("initial_channel_credit must be greater than zero");
     }

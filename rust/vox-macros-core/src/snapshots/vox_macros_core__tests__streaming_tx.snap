@@ -223,7 +223,7 @@ impl StreamerClient {
         let with_tracker = match self.caller.call(req).await {
             Ok(with_tracker) => with_tracker,
             Err(e) => {
-                args.1.finish_retry_binding();
+                args.1.finish_call_binding();
                 return Err(match e {
                     ::vox::VoxError::UnknownMethod => {
                         ::vox::VoxError::<::core::convert::Infallible>::UnknownMethod
@@ -272,13 +272,13 @@ impl StreamerClient {
                     Result<i32, ::vox::VoxError<::core::convert::Infallible>>,
                 >(ret_bytes, method_id, &schema_tracker)
                 .map_err(|e| {
-                    args.1.finish_retry_binding();
+                    args.1.finish_call_binding();
                     ::vox::VoxError::<::core::convert::Infallible>::InvalidPayload(e.to_string())
                 })?;
             match result {
                 Ok(ret) => Ok(ret),
                 Err(err) => {
-                    args.1.finish_retry_binding();
+                    args.1.finish_call_binding();
                     Err(err)
                 }
             }

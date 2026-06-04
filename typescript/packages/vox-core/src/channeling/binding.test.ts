@@ -8,8 +8,23 @@ import { ChannelRegistry } from "./registry.ts";
 import { Role } from "./types.ts";
 
 describe("bindPhonChannels", () => {
+  // r[verify rpc.channel.allocation]
+  it("allocates caller channel ids using connection parity", () => {
+    const initiator = new ChannelIdAllocator(Role.Initiator);
+    const acceptor = new ChannelIdAllocator(Role.Acceptor);
+
+    expect([initiator.next(), initiator.next()]).toEqual([1n, 3n]);
+    expect([acceptor.next(), acceptor.next()]).toEqual([2n, 4n]);
+  });
+
   // r[verify schema.interaction.channels]
   // r[verify schema.exchange.channels.tx-args]
+  // r[verify rpc.channel]
+  // r[verify rpc.channel.direction]
+  // r[verify rpc.channel.binding.caller-args]
+  // r[verify rpc.channel.binding.caller-args.tx]
+  // r[verify rpc.channel.payload-encoding]
+  // r[verify rpc.channel.pair.binding-propagation]
   it("uses lazily advertised auxiliary schemas for caller-side channel receives", async () => {
     const [tx, rx] = channel<unknown>();
     const registry = new ChannelRegistry();
@@ -39,7 +54,34 @@ describe("bindPhonChannels", () => {
 
     registry.routeData(bound.channels[0]!, Uint8Array.of(9));
 
+    expect(bound.channels).toEqual([1n]);
+    expect(bound.values[0]).toEqual(Uint8Array.of(0, 0, 0, 0));
+    expect(rx.isBound).toBe(true);
     await expect(rx.recv()).resolves.toBe("aux:9");
     expect(seen).toEqual([[55n, "args", "channel.arg.0.tx.element", 123n]]);
+  });
+
+  // r[verify rpc.channel.binding.caller-args]
+  // r[verify rpc.channel.binding.caller-args.rx]
+  // r[verify rpc.channel.direction]
+  // r[verify rpc.channel.payload-encoding]
+  // r[verify rpc.channel.pair.binding-propagation]
+  it("binds the paired Tx when the caller passes an Rx argument", () => {
+    const [tx, rx] = channel<unknown>();
+    const registry = new ChannelRegistry();
+    const allocator = new ChannelIdAllocator(Role.Initiator);
+
+    const bound = bindPhonChannels(
+      [rx],
+      [{ index: 0, direction: "rx", elementRoot: 123n }],
+      allocator,
+      registry,
+      {} as Registry,
+      { incoming: 4, outgoing: 4 },
+    );
+
+    expect(bound.channels).toEqual([1n]);
+    expect(bound.values[0]).toEqual(Uint8Array.of(0, 0, 0, 0));
+    expect(tx.isBound).toBe(true);
   });
 });

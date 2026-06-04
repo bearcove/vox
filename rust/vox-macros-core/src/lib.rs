@@ -965,10 +965,10 @@ fn generate_client_method(
     };
 
     let args_binding = quote! { let args = #args_tuple; };
-    let finish_retry_bindings = if tx_arg_indices.is_empty() {
+    let finish_call_bindings = if tx_arg_indices.is_empty() {
         quote! {}
     } else {
-        quote! { #( args.#tx_arg_indices.finish_retry_binding(); )* }
+        quote! { #( args.#tx_arg_indices.finish_call_binding(); )* }
     };
 
     // r[impl schema.errors.call-level]
@@ -992,7 +992,7 @@ fn generate_client_method(
                 let with_tracker = match self.caller.call(req).await {
                     Ok(with_tracker) => with_tracker,
                     Err(e) => {
-                        #finish_retry_bindings
+                        #finish_call_bindings
                         return Err(match e {
                             #vox::VoxError::UnknownMethod => #vox::VoxError::<#err_ty>::UnknownMethod,
                             #vox::VoxError::InvalidPayload(msg) => #vox::VoxError::<#err_ty>::InvalidPayload(msg),
@@ -1017,13 +1017,13 @@ fn generate_client_method(
                     let result: Result<#ok_ty_decode, #vox::VoxError<#err_ty>> =
                         #vox::schema_deser::schema_deserialize_response_borrowed::<Result<#ok_ty_decode, #vox::VoxError<#err_ty>>>(ret_bytes, method_id, &schema_tracker)
                             .map_err(|e| {
-                                #finish_retry_bindings
+                                #finish_call_bindings
                                 #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string())
                             })?;
                     match result {
                         Ok(ret) => Ok(ret),
                         Err(err) => {
-                            #finish_retry_bindings
+                            #finish_call_bindings
                             Err(err)
                         }
                     }
@@ -1049,7 +1049,7 @@ fn generate_client_method(
                 let with_tracker = match self.caller.call(req).await {
                     Ok(with_tracker) => with_tracker,
                     Err(e) => {
-                        #finish_retry_bindings
+                        #finish_call_bindings
                         return Err(match e {
                             #vox::VoxError::UnknownMethod => #vox::VoxError::<#err_ty>::UnknownMethod,
                             #vox::VoxError::InvalidPayload(msg) => #vox::VoxError::<#err_ty>::InvalidPayload(msg),
@@ -1079,13 +1079,13 @@ fn generate_client_method(
                             &schema_tracker,
                         )
                         .map_err(|e| {
-                            #finish_retry_bindings
+                            #finish_call_bindings
                             #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string())
                         })?;
                     match result {
                         Ok(ret) => Ok(ret),
                         Err(err) => {
-                            #finish_retry_bindings
+                            #finish_call_bindings
                             Err(err)
                         }
                     }

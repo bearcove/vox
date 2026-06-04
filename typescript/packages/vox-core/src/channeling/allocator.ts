@@ -5,8 +5,7 @@ import { type ChannelId, Role } from "./types.ts";
 /**
  * Allocates unique channel IDs with correct parity.
  *
- * r[impl channeling.id.uniqueness] - IDs are unique within a connection.
- * r[impl channeling.id.parity] - Initiator uses odd, Acceptor uses even.
+ * r[impl rpc.channel.allocation]
  */
 export class ChannelIdAllocator {
   private nextId: bigint;

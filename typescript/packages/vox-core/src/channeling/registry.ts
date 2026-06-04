@@ -29,6 +29,7 @@ class AsyncQueue<T> {
     this.capacity = capacity;
   }
 
+  // r[impl rpc.channel.delivery.reliable]
   async enqueue(value: T): Promise<boolean> {
     while (!this.closed && this.recvWaiters.length === 0 && this.items.length >= this.capacity) {
       await new Promise<void>((resolve) => {
@@ -110,6 +111,8 @@ class CreditWindow {
     this.available = initialCredit;
   }
 
+  // r[impl rpc.flow-control.credit]
+  // r[impl rpc.flow-control.credit.exhaustion]
   async consume(): Promise<void> {
     while (true) {
       if (this.closed) {
@@ -125,6 +128,7 @@ class CreditWindow {
     }
   }
 
+  // r[impl rpc.flow-control.credit.grant.additive]
   grant(additional: number): void {
     if (this.closed || additional <= 0) {
       return;
@@ -255,7 +259,9 @@ export class ChannelRegistry {
    * Register an incoming channel and return the receiver for Rx<T>.
    *
    * r[impl rpc.channel.allocation] - Caller allocates channel IDs.
+   * r[impl rpc.channel.binding.callee-args]
    * r[impl rpc.channel.binding.callee-args.rx] - Callee binds incoming Rx by channel ID.
+   * r[impl rpc.flow-control.credit.initial]
    */
   registerIncoming(
     channelId: ChannelId,
@@ -317,7 +323,9 @@ export class ChannelRegistry {
    * Register an outgoing channel and return the sender for Tx<T>.
    *
    * r[impl rpc.channel.allocation] - Caller allocates channel IDs.
+   * r[impl rpc.channel.binding.callee-args]
    * r[impl rpc.channel.binding.callee-args.tx] - Callee binds outgoing Tx by channel ID.
+   * r[impl rpc.flow-control.credit.initial]
    */
   registerOutgoing(
     channelId: ChannelId,
@@ -365,6 +373,7 @@ export class ChannelRegistry {
     this.outgoing.get(channelId)?.credit.grant(additional);
   }
 
+  // r[impl rpc.flow-control.credit.grant]
   queueGrantCredit(channelId: ChannelId, additional: number): void {
     if (additional <= 0) {
       return;

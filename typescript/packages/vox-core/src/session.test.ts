@@ -16,7 +16,7 @@ import {
   SessionError,
   session,
 } from "./session.ts";
-import type { MethodDescriptor } from "./channeling/index.ts";
+import { Role, type MethodDescriptor } from "./channeling/index.ts";
 import {
   sessionEchoRegistry,
   sessionEchoMethods,
@@ -131,6 +131,18 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("session", () => {
+  // r[verify rpc.flow-control.credit.initial.high-level]
+  // r[verify rpc.flow-control.credit.initial]
+  // r[verify rpc.flow-control.credit.initial.zero]
+  it("applies and rejects root channel capacity settings", () => {
+    expect(session.rootSettings(Role.Initiator, 64, 7)).toMatchObject({
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 7,
+    });
+    expect(() => session.rootSettings(Role.Acceptor, 64, 0)).toThrow(/initial_channel_credit/);
+  });
+
   // r[verify transport.prologue.first-payload]
   // r[verify transport.prologue.post-accept]
   // r[verify conduit]
