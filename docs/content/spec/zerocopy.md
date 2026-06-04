@@ -253,8 +253,8 @@ insert_anchor_links = "left"
 > |---------------|--------|-----------|-----------|------|--------|
 > | BareConduit   | yes    | yes       | yes       | yes  | yes    |
 >
-> BareConduit is the only conduit shape for every link. Failed attachments are
-> not recovered by the conduit layer.
+> BareConduit is the only conduit shape for every link. A failed link ends its
+> BareConduit and the session above it.
 
 ### End-to-end pipeline and lifetimes
 

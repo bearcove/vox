@@ -10,10 +10,9 @@ weight = 10
 > Rust traits *are* the schema. Implementations for other languages (Swift,
 > TypeScript, etc.) are generated from Rust definitions.
 
-This specification describes the current protocol model. The current line
-introduces a transport prologue below the conduit/session layers so a fresh
-link attachment is rejected before session establishment if the peer is not
-speaking a compatible vox transport protocol.
+This specification describes the current protocol model. Every fresh link
+begins with a transport prologue below the conduit/session layers so an
+incompatible peer is rejected before session establishment.
 
 ## Defining a service
 
@@ -80,7 +79,7 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 +------------------------+
 | Connections            |  request/channel ID namespace
 +------------------------+
-| Session                |  set of connections over a conduit
+| Session                |  set of connections over one BareConduit
 +------------------------+
 | Conduit                |  phon serialization over a link
 +------------------------+
@@ -92,12 +91,12 @@ WebSocket; but a vox connection sits several layers above a "TCP connection".
 
 The layers have distinct failure boundaries:
 
-- A **Link** is one concrete transport attachment.
+- A **Link** is one concrete transport connection.
 - A **Transport Prologue** validates that the peer is speaking a compatible
-  vox transport protocol on that link attachment.
-- A **Conduit** is bound to one link attachment. It does not hide link failure,
-  reconnect, replay, or preserve in-flight request attempts.
-- A **Session** runs above a conduit attachment.
+  vox transport protocol on that link.
+- A **Conduit** is a `BareConduit` bound to one link. It does not hide link
+  failure, reconnect, replay, or preserve in-flight request attempts.
+- A **Session** runs above one `BareConduit` and ends when that conduit fails.
 - A **Connection** is scoped to a session, not to an individual conduit.
 
 # Terminology: call, request attempt, and response
@@ -113,7 +112,7 @@ from the application's point of view.
 A **request attempt** is one concrete wire-level delivery attempt for a call.
 A request attempt is carried by a `RequestCall`, identified by a `RequestId`,
 and sent on one connection. A request attempt may succeed, fail, be cancelled,
-or be abandoned by attachment loss.
+or be abandoned by connection/session failure.
 
 A **response** is the terminal reply to one request attempt. On the wire, a
 response is carried by `RequestResponse` and is matched to a prior request
@@ -126,8 +125,8 @@ In summary:
 
 This distinction matters for failure handling:
 
-- conduit failure abandons in-flight **request attempts** on that attachment
-- the conduit layer never retries or replays a request attempt
+- conduit/session failure abandons in-flight **request attempts**
+- the conduit layer never reconnects, retries, or replays a request attempt
 
 A caller that wants to issue another request after failure does so as a new
 call with a fresh request attempt.

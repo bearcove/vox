@@ -375,16 +375,17 @@ registered on the session builder; otherwise they are rejected.
 > r[rpc.flow-control.max-concurrent-requests.counting]
 >
 > `max_concurrent_requests` counts live request attempts. A later call issued
-> after an earlier attachment failure consumes its own unit of request
-> concurrency while that request attempt is live.
+> after an earlier request attempt failed consumes its own unit of request
+> concurrency while the later request attempt is live.
 
-> r[rpc.flow-control.max-concurrent-requests.attachment-loss]
+> r[rpc.flow-control.max-concurrent-requests.session-failure]
 >
-> Request-attempt accounting is attachment-local. When a conduit attachment
-> fails, in-flight request attempts on that failed attachment are no longer
-> live. The conduit layer MUST NOT preserve, replay, or retransmit those
-> attempts on a later attachment. A later call consumes its own fresh request
-> concurrency while that request attempt is live.
+> Request-attempt accounting is session-local. When the conduit or session
+> fails, in-flight request attempts on that session are no longer live. The
+> conduit layer MUST NOT reconnect, preserve, replay, or retransmit those
+> attempts. A later call requires a new session or a still-live existing session
+> and consumes its own fresh request concurrency while that request attempt is
+> live.
 
 > r[rpc.flow-control.max-concurrent-requests.default]
 >

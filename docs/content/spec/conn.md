@@ -124,7 +124,7 @@ weight = 11
 
 > r[transport.prologue]
 >
-> Every fresh link attachment begins with a **transport prologue** before any
+> Every fresh link begins with a **transport prologue** before any
 > conduit traffic is sent.
 
 > r[transport.prologue.first-payload]
@@ -149,14 +149,14 @@ weight = 11
 
 > r[transport.prologue.post-accept]
 >
-> After `TransportAccept`, the link attachment is eligible for vox session
+> After `TransportAccept`, the link is eligible for vox session
 > establishment. The next payloads are the phon self-describing session
 > handshake. After that handshake succeeds, subsequent session traffic is
 > interpreted as `BareConduit` payloads.
 
 > r[transport.prologue.reject-close]
 >
-> After `TransportReject`, the link attachment is unusable for vox traffic and
+> After `TransportReject`, the link is unusable for vox traffic and
 > MUST be closed or abandoned by the peers.
 
 # Conduits
@@ -177,7 +177,7 @@ weight = 11
 >
 > `BareConduit` does not provide any feature on top of
 > serialization/deserialization. It carries post-handshake session traffic on an
-> accepted link attachment.
+> accepted link.
 
 # Sessions
 
@@ -188,8 +188,8 @@ weight = 11
 > exchanged over channels.
 
 The transport prologue completes first. Session establishment exchanges phon
-self-describing handshake messages on the accepted link attachment. After the
-handshake succeeds, the `BareConduit` carries session `Message` traffic.
+self-describing handshake messages on the accepted link. After the handshake
+succeeds, the `BareConduit` carries session `Message` traffic.
 
 > r[session.peer]
 >
@@ -247,7 +247,7 @@ handshake succeeds, the `BareConduit` carries session `Message` traffic.
 
 > r[session.handshake]
 >
-> To establish a session on an accepted link attachment, a three-step phon
+> To establish a session on an accepted link, a three-step phon
 > self-describing handshake MUST be performed. The handshake messages are phon
 > self-describing values, NOT phon-compact `MessagePayload` variants. This is
 > the bootstrap: phon's self-describing mode needs no prior schema to read

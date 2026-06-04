@@ -1,6 +1,6 @@
 +++
 title = "Specification"
-description = "Formal specification for the Vox protocol, transports, and stability rules."
+description = "Formal specification for the Vox protocol, transports, and failure boundaries."
 weight = 10
 +++
 
