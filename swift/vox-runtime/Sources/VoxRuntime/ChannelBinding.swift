@@ -10,6 +10,8 @@ import Foundation
 // `Tx`/`Rx`. Per-item bytes use the channel's own element codec (the caller supplies
 // it via `channel(...)`; the generated server uses the matching element codec).
 // r[impl schema.interaction.channels]
+// r[impl rpc.channel.binding]
+// r[impl rpc.channel.payload-encoding]
 
 /// The initial channel credit window (in items) both peers advertise at handshake
 /// (`SessionEstablishment.swift` `initialChannelCredit`). Credit is per-item: a sender
@@ -17,9 +19,11 @@ import Foundation
 /// (replenishment threshold = window/2). This MUST match the advertised window — using
 /// a larger value here starves the sender (the receiver would only re-grant after
 /// window/2 ≫ advertised items, deadlocking mid-stream).
+/// r[impl rpc.flow-control.credit.initial]
 public let defaultInitialChannelCredit: UInt32 = 16
 
 /// The 4-byte little-endian phon-compact encoding of a u32 wire index.
+/// r[impl rpc.channel.payload-encoding]
 public func channelWireIndexBytes(_ index: Int) -> [UInt8] {
     let v = UInt32(index).littleEndian
     return withUnsafeBytes(of: v) { Array($0) }
@@ -41,6 +45,9 @@ extension VoxConnection {
     /// caller passed an `Rx` and keeps the paired `Tx` — the caller SENDS. Inject the
     /// phon typed encode codec into the paired `Tx`, allocate a channel id, bind the
     /// paired `Tx` for outgoing, and return the id.
+    /// r[impl rpc.channel.binding.caller-args]
+    /// r[impl rpc.channel.binding.caller-args.rx]
+    /// r[impl rpc.channel.pair.binding-propagation]
     public func bindClientRxArg<T>(
         _ rx: UnboundRx<T>,
         serialize: @escaping @Sendable (T, inout ByteBuffer) -> Void
@@ -57,6 +64,9 @@ extension VoxConnection {
     /// passed a `Tx` and keeps the paired `Rx` — the caller RECEIVES. Inject the phon
     /// typed decode codec into the paired `Rx`, allocate a channel id, register an
     /// incoming receiver, bind the paired `Rx`, and return the id.
+    /// r[impl rpc.channel.binding.caller-args]
+    /// r[impl rpc.channel.binding.caller-args.tx]
+    /// r[impl rpc.channel.pair.binding-propagation]
     public func bindClientTxArg<T>(
         _ tx: UnboundTx<T>,
         deserialize: @escaping @Sendable (inout ByteBuffer) throws -> T
@@ -145,6 +155,8 @@ private func schemaAdvertisingTaskSender(
 
 /// Bind a server `Rx<T>` (the handler RECEIVES). Registers an incoming receiver on the
 /// server registry (so buffered/early data is delivered) and returns a bound `Rx`.
+/// r[impl rpc.channel.binding.callee-args]
+/// r[impl rpc.channel.binding.callee-args.rx]
 public func bindServerRx<T: Sendable>(
     channelId: UInt64,
     registry: ChannelRegistry,
@@ -163,6 +175,8 @@ public func bindServerRx<T: Sendable>(
 
 /// Bind a server `Tx<T>` (the handler SENDS). Registers an outgoing credit controller
 /// on the server registry and returns a bound `Tx`.
+/// r[impl rpc.channel.binding.callee-args]
+/// r[impl rpc.channel.binding.callee-args.tx]
 public func bindServerTx<T: Sendable>(
     channelId: UInt64,
     registry: ChannelRegistry,

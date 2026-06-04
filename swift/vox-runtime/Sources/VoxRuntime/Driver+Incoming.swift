@@ -168,7 +168,6 @@ extension Driver {
         }
     }
 
-    /// r[impl rpc.flow-control.credit.exhaustion] - Payloads bounded by max_payload_size.
     /// r[impl session.connection-settings.hello] - Exceeding limit requires Goodbye.
     /// r[impl rpc.request.id-allocation] - Each request uses a unique ID.
     func handleRequest(

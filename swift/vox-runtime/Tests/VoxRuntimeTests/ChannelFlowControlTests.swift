@@ -51,9 +51,114 @@ private final class PayloadInbox: @unchecked Sendable {
     }
 }
 
+private final class TaskMessageInbox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var messages: [TaskMessage] = []
+
+    func append(_ message: TaskMessage) {
+        lock.lock()
+        messages.append(message)
+        lock.unlock()
+    }
+
+    func snapshot() -> [TaskMessage] {
+        lock.lock()
+        defer { lock.unlock() }
+        return messages
+    }
+}
+
+private func testConnection(taskInbox: TaskMessageInbox = TaskMessageInbox()) -> (Connection, TaskMessageInbox) {
+    let handle = ConnectionHandle(
+        commandTx: { _ in false },
+        taskTx: { message in
+            taskInbox.append(message)
+            return true
+        },
+        role: .initiator
+    )
+    return (Connection(handle: handle, schemaReceiveTracker: SchemaTracker()), taskInbox)
+}
+
 @Suite(.serialized)
 struct ChannelFlowControlTests {
+    // r[verify rpc.channel]
+    // r[verify rpc.channel.allocation]
+    // r[verify rpc.channel.binding]
+    // r[verify rpc.channel.binding.caller-args]
+    // r[verify rpc.channel.binding.caller-args.rx]
+    // r[verify rpc.channel.pair.binding-propagation]
+    // r[verify rpc.channel.payload-encoding]
+    @Test func clientRxArgumentBindsPairedTxForSending() async throws {
+        let (connection, inbox) = testConnection()
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
+
+        let channelId = await connection.bindClientRxArg(rx, serialize: encI32)
+        #expect(channelId == 1)
+        #expect(channelWireIndexBytes(0) == [0, 0, 0, 0])
+
+        try await tx.send(7)
+
+        let messages = inbox.snapshot()
+        #expect(messages.count == 1)
+        guard case .data(let sentChannelId, let payload) = messages.first else {
+            Issue.record("client Rx argument did not bind paired Tx for data")
+            return
+        }
+        #expect(sentChannelId == channelId)
+        var buf = ByteBufferAllocator().buffer(bytes: payload)
+        #expect(try decI32(from: &buf) == 7)
+    }
+
+    // r[verify rpc.channel]
+    // r[verify rpc.channel.allocation]
+    // r[verify rpc.channel.binding]
+    // r[verify rpc.channel.binding.caller-args]
+    // r[verify rpc.channel.binding.caller-args.tx]
+    // r[verify rpc.channel.pair.binding-propagation]
+    // r[verify rpc.channel.payload-encoding]
+    @Test func clientTxArgumentBindsPairedRxForReceiving() async throws {
+        let (connection, _) = testConnection()
+        let (tx, rx): (UnboundTx<Int32>, UnboundRx<Int32>) = channel()
+
+        let channelId = await connection.bindClientTxArg(tx, deserialize: decI32)
+        #expect(channelId == 1)
+        #expect(channelWireIndexBytes(1) == [1, 0, 0, 0])
+
+        var payload = ByteBufferAllocator().buffer(capacity: 4)
+        encI32(11, into: &payload)
+        let bytes = payload.readBytes(length: payload.readableBytes) ?? []
+        #expect(await connection.incomingChannelRegistry.deliverData(channelId: channelId, payload: bytes))
+
+        #expect(try await rx.recv() == 11)
+    }
+
+    // r[verify rpc.channel.close]
+    // r[verify rpc.channel.lifecycle]
+    // r[verify rpc.channel.reset]
+    @Test func registryCloseAndResetTerminateReceivers() async throws {
+        let registry = ChannelRegistry()
+
+        let closeReceiver = await registry.register(21, initialCredit: 2)
+        #expect(await registry.deliverClose(channelId: 21))
+        #expect(await closeReceiver.recv() == nil)
+
+        let resetReceiver = await registry.register(23, initialCredit: 2)
+        #expect(await registry.deliverData(channelId: 23, payload: [1, 2, 3]))
+        await registry.deliverReset(channelId: 23)
+        #expect(await resetReceiver.recv() == nil)
+    }
+
     // r[verify schema.interaction.channels]
+    // r[verify rpc.channel]
+    // r[verify rpc.channel.direction]
+    // r[verify rpc.channel.binding.callee-args]
+    // r[verify rpc.channel.binding.callee-args.tx]
+    // r[verify rpc.channel.item]
+    // r[verify rpc.flow-control.credit]
+    // r[verify rpc.flow-control.credit.exhaustion]
+    // r[verify rpc.flow-control.credit.grant]
+    // r[verify rpc.flow-control.credit.initial]
     @Test func senderWaitsForGrantCredit() async throws {
         let registry = ChannelRegistry()
         let payloads = PayloadInbox()
@@ -92,6 +197,12 @@ struct ChannelFlowControlTests {
         #expect(try decI32(from: &afterBuf) == 2)
     }
 
+    // r[verify rpc.channel.binding.callee-args]
+    // r[verify rpc.channel.binding.callee-args.rx]
+    // r[verify rpc.channel.delivery.reliable]
+    // r[verify rpc.flow-control.credit.grant]
+    // r[verify rpc.flow-control.credit.grant.additive]
+    // r[verify rpc.flow-control.credit.initial]
     @Test func receiverBatchesGrantCreditAtHalfWindow() async throws {
         let registry = ChannelRegistry()
         let inbox = GrantInbox()
@@ -115,5 +226,22 @@ struct ChannelFlowControlTests {
 
         let grants = inbox.snapshot()
         #expect(grants == [8])
+    }
+
+    // r[verify rpc.flow-control.credit.initial.high-level]
+    // r[verify rpc.flow-control.credit.initial.zero]
+    @Test func zeroInitialChannelCreditIsRejectedBeforeAdvertisingSettings() throws {
+        do {
+            _ = try makeConnectionSettings(
+                parity: .odd,
+                maxConcurrentRequests: 64,
+                initialChannelCredit: 0
+            )
+            Issue.record("zero initial channel credit was accepted")
+        } catch ConnectionError.protocolViolation(let rule) {
+            #expect(rule == "rpc.flow-control.credit.initial.zero")
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
     }
 }

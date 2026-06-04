@@ -37,6 +37,27 @@ func requireIdentityMessageSchema(
 /// The local Message schema closure, advertised in the handshake.
 private var localMessagePayloadSchema: [UInt8] { MessageSchemaClosure }
 
+func validateInitialChannelCredit(_ initialChannelCredit: UInt32) throws {
+    // r[impl rpc.flow-control.credit.initial.zero]
+    guard initialChannelCredit > 0 else {
+        throw ConnectionError.protocolViolation(rule: "rpc.flow-control.credit.initial.zero")
+    }
+}
+
+func makeConnectionSettings(
+    parity: Parity,
+    maxConcurrentRequests: UInt32,
+    initialChannelCredit: UInt32
+) throws -> ConnectionSettings {
+    // r[impl rpc.flow-control.credit.initial.high-level]
+    try validateInitialChannelCredit(initialChannelCredit)
+    return ConnectionSettings(
+        parity: parity,
+        maxConcurrentRequests: maxConcurrentRequests,
+        initialChannelCredit: initialChannelCredit
+    )
+}
+
 func performInitiatorHandshake(
     link: any Link,
     maxPayloadSize: UInt32,
@@ -45,9 +66,11 @@ func performInitiatorHandshake(
     metadata: Metadata = .null
 ) async throws -> SessionHandshakeResult {
     traceLog(.handshake, "initiator sending Hello")
-    let ourSettings = ConnectionSettings(
-        parity: .odd, maxConcurrentRequests: maxConcurrentRequests,
-        initialChannelCredit: initialChannelCredit)
+    let ourSettings = try makeConnectionSettings(
+        parity: .odd,
+        maxConcurrentRequests: maxConcurrentRequests,
+        initialChannelCredit: initialChannelCredit
+    )
     let hello = Hello(
         parity: ourSettings.parity,
         connectionSettings: ourSettings,
@@ -67,6 +90,8 @@ func performInitiatorHandshake(
         await sendHandshakeSorry(link, reason: "expected HelloYourself or Sorry")
         throw ConnectionError.handshakeFailed("expected HelloYourself")
     }
+
+    try validateInitialChannelCredit(peerHello.connectionSettings.initialChannelCredit)
 
     let peerSchema = [UInt8](peerHello.messagePayloadSchema)
     try await requireIdentityMessageSchema(peerSchema, on: link)
@@ -114,9 +139,10 @@ func performAcceptorHandshake(
     }
 
     let peerSchema = [UInt8](peerHello.messagePayloadSchema)
+    try validateInitialChannelCredit(peerHello.connectionSettings.initialChannelCredit)
     try await requireIdentityMessageSchema(peerSchema, on: link)
 
-    let ourSettings = ConnectionSettings(
+    let ourSettings = try makeConnectionSettings(
         parity: oppositeParity(peerHello.parity),
         maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit

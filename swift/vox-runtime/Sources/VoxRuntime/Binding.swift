@@ -4,6 +4,8 @@ import Foundation
 // MARK: - Unbound Channel Types
 
 /// Unbound Tx - created by `channel()`, bound at call time.
+/// r[impl rpc.channel]
+/// r[impl rpc.channel.direction]
 public final class UnboundTx<T: Sendable>: @unchecked Sendable {
     public private(set) var channelId: ChannelId = 0
     private var taskTx: (@Sendable (TaskMessage) -> Void)?
@@ -151,6 +153,8 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
 }
 
 /// Unbound Rx - created by `channel()`, bound at call time.
+/// r[impl rpc.channel]
+/// r[impl rpc.channel.direction]
 public final class UnboundRx<T: Sendable>: @unchecked Sendable {
     public private(set) var channelId: ChannelId = 0
     // Injected at bind time from the method's phon element program (codec-less until then).
@@ -283,6 +287,9 @@ extension UnboundRx: AsyncSequence {
 /// Create a paired, codec-less unbound channel. The per-item phon element codec is
 /// injected at bind time by the generated client (keyed on the method's `elementRoot`),
 /// so callers never hand-roll element bytes — mirrors the TS `channel()` design.
+/// r[impl rpc.channel]
+/// r[impl rpc.channel.direction]
+/// r[impl rpc.channel.pair.binding-propagation]
 public func channel<T: Sendable>() -> (UnboundTx<T>, UnboundRx<T>) {
     let tx = UnboundTx<T>()
     let rx = UnboundRx<T>()
@@ -324,6 +331,7 @@ protocol AnyUnboundTx: AnyObject {
 }
 
 extension UnboundRx: AnyUnboundRx {
+    // r[impl rpc.channel.pair.binding-propagation]
     func bindForSchema(
         channelId: ChannelId,
         taskSender: @escaping TaskSender,
@@ -342,6 +350,7 @@ extension UnboundRx: AnyUnboundRx {
 }
 
 extension UnboundTx: AnyUnboundTx {
+    // r[impl rpc.channel.pair.binding-propagation]
     func bindForSchema(channelId: ChannelId, receiver: ChannelReceiver) {
         // Schema Tx = client receives via Rx, so this Tx just gets ID
         self.setChannelIdOnly(channelId: channelId)
