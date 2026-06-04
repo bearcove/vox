@@ -80,6 +80,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
 
     for method in service.methods {
         let (name, args, ret) = method_signature(method);
+        // r[impl rpc.method-id]
         let method_id = hex_u64(crate::method_id(method));
         let prefix = method_global_prefix(service.service_name, method.method_name);
         let resp_ty = swift_type_base(method.response_wire_shape);

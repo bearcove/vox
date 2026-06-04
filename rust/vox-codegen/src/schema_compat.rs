@@ -175,6 +175,7 @@ pub fn snapshot_services(
 }
 
 // r[impl schema.compat.check]
+// r[impl rpc.schema-evolution]
 pub fn compare_snapshots(
     older: &SchemaCompatSnapshot,
     newer: &SchemaCompatSnapshot,
@@ -209,7 +210,7 @@ pub fn compare_snapshots(
                 service_name: service_name.to_string(),
                 method_name: "*".to_string(),
                 direction: SchemaCompatComparisonDirection::Method,
-                status: SchemaCompatStatus::Incompatible,
+                status: SchemaCompatStatus::Bidirectional,
                 note: Some("service added".to_string()),
             }),
             (None, None) => unreachable!("service name came from one of the maps"),
@@ -343,7 +344,7 @@ fn compare_service(
                 service_name: new_service.service_name.clone(),
                 method_name: method_name.to_string(),
                 direction: SchemaCompatComparisonDirection::Method,
-                status: SchemaCompatStatus::Incompatible,
+                status: SchemaCompatStatus::Bidirectional,
                 note: Some("method added".to_string()),
             }),
             (None, None) => unreachable!("method name came from one of the maps"),
@@ -526,6 +527,29 @@ mod tests {
         (method_intersection_snapshot(&old, &new), new)
     }
 
+    fn snapshot_without_method(
+        snapshot: &SchemaCompatSnapshot,
+        service_name: &str,
+        method_name: &str,
+    ) -> SchemaCompatSnapshot {
+        let mut snapshot = snapshot.clone();
+        let service = snapshot
+            .services
+            .iter_mut()
+            .find(|service| service.service_name == service_name)
+            .expect("service in snapshot");
+        let before = service.methods.len();
+        service
+            .methods
+            .retain(|method| method.method_name != method_name);
+        assert_eq!(
+            service.methods.len(),
+            before - 1,
+            "method {service_name}.{method_name} should exist in snapshot"
+        );
+        snapshot
+    }
+
     // r[verify schema.compat.snapshot]
     #[test]
     fn snapshots_include_method_args_and_response_roots() {
@@ -549,6 +573,7 @@ mod tests {
     }
 
     // r[verify schema.compat.check]
+    // r[verify rpc.schema-evolution]
     #[test]
     fn compares_evolved_testbed_schema_directions() {
         let (old, new) = evolved_testbed_snapshots();
@@ -576,6 +601,48 @@ mod tests {
             echo_measurement_args.status,
             SchemaCompatStatus::Incompatible
         );
+    }
+
+    // r[verify rpc.schema-evolution]
+    #[test]
+    fn compare_reports_added_methods_as_compatible() {
+        let services = spec_proto::all_services();
+        let new = snapshot_services(&services).expect("new snapshot");
+        let old = snapshot_without_method(&new, "Testbed", "echo_profile");
+        let report = compare_snapshots(&old, &new).expect("compat report");
+
+        let added_method = report
+            .comparisons
+            .iter()
+            .find(|comparison| {
+                comparison.service_name == "Testbed"
+                    && comparison.method_name == "echo_profile"
+                    && comparison.direction == SchemaCompatComparisonDirection::Method
+            })
+            .expect("added method comparison");
+        assert_eq!(added_method.status, SchemaCompatStatus::Bidirectional);
+        assert_eq!(added_method.note.as_deref(), Some("method added"));
+    }
+
+    // r[verify rpc.schema-evolution]
+    #[test]
+    fn compare_reports_removed_methods_as_breaking() {
+        let services = spec_proto::all_services();
+        let old = snapshot_services(&services).expect("old snapshot");
+        let new = snapshot_without_method(&old, "Testbed", "echo_profile");
+        let report = compare_snapshots(&old, &new).expect("compat report");
+
+        let removed_method = report
+            .comparisons
+            .iter()
+            .find(|comparison| {
+                comparison.service_name == "Testbed"
+                    && comparison.method_name == "echo_profile"
+                    && comparison.direction == SchemaCompatComparisonDirection::Method
+            })
+            .expect("removed method comparison");
+        assert_eq!(removed_method.status, SchemaCompatStatus::Incompatible);
+        assert_eq!(removed_method.note.as_deref(), Some("method removed"));
     }
 
     // r[verify schema.compat.policy]

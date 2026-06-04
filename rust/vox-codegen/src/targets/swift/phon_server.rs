@@ -120,6 +120,7 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
     // dispatch — route to per-method helpers.
     out.push_str("    public func dispatch(methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {\n        switch methodId {\n");
     for m in service.methods {
+        // r[impl rpc.method-id]
         let id = hex_u64(crate::method_id(m));
         let name = m.method_name.to_lower_camel_case();
         let extra = if has_channels(m) {

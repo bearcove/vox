@@ -133,6 +133,7 @@ pub fn generate_client_impl(service: &ServiceDescriptor) -> String {
         ));
 
         let _ = has_streaming_args;
+        // r[impl rpc.method-id]
         let method_id_hex = crate::render::hex_u64(crate::method_id(method));
         // The per-call phon schema data: the method's args/ok roots + args schema
         // closure (from `{service}Methods`) and the service phon `Registry`.

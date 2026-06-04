@@ -12,6 +12,8 @@ use crate::{ArgDescriptor, MethodDescriptor, MethodId, is_rx, is_tx};
 /// schema exchange — two peers can use different type versions and still
 /// route calls to the correct method.
 // r[impl schema.method-id]
+// r[impl rpc.method-id.algorithm]
+// r[impl rpc.method-id.no-collisions]
 pub fn method_id_name_only(service_name: &str, method_name: &str) -> MethodId {
     let mut input = Vec::new();
     input.extend_from_slice(service_name.to_kebab_case().as_bytes());
@@ -51,6 +53,7 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
     );
     let args_have_channels = shape_contains_channel(A::SHAPE);
 
+    // r[impl rpc.method-id]
     let id = method_id_name_only(service_name, method_name);
 
     let arg_shapes: &[&'static Shape] = match A::SHAPE.ty {
@@ -239,6 +242,7 @@ mod tests {
     }
 
     // r[verify schema.method-id]
+    // r[verify rpc.method-id.algorithm]
     #[test]
     fn method_id_name_only_is_stable_across_case_variations() {
         let a = method_id_name_only("MyService", "DoThingFast");
@@ -248,10 +252,19 @@ mod tests {
         assert_eq!(b, c);
     }
 
+    // r[verify rpc.method-id]
     #[test]
     fn method_id_name_only_different_methods_produce_different_ids() {
         let a = method_id_name_only("Svc", "alpha");
         let b = method_id_name_only("Svc", "beta");
+        assert_ne!(a, b);
+    }
+
+    // r[verify rpc.method-id.no-collisions]
+    #[test]
+    fn method_id_name_only_includes_service_name() {
+        let a = method_id_name_only("AlphaSvc", "echo");
+        let b = method_id_name_only("BetaSvc", "echo");
         assert_ne!(a, b);
     }
 

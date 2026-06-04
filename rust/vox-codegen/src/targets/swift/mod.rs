@@ -183,6 +183,8 @@ mod tests {
     // r[verify schema.format.self-contained]
     // r[verify schema.tracking.transitive]
     // r[verify schema.method-id]
+    // r[verify rpc.method-id]
+    // r[verify rpc.method-id.algorithm]
     fn generated_swift_uses_phon_schema_closures_and_canonical_method_ids() {
         let echo = method_descriptor::<(NestedOuter,), NestedOuter>(
             "SchemaSvc",
@@ -254,6 +256,70 @@ mod tests {
                 byte_array_literal(&response_closure)
             )),
             "generated Swift must embed the self-contained phon response closure:\n{generated}"
+        );
+    }
+
+    #[test]
+    // r[verify rpc.method-id.no-collisions]
+    fn generated_swift_method_ids_include_service_name() {
+        let alpha = method_descriptor::<(), ()>(
+            "AlphaSvc",
+            "echo",
+            &[],
+            &[],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let beta = method_descriptor::<(), ()>(
+            "BetaSvc",
+            "echo",
+            &[],
+            &[],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+
+        assert_ne!(crate::method_id(alpha), crate::method_id(beta));
+
+        let alpha_methods = Box::leak(vec![alpha].into_boxed_slice());
+        let beta_methods = Box::leak(vec![beta].into_boxed_slice());
+        let alpha_service = ServiceDescriptor {
+            service_name: "AlphaSvc",
+            methods: alpha_methods,
+            doc: None,
+        };
+        let beta_service = ServiceDescriptor {
+            service_name: "BetaSvc",
+            methods: beta_methods,
+            doc: None,
+        };
+
+        let alpha_generated = generate_service(&alpha_service);
+        let beta_generated = generate_service(&beta_service);
+        let alpha_entry = format!(
+            "    {}: PhonMethodSchemas(",
+            hex_u64(crate::method_id(alpha))
+        );
+        let beta_entry = format!(
+            "    {}: PhonMethodSchemas(",
+            hex_u64(crate::method_id(beta))
+        );
+
+        assert!(
+            alpha_generated.contains(&alpha_entry),
+            "Alpha service must emit its service-qualified method ID:\n{alpha_generated}"
+        );
+        assert!(
+            !alpha_generated.contains(&beta_entry),
+            "Alpha service must not reuse Beta service's same-method-name ID:\n{alpha_generated}"
+        );
+        assert!(
+            beta_generated.contains(&beta_entry),
+            "Beta service must emit its service-qualified method ID:\n{beta_generated}"
         );
     }
 

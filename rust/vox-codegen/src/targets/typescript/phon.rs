@@ -112,6 +112,8 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     ));
     for m in service.methods {
         // r[impl schema.method-id]
+        // r[impl rpc.method-id.algorithm]
+        // r[impl rpc.method-id.no-collisions]
         let method_id = crate::method_id(m);
         let args_root = root_id(m.args_shape);
         let ok_root = root_id(ok_shape(m.return_shape));

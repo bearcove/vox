@@ -146,7 +146,8 @@ structstruck::strike! {
                             pub enum RequestBody<'payload> {
                                 /// Perform a request (or a "call")
                                 Call(pub struct RequestCall<'payload> {
-                                    /// Unique method identifier, hash of fully qualified name + args etc.
+                                    /// Unique method identifier, hash of service and method names.
+                                    // r[impl rpc.method-id]
                                     pub method_id: MethodId,
 
                                     /// Channel IDs for the `Tx`/`Rx` handles that appear in `args`,
