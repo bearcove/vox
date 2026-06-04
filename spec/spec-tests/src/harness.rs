@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use spec_proto::{
@@ -133,9 +134,54 @@ pub fn subject_cmd_for_language(language: SubjectLanguage) -> String {
                     .to_string()
             }
         }
-        SubjectLanguage::Swift => "./swift/subject/subject-swift.sh".to_string(),
+        SubjectLanguage::Swift => swift_subject_binary()
+            .unwrap_or_else(|err| panic!("failed to prepare Swift subject: {err}")),
         SubjectLanguage::TypeScript => "./typescript/subject/subject-ts.sh".to_string(),
     }
+}
+
+fn swift_subject_binary() -> Result<String, String> {
+    static SWIFT_SUBJECT_BINARY: OnceLock<Result<String, String>> = OnceLock::new();
+
+    SWIFT_SUBJECT_BINARY
+        .get_or_init(|| {
+            let subject_dir = workspace_root().join("swift").join("subject");
+            let binary = subject_dir
+                .join(".build")
+                .join("release")
+                .join(format!("subject-swift{}", std::env::consts::EXE_SUFFIX));
+
+            eprintln!("[subject:swift] preparing release subject at {}", binary.display());
+            let output = std::process::Command::new("swift")
+                .arg("build")
+                .arg("-c")
+                .arg("release")
+                .arg("--product")
+                .arg("subject-swift")
+                .current_dir(&subject_dir)
+                .output()
+                .map_err(|err| format!("failed to run swift build for subject-swift: {err}"))?;
+
+            if !output.status.success() {
+                return Err(format!(
+                    "swift build -c release --product subject-swift failed with {}\nstdout:\n{}\nstderr:\n{}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                ));
+            }
+
+            if !binary.exists() {
+                return Err(format!(
+                    "swift build -c release --product subject-swift completed, but {} does not exist",
+                    binary.display()
+                ));
+            }
+
+            eprintln!("[subject:swift] release subject ready at {}", binary.display());
+            Ok(binary.display().to_string())
+        })
+        .clone()
 }
 
 fn subject_transport() -> SubjectTestTransport {
