@@ -2356,11 +2356,18 @@ mod tests {
         assert_eq!(sink_impl.close_on_drop_calls.load(Ordering::Acquire), 1);
     }
 
+    // r[verify rpc.channel.pair]
     // r[verify rpc.observability.channel.context]
     #[test]
     fn channel_pair_captures_source_location_and_type_context() {
         let expected_line = line!() + 1;
         let (tx, rx) = channel::<u32>();
+
+        let tx_core = tx.core.inner.as_ref().expect("paired Tx should have core");
+        let rx_core = rx.core.inner.as_ref().expect("paired Rx should have core");
+        assert!(Arc::ptr_eq(tx_core, rx_core));
+        assert!(!tx.is_bound());
+        assert!(!rx.is_bound());
 
         for context in [tx.debug_context(), rx.debug_context()] {
             assert_eq!(context.type_name, Some(std::any::type_name::<u32>()));
