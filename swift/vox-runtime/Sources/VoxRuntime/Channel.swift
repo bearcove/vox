@@ -13,6 +13,37 @@ public enum Role: Sendable {
     case acceptor  // Uses even IDs (2, 4, 6, ...)
 }
 
+func roleForParity(_ parity: Parity) -> Role {
+    switch parity {
+    case .odd:
+        return .initiator
+    case .even:
+        return .acceptor
+    }
+}
+
+func oppositeRole(_ role: Role) -> Role {
+    switch role {
+    case .initiator:
+        return .acceptor
+    case .acceptor:
+        return .initiator
+    }
+}
+
+func firstId(for role: Role) -> UInt64 {
+    switch role {
+    case .initiator:
+        return 1
+    case .acceptor:
+        return 2
+    }
+}
+
+func idMatchesRole(_ id: UInt64, _ role: Role) -> Bool {
+    id != 0 && id % 2 == firstId(for: role) % 2
+}
+
 // MARK: - Channel ID Allocator
 
 /// Allocates unique channel IDs with correct parity.
@@ -24,10 +55,7 @@ public final class ChannelIdAllocator: @unchecked Sendable {
     private let lock = NSLock()
 
     public init(role: Role) {
-        switch role {
-        case .initiator: next = 1
-        case .acceptor: next = 2
-        }
+        next = firstId(for: role)
     }
 
     public func allocate() -> ChannelId {

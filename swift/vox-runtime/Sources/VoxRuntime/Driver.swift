@@ -31,8 +31,8 @@ public final class Driver: @unchecked Sendable {
     let eventContinuation: AsyncStream<DriverEvent>.Continuation
     let eventStream: AsyncStream<DriverEvent>
     let commandQueue: LockedQueue<HandleCommand>
-    let taskQueue: LockedQueue<TaskMessage>
-    var pendingTaskMessages: [DriverQueuedTaskMessage] = []
+    let taskQueue: LockedQueue<DriverQueuedTaskMessage>
+    var pendingTaskMessages: [DriverQueuedWireMessage] = []
     var pendingCalls: [DriverQueuedCall] = []
 
     let localRootSettings: ConnectionSettings?
@@ -57,10 +57,10 @@ public final class Driver: @unchecked Sendable {
         self.keepalive = keepalive
         self.serverRegistry = ChannelRegistry()
         self.state = DriverState()
-        self.virtualConnState = VirtualConnectionState()
+        self.virtualConnState = VirtualConnectionState(role: role)
         self.schemaSendTracker = SchemaSendTracker()
         self.commandQueue = LockedQueue<HandleCommand>()
-        self.taskQueue = LockedQueue<TaskMessage>()
+        self.taskQueue = LockedQueue<DriverQueuedTaskMessage>()
         self.localRootSettings = nil
         self.peerRootSettings = nil
         self.peerMessageSchema = []
@@ -85,7 +85,7 @@ public final class Driver: @unchecked Sendable {
         eventStream: AsyncStream<DriverEvent>,
         eventContinuation: AsyncStream<DriverEvent>.Continuation,
         commandQueue: LockedQueue<HandleCommand>,
-        taskQueue: LockedQueue<TaskMessage>,
+        taskQueue: LockedQueue<DriverQueuedTaskMessage>,
         schemaSendTracker: SchemaSendTracker = SchemaSendTracker(),
         localRootSettings: ConnectionSettings? = nil,
         peerRootSettings: ConnectionSettings? = nil,
@@ -100,7 +100,7 @@ public final class Driver: @unchecked Sendable {
         self.keepalive = keepalive
         self.serverRegistry = ChannelRegistry()
         self.state = DriverState()
-        self.virtualConnState = VirtualConnectionState()
+        self.virtualConnState = VirtualConnectionState(role: role)
         self.schemaSendTracker = schemaSendTracker
         self.eventStream = eventStream
         self.eventContinuation = eventContinuation

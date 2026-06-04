@@ -3,6 +3,7 @@ import Foundation
 /// Commands from ConnectionHandle to Driver.
 enum HandleCommand: Sendable {
     case call(
+        connectionId: UInt64,
         requestId: UInt64,
         methodId: UInt64,
         metadata: Metadata,
@@ -11,5 +12,11 @@ enum HandleCommand: Sendable {
         timeout: TimeInterval?,
         responseTx: @Sendable (Result<[UInt8], ConnectionError>) -> Void,
         schemaInfo: ClientSchemaInfo?
+    )
+    case openConnection(
+        settings: ConnectionSettings,
+        metadata: Metadata,
+        dispatcher: (any ServiceDispatcher)?,
+        responseTx: @Sendable (Result<Connection, ConnectionError>) -> Void
     )
 }

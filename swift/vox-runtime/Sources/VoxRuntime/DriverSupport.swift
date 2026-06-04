@@ -56,7 +56,7 @@ func makeDriverAndConnection(
     keepalive: SessionKeepaliveConfig? = nil
 ) -> (Connection, Driver) {
     let commandQueue = LockedQueue<HandleCommand>()
-    let taskQueue = LockedQueue<TaskMessage>()
+    let taskQueue = LockedQueue<DriverQueuedTaskMessage>()
     var continuation: AsyncStream<DriverEvent>.Continuation!
     let eventStream = AsyncStream<DriverEvent> { cont in
         continuation = cont
@@ -74,7 +74,7 @@ func makeDriverAndConnection(
         return false
     }
     let taskSender: @Sendable (TaskMessage) -> Bool = { msg in
-        guard taskQueue.push(msg) else {
+        guard taskQueue.push(DriverQueuedTaskMessage(connectionId: 0, taskMessage: msg)) else {
             return false
         }
         let result = capturedContinuation.yield(.wake)
@@ -85,6 +85,7 @@ func makeDriverAndConnection(
     }
 
     let handle = ConnectionHandle(
+        connectionId: 0,
         commandTx: commandSender,
         taskTx: taskSender,
         role: role,
@@ -120,7 +121,7 @@ func makeSessionDriverAndConnection(
     peerMessageSchema: [UInt8]
 ) -> (Connection, Driver, SessionHandle) {
     let commandQueue = LockedQueue<HandleCommand>()
-    let taskQueue = LockedQueue<TaskMessage>()
+    let taskQueue = LockedQueue<DriverQueuedTaskMessage>()
     var continuation: AsyncStream<DriverEvent>.Continuation!
     let eventStream = AsyncStream<DriverEvent> { cont in
         continuation = cont
@@ -138,7 +139,7 @@ func makeSessionDriverAndConnection(
         return false
     }
     let taskSender: @Sendable (TaskMessage) -> Bool = { msg in
-        guard taskQueue.push(msg) else {
+        guard taskQueue.push(DriverQueuedTaskMessage(connectionId: 0, taskMessage: msg)) else {
             return false
         }
         let result = capturedContinuation.yield(.wake)
@@ -149,6 +150,7 @@ func makeSessionDriverAndConnection(
     }
 
     let handle = ConnectionHandle(
+        connectionId: 0,
         commandTx: commandSender,
         taskTx: taskSender,
         role: role,
@@ -173,6 +175,7 @@ func makeSessionDriverAndConnection(
     )
 
     let sessionHandle = SessionHandle(
+        commandTx: commandSender,
         eventContinuation: continuation
     )
 

@@ -205,6 +205,7 @@ func callerAdvertisesArgsSchemaWithFirstRequestOnConnection() async throws {
     let schemaInfo = testClientSchemaInfo(argsSchemaClosure: schemas)
 
     await driver.handleCommand(.call(
+        connectionId: 0,
         requestId: 1,
         methodId: 77,
         metadata: .null,
@@ -215,6 +216,7 @@ func callerAdvertisesArgsSchemaWithFirstRequestOnConnection() async throws {
         schemaInfo: schemaInfo
     ))
     await driver.handleCommand(.call(
+        connectionId: 0,
         requestId: 3,
         methodId: 77,
         metadata: .null,
@@ -264,19 +266,25 @@ func calleeAdvertisesResponseSchemaWithFirstResponseOnConnection() async throws 
     let schemas: [UInt8] = [4, 5, 6]
 
     #expect(await driver.state.addInFlight(9, connectionId: 0, responseMetadata: .null))
-    try await driver.handleTaskMessage(.response(
-        requestId: 9,
-        payload: [7],
-        methodId: 77,
-        responseSchemaClosure: schemas
+    try await driver.handleTaskMessage(DriverQueuedTaskMessage(
+        connectionId: 0,
+        taskMessage: .response(
+            requestId: 9,
+            payload: [7],
+            methodId: 77,
+            responseSchemaClosure: schemas
+        )
     ))
 
     #expect(await driver.state.addInFlight(11, connectionId: 0, responseMetadata: .null))
-    try await driver.handleTaskMessage(.response(
-        requestId: 11,
-        payload: [8],
-        methodId: 77,
-        responseSchemaClosure: schemas
+    try await driver.handleTaskMessage(DriverQueuedTaskMessage(
+        connectionId: 0,
+        taskMessage: .response(
+            requestId: 11,
+            payload: [8],
+            methodId: 77,
+            responseSchemaClosure: schemas
+        )
     ))
 
     let sent = await conduit.snapshot()

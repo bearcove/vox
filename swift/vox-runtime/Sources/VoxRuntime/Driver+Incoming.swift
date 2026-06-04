@@ -52,7 +52,7 @@ extension Driver {
                 try await conduit.send(messagePong(nonce: ping.nonce))
             } catch TransportError.wouldBlock {
                 pendingTaskMessages.append(
-                    DriverQueuedTaskMessage(message: messagePong(nonce: ping.nonce)))
+                    DriverQueuedWireMessage(message: messagePong(nonce: ping.nonce)))
             }
         case .pong(let pong):
             handlePong(nonce: pong.nonce, keepaliveRuntime: &keepaliveRuntime)
@@ -62,6 +62,17 @@ extension Driver {
         case .connectionOpen(let open):
             // r[impl rpc.virtual-connection.accept]
             // r[impl connection.open.rejection]
+            // r[impl connection.open]
+            // r[impl connection.parity]
+            let peerRole = oppositeRole(role)
+            guard idMatchesRole(msg.connectionId, peerRole) else {
+                try await sendProtocolError("connection.open")
+                throw ConnectionError.protocolViolation(rule: "connection.open")
+            }
+            guard !(await virtualConnState.contains(msg.connectionId)) else {
+                try await sendProtocolError("connection.open")
+                throw ConnectionError.protocolViolation(rule: "connection.open")
+            }
             if let acceptor = connectionAcceptor {
                 let metadata = open.metadata
                 guard let service = metadata.metaStr("vox-service") else {
@@ -70,9 +81,18 @@ extension Driver {
                         messageReject(connectionId: msg.connectionId, metadata: .null))
                     return
                 }
+                guard open.connectionSettings.initialChannelCredit > 0 else {
+                    try await conduit.send(
+                        messageReject(connectionId: msg.connectionId, metadata: .null))
+                    return
+                }
+                let localSettings = try makeConnectionSettings(
+                    parity: oppositeParity(open.connectionSettings.parity),
+                    maxConcurrentRequests: open.connectionSettings.maxConcurrentRequests,
+                    initialChannelCredit: open.connectionSettings.initialChannelCredit
+                )
                 let request = ConnectionRequest(metadata: metadata, service: service)
                 let connId = msg.connectionId
-                let connectionSettings = open.connectionSettings
                 let pending = PendingConnection(
                     accept: { [weak self] dispatcher in
                         guard let self else { return }
@@ -81,7 +101,7 @@ extension Driver {
                             try? await self.conduit.send(
                                 messageAccept(
                                     connectionId: connId,
-                                    settings: connectionSettings,
+                                    settings: localSettings,
                                     metadata: .null
                                 ))
                         }
@@ -98,8 +118,35 @@ extension Driver {
             } else {
                 try await conduit.send(messageReject(connectionId: msg.connectionId, metadata: .null))
             }
-        case .connectionAccept, .connectionReject:
-            break
+        case .connectionAccept(let accept):
+            // r[impl connection.open]
+            // r[impl rpc.virtual-connection.open]
+            guard let pending = await virtualConnState.takePendingOutbound(msg.connectionId) else {
+                break
+            }
+            do {
+                try validateInitialChannelCredit(accept.connectionSettings.initialChannelCredit)
+            } catch {
+                pending.responseTx(.failure(.protocolViolation(rule: "connection.open")))
+                try await sendProtocolError("connection.open")
+                throw ConnectionError.protocolViolation(rule: "connection.open")
+            }
+            let connection = makeConnection(
+                connectionId: msg.connectionId,
+                localSettings: pending.localSettings,
+                peerSettings: accept.connectionSettings
+            )
+            await virtualConnState.addConnection(
+                msg.connectionId,
+                dispatcher: pending.dispatcher ?? dispatcher
+            )
+            pending.responseTx(.success(connection))
+        case .connectionReject(let reject):
+            // r[impl connection.open.rejection]
+            guard let pending = await virtualConnState.takePendingOutbound(msg.connectionId) else {
+                break
+            }
+            pending.responseTx(.failure(.rejected(metadata: reject.metadata)))
         case .connectionClose:
             // r[impl connection.close]
             warnLog("received ConnectionClose conn_id=\(msg.connectionId)")
@@ -227,7 +274,7 @@ extension Driver {
             throw ConnectionError.protocolViolation(rule: "rpc.flow-control.credit.exhaustion")
         }
 
-        let taskTx = taskSender()
+        let taskTx = taskSender(connectionId: connId)
         traceLog(.driver, "handleRequest method=\(methodId) req=\(requestId) channels=\(channels)")
         await effectiveDispatcher.preregister(
             methodId: methodId,

@@ -4,14 +4,14 @@ extension Driver {
     // r[impl rpc.flow-control]
     private func sendOrEnqueue(_ message: Message) async throws {
         if !pendingTaskMessages.isEmpty {
-            pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
+            pendingTaskMessages.append(DriverQueuedWireMessage(message: message))
             return
         }
 
         do {
             try await conduit.send(message)
         } catch TransportError.wouldBlock {
-            pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
+            pendingTaskMessages.append(DriverQueuedWireMessage(message: message))
         } catch {
             throw error
         }
@@ -37,32 +37,85 @@ extension Driver {
         )
     }
 
-    /// Get the task sender for handlers to send responses.
-    func taskSender() -> @Sendable (TaskMessage) -> Void {
+    private func commandSender() -> @Sendable (HandleCommand) -> Bool {
+        let cont = eventContinuation
+        let queue = commandQueue
+        return { command in
+            guard queue.push(command) else {
+                return false
+            }
+            let result = cont.yield(.wake)
+            guard case .terminated = result else {
+                return true
+            }
+            return false
+        }
+    }
+
+    private func taskQueueSender(connectionId: UInt64) -> @Sendable (TaskMessage) -> Bool {
         let cont = eventContinuation
         let queue = taskQueue
         return { msg in
-            guard queue.push(msg) else {
-                return
+            guard queue.push(DriverQueuedTaskMessage(connectionId: connectionId, taskMessage: msg))
+            else {
+                return false
             }
-            _ = cont.yield(.wake)
+            let result = cont.yield(.wake)
+            guard case .terminated = result else {
+                return true
+            }
+            return false
+        }
+    }
+
+    func makeConnection(
+        connectionId: UInt64,
+        localSettings: ConnectionSettings,
+        peerSettings: ConnectionSettings
+    ) -> Connection {
+        let handle = ConnectionHandle(
+            connectionId: connectionId,
+            commandTx: commandSender(),
+            taskTx: taskQueueSender(connectionId: connectionId),
+            role: roleForParity(localSettings.parity),
+            maxConcurrentRequests: peerSettings.maxConcurrentRequests
+        )
+        return Connection(handle: handle, schemaReceiveTracker: schemaReceiveTracker)
+    }
+
+    /// Get the task sender for handlers to send responses.
+    func taskSender(connectionId: UInt64) -> @Sendable (TaskMessage) -> Void {
+        let sink = taskQueueSender(connectionId: connectionId)
+        return { msg in
+            _ = sink(msg)
         }
     }
 
     /// Handle a task message from a handler.
     /// r[impl rpc.response]
     /// r[impl rpc.channel.connection-closure]
-    func handleTaskMessage(_ msg: TaskMessage) async throws {
+    func handleTaskMessage(_ queued: DriverQueuedTaskMessage) async throws {
+        let msg = queued.taskMessage
+        let connectionId = queued.connectionId
         let wireMsg: Message
         switch msg {
         case .data(let channelId, let payload):
-            wireMsg = messageData(channelId: channelId, item: payload)
+            wireMsg = messageData(channelId: channelId, item: payload, connectionId: connectionId)
         case .close(let channelId):
-            wireMsg = messageChannelClose(channelId: channelId)
+            wireMsg = messageChannelClose(channelId: channelId, connectionId: connectionId)
         case .grantCredit(let channelId, let bytes):
-            wireMsg = messageCredit(channelId: channelId, additional: bytes)
+            wireMsg = messageCredit(
+                channelId: channelId,
+                additional: bytes,
+                connectionId: connectionId
+            )
         case .schema(let methodId, let direction, let schemas):
-            wireMsg = messageSchema(methodId: methodId, direction: direction, schemas: schemas)
+            wireMsg = messageSchema(
+                methodId: methodId,
+                direction: direction,
+                schemas: schemas,
+                connectionId: connectionId
+            )
         case .response(let requestId, let payload, let methodId, let responseSchemaClosure):
             // Advertise the response schema at THIS sequential send point (not in the
             // concurrent dispatch task): under pipelining many responses for a method
@@ -93,7 +146,13 @@ extension Driver {
             } else {
                 checkedPayload = payload
             }
-            guard let response = await responseMessage(requestId: requestId, payload: checkedPayload, schemas: schemas) else {
+            guard
+                let response = await responseMessage(
+                    requestId: requestId,
+                    payload: checkedPayload,
+                    schemas: schemas
+                )
+            else {
                 return
             }
             wireMsg = response
@@ -108,7 +167,7 @@ extension Driver {
     func handleCommand(_ cmd: HandleCommand) async {
         switch cmd {
         case .call(
-            let requestId, let methodId, let metadata, let payload, let channels,
+            let connectionId, let requestId, let methodId, let metadata, let payload, let channels,
             let timeout, let responseTx, let schemaInfo):
             let isClosed = await state.isConnectionClosed()
             guard !isClosed else {
@@ -117,6 +176,7 @@ extension Driver {
             }
 
             let queuedCall = DriverQueuedCall(
+                connectionId: connectionId,
                 requestId: requestId,
                 methodId: methodId,
                 metadata: metadata,
@@ -153,6 +213,7 @@ extension Driver {
                 payload: payload,
                 metadata: metadata,
                 channels: channels,
+                connectionId: connectionId,
                 schemas: schemas
             )
             do {
@@ -180,6 +241,7 @@ extension Driver {
             let timeoutNs = Self.timeoutToNanoseconds(timeout)
             let capturedState = state
             let capturedConduit = conduit
+            let capturedConnectionId = connectionId
             let timeoutTask = Task {
                 do {
                     try await Task.sleep(nanoseconds: timeoutNs)
@@ -195,11 +257,44 @@ extension Driver {
                 pending.timeoutTask?.cancel()
                 warnLog("request timed out request_id=\(requestId) timeout_s=\(timeout)")
                 pending.responseTx(.failure(.timeout))
-                try? await capturedConduit.send(messageCancel(requestId: requestId))
+                try? await capturedConduit.send(
+                    messageCancel(requestId: requestId, connectionId: capturedConnectionId)
+                )
             }
             let installed = await state.setPendingTimeoutTask(requestId, timeoutTask: timeoutTask)
             if !installed {
                 timeoutTask.cancel()
+            }
+        case .openConnection(let settings, let metadata, let dispatcher, let responseTx):
+            let isClosed = await state.isConnectionClosed()
+            guard !isClosed else {
+                responseTx(.failure(.connectionClosed))
+                return
+            }
+            guard settings.initialChannelCredit > 0 else {
+                responseTx(
+                    .failure(.protocolViolation(rule: "rpc.flow-control.credit.initial.zero"))
+                )
+                return
+            }
+
+            let connId = await virtualConnState.allocateConnId()
+            await virtualConnState.addPendingOutbound(
+                connId,
+                pending: PendingVirtualConnection(
+                    localSettings: settings,
+                    dispatcher: dispatcher,
+                    responseTx: responseTx
+                )
+            )
+
+            do {
+                try await sendOrEnqueue(
+                    messageConnect(connectionId: connId, settings: settings, metadata: metadata)
+                )
+            } catch {
+                let pending = await virtualConnState.takePendingOutbound(connId)
+                pending?.responseTx(.failure(.transportError(String(describing: error))))
             }
         }
     }
@@ -226,6 +321,7 @@ extension Driver {
                 payload: call.payload,
                 metadata: call.metadata,
                 channels: call.channels,
+                connectionId: call.connectionId,
                 schemas: schemas
             )
 
@@ -255,6 +351,7 @@ extension Driver {
             let timeoutNs = Self.timeoutToNanoseconds(timeout)
             let capturedState = state
             let capturedConduit = conduit
+            let capturedConnectionId = call.connectionId
             let requestId = call.requestId
             let timeoutTask = Task {
                 do {
@@ -271,7 +368,9 @@ extension Driver {
                 pending.timeoutTask?.cancel()
                 warnLog("request timed out request_id=\(requestId) timeout_s=\(timeout)")
                 pending.responseTx(.failure(.timeout))
-                try? await capturedConduit.send(messageCancel(requestId: requestId))
+                try? await capturedConduit.send(
+                    messageCancel(requestId: requestId, connectionId: capturedConnectionId)
+                )
             }
             let installed = await state.setPendingTimeoutTask(requestId, timeoutTask: timeoutTask)
             if !installed {

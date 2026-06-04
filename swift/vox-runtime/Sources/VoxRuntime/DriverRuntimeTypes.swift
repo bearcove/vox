@@ -1,10 +1,16 @@
 import Foundation
 
 struct DriverQueuedTaskMessage: Sendable {
+    let connectionId: UInt64
+    let taskMessage: TaskMessage
+}
+
+struct DriverQueuedWireMessage: Sendable {
     let message: Message
 }
 
 struct DriverQueuedCall: Sendable {
+    let connectionId: UInt64
     let requestId: UInt64
     let methodId: UInt64
     let metadata: Metadata
@@ -12,6 +18,12 @@ struct DriverQueuedCall: Sendable {
     let channels: [UInt64]
     let timeout: TimeInterval?
     let schemaInfo: ClientSchemaInfo?
+}
+
+struct PendingVirtualConnection: Sendable {
+    let localSettings: ConnectionSettings
+    let dispatcher: (any ServiceDispatcher)?
+    let responseTx: @Sendable (Result<Connection, ConnectionError>) -> Void
 }
 
 struct DriverKeepaliveRuntime {

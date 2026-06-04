@@ -17,6 +17,10 @@ public final class Connection: @unchecked Sendable {
         handle.channelAllocator
     }
 
+    public var connectionId: UInt64 {
+        handle.connectionId
+    }
+
     public var incomingChannelRegistry: ChannelRegistry {
         handle.channelRegistry
     }

@@ -371,6 +371,45 @@ private func awaitRequestId(
     return nil
 }
 
+private func awaitConnectionOpenId(
+    _ transport: ScriptedTransport,
+    timeoutMs: UInt64 = 1_000
+) async -> UInt64? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent {
+            if case .connectionOpen = message.payload {
+                return message.connectionId
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
+private func awaitRequest(
+    _ transport: ScriptedTransport,
+    connectionId: UInt64,
+    timeoutMs: UInt64 = 1_000
+) async -> RequestMessage? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent where message.connectionId == connectionId {
+            if case .requestMessage(let request) = message.payload,
+                case .call = request.body
+            {
+                return request
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
 private func awaitProtocolReason(
     _ transport: ScriptedTransport,
     timeoutMs: UInt64 = 1_000
@@ -417,6 +456,16 @@ private func isTimeout(_ error: Error) -> Bool {
         return true
     }
     return false
+}
+
+private func rejectedMetadata(_ error: Error) -> Metadata? {
+    guard let connError = error as? ConnectionError else {
+        return nil
+    }
+    if case .rejected(let metadata) = connError {
+        return metadata
+    }
+    return nil
 }
 
 private func isProtocolViolation(_ error: Error, rule: String) -> Bool {
@@ -1016,6 +1065,116 @@ struct ConnectionFailureTests {
             Issue.record("expected driver shutdown")
         } catch {
             #expect(isConnectionClosed(error))
+        }
+    }
+
+    // r[verify connection.open]
+    // r[verify connection.parity]
+    // r[verify rpc.virtual-connection.open]
+    @Test func sessionHandleOpenConnectionCompletesOnAcceptAndUsesVirtualConnectionId() async throws {
+        let transport = ScriptedTransport()
+        let (_, driver, sessionHandle, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let localSettings = ConnectionSettings(
+                parity: .even,
+                maxConcurrentRequests: 8,
+                initialChannelCredit: 16
+            )
+            let openTask: Task<Connection, Error> = Task {
+                try await sessionHandle.openConnection(
+                    settings: localSettings,
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            }
+
+            guard let connId = await awaitConnectionOpenId(transport) else {
+                Issue.record("expected ConnectionOpen")
+                return
+            }
+            #expect(connId == 1)
+
+            await transport.enqueueMessage(
+                messageAccept(
+                    connectionId: connId,
+                    settings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: .null
+                )
+            )
+
+            let connection = try await awaitTaskResult(openTask)
+            #expect(connection.connectionId == connId)
+
+            let callTask: Task<[UInt8], Error> = Task {
+                try await connection.callRaw(methodId: 99, payload: [1, 2, 3], timeout: 1.0)
+            }
+            guard let request = await awaitRequest(transport, connectionId: connId) else {
+                Issue.record("expected request on virtual connection")
+                return
+            }
+            #expect(request.id == 2)
+
+            await transport.enqueueMessage(
+                .response(connId: connId, requestId: request.id, metadata: .null, payload: [0x42])
+            )
+            let response = try await awaitTaskResult(callTask)
+            #expect(response == [0x42])
+        }
+    }
+
+    // r[verify connection.open.rejection]
+    @Test func sessionHandleOpenConnectionFailsOnReject() async throws {
+        let transport = ScriptedTransport()
+        let (_, driver, sessionHandle, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let openTask: Task<Connection, Error> = Task {
+                try await sessionHandle.openConnection(
+                    settings: ConnectionSettings(
+                        parity: .even,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            }
+
+            guard let connId = await awaitConnectionOpenId(transport) else {
+                Issue.record("expected ConnectionOpen")
+                return
+            }
+
+            let rejectionMetadata = meta([("reason", "busy")])
+            await transport.enqueueMessage(
+                messageReject(connectionId: connId, metadata: rejectionMetadata)
+            )
+
+            do {
+                _ = try await awaitTaskResult(openTask)
+                Issue.record("expected virtual connection open rejection")
+            } catch {
+                #expect(rejectedMetadata(error) == rejectionMetadata)
+            }
         }
     }
 }

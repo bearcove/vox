@@ -142,13 +142,24 @@ actor DriverState {
 
 /// Actor for virtual connection state.
 actor VirtualConnectionState {
-    private var nextConnId: UInt64 = 1
+    private var nextConnId: UInt64
     private var virtualConnections: [UInt64: any ServiceDispatcher] = [:]
+    private var pendingOutbound: [UInt64: PendingVirtualConnection] = [:]
 
+    init(role: Role) {
+        nextConnId = firstId(for: role)
+    }
+
+    // r[impl connection.open]
+    // r[impl connection.parity]
     func allocateConnId() -> UInt64 {
         let id = nextConnId
-        nextConnId += 1
+        nextConnId += 2
         return id
+    }
+
+    func contains(_ connId: UInt64) -> Bool {
+        virtualConnections[connId] != nil || pendingOutbound[connId] != nil
     }
 
     func addConnection(_ connId: UInt64, dispatcher: any ServiceDispatcher) {
@@ -161,5 +172,13 @@ actor VirtualConnectionState {
 
     func dispatcher(for connId: UInt64) -> (any ServiceDispatcher)? {
         virtualConnections[connId]
+    }
+
+    func addPendingOutbound(_ connId: UInt64, pending: PendingVirtualConnection) {
+        pendingOutbound[connId] = pending
+    }
+
+    func takePendingOutbound(_ connId: UInt64) -> PendingVirtualConnection? {
+        pendingOutbound.removeValue(forKey: connId)
     }
 }

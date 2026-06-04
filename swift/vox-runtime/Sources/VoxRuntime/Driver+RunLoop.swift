@@ -9,8 +9,8 @@ extension Driver {
             await handleCommand(command)
         }
         let taskMessages = taskQueue.popAll()
-        for message in taskMessages {
-            try await handleTaskMessage(message)
+        for queued in taskMessages {
+            try await handleTaskMessage(queued)
         }
     }
 

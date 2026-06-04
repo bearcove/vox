@@ -3,23 +3,29 @@ import Foundation
 /// Handle for making outgoing RPC calls.
 /// r[impl rpc.caller]
 final class ConnectionHandle: @unchecked Sendable {
+    let connectionId: UInt64
     private let commandTx: @Sendable (HandleCommand) -> Bool
     private let taskTx: @Sendable (TaskMessage) -> Bool
     private let requestSemaphore: AsyncSemaphore?
+    private let role: Role
 
-    private var requestIdAllocator = RequestIdAllocator()
+    private var requestIdAllocator: RequestIdAllocator
 
     let channelAllocator: ChannelIdAllocator
     let channelRegistry: ChannelRegistry
 
     init(
+        connectionId: UInt64 = 0,
         commandTx: @escaping @Sendable (HandleCommand) -> Bool,
         taskTx: @escaping @Sendable (TaskMessage) -> Bool,
         role: Role,
         maxConcurrentRequests: UInt32 = UInt32.max
     ) {
+        self.connectionId = connectionId
         self.commandTx = commandTx
         self.taskTx = taskTx
+        self.role = role
+        self.requestIdAllocator = RequestIdAllocator(role: role)
         self.channelAllocator = ChannelIdAllocator(role: role)
         self.channelRegistry = ChannelRegistry()
         if maxConcurrentRequests < UInt32.max {
@@ -62,6 +68,7 @@ final class ConnectionHandle: @unchecked Sendable {
             }
             let accepted = commandTx(
                 .call(
+                    connectionId: connectionId,
                     requestId: requestId,
                     methodId: methodId,
                     metadata: metadata,
@@ -85,7 +92,7 @@ final class ConnectionHandle: @unchecked Sendable {
     // The session has been started fresh on a new conduit. Reset request IDs so
     // future calls use the new connection's identifier space.
     func onConduitReset() {
-        self.requestIdAllocator = RequestIdAllocator()
+        self.requestIdAllocator = RequestIdAllocator(role: role)
     }
 
     func sendTaskMessage(_ msg: TaskMessage) {
