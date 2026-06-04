@@ -105,6 +105,8 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     use crate::code_writer::CodeWriter;
     use crate::cw_writeln;
 
+    validate_channel_rules(service);
+
     let mut output = String::new();
     let mut w = CodeWriter::with_indent_spaces(&mut output, 2);
 
@@ -140,6 +142,25 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     output.push_str(&generate_descriptor(service));
 
     output
+}
+
+fn validate_channel_rules(service: &ServiceDescriptor) {
+    for method in service.methods {
+        // r[impl rpc.channel.placement]
+        assert!(
+            !vox_types::shape_contains_channel(method.return_shape),
+            "channels are not allowed in return types: {}.{}",
+            method.service_name,
+            method.method_name
+        );
+        // r[impl rpc.channel.no-collections]
+        assert!(
+            !vox_types::shape_contains_channel_in_collection(method.args_shape),
+            "channels are not allowed inside collections: {}.{}",
+            method.service_name,
+            method.method_name
+        );
+    }
 }
 
 /// Generate imports for the service module.
@@ -242,8 +263,11 @@ mod tests {
 
     use super::generate_service;
     use crate::render::hex_u64;
-    use facet::Facet;
-    use vox_types::{MethodDescriptorOptions, Rx, ServiceDescriptor, Tx, method_descriptor};
+    use facet::{Facet, Shape};
+    use vox_types::{
+        MethodDescriptor, MethodDescriptorOptions, MethodId, Rx, ServiceDescriptor, Tx,
+        method_descriptor,
+    };
 
     fn hex_bytes(bytes: &[u8]) -> String {
         let mut out = String::with_capacity(bytes.len() * 2);
@@ -382,6 +406,37 @@ mod tests {
     enum SubscribeMessage {
         Event(SessionEventEnvelope),
         ReplayComplete,
+    }
+
+    fn service_with_shapes(
+        args_shape: &'static Shape,
+        return_shape: &'static Shape,
+    ) -> ServiceDescriptor {
+        let method = Box::leak(Box::new(MethodDescriptor {
+            id: MethodId(1),
+            service_name: "BadSvc",
+            method_name: "bad",
+            args_shape,
+            args: &[],
+            return_shape,
+            response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
+            args_have_channels: vox_types::shape_contains_channel(args_shape),
+            doc: None,
+        }));
+        let methods = Box::leak(vec![method as &'static MethodDescriptor].into_boxed_slice());
+        ServiceDescriptor {
+            service_name: "BadSvc",
+            methods,
+            doc: None,
+        }
+    }
+
+    fn panic_message(panic: Box<dyn std::any::Any + Send>) -> String {
+        panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| panic.downcast_ref::<&'static str>().map(|s| s.to_string()))
+            .expect("panic payload should be a string")
     }
 
     #[test]
@@ -585,6 +640,39 @@ mod tests {
         assert!(
             generated.contains("6368616e6e656c2e6172672e312e72782e656c656d656e74"),
             "Rx<T> element root must be carried as an auxiliary schema root:\n{generated}"
+        );
+    }
+
+    #[test]
+    // r[verify rpc.channel.placement]
+    fn generated_typescript_rejects_channels_in_return_shapes() {
+        let service = service_with_shapes(<() as Facet>::SHAPE, <Tx<u32> as Facet>::SHAPE);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            generate_service(&service);
+        }));
+        let message = panic_message(result.expect_err("generator should reject channel returns"));
+
+        assert!(
+            message.contains("channels are not allowed in return types: BadSvc.bad"),
+            "unexpected panic message: {message}"
+        );
+    }
+
+    #[test]
+    // r[verify rpc.channel.no-collections]
+    fn generated_typescript_rejects_channels_inside_collections() {
+        let service = service_with_shapes(<(Vec<Tx<u32>>,) as Facet>::SHAPE, <() as Facet>::SHAPE);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            generate_service(&service);
+        }));
+        let message =
+            panic_message(result.expect_err("generator should reject collection channels"));
+
+        assert!(
+            message.contains("channels are not allowed inside collections: BadSvc.bad"),
+            "unexpected panic message: {message}"
         );
     }
 
