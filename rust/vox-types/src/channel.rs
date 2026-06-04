@@ -361,6 +361,7 @@ fn take_channel(index: u32) -> Result<ProvidedChannel, String> {
 }
 
 // r[impl rpc.channel.pair]
+// r[impl rpc.channel.pair.binding-propagation]
 /// The binding stored in a channel core — either a sink or a receiver, never both.
 pub enum ChannelBinding {
     Sink(BoundChannelSink),
@@ -626,6 +627,7 @@ struct LogicalReceiverState {
 }
 
 // r[impl rpc.channel.pair]
+// r[impl rpc.channel.pair.binding-propagation]
 /// Shared state between a `Tx`/`Rx` pair created by `channel()`.
 ///
 /// Contains a `Mutex<Option<ChannelBinding>>` that is written once during
@@ -813,6 +815,7 @@ impl CoreSlot {
 }
 
 // r[impl rpc.channel.pair]
+// r[impl rpc.channel.pair.binding-propagation]
 // r[impl rpc.observability.channel.context]
 /// Create a channel pair with shared state — a `Tx<T>` (sender) and `Rx<T>`
 /// (receiver) over one `ChannelCore`.
@@ -1419,6 +1422,7 @@ impl<T> Tx<T> {
     }
 
     // r[impl rpc.channel.pair.tx-read]
+    // r[impl rpc.channel.pair.binding-propagation]
     fn resolve_sink_now(&self) -> Option<Arc<dyn ChannelSink>> {
         // Fast path: local slot (standalone/callee-side handle)
         if let Some(sink) = &self.sink.inner {
@@ -1619,6 +1623,7 @@ impl<T> TryFrom<&Tx<T>> for ChannelId {
 
     // r[impl rpc.channel.binding.caller-args]
     // r[impl rpc.channel.binding.caller-args.tx]
+    // r[impl rpc.channel.pair.binding-propagation]
     fn try_from(value: &Tx<T>) -> Result<Self, Self::Error> {
         // Case 1: Caller passes Tx in args (callee sends, caller receives).
         // Allocate a channel ID and store the receiver binding in the shared
@@ -2005,6 +2010,7 @@ impl<T> TryFrom<&Rx<T>> for ChannelId {
 
     // r[impl rpc.channel.binding.caller-args]
     // r[impl rpc.channel.binding.caller-args.rx]
+    // r[impl rpc.channel.pair.binding-propagation]
     fn try_from(value: &Rx<T>) -> Result<Self, Self::Error> {
         // Case 2: Caller passes Rx in args (callee receives, caller sends).
         // Allocate a channel ID and store the sink binding in the shared

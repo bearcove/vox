@@ -237,6 +237,8 @@ impl channel_rx_v2::EventSink for ChannelRxV2Service {
 // r[verify schema.interaction.channels]
 // r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.rx-args]
+// r[verify rpc.channel.pair.binding-propagation]
+// r[verify rpc.channel.pair.tx-read]
 #[tokio::test]
 async fn rx_channel_items_use_caller_writer_schema() {
     let (client_conduit, server_conduit) = conduit_pair();
@@ -319,6 +321,8 @@ impl channel_tx_v2::EventSource for ChannelTxV2Service {
 // r[verify schema.interaction.channels]
 // r[verify schema.exchange.channels]
 // r[verify schema.exchange.channels.tx-args]
+// r[verify rpc.channel.pair.binding-propagation]
+// r[verify rpc.channel.pair.rx-take]
 #[tokio::test]
 async fn tx_channel_items_use_callee_writer_schema() {
     let (client_conduit, server_conduit) = conduit_pair();
