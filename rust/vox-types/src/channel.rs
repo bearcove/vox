@@ -144,6 +144,7 @@ std::thread_local! {
 /// `f` produced together with the channel ids it gathered (the out-of-band list
 /// for `RequestCall.channels`). Wrap the args encode with this — together with a
 /// [`ChannelBinder`] (the collector records ids the binder allocates).
+// r[impl rpc.channel.discovery]
 pub fn collect_channels<R>(f: impl FnOnce() -> R) -> (R, Vec<ChannelId>) {
     struct Restore(Option<ChannelCollector>);
     impl Drop for Restore {
@@ -173,6 +174,7 @@ pub fn collect_channels_for_method<R>(
     f: impl FnOnce() -> R,
 ) -> (R, Vec<ChannelId>) {
     // r[impl schema.exchange.channels]
+    // r[impl rpc.channel.discovery]
     struct Restore(Option<ChannelCollector>);
     impl Drop for Restore {
         fn drop(&mut self) {
@@ -304,6 +306,7 @@ pub fn provide_channels_for_method<R>(
 /// Record `channel_id` in the active collector, returning its stable index.
 /// Idempotent per handle value address. Returns [`CHANNEL_NOT_COLLECTED`] when
 /// no collector is installed (the error surfaces cleanly at decode).
+// r[impl rpc.channel.discovery]
 fn collect_channel(key: usize, channel_id: ChannelId) -> CollectedChannel {
     CHANNEL_COLLECTOR.with(|c| {
         let mut slot = c.borrow_mut();
@@ -3037,5 +3040,141 @@ mod tests {
         // Index 0 → first handle, index 1 → second handle.
         assert_eq!(decoded.first.channel_id, channels[0]);
         assert_eq!(decoded.second.channel_id, channels[1]);
+    }
+
+    // r[verify rpc.channel.discovery]
+    #[test]
+    fn nested_struct_channels_are_collected_in_field_order() {
+        use facet::Facet;
+
+        #[derive(Facet)]
+        struct Inner {
+            first: Tx<u32>,
+            second: Rx<u32>,
+        }
+
+        #[derive(Facet)]
+        struct Args {
+            before: u32,
+            inner: Inner,
+            third: Tx<u32>,
+        }
+
+        let (first, _first_rx) = channel::<u32>();
+        let (_second_tx, second) = channel::<u32>();
+        let (third, _third_rx) = channel::<u32>();
+        let args = Args {
+            before: 7,
+            inner: Inner { first, second },
+            third,
+        };
+
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&args).expect("serialize nested args")
+            })
+        });
+        assert_eq!(
+            channels,
+            vec![ChannelId(100), ChannelId(102), ChannelId(104)]
+        );
+
+        let callee_binder = TestBinder::new();
+        let decoded: Args = provide_channels(channels.clone(), || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize nested args")
+            })
+        });
+        assert_eq!(decoded.before, 7);
+        assert_eq!(decoded.inner.first.channel_id, channels[0]);
+        assert_eq!(decoded.inner.second.channel_id, channels[1]);
+        assert_eq!(decoded.third.channel_id, channels[2]);
+    }
+
+    // r[verify rpc.channel.discovery]
+    #[test]
+    fn active_enum_variant_channels_are_collected_in_field_order() {
+        use facet::Facet;
+
+        #[derive(Facet)]
+        #[repr(u8)]
+        enum Choice {
+            Empty,
+            Active { first: Rx<u32>, second: Tx<u32> },
+        }
+
+        #[derive(Facet)]
+        struct Args {
+            choice: Choice,
+            after: Rx<u32>,
+        }
+
+        let (_first_tx, first) = channel::<u32>();
+        let (second, _second_rx) = channel::<u32>();
+        let (_after_tx, after) = channel::<u32>();
+        let args = Args {
+            choice: Choice::Active { first, second },
+            after,
+        };
+
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&args).expect("serialize enum args")
+            })
+        });
+        assert_eq!(
+            channels,
+            vec![ChannelId(100), ChannelId(102), ChannelId(104)]
+        );
+
+        let callee_binder = TestBinder::new();
+        let decoded: Args = provide_channels(channels.clone(), || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize enum args")
+            })
+        });
+        let Args { choice, after } = decoded;
+        match choice {
+            Choice::Active { first, second } => {
+                assert_eq!(first.channel_id, channels[0]);
+                assert_eq!(second.channel_id, channels[1]);
+            }
+            Choice::Empty => panic!("expected active variant"),
+        }
+        assert_eq!(after.channel_id, channels[2]);
+    }
+
+    // r[verify rpc.channel.discovery]
+    #[test]
+    fn none_option_channel_is_absent_from_collected_channels() {
+        use facet::Facet;
+
+        #[derive(Facet)]
+        struct Args {
+            maybe: Option<Tx<u32>>,
+            after: Rx<u32>,
+        }
+
+        let (_after_tx, after) = channel::<u32>();
+        let args = Args { maybe: None, after };
+
+        let caller_binder = TestBinder::new();
+        let (bytes, channels) = collect_channels(|| {
+            with_channel_binder(&caller_binder, || {
+                vox_phon::to_vec(&args).expect("serialize option args")
+            })
+        });
+        assert_eq!(channels, vec![ChannelId(100)]);
+
+        let callee_binder = TestBinder::new();
+        let decoded: Args = provide_channels(channels.clone(), || {
+            with_channel_binder(&callee_binder, || {
+                vox_phon::from_slice(&bytes).expect("deserialize option args")
+            })
+        });
+        assert!(decoded.maybe.is_none());
+        assert_eq!(decoded.after.channel_id, channels[0]);
     }
 }
