@@ -288,8 +288,9 @@ impl DecodeProgram {
         }
     }
 
-    #[cfg(test)]
-    fn uses_native_jit(&self) -> bool {
+    /// Whether this compatibility decode program uses the native JIT backend on
+    /// this build target.
+    pub fn uses_native_jit(&self) -> bool {
         cfg!(all(target_os = "macos", target_arch = "aarch64"))
     }
 }

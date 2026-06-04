@@ -49,6 +49,19 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+/// Whether a shape-erased typed program uses the native JIT backend.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct JitStatus {
+    pub encode_native: bool,
+    pub decode_native: bool,
+}
+
+impl JitStatus {
+    pub fn fully_native(self) -> bool {
+        self.encode_native && self.decode_native
+    }
+}
+
 fn lower_derived(type_name: &str, derived: &Derived) -> Result<Lowered, Error> {
     let reg = Registry::new(derived.schemas.clone());
     typed::lower_typed(&derived.descriptor, &derived.descriptor_blocks, &reg)
@@ -132,16 +145,21 @@ impl TypedProgram {
             .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
     }
 
-    #[cfg(test)]
-    fn uses_native_jit(&self) -> bool {
+    fn jit_status(&self) -> JitStatus {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
-            self.native_encode.is_some() && self.native_decode.is_some()
+            JitStatus {
+                encode_native: self.native_encode.is_some(),
+                decode_native: self.native_decode.is_some(),
+            }
         }
 
         #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
         {
-            false
+            JitStatus {
+                encode_native: false,
+                decode_native: false,
+            }
         }
     }
 }
@@ -253,6 +271,15 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
     Ok(unsafe { program.encode(ptr.as_byte_ptr()) })
 }
 
+/// Report whether the shape-erased typed program for `shape` is backed by
+/// native JIT programs on this build target.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema.
+pub fn jit_status_for_shape(shape: &'static Shape) -> Result<JitStatus, Error> {
+    Ok(typed_program_for_shape(shape)?.jit_status())
+}
+
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes`: `&str`,
 /// `&[u8]`, `Cow`, and opaque payloads point INTO `bytes`, so the decoded value may
 /// not outlive it. The lifetime tie (`bytes: &'a [u8]`, `T: Facet<'a>`) enforces it.
@@ -342,7 +369,7 @@ mod tests {
         let second = typed_program_for_shape(Person::SHAPE).expect("second program");
         assert!(Arc::ptr_eq(&first, &second));
         assert_eq!(
-            first.uses_native_jit(),
+            first.jit_status().fully_native(),
             cfg!(all(target_os = "macos", target_arch = "aarch64"))
         );
 
@@ -365,6 +392,27 @@ mod tests {
         )
         .expect("shape encode");
         assert_eq!(generic, erased);
+    }
+
+    #[test]
+    fn vox_wire_shapes_report_native_jit_when_available() {
+        for (name, shape) in [
+            ("Message", Message::SHAPE),
+            ("MessagePayload", MessagePayload::SHAPE),
+            ("RequestCall", RequestCall::SHAPE),
+            ("RequestMessage", RequestMessage::SHAPE),
+            ("SchemaMessage", SchemaMessage::SHAPE),
+            ("Payload", Payload::SHAPE),
+        ] {
+            let status = jit_status_for_shape(shape).unwrap_or_else(|err| {
+                panic!("failed to build JIT status for {name}: {err}");
+            });
+            assert_eq!(
+                status.fully_native(),
+                cfg!(all(target_os = "macos", target_arch = "aarch64")),
+                "{name} JIT status: {status:?}"
+            );
+        }
     }
 
     #[test]
