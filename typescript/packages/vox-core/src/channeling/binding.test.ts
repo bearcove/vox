@@ -6,6 +6,9 @@ import { bindPhonChannels } from "./binding.ts";
 import { channel } from "./pair.ts";
 import { ChannelRegistry } from "./registry.ts";
 import { Role } from "./types.ts";
+import { sessionEchoRegistry } from "../session_echo.fixture.ts";
+
+const U32_ROOT = 0x281c5be4f2ee63b4n;
 
 describe("bindPhonChannels", () => {
   // r[verify rpc.channel.allocation]
@@ -24,7 +27,9 @@ describe("bindPhonChannels", () => {
   // r[verify rpc.channel.binding.caller-args]
   // r[verify rpc.channel.binding.caller-args.tx]
   // r[verify rpc.channel.payload-encoding]
+  // r[verify rpc.channel.pair]
   // r[verify rpc.channel.pair.binding-propagation]
+  // r[verify rpc.channel.pair.rx-take]
   it("uses lazily advertised auxiliary schemas for caller-side channel receives", async () => {
     const [tx, rx] = channel<unknown>();
     const registry = new ChannelRegistry();
@@ -65,23 +70,31 @@ describe("bindPhonChannels", () => {
   // r[verify rpc.channel.binding.caller-args.rx]
   // r[verify rpc.channel.direction]
   // r[verify rpc.channel.payload-encoding]
+  // r[verify rpc.channel.pair]
   // r[verify rpc.channel.pair.binding-propagation]
-  it("binds the paired Tx when the caller passes an Rx argument", () => {
+  // r[verify rpc.channel.pair.tx-read]
+  it("binds the paired Tx when the caller passes an Rx argument", async () => {
     const [tx, rx] = channel<unknown>();
     const registry = new ChannelRegistry();
     const allocator = new ChannelIdAllocator(Role.Initiator);
 
     const bound = bindPhonChannels(
       [rx],
-      [{ index: 0, direction: "rx", elementRoot: 123n }],
+      [{ index: 0, direction: "rx", elementRoot: U32_ROOT }],
       allocator,
       registry,
-      {} as Registry,
+      sessionEchoRegistry,
       { incoming: 4, outgoing: 4 },
     );
 
     expect(bound.channels).toEqual([1n]);
     expect(bound.values[0]).toEqual(Uint8Array.of(0, 0, 0, 0));
     expect(tx.isBound).toBe(true);
+    await tx.send(9);
+    expect(registry.pollOutgoing()).toEqual({
+      kind: "data",
+      channelId: 1n,
+      payload: Uint8Array.of(9, 0, 0, 0),
+    });
   });
 });

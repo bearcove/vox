@@ -27,6 +27,7 @@ import { Rx } from "./rx.ts";
  *
  * r[impl rpc.channel]
  * r[impl rpc.channel.direction]
+ * r[impl rpc.channel.pair]
  * r[impl rpc.channel.pair.binding-propagation]
  */
 export function channel<T>(): [Tx<T>, Rx<T>] {

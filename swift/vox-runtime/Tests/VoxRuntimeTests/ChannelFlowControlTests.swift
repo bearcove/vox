@@ -87,7 +87,9 @@ struct ChannelFlowControlTests {
     // r[verify rpc.channel.binding]
     // r[verify rpc.channel.binding.caller-args]
     // r[verify rpc.channel.binding.caller-args.rx]
+    // r[verify rpc.channel.pair]
     // r[verify rpc.channel.pair.binding-propagation]
+    // r[verify rpc.channel.pair.tx-read]
     // r[verify rpc.channel.payload-encoding]
     @Test func clientRxArgumentBindsPairedTxForSending() async throws {
         let (connection, inbox) = testConnection()
@@ -115,7 +117,9 @@ struct ChannelFlowControlTests {
     // r[verify rpc.channel.binding]
     // r[verify rpc.channel.binding.caller-args]
     // r[verify rpc.channel.binding.caller-args.tx]
+    // r[verify rpc.channel.pair]
     // r[verify rpc.channel.pair.binding-propagation]
+    // r[verify rpc.channel.pair.rx-take]
     // r[verify rpc.channel.payload-encoding]
     @Test func clientTxArgumentBindsPairedRxForReceiving() async throws {
         let (connection, _) = testConnection()

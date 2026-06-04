@@ -112,6 +112,7 @@ export class Rx<T> {
    * Returns the value, or null when the channel is closed.
    *
    * r[impl rpc.channel.item]
+   * r[impl rpc.channel.pair.rx-take]
    *
    * @throws If the Rx is not bound yet
    */

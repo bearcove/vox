@@ -72,6 +72,7 @@ public final class UnboundTx<T: Sendable>: @unchecked Sendable {
     }
 
     /// Send a value.
+    /// r[impl rpc.channel.pair.tx-read]
     public func send(_ value: T) async throws {
         let (taskTx, credit) = try await waitForSendBinding()
         if lock.withLock({ closed }) {
@@ -207,6 +208,7 @@ public final class UnboundRx<T: Sendable>: @unchecked Sendable {
     }
 
     /// Receive the next value, or nil if closed.
+    /// r[impl rpc.channel.pair.rx-take]
     public func recv() async throws -> T? {
         while true {
             let receiver = lock.withLock { receivers.first }
@@ -289,6 +291,7 @@ extension UnboundRx: AsyncSequence {
 /// so callers never hand-roll element bytes — mirrors the TS `channel()` design.
 /// r[impl rpc.channel]
 /// r[impl rpc.channel.direction]
+/// r[impl rpc.channel.pair]
 /// r[impl rpc.channel.pair.binding-propagation]
 public func channel<T: Sendable>() -> (UnboundTx<T>, UnboundRx<T>) {
     let tx = UnboundTx<T>()

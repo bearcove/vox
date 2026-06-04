@@ -153,6 +153,7 @@ export class Tx<T> {
    *
    * r[impl rpc.channel.item]
    * r[impl rpc.flow-control.credit]
+   * r[impl rpc.channel.pair.tx-read]
    *
    * @throws If the Tx is not bound yet
    */

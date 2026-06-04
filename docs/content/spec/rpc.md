@@ -663,22 +663,18 @@ On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
 
 > r[rpc.channel.pair]
 >
-> `channel<T>()` returns a `(Tx<T>, Rx<T>)` pair that share a single
-> channel core. Runtime channel capacity defaults to 16 items unless the
-> session is configured otherwise. Both handles hold an `Arc` reference to
-> the core. The
-> core contains a `Mutex<Option<ChannelBinding>>` where `ChannelBinding`
-> is either a `Sink` or a `Receiver` — never both. The `Mutex` is
-> needed because `Rx::recv` takes the receiver out of the core on
-> first call.
+> `channel<T>()` returns a linked `(Tx<T>, Rx<T>)` pair for one logical
+> unidirectional channel. Before binding, neither endpoint has a channel ID,
+> element codec, or transport binding. Runtime channel capacity defaults to
+> 16 items unless the session is configured otherwise.
 
 > r[rpc.channel.pair.binding-propagation]
 >
 > When the framework binds a channel handle that is part of a pair
-> (created via `channel()`), the binding is stored in the shared core.
-> The paired handle — which the caller or callee kept — reads or takes
-> the binding from the same core. This allows the framework to bind
-> both ends by touching only the handle that appears in the args.
+> (created via `channel()`), it MUST propagate the channel ID, element codec,
+> and send/receive binding needed by the paired handle that the caller or
+> callee kept. This allows the framework to bind both ends by touching only
+> the handle that appears in the args.
 
 ## Caller-side binding (args)
 
@@ -729,15 +725,16 @@ On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
 
 > r[rpc.channel.pair.tx-read]
 >
-> `Tx::send` reads the sink from the shared core. If the `Tx` was
-> created standalone (deserialized), it reads from its local sink slot.
-> If it was created via `channel()`, it reads from the shared core's
-> `ChannelBinding::Sink`.
+> Sending through a `Tx<T>` MUST use the send binding currently associated
+> with that handle. If the `Tx` was created standalone (deserialized or
+> server-side), the binding is local to that handle. If it was created via
+> `channel()`, the binding is installed by pair binding propagation when the
+> paired `Rx<T>` is bound.
 
 > r[rpc.channel.pair.rx-take]
 >
-> `Rx::recv` takes the receiver on first call. If the `Rx` was created
-> standalone (deserialized), the receiver is already in its local slot.
-> If it was created via `channel()`, the first `recv` call takes the
-> receiver from the shared core's `ChannelBinding::Receiver` into the
-> local slot. Subsequent calls use the local slot directly.
+> Receiving through an `Rx<T>` MUST use the receive binding currently
+> associated with that handle. If the `Rx` was created standalone
+> (deserialized or server-side), the binding is local to that handle. If it
+> was created via `channel()`, the binding is installed by pair binding
+> propagation when the paired `Tx<T>` is bound.
