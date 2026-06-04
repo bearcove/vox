@@ -4,6 +4,11 @@ import { metadataKeyIsNoPropagate, metadataKeyIsRedacted } from "@bearcove/vox-w
 import { ClientMetadata, clientMetadataToWire } from "./metadata.ts";
 
 describe("ClientMetadata", () => {
+  // r[verify rpc.metadata]
+  // r[verify rpc.metadata.value]
+  // r[verify rpc.metadata.keys]
+  // r[verify rpc.metadata.duplicates]
+  // r[verify rpc.metadata.unknown]
   // r[verify schema.interaction.metadata]
   it("exposes metadata as a self-describing wire Value map", () => {
     const metadata = new ClientMetadata();
@@ -12,13 +17,20 @@ describe("ClientMetadata", () => {
     metadata.set("trace-id", "abc");
     metadata.set("attempt", 7n);
     metadata.set("blob", bytes);
+    metadata.set("Trace-Id", "case-sensitive");
+    metadata.set("unknown-key", "ignored unless read explicitly");
+    metadata.set("trace-id", "replacement");
 
     const wire = clientMetadataToWire(metadata);
 
     expect(wire).toBe(metadata.toWire());
-    expect(wire.get("trace-id")).toBe("abc");
+    expect(wire.get("trace-id")).toBe("replacement");
+    expect(wire.get("Trace-Id")).toBe("case-sensitive");
+    expect(wire.get("TRACE-ID")).toBeUndefined();
     expect(wire.get("attempt")).toBe(7n);
     expect(wire.get("blob")).toBe(bytes);
+    expect(wire.get("unknown-key")).toBe("ignored unless read explicitly");
+    expect(wire.size).toBe(5);
   });
 
   // r[verify rpc.metadata.sigils]

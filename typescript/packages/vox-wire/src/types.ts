@@ -53,6 +53,10 @@ export type ChannelId = bigint;
 // values are phon `Value`s. Key sigils (`#`, `-`, `-#`) are conventions on the
 // key string; there is no separate metadata flag map.
 // r[impl rpc.metadata]
+// r[impl rpc.metadata.value]
+// r[impl rpc.metadata.keys]
+// r[impl rpc.metadata.duplicates]
+// r[impl rpc.metadata.unknown]
 // r[impl schema.interaction.metadata]
 // ---------------------------------------------------------------------------
 

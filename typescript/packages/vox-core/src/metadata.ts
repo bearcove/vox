@@ -3,6 +3,10 @@
 // On the wire metadata is a phon `Value` map. Key sigils (`#`, `-`, `-#`) are
 // conventions on the key string, not separate flag-list entries.
 // r[impl rpc.metadata]
+// r[impl rpc.metadata.value]
+// r[impl rpc.metadata.keys]
+// r[impl rpc.metadata.duplicates]
+// r[impl rpc.metadata.unknown]
 // r[impl schema.interaction.metadata]
 
 import type { Value } from "@bearcove/phon-schema";

@@ -14,6 +14,8 @@ use facet_value::{VBytes, VObject, VString, Value};
 /// Metadata is a self-describing [`Value`] — an object of string keys to values
 /// (string / bytes / `u64`), or null when empty.
 // r[impl rpc.metadata]
+// r[impl rpc.metadata.keys]
+// r[impl rpc.metadata.unknown]
 // r[impl schema.interaction.metadata]
 pub type Metadata = Value;
 
@@ -160,7 +162,9 @@ mod tests {
 
     // r[verify rpc.metadata]
     // r[verify rpc.metadata.value]
+    // r[verify rpc.metadata.keys]
     // r[verify rpc.metadata.duplicates]
+    // r[verify rpc.metadata.unknown]
     // r[verify schema.interaction.metadata]
     #[test]
     fn builder_and_accessors_round_trip() {
@@ -168,15 +172,21 @@ mod tests {
             .str("trace", "abc")
             .u64("n", 99)
             .bytes("blob", &[1u8, 2, 3][..])
+            .str("Trace", "case-sensitive")
+            .str("unknown-key", "ignored unless read explicitly")
             .str("trace", "replacement")
             .build();
 
         assert_eq!(m.meta_str("trace"), Some("replacement"));
+        assert_eq!(m.meta_str("Trace"), Some("case-sensitive"));
+        assert_eq!(m.meta_str("TRACE"), None);
         assert_eq!(m.meta_u64("n"), Some(99));
         assert_eq!(m.meta_bytes("blob"), Some(&[1u8, 2, 3][..]));
         let entries: Vec<&str> = m.meta_entries().into_iter().map(|(k, _)| k).collect();
-        assert_eq!(entries.len(), 3);
+        assert_eq!(entries.len(), 5);
         assert!(entries.contains(&"trace"));
+        assert!(entries.contains(&"Trace"));
+        assert!(entries.contains(&"unknown-key"));
         assert!(entries.contains(&"n"));
         assert!(entries.contains(&"blob"));
     }

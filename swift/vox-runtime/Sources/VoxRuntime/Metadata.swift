@@ -4,6 +4,9 @@ import PhonSchema
 // `Value` (`r[rpc.metadata]`) — an object of string keys to string / bytes / u64
 // values, or null when empty. Mirrors `rust/vox-types/src/metadata.rs`.
 // r[impl rpc.metadata]
+// r[impl rpc.metadata.value]
+// r[impl rpc.metadata.keys]
+// r[impl rpc.metadata.unknown]
 // r[impl schema.interaction.metadata]
 //
 // Per-key handling conventions are encoded directly in the key string: a leading
@@ -59,6 +62,7 @@ public extension Value {
 
     /// Insert (or replace) `key`→`value`, creating the object if needed. The shared
     /// construction primitive (mirrors `meta_set`).
+    // r[impl rpc.metadata.duplicates]
     mutating func metaSet(_ key: String, _ value: Value) {
         var entries: [Entry]
         if case .object(let e) = self { entries = e } else { entries = [] }
