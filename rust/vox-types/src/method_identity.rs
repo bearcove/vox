@@ -39,6 +39,11 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         !shape_contains_channel(R::SHAPE),
         "channels are not allowed in return types: {service_name}.{method_name}"
     );
+    // r[impl rpc.channel.no-collections]
+    assert!(
+        !shape_contains_channel_in_collection(A::SHAPE),
+        "channels are not allowed inside collections: {service_name}.{method_name}"
+    );
     let args_have_channels = shape_contains_channel(A::SHAPE);
 
     let id = method_id_name_only(service_name, method_name);
@@ -133,9 +138,89 @@ pub fn shape_contains_channel(shape: &'static Shape) -> bool {
     visit(shape, &mut seen)
 }
 
+// r[impl rpc.channel.no-collections]
+pub fn shape_contains_channel_in_collection(shape: &'static Shape) -> bool {
+    fn is_collection(def: Def) -> bool {
+        matches!(
+            def,
+            Def::List(_) | Def::Array(_) | Def::Slice(_) | Def::Map(_) | Def::Set(_)
+        )
+    }
+
+    fn visit(
+        shape: &'static Shape,
+        inside_collection: bool,
+        seen: &mut HashSet<(&'static Shape, bool)>,
+    ) -> bool {
+        if is_tx(shape) || is_rx(shape) {
+            return inside_collection;
+        }
+
+        if !seen.insert((shape, inside_collection)) {
+            return false;
+        }
+
+        let nested_inside_collection = inside_collection || is_collection(shape.def);
+
+        if let Some(inner) = shape.inner
+            && visit(inner, nested_inside_collection, seen)
+        {
+            return true;
+        }
+
+        if shape
+            .type_params
+            .iter()
+            .any(|t| visit(t.shape, nested_inside_collection, seen))
+        {
+            return true;
+        }
+
+        match shape.def {
+            Def::List(list_def) => visit(list_def.t(), true, seen),
+            Def::Array(array_def) => visit(array_def.t(), true, seen),
+            Def::Slice(slice_def) => visit(slice_def.t(), true, seen),
+            Def::Map(map_def) => visit(map_def.k(), true, seen) || visit(map_def.v(), true, seen),
+            Def::Set(set_def) => visit(set_def.t(), true, seen),
+            Def::Option(opt_def) => visit(opt_def.t(), nested_inside_collection, seen),
+            Def::Result(result_def) => {
+                visit(result_def.t(), nested_inside_collection, seen)
+                    || visit(result_def.e(), nested_inside_collection, seen)
+            }
+            Def::Pointer(ptr_def) => ptr_def
+                .pointee
+                .is_some_and(|p| visit(p, nested_inside_collection, seen)),
+            _ => match shape.ty {
+                Type::User(UserType::Struct(s)) => s
+                    .fields
+                    .iter()
+                    .any(|f| visit(f.shape(), nested_inside_collection, seen)),
+                Type::User(UserType::Enum(e)) => e.variants.iter().any(|v| {
+                    v.data
+                        .fields
+                        .iter()
+                        .any(|f| visit(f.shape(), nested_inside_collection, seen))
+                }),
+                _ => false,
+            },
+        }
+    }
+
+    let mut seen = HashSet::new();
+    visit(shape, false, &mut seen)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use facet::Facet;
+
+    fn unit_response_options() -> MethodDescriptorOptions {
+        MethodDescriptorOptions {
+            response_wire_shape: <() as Facet>::SHAPE,
+            doc: None,
+        }
+    }
 
     // r[verify schema.method-id]
     #[test]
@@ -152,5 +237,40 @@ mod tests {
         let a = method_id_name_only("Svc", "alpha");
         let b = method_id_name_only("Svc", "beta");
         assert_ne!(a, b);
+    }
+
+    // r[verify rpc.channel.no-collections]
+    #[test]
+    fn method_descriptor_rejects_channel_inside_nested_collection_arg() {
+        #[derive(Facet)]
+        struct Nested {
+            stream: Vec<crate::Tx<u8>>,
+        }
+
+        #[derive(Facet)]
+        struct Args {
+            nested: Nested,
+        }
+
+        let result = std::panic::catch_unwind(|| {
+            let _ = method_descriptor::<Args, ()>(
+                "StreamService",
+                "bad",
+                &["nested"],
+                &[None],
+                unit_response_options(),
+            );
+        });
+
+        let panic = result.expect_err("descriptor should reject channels in collections");
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&'static str>().copied())
+            .expect("panic payload should be a string");
+        assert!(
+            message.contains("channels are not allowed inside collections: StreamService.bad"),
+            "unexpected panic message: {message}"
+        );
     }
 }
