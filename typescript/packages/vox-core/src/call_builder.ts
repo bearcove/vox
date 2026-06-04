@@ -84,7 +84,7 @@ export class CallBuilder<T> implements PromiseLike<T> {
  * attempt is started:
  * ```typescript
  * const meta = new ClientMetadata();
- * meta.setSensitive("authorization", "Bearer token");
+ * meta.set("#authorization", "Bearer token");
  * await withMeta(meta, (m) => client.echo("hello", m));
  * ```
  *

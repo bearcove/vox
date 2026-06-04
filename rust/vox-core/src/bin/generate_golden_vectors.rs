@@ -5,9 +5,9 @@ use std::{fs, path::PathBuf};
 use vox_types::{
     ChannelBody, ChannelClose, ChannelGrantCredit, ChannelId, ChannelItem, ChannelMessage,
     ChannelReset, ConnectionAccept, ConnectionClose, ConnectionId, ConnectionOpen,
-    ConnectionReject, ConnectionSettings, Message, MessagePayload, Metadata, MetadataFlags,
-    MethodId, Parity, Payload, ProtocolError, RequestBody, RequestCall, RequestCancel, RequestId,
-    RequestMessage, RequestResponse, VoxError,
+    ConnectionReject, ConnectionSettings, Message, MessagePayload, Metadata, MethodId, Parity,
+    Payload, ProtocolError, RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage,
+    RequestResponse, VoxError,
 };
 
 fn fixture_root() -> PathBuf {
@@ -36,12 +36,7 @@ fn sample_metadata() -> Metadata {
         .str("trace-id", "abc123")
         .u64("attempt", 2)
         .build();
-    vox_types::meta_set(
-        &mut m,
-        "auth",
-        &[0xDE, 0xAD, 0xBE, 0xEF][..],
-        MetadataFlags::SENSITIVE | MetadataFlags::NO_PROPAGATE,
-    );
+    vox_types::meta_set(&mut m, "-#auth", &[0xDE, 0xAD, 0xBE, 0xEF][..]);
     m
 }
 

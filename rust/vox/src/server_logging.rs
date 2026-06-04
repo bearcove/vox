@@ -6,6 +6,7 @@ use tracing::{debug, trace};
 use crate::{
     BoxMiddlewareFuture, Metadata, MetadataExt, RequestContext, ServerCallOutcome,
     ServerMiddleware, ServerRequest, ServerResponse, ServerResponseContext, ServerResponsePayload,
+    metadata_key_is_redacted,
 };
 
 const DEFAULT_PAYLOAD_MAX_DEPTH: usize = 4;
@@ -165,8 +166,8 @@ impl ServerMiddleware for ServerLogging {
 #[derive(Debug)]
 struct RequestStart(Instant);
 
-/// Debug view of metadata that redacts the values of keys marked sensitive
-/// (`r[rpc.metadata.flags.sensitive]`) and hides the well-known flag keys.
+/// Debug view of metadata that redacts the values of keys marked sensitive by
+/// the metadata sigil convention.
 #[derive(Clone, Copy)]
 struct RedactedMetadata<'a>(&'a Metadata);
 
@@ -174,7 +175,7 @@ impl std::fmt::Debug for RedactedMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut map = f.debug_map();
         for (key, value) in self.0.meta_entries() {
-            if self.0.meta_is_sensitive(key) {
+            if metadata_key_is_redacted(key) {
                 map.entry(&key, &"[REDACTED]");
             } else {
                 map.entry(&key, &MetadataValueDebug(value));
@@ -216,32 +217,27 @@ mod tests {
 
     use super::{RedactedMetadata, ServerLogging, ServerLoggingOptions};
     use crate::{
-        Extensions, MetadataFlags, RequestContext, ServerCallOutcome, ServerMiddleware,
-        ServerRequest, meta_set, metadata,
+        Extensions, RequestContext, ServerCallOutcome, ServerMiddleware, ServerRequest, meta_set,
+        metadata,
     };
 
+    // r[verify rpc.metadata.sigils]
     #[test]
     fn metadata_debug_redacts_sensitive_values() {
         let mut m = metadata()
             .bytes("blob", &[1u8, 2, 3][..])
             .u64("attempt", 2)
             .build();
-        meta_set(
-            &mut m,
-            "authorization",
-            "Bearer secret",
-            MetadataFlags::SENSITIVE,
-        );
+        meta_set(&mut m, "-#authorization", "Bearer secret");
 
         let rendered = format!("{:?}", RedactedMetadata(&m));
         assert!(
-            rendered.contains("\"authorization\": \"[REDACTED]\""),
+            rendered.contains("\"-#authorization\": \"[REDACTED]\""),
             "{rendered}"
         );
         assert!(rendered.contains("\"blob\": <3 bytes>"), "{rendered}");
         assert!(rendered.contains("\"attempt\": 2"), "{rendered}");
         assert!(!rendered.contains("Bearer secret"), "{rendered}");
-        assert!(!rendered.contains("vox:sensitive"), "{rendered}");
     }
 
     #[tokio::test]
@@ -273,12 +269,7 @@ mod tests {
             };
 
         let mut request_metadata = metadata().u64("attempt", 2).build();
-        meta_set(
-            &mut request_metadata,
-            "authorization",
-            "Bearer secret",
-            MetadataFlags::SENSITIVE,
-        );
+        meta_set(&mut request_metadata, "-#authorization", "Bearer secret");
         let extensions = Extensions::new();
         let context = RequestContext::with_extensions(&METHOD, &request_metadata, &extensions);
         let request = ServerRequest::new(context, crate::Peek::new(&()));
@@ -314,7 +305,7 @@ mod tests {
         assert!(output.contains("rpc request payload"));
         assert!(output.contains("rpc response"));
         assert!(output.contains("rpc response payload"));
-        assert!(output.contains("authorization"));
+        assert!(output.contains("-#authorization"));
         assert!(output.contains("[REDACTED]"));
         assert!(!output.contains("Bearer secret"));
         assert!(output.contains("attempt"));

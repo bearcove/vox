@@ -3,23 +3,24 @@ import PhonSchema
 // Metadata: a self-describing key→value map carried on the wire as a phon dynamic
 // `Value` (`r[rpc.metadata]`) — an object of string keys to string / bytes / u64
 // values, or null when empty. Mirrors `rust/vox-types/src/metadata.rs`.
+// r[impl rpc.metadata]
 // r[impl schema.interaction.metadata]
 //
-// Per-key behavior flags (sensitive, no-propagate) are recorded under the
-// well-known keys below, each holding an array of the metadata key-names the flag
-// applies to — they are NOT a per-entry wire field.
+// Per-key handling conventions are encoded directly in the key string: a leading
+// `#` marks the value sensitive, `-` marks it no-propagate, and `-#` does both.
 
 /// Metadata is a self-describing [`Value`].
 public typealias Metadata = Value
 
-/// Well-known metadata keys carrying per-key behavior flags
-/// (`r[rpc.metadata.flags]`).
-public enum MetadataKeys {
-    /// Keys whose values MUST NOT be logged/traced (`r[rpc.metadata.flags.sensitive]`).
-    public static let sensitive = "vox:sensitive"
-    /// Keys whose values MUST NOT be forwarded downstream
-    /// (`r[rpc.metadata.flags.no-propagate]`).
-    public static let noPropagate = "vox:no-propagate"
+// r[impl rpc.metadata.sigils]
+public func metadataKeyIsRedacted(_ key: String) -> Bool {
+    let localKey = key.hasPrefix("-") ? String(key.dropFirst()) : key
+    return localKey.hasPrefix("#")
+}
+
+// r[impl rpc.metadata.sigils]
+public func metadataKeyIsNoPropagate(_ key: String) -> Bool {
+    key.hasPrefix("-")
 }
 
 /// Empty metadata reads as null (an absent metadata field).
@@ -50,12 +51,10 @@ public extension Value {
     /// Whether a key is present.
     func metaHas(_ key: String) -> Bool { get(key) != nil }
 
-    /// The (non-well-known) `(key, value)` entries.
+    /// The `(key, value)` entries.
     func metaEntries() -> [(String, Value)] {
         guard case .object(let entries) = self else { return [] }
-        return entries
-            .filter { $0.key != MetadataKeys.sensitive && $0.key != MetadataKeys.noPropagate }
-            .map { ($0.key, $0.value) }
+        return entries.map { ($0.key, $0.value) }
     }
 
     /// Insert (or replace) `key`→`value`, creating the object if needed. The shared

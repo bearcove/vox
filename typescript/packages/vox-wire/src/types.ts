@@ -50,18 +50,13 @@ export type ChannelId = bigint;
 // Metadata
 //
 // Metadata is a self-describing `Value` map (`r[rpc.metadata]`): keys are strings,
-// values are phon `Value`s. Flags became well-known keys whose value is a list of
-// the key names they apply to (`r[rpc.metadata.flags]`).
+// values are phon `Value`s. Key sigils (`#`, `-`, `-#`) are conventions on the
+// key string; there is no separate metadata flag map.
+// r[impl rpc.metadata]
 // r[impl schema.interaction.metadata]
 // ---------------------------------------------------------------------------
 
 export type Metadata = Map<string, Value>;
-
-/** Well-known metadata flag keys. */
-export const MetadataKeys = {
-  SENSITIVE: "vox:sensitive",
-  NO_PROPAGATE: "vox:no-propagate",
-} as const;
 
 export function emptyMetadata(): Metadata {
   return new Map();
@@ -76,22 +71,15 @@ export function coerceMetadata(value: unknown): Metadata {
   return value instanceof Map ? (value as Metadata) : new Map();
 }
 
-/** Mark `key` under a well-known flag list (`vox:sensitive` / `vox:no-propagate`). */
-export function metadataAddFlag(meta: Metadata, flagKey: string, key: string): void {
-  const existing = meta.get(flagKey);
-  const list: Value[] = Array.isArray(existing) ? (existing as Value[]) : [];
-  if (!list.includes(key)) list.push(key);
-  meta.set(flagKey, list);
+// r[impl rpc.metadata.sigils]
+export function metadataKeyIsRedacted(key: string): boolean {
+  const localKey = key.startsWith("-") ? key.slice(1) : key;
+  return localKey.startsWith("#");
 }
 
-export function metadataIsSensitive(meta: Metadata, key: string): boolean {
-  const list = meta.get(MetadataKeys.SENSITIVE);
-  return Array.isArray(list) && (list as Value[]).includes(key);
-}
-
-export function metadataIsNoPropagate(meta: Metadata, key: string): boolean {
-  const list = meta.get(MetadataKeys.NO_PROPAGATE);
-  return Array.isArray(list) && (list as Value[]).includes(key);
+// r[impl rpc.metadata.sigils]
+export function metadataKeyIsNoPropagate(key: string): boolean {
+  return key.startsWith("-");
 }
 
 // ---------------------------------------------------------------------------

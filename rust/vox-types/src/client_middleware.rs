@@ -1,8 +1,5 @@
 use crate::server_middleware::BoxMiddlewareFuture;
-use crate::{
-    Extensions, Metadata, MetadataFlags, MethodDescriptor, MethodId, RequestCall, VoxError,
-    meta_set,
-};
+use crate::{Extensions, Metadata, MethodDescriptor, MethodId, RequestCall, VoxError, meta_set};
 
 /// Borrowed per-call context exposed to client middleware.
 #[derive(Clone, Copy, Debug)]
@@ -64,26 +61,16 @@ impl<'call, 'state> ClientRequest<'call, 'state> {
         &mut self.call.metadata
     }
 
-    pub fn push_string_metadata(
-        &mut self,
-        key: &'static str,
-        value: impl Into<String>,
-        flags: MetadataFlags,
-    ) {
-        meta_set(&mut self.call.metadata, key, value.into(), flags);
+    pub fn push_string_metadata(&mut self, key: &'static str, value: impl Into<String>) {
+        meta_set(&mut self.call.metadata, key, value.into());
     }
 
-    pub fn push_bytes_metadata(
-        &mut self,
-        key: &'static str,
-        value: impl Into<Vec<u8>>,
-        flags: MetadataFlags,
-    ) {
-        meta_set(&mut self.call.metadata, key, value.into(), flags);
+    pub fn push_bytes_metadata(&mut self, key: &'static str, value: impl Into<Vec<u8>>) {
+        meta_set(&mut self.call.metadata, key, value.into());
     }
 
-    pub fn push_u64_metadata(&mut self, key: &'static str, value: u64, flags: MetadataFlags) {
-        meta_set(&mut self.call.metadata, key, value, flags);
+    pub fn push_u64_metadata(&mut self, key: &'static str, value: u64) {
+        meta_set(&mut self.call.metadata, key, value);
     }
 }
 
@@ -121,7 +108,7 @@ pub trait ClientMiddleware: Send + Sync + 'static {
 mod tests {
     use crate::{MetadataExt, Payload};
 
-    use super::{ClientRequest, MetadataFlags, MethodId, RequestCall};
+    use super::{ClientRequest, MethodId, RequestCall};
 
     #[test]
     fn client_request_can_add_metadata() {
@@ -133,9 +120,9 @@ mod tests {
             schemas: Default::default(),
         };
         let mut request = ClientRequest::new(&mut call);
-        request.push_string_metadata("x-test", "value".to_string(), MetadataFlags::NONE);
-        request.push_bytes_metadata("x-bytes", vec![1, 2, 3], MetadataFlags::NONE);
-        request.push_u64_metadata("x-num", 7, MetadataFlags::NONE);
+        request.push_string_metadata("x-test", "value".to_string());
+        request.push_bytes_metadata("x-bytes", vec![1, 2, 3]);
+        request.push_u64_metadata("x-num", 7);
 
         assert_eq!(request.metadata().meta_len(), 3);
         assert_eq!(request.metadata().meta_str("x-test"), Some("value"));

@@ -1,4 +1,4 @@
-import { MetadataKeys } from "@bearcove/vox-wire";
+import { metadataKeyIsRedacted } from "@bearcove/vox-wire";
 import type { RequestContext } from "./request_context.ts";
 import type { ServerCallOutcome, ServerMiddleware } from "./server_middleware.ts";
 
@@ -16,14 +16,11 @@ function renderMetadataValue(value: unknown): unknown {
   return value;
 }
 
+// r[impl rpc.metadata.sigils]
 function metadataForLog(context: RequestContext): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of context.metadata.entries()) {
-    // Hide well-known flag keys from logged output.
-    if (key === MetadataKeys.SENSITIVE || key === MetadataKeys.NO_PROPAGATE) {
-      continue;
-    }
-    if (context.metadata.isSensitive(key)) {
+    if (metadataKeyIsRedacted(key)) {
       out[key] = "[REDACTED]";
     } else {
       out[key] = renderMetadataValue(value);

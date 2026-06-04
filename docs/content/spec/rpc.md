@@ -570,39 +570,20 @@ registered on the session builder; otherwise they are rejected.
 > are also valid. A peer carrying no metadata MAY encode it as the unit/null
 > `Value` rather than an empty map.
 
-> r[rpc.metadata.flags]
->
-> Handling flags are carried as **well-known keys** in the metadata map, not as
-> a per-entry bitfield. Each flag key maps to a `Value` list naming the metadata
-> keys that bear that flag:
->
-> | Key | Meaning |
-> |-----|---------|
-> | `vox:sensitive` | See `r[rpc.metadata.flags.sensitive]` |
-> | `vox:no-propagate` | See `r[rpc.metadata.flags.no-propagate]` |
->
-> The `vox:` key prefix is reserved for protocol use. Implementations MAY expose
-> flags as an ergonomic per-entry API, but on the wire they MUST lower to these
-> keys. Unknown `vox:` keys MUST be preserved when forwarding but ignored for
-> handling decisions.
-
-> r[rpc.metadata.flags.sensitive]
->
-> A metadata key listed in the `vox:sensitive` list MUST NOT be logged, traced,
-> or included in error messages. Implementations MUST take care not to expose
-> such values in debug output, telemetry, or crash reports.
-
-> r[rpc.metadata.flags.no-propagate]
->
-> A metadata key listed in the `vox:no-propagate` list MUST NOT be forwarded to
-> downstream calls. A proxy or middleware that forwards metadata MUST strip those
-> keys, and prune them from the `vox:no-propagate` list it forwards.
-
 > r[rpc.metadata.keys]
 >
-> Metadata keys are case-sensitive UTF-8 strings. By convention, application keys
-> use lowercase kebab-case (e.g. `authorization`, `trace-parent`,
-> `request-deadline`); the `vox:` prefix is reserved for protocol keys.
+> Metadata keys are case-sensitive UTF-8 strings. By convention, application
+> keys use lowercase kebab-case (e.g. `authorization`, `trace-parent`,
+> `request-deadline`).
+
+> r[rpc.metadata.sigils]
+>
+> A metadata key MAY carry handling conventions directly in the key string:
+> `#key` marks the value sensitive for log/trace rendering, `-key` marks the
+> entry as no-propagate for code that intentionally forwards metadata, and
+> `-#key` applies both conventions. Implementations MUST preserve the full key
+> string on the wire; there is no separate flag map or metadata-specific wire
+> type.
 
 > r[rpc.metadata.duplicates]
 >
@@ -617,25 +598,18 @@ registered on the session builder; otherwise they are rejected.
 ### Examples
 
 Build a metadata map and mark an authentication token sensitive (and
-non-propagating) so it is not logged or forwarded downstream:
+non-propagating) with the `-#` key sigils:
 
 ```rust
-let mut metadata = vox_types::metadata()
+let metadata = vox_types::metadata()
     .str("trace-id", "abc123")
     .u64("attempt", 2)
+    .str("-#authorization", "Bearer sk-...")
     .build();
-
-vox_types::meta_set(
-    &mut metadata,
-    "authorization",
-    "Bearer sk-...",
-    MetadataFlags::SENSITIVE | MetadataFlags::NO_PROPAGATE,
-);
 ```
 
 On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
-"authorization": "Bearer sk-...", "vox:sensitive": ["authorization"],
-"vox:no-propagate": ["authorization"] }`.
+"-#authorization": "Bearer sk-..." }`.
 
 # Channel binding
 

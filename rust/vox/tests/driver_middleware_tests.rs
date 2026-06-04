@@ -115,11 +115,7 @@ impl vox::ClientMiddleware for MetadataInjectingMiddleware {
         request: &'a mut vox::ClientRequest<'call, 'a>,
     ) -> vox::BoxMiddlewareFuture<'a> {
         Box::pin(async move {
-            request.push_string_metadata(
-                "x-test",
-                "injected".to_string(),
-                vox::MetadataFlags::NONE,
-            );
+            request.push_string_metadata("x-test", "injected".to_string());
         })
     }
 }

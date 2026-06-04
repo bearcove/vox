@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { metadataKeyIsNoPropagate, metadataKeyIsRedacted } from "@bearcove/vox-wire";
 
 import { ClientMetadata, clientMetadataToWire } from "./metadata.ts";
 
@@ -18,5 +19,20 @@ describe("ClientMetadata", () => {
     expect(wire.get("trace-id")).toBe("abc");
     expect(wire.get("attempt")).toBe(7n);
     expect(wire.get("blob")).toBe(bytes);
+  });
+
+  // r[verify rpc.metadata.sigils]
+  it("treats metadata sigils as key-string conventions", () => {
+    expect(metadataKeyIsRedacted("regular.metadata")).toBe(false);
+    expect(metadataKeyIsNoPropagate("regular.metadata")).toBe(false);
+
+    expect(metadataKeyIsRedacted("#sensitive.metadata")).toBe(true);
+    expect(metadataKeyIsNoPropagate("#sensitive.metadata")).toBe(false);
+
+    expect(metadataKeyIsRedacted("-no-propagate-metadata")).toBe(false);
+    expect(metadataKeyIsNoPropagate("-no-propagate-metadata")).toBe(true);
+
+    expect(metadataKeyIsRedacted("-#sensitive-and-no-propagate-metadata")).toBe(true);
+    expect(metadataKeyIsNoPropagate("-#sensitive-and-no-propagate-metadata")).toBe(true);
   });
 });

@@ -24,12 +24,7 @@ pub const VOX_SERVICE_METADATA_KEY: &str = "vox-service";
 
 /// Inject `vox-service` metadata from `Client::SERVICE_NAME`.
 fn inject_service_metadata<Client: FromVoxSession>(metadata: &mut Metadata) {
-    vox_types::meta_set(
-        metadata,
-        VOX_SERVICE_METADATA_KEY,
-        Client::SERVICE_NAME,
-        vox_types::MetadataFlags::NONE,
-    );
+    vox_types::meta_set(metadata, VOX_SERVICE_METADATA_KEY, Client::SERVICE_NAME);
 }
 
 /// A pinned, boxed session future. On non-WASM this is `Send + 'static`;
@@ -293,7 +288,6 @@ impl<C> SessionInitiatorBuilder<C> {
             &mut peer_metadata,
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
-            vox_types::MetadataFlags::NONE,
         );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(
@@ -730,7 +724,6 @@ impl<C> SessionAcceptorBuilder<C> {
             &mut peer_metadata,
             VOX_SERVICE_METADATA_KEY,
             Client::SERVICE_NAME,
-            vox_types::MetadataFlags::NONE,
         );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(

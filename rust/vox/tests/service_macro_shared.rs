@@ -329,11 +329,7 @@ impl vox::ClientMiddleware for RecordingClientMiddleware {
             }
 
             if self.inject_metadata {
-                request.push_string_metadata(
-                    "x-client-value",
-                    format!("{}-value", self.name),
-                    vox::MetadataFlags::NONE,
-                );
+                request.push_string_metadata("x-client-value", format!("{}-value", self.name));
             }
         })
     }

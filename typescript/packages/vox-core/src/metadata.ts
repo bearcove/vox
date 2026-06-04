@@ -1,17 +1,12 @@
 // Client-side metadata: a self-describing `Value` map (`r[rpc.metadata]`).
 //
-// On the wire metadata is a phon `Value` map; flags are well-known keys whose
-// value is a list of the key names they apply to (`r[rpc.metadata.flags]`).
+// On the wire metadata is a phon `Value` map. Key sigils (`#`, `-`, `-#`) are
+// conventions on the key string, not separate flag-list entries.
+// r[impl rpc.metadata]
 // r[impl schema.interaction.metadata]
 
 import type { Value } from "@bearcove/phon-schema";
-import {
-  type Metadata,
-  MetadataKeys,
-  metadataAddFlag,
-  metadataIsSensitive,
-  metadataIsNoPropagate,
-} from "@bearcove/vox-wire";
+import { type Metadata } from "@bearcove/vox-wire";
 
 /** A metadata value: string, u64 (bigint), or raw bytes. */
 export type ClientMetadataValue = string | bigint | Uint8Array;
@@ -19,28 +14,14 @@ export type ClientMetadataValue = string | bigint | Uint8Array;
 /**
  * Client-side metadata builder.
  *
- * `set()` for normal metadata; `setSensitive()` marks a key for redaction in logs
- * and traces (recorded under the `vox:sensitive` well-known key).
+ * Use `set()` with the key string that should appear on the wire. A leading `#`
+ * marks values sensitive for logging, and `-#` marks sensitive/no-propagate.
  */
 export class ClientMetadata {
   private readonly map: Metadata = new Map();
 
   set(key: string, value: ClientMetadataValue): this {
     this.map.set(key, value as Value);
-    return this;
-  }
-
-  /** r[impl rpc.metadata.flags.sensitive] */
-  setSensitive(key: string, value: ClientMetadataValue): this {
-    this.map.set(key, value as Value);
-    metadataAddFlag(this.map, MetadataKeys.SENSITIVE, key);
-    return this;
-  }
-
-  /** r[impl rpc.metadata.flags.no-propagate] */
-  setNoPropagate(key: string, value: ClientMetadataValue): this {
-    this.map.set(key, value as Value);
-    metadataAddFlag(this.map, MetadataKeys.NO_PROPAGATE, key);
     return this;
   }
 
@@ -68,15 +49,7 @@ export class ClientMetadata {
     return this.map.entries();
   }
 
-  isSensitive(key: string): boolean {
-    return metadataIsSensitive(this.map, key);
-  }
-
-  isNoPropagate(key: string): boolean {
-    return metadataIsNoPropagate(this.map, key);
-  }
-
-  /** The wire `Value` map (flags already folded into well-known keys). */
+  /** The wire `Value` map. */
   toWire(): Metadata {
     return this.map;
   }

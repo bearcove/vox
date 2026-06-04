@@ -155,7 +155,7 @@ describe("loggingMiddleware", () => {
     const middleware = loggingMiddleware({ logMetadata: true });
     const ctx: ClientContext = { extensions: new Extensions() };
     const metadata = new ClientMetadata();
-    metadata.setSensitive("authorization", "Bearer super-secret-token");
+    metadata.set("#authorization", "Bearer super-secret-token");
     metadata.set("trace-id", "123");
     const request: CallRequest = {
       method: "Service.method",
@@ -166,7 +166,7 @@ describe("loggingMiddleware", () => {
     middleware.pre?.(ctx, request);
     expect(consoleLogs[0].data).toMatchObject({
       metadata: {
-        authorization: "[REDACTED]",
+        "#authorization": "[REDACTED]",
         "trace-id": "123",
       },
     });

@@ -36,12 +36,10 @@ export type {
 } from "./types.ts";
 
 export {
-  MetadataKeys,
   emptyMetadata,
   coerceMetadata,
-  metadataAddFlag,
-  metadataIsSensitive,
-  metadataIsNoPropagate,
+  metadataKeyIsRedacted,
+  metadataKeyIsNoPropagate,
   parityOdd,
   parityEven,
   connectionSettings,

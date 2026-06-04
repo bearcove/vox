@@ -4,7 +4,7 @@ use tracing::debug;
 
 use crate::{
     BoxMiddlewareFuture, ClientCallOutcome, ClientContext, ClientMiddleware, ClientRequest,
-    Metadata, MetadataExt,
+    Metadata, MetadataExt, metadata_key_is_redacted,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -100,8 +100,8 @@ impl ClientMiddleware for ClientLogging {
 #[derive(Debug)]
 struct RequestStart(Instant);
 
-/// Debug view of metadata that redacts the values of keys marked sensitive
-/// (`r[rpc.metadata.flags.sensitive]`) and hides the well-known flag keys.
+/// Debug view of metadata that redacts the values of keys marked sensitive by
+/// the metadata sigil convention.
 #[derive(Clone, Copy)]
 pub(crate) struct RedactedMetadata<'a>(pub(crate) &'a Metadata);
 
@@ -109,7 +109,7 @@ impl std::fmt::Debug for RedactedMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut map = f.debug_map();
         for (key, value) in self.0.meta_entries() {
-            if self.0.meta_is_sensitive(key) {
+            if metadata_key_is_redacted(key) {
                 map.entry(&key, &"[REDACTED]");
             } else {
                 map.entry(&key, &MetadataValueDebug(value));
@@ -150,28 +150,21 @@ mod tests {
     };
 
     use super::{ClientLogging, ClientLoggingOptions, RedactedMetadata};
-    use crate::{MetadataFlags, MethodDescriptor, MethodId, meta_set, metadata};
+    use crate::{MethodDescriptor, MethodId, meta_set, metadata};
 
+    // r[verify rpc.metadata.sigils]
     #[test]
     fn metadata_debug_redacts_sensitive_values() {
         let mut m = metadata().bytes("blob", &[1u8, 2, 3][..]).build();
-        meta_set(
-            &mut m,
-            "authorization",
-            "Bearer secret",
-            MetadataFlags::SENSITIVE,
-        );
+        meta_set(&mut m, "#authorization", "Bearer secret");
 
         let rendered = format!("{:?}", RedactedMetadata(&m));
-        // The sensitive value is redacted; the non-sensitive one is shown; the
-        // secret never appears; the well-known flag key is hidden.
         assert!(
-            rendered.contains("\"authorization\": \"[REDACTED]\""),
+            rendered.contains("\"#authorization\": \"[REDACTED]\""),
             "{rendered}"
         );
         assert!(rendered.contains("\"blob\": <3 bytes>"), "{rendered}");
         assert!(!rendered.contains("Bearer secret"), "{rendered}");
-        assert!(!rendered.contains("vox:sensitive"), "{rendered}");
     }
 
     #[tokio::test]
@@ -237,12 +230,7 @@ mod tests {
         let caller = caller.caller.with_middleware(&SERVICE, logging);
 
         let mut request_metadata = metadata().u64("attempt", 2).build();
-        meta_set(
-            &mut request_metadata,
-            "authorization",
-            "Bearer secret",
-            MetadataFlags::SENSITIVE,
-        );
+        meta_set(&mut request_metadata, "#authorization", "Bearer secret");
         let _ = caller
             .call(crate::RequestCall {
                 method_id: MethodId(7),
@@ -263,8 +251,8 @@ mod tests {
             "expected 'rpc response' in output: {output}"
         );
         assert!(
-            output.contains("authorization"),
-            "expected 'authorization' in output: {output}"
+            output.contains("#authorization"),
+            "expected '#authorization' in output: {output}"
         );
         assert!(
             output.contains("[REDACTED]"),

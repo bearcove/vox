@@ -4,7 +4,7 @@
 // Uses localStorage.debug pattern matching (like npm's debug package).
 
 import type { ClientMiddleware, ClientContext, CallRequest, CallOutcome } from "./middleware.ts";
-import { MetadataKeys, RpcError, RpcErrorCode } from "@bearcove/vox-wire";
+import { RpcError, RpcErrorCode, metadataKeyIsRedacted } from "@bearcove/vox-wire";
 
 /** Render a raw metadata value for log display. */
 function renderMetadataValue(value: unknown): unknown {
@@ -127,6 +127,7 @@ function matchPattern(namespace: string, pattern: string): boolean {
  * // Console shows expandable objects with full request/response data
  * ```
  */
+// r[impl rpc.metadata.sigils]
 export function loggingMiddleware(options: LoggingOptions = {}): ClientMiddleware {
   const namespace = options.namespace ?? "vox:rpc";
   const logArgs = options.logArgs ?? true;
@@ -154,14 +155,9 @@ export function loggingMiddleware(options: LoggingOptions = {}): ClientMiddlewar
       }
 
       if (logMetadata && request.metadata.size > 0) {
-        // r[impl call.metadata.flags] - Respect SENSITIVE flag when logging
         const metaObj: Record<string, unknown> = {};
         for (const [key, value] of request.metadata.entries()) {
-          // Hide well-known flag keys from logged output.
-          if (key === MetadataKeys.SENSITIVE || key === MetadataKeys.NO_PROPAGATE) {
-            continue;
-          }
-          if (request.metadata.isSensitive(key)) {
+          if (metadataKeyIsRedacted(key)) {
             metaObj[key] = "[REDACTED]";
           } else {
             metaObj[key] = renderMetadataValue(value);

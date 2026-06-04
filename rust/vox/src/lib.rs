@@ -169,7 +169,6 @@ pub use vox_types::{
     Metadata,
     MetadataBuilder,
     MetadataExt,
-    MetadataFlags,
     MethodDescriptor,
     MethodId,
     MsgFamily,
@@ -215,6 +214,8 @@ pub use vox_types::{
     // Metadata helpers
     metadata_get_str,
     metadata_get_u64,
+    metadata_key_is_no_propagate,
+    metadata_key_is_redacted,
     observe_reply,
 };
 

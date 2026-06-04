@@ -1641,12 +1641,7 @@ impl Session {
 
         // Let the acceptor decide the connection's fate.
         let mut metadata = open.metadata.clone();
-        vox_types::meta_set(
-            &mut metadata,
-            "vox-connection-kind",
-            "virtual",
-            vox_types::MetadataFlags::NONE,
-        );
+        vox_types::meta_set(&mut metadata, "vox-connection-kind", "virtual");
         let request = match ConnectionRequest::new(&metadata) {
             Ok(r) => r,
             Err(e) => {

@@ -35,8 +35,10 @@ specs (
                     typescript/packages/vox-core/src/transport_prologue.test.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
+                    typescript/packages/vox-core/src/logging.ts
                     typescript/packages/vox-core/src/metadata.ts
                     typescript/packages/vox-core/src/metadata.test.ts
+                    typescript/packages/vox-core/src/server_logging.ts
                     typescript/packages/vox-core/src/schema_tracker.ts
                     typescript/packages/vox-core/src/schema_tracker.test.ts
                     typescript/packages/vox-core/src/channeling/allocator.ts
@@ -48,6 +50,7 @@ specs (
                     typescript/packages/vox-core/src/channeling/rx.ts
                     typescript/packages/vox-core/src/channeling/tx.ts
                     typescript/packages/vox-core/src/channeling/types.ts
+                    typescript/packages/vox-wire/src/types.ts
                     typescript/packages/vox-wire/src/codec.ts
                     typescript/packages/vox-wire/src/codec.test.ts
                 )
