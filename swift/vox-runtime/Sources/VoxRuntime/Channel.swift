@@ -86,6 +86,17 @@ actor ChannelCreditController {
         }
     }
 
+    func tryConsume() -> CreditConsumeResult {
+        if closed {
+            return .closed
+        }
+        if available == 0 {
+            return .full
+        }
+        available -= 1
+        return .consumed
+    }
+
     // r[impl rpc.flow-control.credit.grant.additive]
     func grant(_ additional: UInt32) {
         guard additional > 0 else {
@@ -110,6 +121,12 @@ actor ChannelCreditController {
             waiter.resume(throwing: ChannelError.closed)
         }
     }
+}
+
+enum CreditConsumeResult: Sendable {
+    case consumed
+    case full
+    case closed
 }
 
 // MARK: - Channel Receiver
@@ -294,6 +311,28 @@ public final class Tx<T: Sendable>: @unchecked Sendable {
         taskTx(.data(channelId: channelId, payload: bytes))
     }
 
+    // r[impl rpc.flow-control.credit.try-send]
+    public func trySend(_ value: T) async throws -> TrySendResult<T> {
+        guard let taskTx = taskTx, let credit else {
+            return .full(value)
+        }
+        if lock.withLock({ closed }) {
+            return .closed(value)
+        }
+        switch await credit.tryConsume() {
+        case .consumed:
+            var buf = ByteBufferAllocator().buffer(capacity: 64)
+            serialize(value, &buf)
+            let bytes = buf.readBytes(length: buf.readableBytes) ?? []
+            taskTx(.data(channelId: channelId, payload: bytes))
+            return .sent
+        case .full:
+            return .full(value)
+        case .closed:
+            return .closed(value)
+        }
+    }
+
     /// Close this channel.
     ///
     /// r[impl rpc.channel.close] - Close terminates the channel.
@@ -320,6 +359,12 @@ public final class Tx<T: Sendable>: @unchecked Sendable {
     deinit {
         close()
     }
+}
+
+public enum TrySendResult<T: Sendable>: Sendable {
+    case sent
+    case full(T)
+    case closed(T)
 }
 
 // MARK: - Rx (Receive Handle)

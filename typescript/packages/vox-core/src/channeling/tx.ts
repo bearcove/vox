@@ -18,6 +18,11 @@ type TxSender =
   | { mode: "client"; sender: OutgoingSender }
   | { mode: "server"; channelId: ChannelId; taskSender: TaskSender; credit: OutgoingCreditController };
 
+export type TrySendResult<T> =
+  | { kind: "sent" }
+  | { kind: "full"; value: T }
+  | { kind: "closed"; value: T };
+
 /**
  * Tx channel handle - caller sends data to callee.
  *
@@ -178,6 +183,43 @@ export class Tx<T> {
         payload: bytes,
       });
     }
+  }
+
+  // r[impl rpc.flow-control.credit.try-send]
+  trySend(value: T): TrySendResult<T> {
+    if (!this.isBound || this.sender === undefined || this.serialize === undefined) {
+      return { kind: "full", value };
+    }
+
+    if (this.closed) {
+      return { kind: "closed", value };
+    }
+
+    let bytes: Uint8Array;
+    try {
+      bytes = this.serialize(value);
+    } catch (e) {
+      throw ChannelError.serialize(e);
+    }
+
+    if (this.sender.mode === "client") {
+      const outcome = this.sender.sender.trySendData(bytes);
+      if (outcome === "sent") {
+        return { kind: "sent" };
+      }
+      return { kind: outcome, value };
+    }
+
+    const credit = this.sender.credit.tryConsume();
+    if (credit === "consumed") {
+      this.sender.taskSender({
+        kind: "data",
+        channelId: this.sender.channelId,
+        payload: bytes,
+      });
+      return { kind: "sent" };
+    }
+    return { kind: credit === "closed" ? "closed" : "full", value };
   }
 
   /**

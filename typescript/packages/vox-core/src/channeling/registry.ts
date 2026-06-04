@@ -51,6 +51,25 @@ class AsyncQueue<T> {
     return true;
   }
 
+  tryEnqueue(value: T): "enqueued" | "full" | "closed" {
+    if (this.closed) {
+      return "closed";
+    }
+
+    const waiter = this.recvWaiters.shift();
+    if (waiter) {
+      waiter(value);
+      return "enqueued";
+    }
+
+    if (this.items.length >= this.capacity) {
+      return "full";
+    }
+
+    this.items.push(value);
+    return "enqueued";
+  }
+
   async dequeue(): Promise<T | null> {
     if (this.items.length > 0) {
       const value = this.items.shift()!;
@@ -128,6 +147,17 @@ class CreditWindow {
     }
   }
 
+  tryConsume(): "consumed" | "full" | "closed" {
+    if (this.closed) {
+      return "closed";
+    }
+    if (this.available === 0) {
+      return "full";
+    }
+    this.available -= 1;
+    return "consumed";
+  }
+
   // r[impl rpc.flow-control.credit.grant.additive]
   grant(additional: number): void {
     if (this.closed || additional <= 0) {
@@ -154,6 +184,7 @@ class CreditWindow {
 
 export interface OutgoingCreditController {
   consume(): Promise<void>;
+  tryConsume(): "consumed" | "full" | "closed";
   close(): void;
 }
 
@@ -211,6 +242,25 @@ export class OutgoingSender {
       throw ChannelError.closed();
     }
     this.notifyOutgoing?.();
+  }
+
+  trySendData(data: Uint8Array): "sent" | "full" | "closed" {
+    const credit = this.state.credit.tryConsume();
+    if (credit === "full") {
+      return "full";
+    }
+    if (credit === "closed") {
+      return "closed";
+    }
+
+    const enqueued = this.state.queue.tryEnqueue({ kind: "data", payload: data });
+    if (enqueued === "enqueued") {
+      this.notifyOutgoing?.();
+      return "sent";
+    }
+
+    this.state.credit.grant(1);
+    return enqueued === "closed" ? "closed" : "full";
   }
 
   /** Send close signal. */

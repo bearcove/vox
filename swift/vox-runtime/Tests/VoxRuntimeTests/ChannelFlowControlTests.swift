@@ -197,6 +197,44 @@ struct ChannelFlowControlTests {
         #expect(try decI32(from: &afterBuf) == 2)
     }
 
+    // r[verify rpc.flow-control.credit.try-send]
+    @Test func trySendReturnsFullOrClosedWithOriginalValue() async throws {
+        let registry = ChannelRegistry()
+        let payloads = PayloadInbox()
+        let credit = await registry.registerOutgoing(31, initialCredit: 1)
+        let tx = Tx<Int32>(serialize: { val, buf in encI32(val, into: &buf) })
+        tx.bind(
+            channelId: 31,
+            taskTx: { message in
+                guard case .data(_, let payload) = message else {
+                    return
+                }
+                payloads.append(payload)
+            }, credit: credit)
+
+        guard case .sent = try await tx.trySend(1) else {
+            Issue.record("first trySend did not send")
+            return
+        }
+        guard case .full(let value) = try await tx.trySend(2) else {
+            Issue.record("second trySend did not report full")
+            return
+        }
+        #expect(value == 2)
+
+        let sent = payloads.snapshot()
+        #expect(sent.count == 1)
+        var sentBuf = ByteBufferAllocator().buffer(bytes: sent[0])
+        #expect(try decI32(from: &sentBuf) == 1)
+
+        tx.close()
+        guard case .closed(let closedValue) = try await tx.trySend(3) else {
+            Issue.record("trySend after close did not report closed")
+            return
+        }
+        #expect(closedValue == 3)
+    }
+
     // r[verify rpc.channel.binding.callee-args]
     // r[verify rpc.channel.binding.callee-args.rx]
     // r[verify rpc.channel.delivery.reliable]

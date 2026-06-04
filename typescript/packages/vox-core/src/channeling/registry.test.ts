@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ChannelRegistry } from "./registry.ts";
+import { Tx } from "./tx.ts";
 
 describe("ChannelRegistry", () => {
   // r[verify rpc.channel.binding]
@@ -60,6 +61,26 @@ describe("ChannelRegistry", () => {
 
     expect(sentSecond).toBe(true);
     expect(registry.pollOutgoing()).toEqual({ kind: "data", channelId, payload: second });
+  });
+
+  // r[verify rpc.flow-control.credit.try-send]
+  it("trySend returns full or closed with the original value", () => {
+    const registry = new ChannelRegistry();
+    const channelId = 14n;
+    const tx = new Tx<number>();
+    tx.bind(channelId, registry, (value) => Uint8Array.of(value), 1);
+
+    expect(tx.trySend(1)).toEqual({ kind: "sent" });
+    expect(tx.trySend(2)).toEqual({ kind: "full", value: 2 });
+    expect(registry.pollOutgoing()).toEqual({
+      kind: "data",
+      channelId,
+      payload: Uint8Array.of(1),
+    });
+    expect(registry.pollOutgoing()).toEqual({ kind: "pending" });
+
+    tx.close();
+    expect(tx.trySend(3)).toEqual({ kind: "closed", value: 3 });
   });
 
   // r[verify rpc.flow-control.credit.grant]

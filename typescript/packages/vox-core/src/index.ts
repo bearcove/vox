@@ -9,6 +9,7 @@ export {
   Rx,
   channel,
   bindPhonChannels,
+  type TrySendResult,
   type BoundChannels,
   type ChannelCredit,
   type MethodDescriptor,
