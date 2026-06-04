@@ -910,3 +910,15 @@ fn session_error_from_transport(error: crate::TransportPrologueError) -> Session
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // r[verify rpc.flow-control.max-concurrent-requests.default]
+    #[test]
+    fn session_config_default_advertises_request_limit() {
+        let config = SessionConfig::default();
+        assert_eq!(config.root_settings.max_concurrent_requests, 64);
+    }
+}

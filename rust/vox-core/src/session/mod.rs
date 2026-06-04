@@ -286,6 +286,7 @@ struct CloseRequest {
 pub(crate) enum DropControlRequest {
     Shutdown,
     Close(ConnectionId),
+    ProtocolClose(ConnectionId),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1873,6 +1874,34 @@ impl Session {
 
                 if self
                     .remove_connection_with_reason(&conn_id, ConnectionCloseReason::Local)
+                    .is_some()
+                {
+                    let _ = self
+                        .sess_core
+                        .send(
+                            Message {
+                                connection_id: conn_id,
+                                payload: MessagePayload::ConnectionClose(ConnectionClose {
+                                    metadata: vox_types::Metadata::default(),
+                                }),
+                            },
+                            None,
+                            None,
+                        )
+                        .await;
+                }
+
+                !self.root_closed_internal || self.has_virtual_connections()
+            }
+            DropControlRequest::ProtocolClose(conn_id) => {
+                trace!(%conn_id, "protocol close requested");
+                if conn_id.is_root() {
+                    self.close_all_connections(ConnectionCloseReason::Protocol);
+                    return false;
+                }
+
+                if self
+                    .remove_connection_with_reason(&conn_id, ConnectionCloseReason::Protocol)
                     .is_some()
                 {
                     let _ = self

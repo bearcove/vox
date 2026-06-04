@@ -370,6 +370,10 @@ struct DriverShared {
     local_initial_channel_credit: u32,
     // r[impl rpc.flow-control.credit.initial]
     peer_initial_channel_credit: u32,
+    // r[impl rpc.flow-control.max-concurrent-requests.outbound]
+    outbound_request_limit: Semaphore,
+    // r[impl rpc.flow-control.max-concurrent-requests.inbound]
+    local_max_concurrent_requests: u32,
     observer: Option<VoxObserverHandle>,
 }
 
@@ -1766,6 +1770,15 @@ impl DriverCaller {
         call: RequestCall<'_>,
         method: Option<&'static vox_types::MethodDescriptor>,
     ) -> CallResult {
+        // r[impl rpc.flow-control.max-concurrent-requests.outbound]
+        // r[impl rpc.flow-control.max-concurrent-requests.counting]
+        let _request_permit = self
+            .shared
+            .outbound_request_limit
+            .acquire_owned()
+            .await
+            .map_err(|_| VoxError::ConnectionClosed)?;
+
         // Allocate a request ID.
         let req_id = self.shared.request_ids.lock().alloc();
         let request_started_at = Instant::now();
@@ -2136,6 +2149,11 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 channel_schema_roles: SyncMutex::new("driver.channel_schema_roles", HashMap::new()),
                 local_initial_channel_credit: local_settings.initial_channel_credit,
                 peer_initial_channel_credit: peer_settings.initial_channel_credit,
+                outbound_request_limit: Semaphore::new(
+                    "driver.outbound_request_limit",
+                    peer_settings.max_concurrent_requests as usize,
+                ),
+                local_max_concurrent_requests: local_settings.max_concurrent_requests,
                 observer,
             }),
             in_flight_handlers: BTreeMap::new(),
@@ -2340,6 +2358,8 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         for (_, in_flight) in std::mem::take(&mut self.in_flight_handlers) {
             in_flight.abort.abort();
         }
+        // r[impl rpc.flow-control.max-concurrent-requests.session-failure]
+        self.shared.outbound_request_limit.close();
         self.shared.pending_responses.lock().clear();
         self.shared.request_debug.lock().clear();
         let close_reason =
@@ -2522,6 +2542,23 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         let is_cancel = matches!(&msg_ref.body, RequestBody::Cancel(_));
 
         if is_call {
+            if self.in_flight_handlers.len() >= self.shared.local_max_concurrent_requests as usize {
+                // r[impl rpc.flow-control.max-concurrent-requests.inbound]
+                tracing::warn!(
+                    conn_id = ?self.sender.connection_id(),
+                    ?req_id,
+                    limit = self.shared.local_max_concurrent_requests,
+                    in_flight = self.in_flight_handlers.len(),
+                    "closing connection after max_concurrent_requests protocol violation"
+                );
+                if let Some(control_tx) = &self.drop_control_seed {
+                    let _ = control_tx.send(DropControlRequest::ProtocolClose(
+                        self.sender.connection_id(),
+                    ));
+                }
+                return;
+            }
+
             let method_id = match &msg_ref.body {
                 RequestBody::Call(call) => call.method_id,
                 _ => unreachable!(),

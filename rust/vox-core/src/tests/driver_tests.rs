@@ -7,8 +7,8 @@ use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
     ChannelItem, ChannelMessage, ChannelSink, ConnectionSettings, HandshakeResult,
     IncomingChannelMessage, Message, MessagePayload, Metadata, MethodId, Parity, Payload,
-    RequestBody, RequestCall, RequestCancel, RequestMessage, RequestResponse, Rx, SelfRef,
-    SessionRole, Tx, VoxError, channel,
+    RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage, RequestResponse, Rx,
+    SelfRef, SessionRole, Tx, VoxError, channel,
 };
 
 use super::utils::*;
@@ -18,6 +18,36 @@ use crate::session::{
     initiator_on, proxy_connections,
 };
 use crate::{BareConduit, Driver, NoopClient, memory_link_pair};
+
+fn acceptor_handshake_with_request_limits(our_max: u32, peer_max: u32) -> HandshakeResult {
+    let mut handshake = test_acceptor_handshake();
+    handshake.our_settings.max_concurrent_requests = our_max;
+    handshake.peer_settings.max_concurrent_requests = peer_max;
+    handshake
+}
+
+fn initiator_handshake_with_request_limits(our_max: u32, peer_max: u32) -> HandshakeResult {
+    let mut handshake = test_initiator_handshake();
+    handshake.our_settings.max_concurrent_requests = our_max;
+    handshake.peer_settings.max_concurrent_requests = peer_max;
+    handshake
+}
+
+async fn wait_for_outstanding_requests(caller: &crate::Caller, expected: usize) {
+    for _ in 0..50 {
+        let outstanding = caller
+            .debug_snapshot()
+            .connections
+            .iter()
+            .map(|connection| connection.outstanding_requests)
+            .sum::<usize>();
+        if outstanding == expected {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("timed out waiting for {expected} outstanding requests");
+}
 
 // r[verify rpc.caller.liveness.refcounted]
 #[tokio::test]
@@ -520,6 +550,187 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
         was_cancelled_check.load(Ordering::SeqCst),
         "server handler should be cancelled when peer connection closes"
     );
+}
+
+// r[verify rpc.flow-control.max-concurrent-requests]
+// r[verify rpc.flow-control.max-concurrent-requests.outbound]
+// r[verify rpc.flow-control.max-concurrent-requests.counting]
+// r[verify rpc.flow-control.max-concurrent-requests.session-failure]
+#[tokio::test]
+async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let was_cancelled = Arc::new(AtomicBool::new(false));
+    let (session_tx, session_rx) = tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+    let server_task = moire::task::spawn(
+        {
+            let was_cancelled = Arc::clone(&was_cancelled);
+            async move {
+                acceptor_conduit(
+                    server_conduit,
+                    acceptor_handshake_with_request_limits(1, 64),
+                )
+                .spawn_fn(move |fut| {
+                    let handle = moire::task::spawn(fut);
+                    let _ = session_tx.send(handle);
+                })
+                .on_connection(BlockingHandler { was_cancelled })
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+            }
+        }
+        .named("server_setup"),
+    );
+
+    let client_guard = initiator_conduit(
+        client_conduit,
+        initiator_handshake_with_request_limits(64, 1),
+    )
+    .establish::<NoopClient>()
+    .await
+    .expect("client handshake failed");
+    let server_guard = server_task.await.expect("server setup failed");
+    let server_session_task = session_rx.await.expect("session handle sent");
+
+    let first_caller = client_guard.caller.clone();
+    let first_call = tokio::spawn(async move {
+        first_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&1_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    wait_for_outstanding_requests(&server_guard.caller, 1).await;
+
+    let second_caller = client_guard.caller.clone();
+    let second_call = tokio::spawn(async move {
+        second_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&2_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    wait_for_outstanding_requests(&server_guard.caller, 1).await;
+    assert!(
+        !second_call.is_finished(),
+        "second call should wait for request capacity instead of being sent"
+    );
+
+    drop(server_guard);
+    server_session_task.abort();
+
+    let first_result = tokio::time::timeout(Duration::from_millis(500), first_call)
+        .await
+        .expect("first call should resolve after server closes")
+        .expect("first call task join");
+    assert!(
+        matches!(
+            first_result,
+            Err(VoxError::ConnectionClosed) | Err(VoxError::SessionShutdown)
+        ),
+        "expected first call to fail with connection/session closure, got {first_result:?}"
+    );
+
+    let second_result = tokio::time::timeout(Duration::from_millis(500), second_call)
+        .await
+        .expect("second call should resolve after request limiter closes")
+        .expect("second call task join");
+    assert!(
+        matches!(
+            second_result,
+            Err(VoxError::ConnectionClosed) | Err(VoxError::SessionShutdown)
+        ),
+        "expected queued second call to fail with connection/session closure, got {second_result:?}"
+    );
+}
+
+// r[verify rpc.flow-control.max-concurrent-requests]
+// r[verify rpc.flow-control.max-concurrent-requests.inbound]
+#[tokio::test]
+async fn inbound_max_concurrent_requests_violation_closes_connection() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let was_cancelled = Arc::new(AtomicBool::new(false));
+    let server_task = moire::task::spawn(
+        {
+            let was_cancelled = Arc::clone(&was_cancelled);
+            async move {
+                acceptor_conduit(
+                    server_conduit,
+                    acceptor_handshake_with_request_limits(1, 64),
+                )
+                .on_connection(BlockingHandler { was_cancelled })
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+            }
+        }
+        .named("server_setup"),
+    );
+
+    let client_guard = initiator_conduit(
+        client_conduit,
+        initiator_handshake_with_request_limits(64, 1),
+    )
+    .establish::<NoopClient>()
+    .await
+    .expect("client handshake failed");
+    let server_guard = server_task.await.expect("server setup failed");
+    let client_sender = client_guard.caller.driver().connection_sender().clone();
+
+    let first_arg = 1_u32;
+    client_sender
+        .send(ConnectionMessage::Request(RequestMessage {
+            id: RequestId(1),
+            body: RequestBody::Call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&first_arg),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            }),
+        }))
+        .await
+        .expect("send first raw call");
+    wait_for_outstanding_requests(&server_guard.caller, 1).await;
+
+    let second_arg = 2_u32;
+    client_sender
+        .send(ConnectionMessage::Request(RequestMessage {
+            id: RequestId(3),
+            body: RequestBody::Call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&second_arg),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            }),
+        }))
+        .await
+        .expect("send second raw call");
+
+    tokio::time::timeout(Duration::from_millis(500), server_guard.caller.closed())
+        .await
+        .expect("server connection should close after inbound limit violation");
+    let server_snapshot = server_guard.caller.debug_snapshot();
+    assert_eq!(
+        server_snapshot.connections[0].close_reason,
+        Some(vox_types::ConnectionCloseReason::Protocol)
+    );
+
+    drop(server_guard);
 }
 
 #[tokio::test]
