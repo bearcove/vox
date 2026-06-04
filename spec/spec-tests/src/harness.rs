@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -151,7 +152,11 @@ fn swift_subject_binary() -> Result<String, String> {
                 .join("release")
                 .join(format!("subject-swift{}", std::env::consts::EXE_SUFFIX));
 
-            eprintln!("[subject:swift] preparing release subject at {}", binary.display());
+            if swift_subject_is_fresh(&subject_dir, &binary)? {
+                return Ok(binary.display().to_string());
+            }
+
+            eprintln!("[subject:swift] building release subject at {}", binary.display());
             let output = std::process::Command::new("swift")
                 .arg("build")
                 .arg("-c")
@@ -178,10 +183,80 @@ fn swift_subject_binary() -> Result<String, String> {
                 ));
             }
 
-            eprintln!("[subject:swift] release subject ready at {}", binary.display());
+            eprintln!(
+                "[subject:swift] built release subject at {}",
+                binary.display()
+            );
             Ok(binary.display().to_string())
         })
         .clone()
+}
+
+fn swift_subject_is_fresh(subject_dir: &Path, binary: &Path) -> Result<bool, String> {
+    let binary_modified = match std::fs::metadata(binary) {
+        Ok(metadata) => metadata
+            .modified()
+            .map_err(|err| format!("failed to stat {}: {err}", binary.display()))?,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(format!("failed to stat {}: {err}", binary.display())),
+    };
+    let runtime_dir = subject_dir
+        .parent()
+        .ok_or_else(|| format!("{} has no parent directory", subject_dir.display()))?
+        .join("vox-runtime");
+    let phon_dir = workspace_root()
+        .parent()
+        .ok_or_else(|| format!("{} has no parent directory", workspace_root().display()))?
+        .join("phon");
+
+    let inputs = [
+        subject_dir.join("Package.swift"),
+        subject_dir.join("Package.resolved"),
+        subject_dir.join("Sources"),
+        runtime_dir.join("Package.swift"),
+        runtime_dir.join("Package.resolved"),
+        runtime_dir.join("Sources"),
+        phon_dir.join("Package.swift"),
+        phon_dir.join("swift"),
+    ];
+
+    for input in inputs {
+        if path_is_newer_than(&input, binary_modified)? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn path_is_newer_than(path: &Path, baseline: std::time::SystemTime) -> Result<bool, String> {
+    let metadata = match std::fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(format!("failed to stat {}: {err}", path.display())),
+    };
+
+    if metadata
+        .modified()
+        .map_err(|err| format!("failed to stat {}: {err}", path.display()))?
+        > baseline
+    {
+        return Ok(true);
+    }
+
+    if metadata.is_dir() {
+        let entries = std::fs::read_dir(path)
+            .map_err(|err| format!("failed to read {}: {err}", path.display()))?;
+        for entry in entries {
+            let entry =
+                entry.map_err(|err| format!("failed to read {} entry: {err}", path.display()))?;
+            if path_is_newer_than(&entry.path(), baseline)? {
+                return Ok(true);
+            }
+        }
+    }
+
+    Ok(false)
 }
 
 fn subject_transport() -> SubjectTestTransport {
