@@ -1,6 +1,6 @@
 //! End-to-end validation that phon can carry vox's `Message` envelope: the
 //! opaque `Payload` field, `Cow` metadata, transparent id newtypes, and borrowed
-//! (zero-copy) decode of the whole thing.
+//! decode of the whole thing.
 
 use facet::Facet;
 use vox_types::*;
@@ -22,10 +22,8 @@ fn probe_vox_wire_types() {
 
 /// A full `Message` (RequestCall carrying an inline `Payload::Value`) round-trips
 /// through phon: encode the envelope (opaque payload sub-encoded inline), then
-/// borrowed-decode it back. The payload becomes a zero-copy span pointing INTO the
+/// borrowed-decode it back. The payload becomes a borrowed span pointing INTO the
 /// wire, metadata strings borrow the wire, and the span re-decodes to the args.
-// r[verify zerocopy.framing.value]
-// r[verify zerocopy.framing.value.opaque.length-prefix]
 #[test]
 fn message_with_value_payload_roundtrips() {
     let args: u32 = 42;
@@ -74,7 +72,7 @@ fn message_with_value_payload_roundtrips() {
     let wire_start = bytes.as_ptr() as usize;
     assert!(
         (wire_start..wire_start + bytes.len()).contains(&(span.as_ptr() as usize)),
-        "payload span must point into the wire buffer (zero-copy)"
+        "payload span must point into the wire buffer"
     );
     let span_offset = (span.as_ptr() as usize) - wire_start;
     assert!(

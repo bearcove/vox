@@ -41,9 +41,8 @@ impl<T: Future> MaybeSendFuture for T {}
 
 /// Bidirectional raw-bytes transport.
 ///
-/// TCP, WebSocket, SHM all implement this. No knowledge of what's being
-/// sent — just bytes in, bytes out. The transport provides write buffers
-/// so callers can encode directly into the destination (zero-copy for SHM).
+/// TCP, WebSocket, local IPC, and in-memory transports implement this. No
+/// knowledge of what's being sent — just bytes in, bytes out.
 // r[impl link]
 // r[impl link.message]
 // r[impl link.order]
@@ -111,8 +110,7 @@ pub trait LinkTx: MaybeSend + MaybeSync + 'static {
 /// The transport handles framing (length-prefix, WebSocket frames, etc.)
 /// and returns exactly one message's bytes per `recv` call.
 ///
-/// For SHM: the Backing might be a VarSlot reference.
-/// For TCP: the Backing is a heap-allocated buffer.
+/// For current transports, the backing is usually a heap-allocated buffer.
 pub trait LinkRx: MaybeSend + 'static {
     type Error: std::error::Error + MaybeSend + MaybeSync + 'static;
 

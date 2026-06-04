@@ -12,7 +12,6 @@ private let subsystem = "bearcove.vox.runtime"
 enum TraceCategory: String, CaseIterable {
     case driver
     case handshake
-    case shm
 }
 
 private func parseTraceCategories() -> Set<TraceCategory> {

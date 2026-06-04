@@ -7,13 +7,12 @@ pub use vox_schema::Reborrow;
 
 /// A decoded value `T` that may borrow from its own backing storage.
 ///
-/// Transports decode into storage they own (heap buffer, VarSlot, mmap).
+/// Transports decode into storage they own.
 /// `SelfRef` keeps that storage alive so `T` can safely borrow from it.
 ///
 /// Uses `ManuallyDrop` + custom `Drop` to guarantee drop order: value is
 /// dropped before backing, so borrowed references in `T` remain valid
 /// through `T`'s drop.
-// r[impl zerocopy.recv.selfref]
 pub struct SelfRef<T: 'static> {
     /// The decoded value, potentially borrowing from `backing`.
     value: ManuallyDrop<T>,
@@ -28,12 +27,10 @@ pub trait SharedBacking: Send + Sync + 'static {
     fn as_bytes(&self) -> &[u8];
 }
 
-// r[impl zerocopy.backing]
 pub enum Backing {
-    // r[impl zerocopy.backing.boxed]
-    /// Heap-allocated buffer (TCP read, BipBuffer copy-out for small messages).
+    /// Heap-allocated buffer.
     Boxed(Box<[u8]>),
-    /// Shared backing that can be provided by transports (for example SHM slots).
+    /// Shared backing that can be provided by transports.
     Shared(Arc<dyn SharedBacking>),
 }
 

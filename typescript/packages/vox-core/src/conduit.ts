@@ -17,9 +17,10 @@ export interface Conduit<T> {
 
 /**
  * Build the envelope decoder from the peer's `Message` schema (exchanged
- * in the handshake, as phon schema-closure bytes) against ours (`r[zerocopy.framing.value.decode-plan]`).
+ * in the handshake, as phon schema-closure bytes) against ours.
  * With no peer schema it degenerates to writer==reader.
  */
+// r[impl conduit.typeplan]
 export function buildMessageDecodePlan(peerSchemaBytes?: Uint8Array): MessageDecoder {
   return buildMessageDecoder(peerSchemaBytes);
 }

@@ -296,7 +296,7 @@ fn main() {
     let meta = sample_metadata();
 
     // Hello and HelloYourself are no longer MessagePayload variants.
-    // They are CBOR-encoded handshake messages exchanged before postcard traffic.
+    // They are phon self-describing handshake messages exchanged before compact traffic.
 
     write_fixture(
         "wire/message_protocol_error.bin",

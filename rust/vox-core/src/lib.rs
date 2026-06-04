@@ -37,10 +37,10 @@ pub use driver::*;
 ///
 /// The envelope is an evolvable wire type like any other: the Rx half builds a
 /// phon compatibility decode program from this *writer* schema to its own
-/// `Message` descriptor (`r[zerocopy.framing.value.decode-plan]`). There is no
-/// same-version envelope shortcut — when no schema was exchanged, the writer schema
-/// defaults to our own, which is the *schema-identical degenerate output* of the one
-/// compat path (the identical `lower_decode`), not a second code path.
+/// `Message` descriptor. There is no same-version envelope shortcut — when no
+/// schema was exchanged, the writer schema defaults to our own, which is the
+/// schema-identical degenerate output of the one compat path (the identical
+/// `lower_decode`), not a second code path.
 pub struct MessagePlan {
     /// The peer's `Message` envelope schema as phon self-describing bytes
     /// (`vox_phon::schema_bytes`). Used lazily in the Rx half against the

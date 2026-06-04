@@ -4,7 +4,7 @@ use crate::{ConnectionSettings, Metadata, Parity};
 
 // r[impl session.handshake]
 // r[impl session.handshake.phon]
-/// CBOR-encoded handshake message exchanged before postcard traffic begins.
+/// Phon self-describing handshake message exchanged before compact session traffic begins.
 #[derive(Debug, Clone, Facet)]
 #[repr(u8)]
 pub enum HandshakeMessage {
@@ -23,7 +23,7 @@ pub struct Hello {
     /// Connection limits advertised by the initiator for the root connection.
     pub connection_settings: ConnectionSettings,
     // r[impl session.handshake.protocol-schema]
-    /// The initiator's schema for MessagePayload — the postcard enum used
+    /// The initiator's schema for MessagePayload — the compact enum used
     /// for all subsequent communication.
     pub message_payload_schema: Vec<u8>,
     /// Metadata sent by the initiator (e.g. `vox-service` for service routing).
@@ -57,7 +57,7 @@ pub struct Sorry {
     pub reason: String,
 }
 
-/// Result of a completed CBOR handshake.
+/// Result of a completed phon handshake.
 #[derive(Debug, Clone)]
 pub struct HandshakeResult {
     pub role: crate::SessionRole,

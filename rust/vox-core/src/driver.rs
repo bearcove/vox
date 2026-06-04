@@ -881,7 +881,7 @@ impl ReplySink for DriverReplySink {
             method_id = ?self.method_id,
             payload = match &response.ret {
                 Payload::Value { .. } => "value",
-                Payload::Encoded(_) => "postcard-bytes",
+                Payload::Encoded(_) => "encoded-bytes",
             },
             "vox driver sending reply"
         );

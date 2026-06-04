@@ -1,6 +1,6 @@
 //! Spec-level wire types.
 //!
-//! Canonical definitions live in `docs/content/spec/_index.md` and `docs/content/shm-spec/_index.md`.
+//! Canonical definitions live in `docs/content/spec/_index.md`.
 
 use std::marker::PhantomData;
 
@@ -278,12 +278,10 @@ structstruck::strike! {
 ///   `(ptr, shape)` or passes an [`Encoded`](Payload::Encoded) span through verbatim.
 /// - **Recv path:** `deserialize_build` produces an [`Encoded`](Payload::Encoded)
 ///   span borrowed from the wire.
-// r[impl zerocopy.payload]
 #[derive(Debug, Facet)]
 #[repr(u8)]
 #[facet(opaque = PayloadAdapter, traits(Debug))]
 pub enum Payload<'payload> {
-    // r[impl zerocopy.payload.borrowed]
     /// Type-erased pointer to caller-owned memory + its Shape, encoded in place.
     Value {
         ptr: PtrConst,
@@ -291,8 +289,7 @@ pub enum Payload<'payload> {
         _lt: PhantomData<&'payload ()>,
     },
 
-    // r[impl zerocopy.payload.bytes]
-    /// Already-encoded payload bytes, borrowed from the backing (zero-copy).
+    /// Already-encoded payload bytes, borrowed from the backing.
     Encoded(&'payload [u8]),
 }
 
@@ -338,8 +335,6 @@ impl<'payload> Payload<'payload> {
 unsafe impl<'payload> Send for Payload<'payload> {}
 
 /// Adapter that bridges [`Payload`] through the opaque field contract.
-// r[impl zerocopy.framing.value.opaque]
-// r[impl zerocopy.framing.value.opaque.length-prefix]
 pub struct PayloadAdapter;
 
 impl FacetOpaqueAdapter for PayloadAdapter {

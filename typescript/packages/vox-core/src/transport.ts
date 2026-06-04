@@ -20,7 +20,7 @@
  */
 export interface MessageTransport {
   /**
-   * Send a message (raw postcard-encoded payload for WebSocket,
+   * Send a message (raw phon-encoded payload for WebSocket,
    * or length-prefixed for byte streams).
    */
   send(payload: Uint8Array): Promise<void>;

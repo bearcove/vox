@@ -883,9 +883,7 @@ fn generate_client(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream2 {
     }
 }
 
-// r[impl zerocopy.send.borrowed]
-// r[impl zerocopy.send.borrowed-in-struct]
-// r[impl zerocopy.send.lifetime]
+// r[impl rpc.fallible.caller-signature]
 fn generate_client_method(
     method: &ServiceMethod,
     method_index: usize,

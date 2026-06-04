@@ -1036,7 +1036,7 @@ impl Session {
         self.maybe_request_shutdown_after_root_closed();
     }
 
-    fn record_received_schema_cbor(
+    fn record_received_schema_bytes(
         &mut self,
         _conn_id: ConnectionId,
         schema_recv_tracker: Arc<vox_types::SchemaRecvTracker>,
@@ -1178,7 +1178,7 @@ impl Session {
     /// Run the session recv loop: read from the conduit, demux by connection
     /// ID, and route to the appropriate connection's driver. Also processes
     /// open/close requests from the SessionHandle.
-    // r[impl zerocopy.framing.pipeline.incoming]
+    // r[impl session.message]
     pub async fn run(&mut self) {
         let mut keepalive_runtime = self.make_keepalive_runtime();
         let mut keepalive_tick = keepalive_runtime.as_ref().map(|_| {
@@ -1287,7 +1287,7 @@ impl Session {
                     ),
                     _ => return,
                 };
-                let _ = self.record_received_schema_cbor(
+                let _ = self.record_received_schema_bytes(
                     conn_id,
                     Arc::clone(&schema_recv_tracker),
                     schema_msg.method_id,
@@ -1354,7 +1354,7 @@ impl Session {
                 // Record any inlined schemas from the incoming request before routing
                 let response_had_schema_payload = matches!(&r_ref.body, RequestBody::Response(resp) if !resp.schemas.is_empty());
                 {
-                    let schemas_cbor = match &r_ref.body {
+                    let schema_bytes = match &r_ref.body {
                         RequestBody::Call(call) => Some(&call.schemas),
                         RequestBody::Response(resp) => Some(&resp.schemas),
                         _ => None,
@@ -1368,7 +1368,7 @@ impl Session {
                             RequestBody::Response(_) => "Response",
                             RequestBody::Cancel(_) => "Cancel",
                         },
-                        schemas_cbor.map(|s| s.0.len())
+                        schema_bytes.map(|s| s.0.len())
                     );
                     let schema_recv_tracker = match self.conns.get(&conn_id) {
                         Some(ConnectionSlot::Active(state)) => {
@@ -1376,8 +1376,8 @@ impl Session {
                         }
                         _ => return,
                     };
-                    if let Some(schemas_cbor) = schemas_cbor
-                        && !schemas_cbor.is_empty()
+                    if let Some(schema_bytes) = schema_bytes
+                        && !schema_bytes.is_empty()
                     {
                         let (method_id, direction) = match &r_ref.body {
                             RequestBody::Call(call) => {
@@ -1400,12 +1400,12 @@ impl Session {
                             }
                             RequestBody::Cancel(_) => unreachable!(),
                         };
-                        if !self.record_received_schema_cbor(
+                        if !self.record_received_schema_bytes(
                             conn_id,
                             schema_recv_tracker,
                             method_id,
                             direction,
-                            schemas_cbor,
+                            schema_bytes,
                             "inlined request schemas",
                         ) {
                             return;
@@ -2849,8 +2849,7 @@ pub trait DynConduitRx: MaybeSend {
     fn take_frame_fds(&mut self) -> vox_types::FrameFds;
 }
 
-// r[impl zerocopy.send]
-// r[impl zerocopy.framing.pipeline.outgoing]
+// r[impl session.message]
 impl<T> DynConduitTx for T
 where
     T: ConduitTx<Msg = MessageFamily> + MaybeSend + MaybeSync + 'static,

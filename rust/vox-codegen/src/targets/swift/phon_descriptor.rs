@@ -376,6 +376,16 @@ fn variant_payload_fields(variant: &facet_core::Variant) -> Vec<(Option<String>,
     }
 }
 
+fn is_uninhabited_swift_type(shape: &'static Shape) -> bool {
+    if swift_type_base(shape) == "Infallible" {
+        return true;
+    }
+    matches!(
+        classify_shape(shape),
+        ShapeKind::Enum(EnumInfo { variants, .. }) if variants.is_empty()
+    )
+}
+
 fn enum_access(
     shape: &'static Shape,
     variants: &[facet_core::Variant],
@@ -403,6 +413,7 @@ fn enum_access(
         // The scratch payload record: a Swift tuple of the field types (or the bare
         // type for a single field). Field offsets are this tuple's natural layout.
         let tys: Vec<String> = fields.iter().map(|(_, s)| swift_type_base(s)).collect();
+        let uninhabited_payload = fields.iter().any(|(_, s)| is_uninhabited_swift_type(s));
         let scratch_ty = if tys.len() == 1 {
             tys[0].clone()
         } else {
@@ -415,6 +426,31 @@ fn enum_access(
                 format!("MemoryLayout<{scratch_ty}>.offset(of: \\.{k})!")
             }
         };
+        if uninhabited_payload {
+            project_cases.push_str(&format!(
+                "case .{case}: fatalError(\"uninhabited variant payload\")\n            "
+            ));
+            destroy_cases.push_str(&format!("case {i}: break\n            "));
+            inject_cases.push_str(&format!(
+                "case {i}: fatalError(\"uninhabited variant payload\")\n            "
+            ));
+            let pfields: Vec<String> = fields
+                .iter()
+                .enumerate()
+                .map(|(k, (_, s))| {
+                    format!(
+                        "FieldAccess(offset: {}, descriptor: {})",
+                        offset(k),
+                        descriptor_node(s, ctx)
+                    )
+                })
+                .collect();
+            variant_entries.push(format!(
+                "VariantAccess(wireIndex: {i}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
+                pfields.join(", ")
+            ));
+            continue;
+        }
         // project: bind each associated value, store it into scratch at its offset.
         let binds: Vec<String> = (0..fields.len()).map(|k| format!("let f{k}")).collect();
         let mut proj = format!("case .{case}({}): ", binds.join(", "));
@@ -527,5 +563,16 @@ mod tests {
         assert!(module.contains("MessageDescriptor: Descriptor ="));
         assert!(!module.contains("decodeMessage"));
         assert!(!module.contains("MessageDecodeProgram"));
+    }
+
+    #[test]
+    fn uninhabited_variant_payloads_do_not_bind_impossible_values() {
+        let expr = descriptor_expr(<vox_types::VoxError<std::convert::Infallible> as Facet>::SHAPE);
+        assert!(
+            expr.contains("case .user: fatalError(\"uninhabited variant payload\")"),
+            "generated descriptor:\n{expr}"
+        );
+        assert!(!expr.contains("case .user(let f0)"));
+        assert!(!expr.contains("Infallible.self).move(); v = .user"));
     }
 }

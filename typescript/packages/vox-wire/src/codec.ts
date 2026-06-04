@@ -2,8 +2,8 @@
 //
 // The envelope is an evolvable wire type like any other: decode uses the
 // peer's `Message` schema (exchanged in the handshake) against our own via phon's
-// compatibility plan (`r[zerocopy.framing.value.decode-plan]`). With no peer schema it degenerates
-// to writer==reader — the same plan, not a shortcut.
+// compatibility plan. With no peer schema it degenerates to writer==reader — the
+// same plan, not a shortcut.
 // r[impl conduit.typeplan]
 // r[impl schema.type-id]
 

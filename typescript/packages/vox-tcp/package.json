@@ -38,8 +38,7 @@
     "vox",
     "ipc",
     "rpc",
-    "typescript",
-    "shared-memory"
+    "typescript"
   ],
   "readme": "README.md"
 }

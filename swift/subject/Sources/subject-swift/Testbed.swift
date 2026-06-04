@@ -326,9 +326,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -342,9 +340,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -354,10 +350,7 @@ nonisolated(unsafe) let testbed_echo_ResponseDescriptor: Descriptor = Descriptor
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -499,9 +492,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -515,9 +506,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -527,10 +516,7 @@ nonisolated(unsafe) let testbed_reverse_ResponseDescriptor: Descriptor = Descrip
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -1129,9 +1115,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -1145,9 +1129,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -1157,10 +1139,7 @@ nonisolated(unsafe) let testbed_sum_ResponseDescriptor: Descriptor = Descriptor(
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -1308,9 +1287,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -1324,9 +1301,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -1336,10 +1311,7 @@ nonisolated(unsafe) let testbed_generate_ResponseDescriptor: Descriptor = Descri
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -1487,9 +1459,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -1503,9 +1473,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -1515,10 +1483,7 @@ nonisolated(unsafe) let testbed_transform_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -1659,9 +1624,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -1675,9 +1638,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -1687,10 +1648,7 @@ nonisolated(unsafe) let testbed_postReplyGenerate_ResponseDescriptor: Descriptor
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -1839,9 +1797,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -1855,9 +1811,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -1867,10 +1821,7 @@ nonisolated(unsafe) let testbed_postReplySum_ResponseDescriptor: Descriptor = De
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -2046,9 +1997,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -2062,9 +2011,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -2074,10 +2021,7 @@ nonisolated(unsafe) let testbed_echoPoint_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -2275,9 +2219,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -2291,9 +2233,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -2303,10 +2243,7 @@ nonisolated(unsafe) let testbed_createPerson_ResponseDescriptor: Descriptor = De
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -2516,9 +2453,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -2532,9 +2467,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -2544,10 +2477,7 @@ nonisolated(unsafe) let testbed_rectangleArea_ResponseDescriptor: Descriptor = D
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -2737,9 +2667,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -2753,9 +2681,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -2765,10 +2691,7 @@ nonisolated(unsafe) let testbed_parseColor_ResponseDescriptor: Descriptor = Desc
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -2993,9 +2916,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -3009,9 +2930,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -3021,10 +2940,7 @@ nonisolated(unsafe) let testbed_shapeArea_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -3485,9 +3401,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -3501,9 +3415,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -3513,10 +3425,7 @@ nonisolated(unsafe) let testbed_createCanvas_ResponseDescriptor: Descriptor = De
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -4526,9 +4435,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -4542,9 +4449,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -4554,10 +4459,7 @@ nonisolated(unsafe) let testbed_echoGnarly_ResponseDescriptor: Descriptor = Desc
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -4871,9 +4773,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -4887,9 +4787,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -4899,10 +4797,7 @@ nonisolated(unsafe) let testbed_processMessage_ResponseDescriptor: Descriptor = 
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5069,9 +4964,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -5085,9 +4978,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -5097,10 +4988,7 @@ nonisolated(unsafe) let testbed_getPoints_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5286,9 +5174,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -5302,9 +5188,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -5314,10 +5198,7 @@ nonisolated(unsafe) let testbed_swapPair_ResponseDescriptor: Descriptor = Descri
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5458,9 +5339,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -5474,9 +5353,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -5486,10 +5363,7 @@ nonisolated(unsafe) let testbed_echoBytes_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5630,9 +5504,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -5646,9 +5518,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -5658,10 +5528,7 @@ nonisolated(unsafe) let testbed_echoBool_ResponseDescriptor: Descriptor = Descri
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5803,9 +5670,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -5819,9 +5684,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -5831,10 +5694,7 @@ nonisolated(unsafe) let testbed_echoU64_ResponseDescriptor: Descriptor = Descrip
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -5991,9 +5851,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -6007,9 +5865,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -6019,10 +5875,7 @@ nonisolated(unsafe) let testbed_echoOptionString_ResponseDescriptor: Descriptor 
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -6165,9 +6018,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -6181,9 +6032,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -6193,10 +6042,7 @@ nonisolated(unsafe) let testbed_sumLarge_ResponseDescriptor: Descriptor = Descri
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -6344,9 +6190,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -6360,9 +6204,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -6372,10 +6214,7 @@ nonisolated(unsafe) let testbed_generateLarge_ResponseDescriptor: Descriptor = D
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -6556,9 +6395,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -6572,9 +6409,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -6584,10 +6419,7 @@ nonisolated(unsafe) let testbed_allColors_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -6782,9 +6614,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -6798,9 +6628,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -6810,10 +6638,7 @@ nonisolated(unsafe) let testbed_describePoint_ResponseDescriptor: Descriptor = D
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -7124,9 +6949,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -7140,9 +6963,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -7152,10 +6973,7 @@ nonisolated(unsafe) let testbed_echoShape_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -7363,9 +7181,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -7379,9 +7195,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -7391,10 +7205,7 @@ nonisolated(unsafe) let testbed_echoStatusV1_ResponseDescriptor: Descriptor = De
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -7583,9 +7394,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -7599,9 +7408,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -7611,10 +7418,7 @@ nonisolated(unsafe) let testbed_echoTagV1_ResponseDescriptor: Descriptor = Descr
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -7791,9 +7595,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -7807,9 +7609,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -7819,10 +7619,7 @@ nonisolated(unsafe) let testbed_echoProfile_ResponseDescriptor: Descriptor = Des
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -8012,9 +7809,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -8028,9 +7823,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -8040,10 +7833,7 @@ nonisolated(unsafe) let testbed_echoRecord_ResponseDescriptor: Descriptor = Desc
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -8251,9 +8041,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -8267,9 +8055,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -8279,10 +8065,7 @@ nonisolated(unsafe) let testbed_echoStatus_ResponseDescriptor: Descriptor = Desc
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -8471,9 +8254,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -8487,9 +8268,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -8499,10 +8278,7 @@ nonisolated(unsafe) let testbed_echoTag_ResponseDescriptor: Descriptor = Descrip
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -8682,9 +8458,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -8698,9 +8472,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -8710,10 +8482,7 @@ nonisolated(unsafe) let testbed_echoMeasurement_ResponseDescriptor: Descriptor =
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -8890,9 +8659,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -8906,9 +8673,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -8918,10 +8683,7 @@ nonisolated(unsafe) let testbed_echoConfig_ResponseDescriptor: Descriptor = Desc
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
@@ -9115,9 +8877,7 @@ nonisolated(unsafe) let testbed_echoTree_ResponseDescriptor: Descriptor = Descri
                     },
                     projectPayload: { value, _, scratch in
                       switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
-                      case .user(let f0):
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self).initialize(
-                          to: f0)
+                      case .user: fatalError("uninhabited variant payload")
                       case .unknownMethod: break
                       case .invalidPayload(let f0):
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
@@ -9131,9 +8891,7 @@ nonisolated(unsafe) let testbed_echoTree_ResponseDescriptor: Descriptor = Descri
                     },
                     destroyPayload: { scratch, localIndex in
                       switch localIndex {
-                      case 0:
-                        scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .deinitialize(count: 1)
+                      case 0: break
                       case 2:
                         scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
                           count: 1)
@@ -9143,10 +8901,7 @@ nonisolated(unsafe) let testbed_echoTree_ResponseDescriptor: Descriptor = Descri
                     inject: { slot, localIndex, scratch in
                       let v: VoxError<Infallible>
                       switch localIndex {
-                      case 0:
-                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: Infallible.self)
-                          .move()
-                        v = .user(f0)
+                      case 0: fatalError("uninhabited variant payload")
                       case 1: v = .unknownMethod
                       case 2:
                         let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()

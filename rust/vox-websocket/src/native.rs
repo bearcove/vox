@@ -18,7 +18,6 @@ use vox_types::{Backing, Link, LinkRx, LinkTx};
 /// boundaries natively, so no length-prefix framing is needed.
 // r[impl transport.websocket]
 // r[impl transport.websocket.platforms]
-// r[impl zerocopy.framing.link.websocket]
 pub struct WsLink<S> {
     stream: WebSocketStream<S>,
 }
@@ -232,7 +231,6 @@ impl std::error::Error for WsLinkRxError {
     }
 }
 
-// r[impl zerocopy.recv.websocket]
 impl LinkRx for WsLinkRx {
     type Error = WsLinkRxError;
 

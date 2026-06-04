@@ -116,8 +116,8 @@ class VoxCallImpl implements VoxCall {
 
   /**
    * Encode a `Result<T, VoxError<E>>` response payload as phon bytes against the
-   * method's `responseRoot` (`r[zerocopy.payload]`). The `{ tag, value }` shape
-   * mirrors the Rust `RequestResponse.ret`.
+   * method's `responseRoot`. The `{ tag, value }` shape mirrors the Rust
+   * `RequestResponse.ret`.
    */
   private encodeResponse(result: {
     tag: "Ok" | "Err";

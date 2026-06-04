@@ -664,7 +664,7 @@ async fn missing_required_field_is_non_retryable() {
     // New client calls old daemon. The response has DaemonStatus with only
     // {uptime_ms, listen}, but the client expects {uptime_ms, listen, pid,
     // executable_path}. The phon compat decode rejects the missing required
-    // (non-default) reader fields up front (r[zerocopy.framing.value.decode-plan]).
+    // (non-default) reader fields up front.
     let err = client.status().await.expect_err("call should fail");
 
     // The error must be InvalidPayload (schema compatibility failure).

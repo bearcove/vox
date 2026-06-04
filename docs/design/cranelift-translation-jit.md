@@ -1,6 +1,6 @@
 # Cranelift Compatibility Decode JIT
 
-Design notes for replacing the reflection-heavy postcard execution path with
+Design notes for replacing the reflection-heavy phon execution path with
 Cranelift-generated decode and encode stubs.
 
 This is a runtime design note, not a spec change.
@@ -92,7 +92,7 @@ The primary target is decode, since that is where the current runtime pays for:
 - generic list/map/set assembly
 - repeated field enter/exit operations
 
-The generated decoder reads postcard bytes from a cursor and writes directly
+The generated decoder reads phon-compact bytes from a cursor and writes directly
 into the destination object according to:
 
 - the local layout metadata for Facet-owned types
@@ -112,7 +112,7 @@ are materialized and how lifetimes are represented in runtime helpers.
 Encode is secondary but still valuable. The generated encoder:
 
 - walks the sender's local layout directly
-- writes postcard bytes into a buffer builder
+- writes phon-compact bytes into a buffer builder
 - uses helper calls only for dynamic growth or opaque/proxy cases
 
 Encode does not use compatibility decode plans. The sender still serializes using the

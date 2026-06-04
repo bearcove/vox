@@ -58,10 +58,10 @@ async fn borrowed_return_survives_teardown_slot_ref() {
 }
 
 #[tokio::test]
-async fn borrowed_return_survives_teardown_mmap_ref() {
+async fn borrowed_return_survives_teardown_large() {
     service_macro_shared::run_borrowed_return_survives_teardown_over_generated_client(
         message_conduit_pair,
-        service_macro_shared::BorrowedPayloadKind::MmapRef,
+        service_macro_shared::BorrowedPayloadKind::Large,
     )
     .await;
 }

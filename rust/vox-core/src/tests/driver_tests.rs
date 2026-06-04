@@ -315,12 +315,12 @@ fn message_plan_from_identical_schemas_round_trips() {
     let plan = crate::MessagePlan::from_handshake(&handshake_result)
         .expect("should build message plan from identical schemas");
 
-    // Build the compat decode program from the plan's writer schema (r[zerocopy.framing.value.decode-plan]).
+    // Build the compat decode program from the plan's writer schema.
     let writer = vox_phon::parse_schema_bytes(&plan.writer_schema).expect("parse writer schema");
     let program =
         vox_phon::build_decode_program::<Message<'static>>(&writer).expect("build decode program");
 
-    // Encode a Ping and decode it back through the program (zero-copy via SelfRef).
+    // Encode a Ping and decode it back through the program, borrowing via SelfRef.
     let msg = Message {
         connection_id: vox_types::ConnectionId::ROOT,
         payload: MessagePayload::Ping(vox_types::Ping { nonce: 42 }),

@@ -81,7 +81,7 @@ pub fn acceptor_conduit<I: IntoConduit>(
     SessionAcceptorBuilder::new(into_conduit.into_conduit(), handshake_result)
 }
 
-/// Convenience: perform CBOR handshake as initiator on a raw link, then return
+/// Convenience: perform the phon handshake as initiator on a raw link, then return
 /// a builder with the conduit ready to go.
 pub async fn initiator_on_link<L: Link>(
     link: L,
@@ -107,7 +107,7 @@ where
     ))
 }
 
-/// Convenience: perform CBOR handshake as acceptor on a raw link, then return
+/// Convenience: perform the phon handshake as acceptor on a raw link, then return
 /// a builder with the conduit ready to go.
 pub async fn acceptor_on_link<L: Link>(
     link: L,

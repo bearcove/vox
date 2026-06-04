@@ -44,9 +44,9 @@ weight = 12
 
 > r[rpc.method-id.algorithm]
 >
-> The exact algorithm for computing method IDs is defined in the
-> [signature specification](./sig/). Other language implementations
-> receive pre-computed method IDs from code generation.
+> The exact algorithm for computing method IDs is defined by
+> `r[schema.method-id]`. Other language implementations receive
+> pre-computed method IDs from code generation.
 
 > r[rpc.schema-evolution]
 >

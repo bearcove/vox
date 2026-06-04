@@ -111,12 +111,12 @@ struct MiddlewareProbeService;
 pub enum BorrowedPayloadKind {
     Inline = 1,
     SlotRef = 2,
-    MmapRef = 3,
+    Large = 3,
 }
 
 const INLINE_PAYLOAD_LEN: usize = 64;
 const SLOT_REF_PAYLOAD_LEN: usize = 1024;
-const MMAP_REF_PAYLOAD_LEN: usize = 8192;
+const LARGE_PAYLOAD_LEN: usize = 8192;
 
 #[vox::service]
 trait BorrowedPayloadProbe {
@@ -127,7 +127,7 @@ trait BorrowedPayloadProbe {
 struct BorrowedPayloadProbeService {
     inline: &'static str,
     slot_ref: &'static str,
-    mmap_ref: &'static str,
+    large: &'static str,
 }
 
 impl BorrowedPayloadProbeService {
@@ -135,7 +135,7 @@ impl BorrowedPayloadProbeService {
         Self {
             inline: Box::leak(patterned_payload(INLINE_PAYLOAD_LEN, b'i').into_boxed_str()),
             slot_ref: Box::leak(patterned_payload(SLOT_REF_PAYLOAD_LEN, b's').into_boxed_str()),
-            mmap_ref: Box::leak(patterned_payload(MMAP_REF_PAYLOAD_LEN, b'm').into_boxed_str()),
+            large: Box::leak(patterned_payload(LARGE_PAYLOAD_LEN, b'l').into_boxed_str()),
         }
     }
 
@@ -143,7 +143,7 @@ impl BorrowedPayloadProbeService {
         match kind {
             BorrowedPayloadKind::Inline => patterned_payload(INLINE_PAYLOAD_LEN, b'i'),
             BorrowedPayloadKind::SlotRef => patterned_payload(SLOT_REF_PAYLOAD_LEN, b's'),
-            BorrowedPayloadKind::MmapRef => patterned_payload(MMAP_REF_PAYLOAD_LEN, b'm'),
+            BorrowedPayloadKind::Large => patterned_payload(LARGE_PAYLOAD_LEN, b'l'),
         }
     }
 }
@@ -157,7 +157,7 @@ impl BorrowedPayloadProbe for BorrowedPayloadProbeService {
         let text = match kind {
             BorrowedPayloadKind::Inline => self.inline,
             BorrowedPayloadKind::SlotRef => self.slot_ref,
-            BorrowedPayloadKind::MmapRef => self.mmap_ref,
+            BorrowedPayloadKind::Large => self.large,
         };
         call.ok(text).await;
     }
@@ -425,7 +425,7 @@ pub async fn run_request_context_end_to_end<L>(
         .describe()
         .await
         .expect("describe call should succeed");
-    // No metadata is auto-injected now that operation-id/retry metadata is gone.
+    // No call policy metadata is auto-injected.
     assert_eq!(described, "describe:0");
 
     let plain = client.plain().await.expect("plain call should succeed");

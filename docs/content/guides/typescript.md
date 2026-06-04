@@ -19,15 +19,13 @@ For a Node server/client setup, start with:
     "@bearcove/vox-core": "7.0.0",
     "@bearcove/vox-tcp": "7.0.0",
     "@bearcove/vox-ws": "7.0.0",
-    "@bearcove/vox-wire": "7.0.0",
-    "@bearcove/vox-postcard": "7.0.0"
+    "@bearcove/vox-wire": "7.0.0"
   }
 }
 ```
 
 Generated files import from `@bearcove/vox-core` and transport packages. The
-wire/postcard packages handle low-level encoding and are typically not used
-directly.
+wire package handles low-level phon encoding and is typically not used directly.
 
 ## 2) Generate TypeScript bindings from Rust
 
@@ -47,7 +45,7 @@ The output contains:
 - `GreeterClient` — typed caller
 - `GreeterHandler` interface — implement this on the server
 - `GreeterDispatcher` — wires a `GreeterHandler` into the vox session
-- `greeter_descriptor` — schema + retry metadata used by the runtime
+- `greeter_descriptor` — schema and method metadata used by the runtime
 
 ## 3) Use the generated client
 

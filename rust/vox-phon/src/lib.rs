@@ -2,13 +2,13 @@
 //!
 //! This is the data-plane adapter for the codec migration: encode/decode a
 //! `#[derive(Facet)]` value through phon's typed (schema-driven) path, mirroring
-//! the slice of vox-postcard's surface the driver uses (`to_vec` / `from_slice`).
+//! the old driver-facing codec surface (`to_vec` / `from_slice`).
 //! It derives the schema + descriptor from the facet `Shape`, lowers that to
 //! phon IR, then runs the native JIT backend when this target supports it.
 //!
 //! The wire is **phon-compact** — fixed-width little-endian with `u32` length
 //! prefixes and alignment padding — and is deliberately NOT byte-compatible with
-//! the postcard wire it replaces. Swapping codecs breaks the old wire by design.
+//! the wire format it replaces. Swapping codecs breaks the old wire by design.
 //!
 use std::{
     collections::HashMap,
@@ -229,7 +229,6 @@ fn encode_program_supported(program: &[MemOp]) -> bool {
 /// # Errors
 /// [`Error`] if `T` cannot be lowered to a phon schema or the value does not
 /// match it.
-// r[impl zerocopy.framing.value]
 pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
     let program = typed_program_for_shape(T::SHAPE)?;
     // Safety: `value` is a live `T`; `program` was built from `T`'s descriptor.
@@ -247,7 +246,6 @@ pub fn to_vec<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error> {
 /// # Errors
 /// [`Error`] if `shape` cannot be lowered to a phon schema or the value does not
 /// match it.
-// r[impl zerocopy.framing.value]
 pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>, Error> {
     let program = typed_program_for_shape(shape)?;
     // Safety: `ptr` points to a live value of `shape`; `program` was built from
@@ -255,7 +253,7 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
     Ok(unsafe { program.encode(ptr.as_byte_ptr()) })
 }
 
-/// Decode `T` from phon-compact bytes, BORROWING from `bytes` (zero-copy): `&str`,
+/// Decode `T` from phon-compact bytes, BORROWING from `bytes`: `&str`,
 /// `&[u8]`, `Cow`, and opaque payloads point INTO `bytes`, so the decoded value may
 /// not outlive it. The lifetime tie (`bytes: &'a [u8]`, `T: Facet<'a>`) enforces it.
 ///
@@ -264,7 +262,6 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
-// r[impl zerocopy.framing.value]
 pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
     let program = typed_program_for_shape(T::SHAPE)?;
@@ -283,7 +280,6 @@ pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
-// r[impl zerocopy.framing.value]
 pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
     let type_name = T::SHAPE.type_identifier;
     let program = typed_program_for_shape(T::SHAPE)?;

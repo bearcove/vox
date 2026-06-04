@@ -48,8 +48,7 @@ fn message_schema() -> Vec<u8> {
 }
 
 /// Send a handshake message on a raw link, self-describing (it carries its own phon
-/// schema closure, so the peer can decode it without a prior exchange — the phon
-/// analog of the old CBOR self-description).
+/// schema closure, so the peer can decode it without a prior exchange).
 async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(), HandshakeError> {
     let bytes =
         vox_phon::to_self_describing(msg).map_err(|e| HandshakeError::Encode(e.to_string()))?;
@@ -63,8 +62,7 @@ async fn send_handshake<Tx: LinkTx>(tx: &Tx, msg: &HandshakeMessage) -> Result<(
 
 /// Receive and decode a self-describing handshake message from a raw link. The
 /// embedded writer schema feeds the compatibility decode program for the local
-/// `HandshakeMessage` (`r[zerocopy.framing.value.decode-plan]`), so even the bootstrap
-/// message survives version skew.
+/// `HandshakeMessage`, so even the bootstrap message survives version skew.
 async fn recv_handshake<Rx: LinkRx>(rx: &mut Rx) -> Result<HandshakeMessage, HandshakeError> {
     let backing = rx
         .recv()
@@ -92,7 +90,7 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 
 // r[impl session.handshake]
 // r[impl session.handshake.phon]
-/// Perform the CBOR handshake as the initiator.
+/// Perform the phon handshake as the initiator.
 ///
 /// Three-step exchange:
 /// 1. Send Hello
@@ -157,7 +155,7 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 
 // r[impl session.handshake]
 // r[impl session.handshake.phon]
-/// Perform the CBOR handshake as the acceptor.
+/// Perform the phon handshake as the acceptor.
 ///
 /// Three-step exchange:
 /// 1. Receive Hello

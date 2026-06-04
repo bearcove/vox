@@ -98,7 +98,8 @@ mod unix {
         inner: Cell<Option<OwnedFd>>,
         /// Scratch the adapter points `OpaqueSerialize` at. Holds
         /// `NOT_COLLECTED` until the first `serialize_map`, then the index
-        /// assigned by the send collector. Serialized as a postcard varint.
+        /// assigned by the send collector. Serialized as the adapter's compact
+        /// u32 payload.
         wire_index: Cell<u32>,
     }
 

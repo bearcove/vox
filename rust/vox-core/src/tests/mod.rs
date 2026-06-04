@@ -418,7 +418,7 @@ fn test_deser_phon_borrowed() {
 
     let backing = Backing::Boxed(payload.into_boxed_slice());
 
-    // Decode zero-copy: the `&str` borrows the backing, kept alive by the SelfRef.
+    // Decode with borrowing: the `&str` borrows the backing, kept alive by the SelfRef.
     let reply: SelfRef<Reply<'static>> =
         SelfRef::try_new(backing, vox_phon::from_slice_borrowed::<Reply>).unwrap();
     let reply = reply.map(|reply| reply.s.to_string());

@@ -348,9 +348,8 @@ which is exactly what schema exchange is designed to avoid.
 > ```
 > method_id = blake3(kebab(ServiceName) + "." + kebab(methodName))[0..8]
 > ```
-> The signature hash (`sig_bytes` from `r[signature.hash.algorithm]`) is
-> excluded. Only the service name and method name contribute to the method
-> ID.
+> Only the service name and method name contribute to the method ID. Argument
+> and return types do not contribute.
 
 Renaming a method is still a breaking change (the method ID changes),
 but changing argument or return types is no longer automatically

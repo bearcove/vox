@@ -6,21 +6,20 @@ use crate::MessagePlan;
 
 /// Wraps a [`Link`] with phon serialization. No reconnect, no reliability.
 ///
-/// If the link dies, the conduit is dead. For localhost, SHM, or any
-/// transport where reconnect isn't needed.
+/// If the link dies, the conduit is dead. For localhost or any transport
+/// where reconnect isn't needed.
 ///
 /// `F` is a [`MsgFamily`] — it maps lifetimes to concrete message types.
 /// The send path accepts `F::Msg<'a>` (borrowed data serialized in place).
-/// The recv path yields `SelfRef<F::Msg<'static>>` (zero-copy: the decoded
-/// value borrows the received backing).
+/// The recv path yields `SelfRef<F::Msg<'static>>`: the decoded value borrows
+/// the received backing.
 ///
 /// The `Message` envelope is an evolvable wire type like any other: the Rx half
 /// builds a compatibility decode program from the peer's envelope schema (received
 /// in the handshake, carried in [`MessagePlan`]) to its own `Message` descriptor
-/// (`r[zerocopy.framing.value.decode-plan]`). There is no same-version envelope shortcut.
+/// and reuses it for every frame. There is no same-version envelope shortcut.
 // r[impl conduit.bare]
 // r[impl conduit.typeplan]
-// r[impl zerocopy.framing.conduit.bare]
 pub struct BareConduit<F: MsgFamily, L: Link> {
     link: L,
     /// The peer's `Message` envelope schema (phon bytes) from the handshake, or
@@ -46,7 +45,7 @@ impl<F: MsgFamily, L: Link> BareConduit<F, L> {
 
     /// Create a BareConduit carrying the peer's envelope schema from the
     /// handshake. The Rx half builds the compat decode program against its own
-    /// `Message` descriptor (`r[zerocopy.framing.value.decode-plan]`).
+    /// `Message` descriptor.
     pub fn with_message_plan(link: L, message_plan: MessagePlan) -> Self {
         Self {
             link,
@@ -105,9 +104,6 @@ impl<F: MsgFamily, LTx: LinkTx + MaybeSend + 'static> ConduitTx for BareConduitT
     type Prepared = PreparedFrame;
     type Error = BareConduitError;
 
-    // r[impl zerocopy.framing.single-pass]
-    // r[impl zerocopy.framing.no-double-serialize]
-    // r[impl zerocopy.scatter]
     fn prepare_send(&self, item: F::Msg<'_>) -> Result<Self::Prepared, Self::Error> {
         // Collect any `Fd`s the encoder funnels into the thread-local
         // collector — same install-around-encode shape as the channel
@@ -152,7 +148,7 @@ pub struct BareConduitRx<F: MsgFamily, LRx> {
     /// `None` to build a program from our own schema to itself (degenerate path).
     writer_schema: Option<Vec<u8>>,
     /// The compat decode program, built lazily on the first `recv` (writer schema
-    /// the writer schema against `F::Msg`, `r[zerocopy.framing.value.decode-plan]`) and reused.
+    /// against `F::Msg`) and reused.
     program: Option<vox_phon::DecodeProgram>,
     _phantom: PhantomData<fn() -> F>,
 }
@@ -161,7 +157,7 @@ impl<F: MsgFamily, LRx> BareConduitRx<F, LRx> {
     /// Build (once) and return the envelope compat decode program. Uses the
     /// peer's `Message` schema — or our own, when none was exchanged (the
     /// schema-identical degenerate of the one compat path) — against `F::Msg`'s
-    /// descriptor via phon's `lower_decode` (`r[zerocopy.framing.value.decode-plan]`).
+    /// descriptor via phon's `lower_decode`.
     // r[impl conduit.typeplan]
     fn ensure_program(&mut self) -> Result<&vox_phon::DecodeProgram, BareConduitError> {
         if self.program.is_none() {
@@ -189,7 +185,6 @@ where
     type Msg = F;
     type Error = BareConduitError;
 
-    // r[impl zerocopy.recv]
     #[moire::instrument]
     async fn recv(&mut self) -> Result<Option<SelfRef<F::Msg<'static>>>, Self::Error> {
         let backing = match self.link_rx.recv().await.map_err(|error| {
@@ -208,12 +203,10 @@ where
         // Lazily build the envelope compat program from the peer's
         // `Message` schema (or our own, in the degenerate no-exchange case)
         // against our `Message` descriptor. Built once, reused for every frame.
-        // r[impl zerocopy.framing.value.decode-plan]
         let program = self.ensure_program()?;
 
-        // Decode the envelope through the compat program, zero-copy: the decoded
+        // Decode the envelope through the compat program: the decoded
         // `Message` borrows the backing (payload span, metadata strings).
-        // r[impl zerocopy.recv.selfref]
         SelfRef::try_new(backing, |bytes| {
             vox_phon::decode_with_program::<F::Msg<'static>>(program, bytes)
                 .map_err(BareConduitError::Decode)

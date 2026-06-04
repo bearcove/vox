@@ -1497,7 +1497,6 @@ mod tests {
         ));
     }
 
-    // r[verify zerocopy.framing.value.opaque]
     #[test]
     fn opaque_payload_is_payload_primitive() {
         let schemas = extract_schemas(crate::Payload::<'static>::SHAPE)

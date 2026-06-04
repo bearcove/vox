@@ -1,12 +1,12 @@
 //! Schema exchange and **compatibility** decode through phon.
 //!
 //! A peer describes its types to the other side as phon **self-describing** schema
-//! bytes (this is what CBOR used to carry). The receiver parses that closure into a
+//! bytes. The receiver parses that closure into a
 //! [`SchemaBundle`], then builds a compatibility decode program from the
 //! *writer's* schema to the *reader's* derived descriptor — phon's
-//! `lower_decode` (`r[zerocopy.framing.value.decode-plan]`). Every decode goes through this; there is
-//! no same-version shortcut (the schema-identical case is just the degenerate output of
-//! the one program, `r[ir.inlining]`).
+//! `lower_decode`. Every decode goes through this; there is no same-version
+//! shortcut (the schema-identical case is just the degenerate output of the one
+//! program).
 //!
 //! Wire framing of a closure: `u64` root id, `u32` schema count, then each schema as
 //! `u32` length + its [`schema_to_bytes`] self-describing bytes. Bindings that need
@@ -303,8 +303,8 @@ unsafe impl Send for DecodeProgram {}
 unsafe impl Sync for DecodeProgram {}
 
 /// Build the compat decode program from `writer`'s schema against `T`'s
-/// derived descriptor (`r[zerocopy.framing.value.decode-plan]`). Fails if the schemas are
-/// incompatible — before any bytes are touched.
+/// derived descriptor. Fails if the schemas are incompatible — before any bytes
+/// are touched.
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be derived, the writer root is unknown, or the schemas
@@ -333,7 +333,7 @@ pub fn build_decode_program<'a, T: Facet<'a>>(
 }
 
 /// Decode `bytes` into `T` through a prebuilt compat [`DecodeProgram`], BORROWING
-/// from `bytes` (zero-copy). The program and `T` must match.
+/// from `bytes`. The program and `T` must match.
 ///
 /// # Errors
 /// [`Error`] for malformed or trailing input.
@@ -392,7 +392,7 @@ pub fn decode_compat<'a, T: Facet<'a>>(bytes: &'a [u8], writer: &SchemaBundle) -
 /// Encode `value` as a SELF-CONTAINED message: its phon schema closure (`u32` length
 /// then [`schema_bytes`]) followed by its compact value. Used where no schema was
 /// pre-exchanged — the handshake — so the message carries the schema needed to decode
-/// it (the phon analog of a CBOR-style self-describing typed value).
+/// it.
 ///
 /// # Errors
 /// [`Error`] if `T` cannot be derived or encoded.
@@ -407,8 +407,8 @@ pub fn to_self_describing<'a, T: Facet<'a>>(value: &T) -> Result<Vec<u8>, Error>
 }
 
 /// Decode a self-contained message produced by [`to_self_describing`] into an OWNED
-/// `T`: parse the embedded writer schema closure, build a compatibility decode program against `T`
-/// (`r[zerocopy.framing.value.decode-plan]`), and decode the value. The handshake decode — so even the
+/// `T`: parse the embedded writer schema closure, build a compatibility decode
+/// program against `T`, and decode the value. The handshake decode — so even the
 /// bootstrap message uses writer→reader planning rather than assuming same-version.
 ///
 /// # Errors
@@ -455,7 +455,6 @@ mod tests {
         value: String,
     }
 
-    // r[verify zerocopy.framing.value.decode-plan]
     #[test]
     fn compat_decode_bridges_writer_and_reader_changes() {
         // The writer sends its schema closure.

@@ -151,8 +151,9 @@ pub trait ReplySink: MaybeSend + MaybeSync + 'static {
     {
         use crate::{Payload, RequestResponse};
         // Wire format is always Result<T, VoxError<E>>. We don't know T here,
-        // but postcard encodes () as zero bytes, so Result<(), VoxError<E>>
-        // produces the same Err variant encoding as any Result<T, VoxError<E>>.
+        // but an Err variant does not include any Ok payload bytes, so
+        // Result<(), VoxError<E>> produces the same Err variant encoding as
+        // any Result<T, VoxError<E>>.
         async move {
             let wire: Result<(), VoxError<E>> = Err(error);
             self.send_reply(RequestResponse {

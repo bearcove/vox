@@ -461,7 +461,7 @@ The HTTP server cell finds itself in the middle of the host and the browser, and
 has to forward calls somehow:
 
 ```aasvg
-.----------------.   vox/SHM   .----------------.   vox/WebSocket   .----------------.
+.----------------.   vox/Local .----------------.   vox/WebSocket   .----------------.
 | Host           |<------------>| HTTP Server    |<------------------>| Browser        |
 | (main binary)  |              | Cell           |                    | (DevTools)     |
 '----------------'              '----------------'                    '----------------'

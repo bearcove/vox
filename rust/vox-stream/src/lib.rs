@@ -26,7 +26,6 @@ pub use fd_link::{FdStreamLink, FdStreamLinkRx, FdStreamLinkTx};
 /// `[len: u32 LE][payload bytes]`.
 // r[impl transport.stream]
 // r[impl transport.stream.kinds]
-// r[impl zerocopy.framing.link.stream]
 pub struct StreamLink<R, W> {
     reader: R,
     writer: W,
@@ -266,7 +265,6 @@ pub struct StreamLinkRx<R> {
     _phantom: std::marker::PhantomData<fn(R)>,
 }
 
-// r[impl zerocopy.recv.stream]
 impl<R: Send + 'static> LinkRx for StreamLinkRx<R> {
     type Error = io::Error;
 
