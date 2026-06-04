@@ -15,14 +15,17 @@ pub enum HandshakeMessage {
 }
 
 // r[impl session.handshake]
+// r[impl session.handshake.unversioned]
 /// Sent by the initiator as the first handshake message.
 #[derive(Debug, Clone, Facet)]
 pub struct Hello {
     /// The identifier partition desired by the initiator.
     pub parity: Parity,
     /// Connection limits advertised by the initiator for the root connection.
+    // r[impl session.connection-settings.hello]
     pub connection_settings: ConnectionSettings,
     // r[impl session.handshake.protocol-schema]
+    // r[impl session.handshake.protocol-schema.session-scoped]
     /// The initiator's schema for MessagePayload — the compact enum used
     /// for all subsequent communication.
     pub message_payload_schema: Vec<u8>,
@@ -32,12 +35,15 @@ pub struct Hello {
 }
 
 // r[impl session.handshake]
+// r[impl session.handshake.unversioned]
 /// Sent by the acceptor in response to Hello.
 #[derive(Debug, Clone, Facet)]
 pub struct HelloYourself {
     /// Connection limits advertised by the acceptor for the root connection.
+    // r[impl session.connection-settings.hello]
     pub connection_settings: ConnectionSettings,
     // r[impl session.handshake.protocol-schema]
+    // r[impl session.handshake.protocol-schema.session-scoped]
     /// The acceptor's schema for MessagePayload.
     pub message_payload_schema: Vec<u8>,
     /// Metadata sent by the acceptor.

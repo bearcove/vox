@@ -1261,6 +1261,7 @@ impl Session {
         let conn_id = msg_ref.connection_id;
         match &msg_ref.payload {
             MessagePayload::Ping(ping) => {
+                // r[impl session.keepalive]
                 let _ = self
                     .sess_core
                     .send(
@@ -1276,6 +1277,7 @@ impl Session {
             }
             MessagePayload::Pong(pong) => {
                 if conn_id.is_root() {
+                    // r[impl session.keepalive]
                     self.handle_keepalive_pong(pong.nonce, keepalive_runtime);
                 }
                 return;
@@ -1469,6 +1471,7 @@ impl Session {
         })
     }
 
+    // r[impl session.keepalive]
     fn make_keepalive_runtime(&self) -> Option<KeepaliveRuntime> {
         let config = self.keepalive?;
         if config.ping_interval.is_zero() || config.pong_timeout.is_zero() {
@@ -1486,6 +1489,7 @@ impl Session {
         })
     }
 
+    // r[impl session.keepalive]
     fn handle_keepalive_pong(&self, nonce: u64, keepalive_runtime: &mut Option<KeepaliveRuntime>) {
         let Some(runtime) = keepalive_runtime.as_mut() else {
             return;
@@ -1497,6 +1501,7 @@ impl Session {
         runtime.next_ping_at = vox_types::time::tokio::Instant::now() + runtime.ping_interval;
     }
 
+    // r[impl session.keepalive]
     async fn handle_keepalive_tick(
         &mut self,
         keepalive_runtime: &mut Option<KeepaliveRuntime>,

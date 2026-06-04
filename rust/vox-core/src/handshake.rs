@@ -90,6 +90,9 @@ fn handshake_tag(msg: &HandshakeMessage) -> &'static str {
 
 // r[impl session.handshake]
 // r[impl session.handshake.phon]
+// r[impl session.connection-settings.hello]
+// r[impl session.handshake.protocol-schema.session-scoped]
+// r[impl session.handshake.unversioned]
 /// Perform the phon handshake as the initiator.
 ///
 /// Three-step exchange:
@@ -138,9 +141,18 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
         .await?;
         return Err(HandshakeError::Protocol(reason));
     }
+    if let Err(reason) = crate::validate_message_writer_schema(&hy.message_payload_schema) {
+        send_handshake(
+            tx,
+            &HandshakeMessage::Sorry(vox_types::Sorry {
+                reason: reason.clone(),
+            }),
+        )
+        .await?;
+        return Err(HandshakeError::Protocol(reason));
+    }
 
     // Step 3: Send LetsGo
-    // TODO: Compare schemas and send Sorry if incompatible
     send_handshake(tx, &HandshakeMessage::LetsGo(vox_types::LetsGo {})).await?;
 
     Ok(HandshakeResult {
@@ -155,6 +167,9 @@ pub async fn handshake_as_initiator<Tx: LinkTx, Rx: LinkRx>(
 
 // r[impl session.handshake]
 // r[impl session.handshake.phon]
+// r[impl session.connection-settings.hello]
+// r[impl session.handshake.protocol-schema.session-scoped]
+// r[impl session.handshake.unversioned]
 /// Perform the phon handshake as the acceptor.
 ///
 /// Three-step exchange:
@@ -176,6 +191,16 @@ pub async fn handshake_as_acceptor<Tx: LinkTx, Rx: LinkRx>(
     };
     if hello.connection_settings.initial_channel_credit == 0 {
         let reason = INITIAL_CHANNEL_CREDIT_ZERO_ERROR.to_string();
+        send_handshake(
+            tx,
+            &HandshakeMessage::Sorry(vox_types::Sorry {
+                reason: reason.clone(),
+            }),
+        )
+        .await?;
+        return Err(HandshakeError::Protocol(reason));
+    }
+    if let Err(reason) = crate::validate_message_writer_schema(&hello.message_payload_schema) {
         send_handshake(
             tx,
             &HandshakeMessage::Sorry(vox_types::Sorry {
@@ -232,6 +257,120 @@ mod tests {
             max_concurrent_requests: 64,
             initial_channel_credit,
         }
+    }
+
+    fn settings_with_request_limit(
+        parity: Parity,
+        max_concurrent_requests: u32,
+        initial_channel_credit: u32,
+    ) -> ConnectionSettings {
+        ConnectionSettings {
+            parity,
+            max_concurrent_requests,
+            initial_channel_credit,
+        }
+    }
+
+    // r[verify session.handshake]
+    // r[verify session.handshake.phon]
+    // r[verify session.handshake.protocol-schema]
+    // r[verify session.connection-settings.hello]
+    #[tokio::test]
+    async fn hello_and_hello_yourself_carry_root_connection_settings() {
+        let (client_link, server_link) = crate::memory_link_pair(4);
+        let (client_tx, mut client_rx) = client_link.split();
+        let (server_tx, mut server_rx) = server_link.split();
+
+        let initiator_settings = settings_with_request_limit(Parity::Odd, 37, 23);
+        let initiator_expected = initiator_settings.clone();
+        let acceptor_settings = settings_with_request_limit(Parity::Even, 41, 29);
+        let acceptor_expected = acceptor_settings.clone();
+
+        let initiator = tokio::spawn(async move {
+            handshake_as_initiator(
+                &client_tx,
+                &mut client_rx,
+                initiator_settings,
+                vox_types::Metadata::default(),
+            )
+            .await
+        });
+
+        let hello = recv_handshake(&mut server_rx).await.expect("recv hello");
+        let HandshakeMessage::Hello(hello) = hello else {
+            panic!("expected Hello");
+        };
+        assert_eq!(hello.connection_settings, initiator_expected);
+
+        send_handshake(
+            &server_tx,
+            &HandshakeMessage::HelloYourself(vox_types::HelloYourself {
+                connection_settings: acceptor_settings,
+                message_payload_schema: message_schema(),
+                metadata: vox_types::Metadata::default(),
+            }),
+        )
+        .await
+        .expect("send hello-yourself");
+
+        let lets_go = recv_handshake(&mut server_rx).await.expect("recv lets-go");
+        assert!(matches!(lets_go, HandshakeMessage::LetsGo(_)));
+
+        let result = initiator
+            .await
+            .expect("initiator task")
+            .expect("initiator handshake");
+        assert_eq!(result.our_settings, initiator_expected);
+        assert_eq!(result.peer_settings, acceptor_expected);
+    }
+
+    // r[verify session.handshake.sorry]
+    // r[verify session.handshake.unversioned]
+    // r[verify session.handshake.protocol-schema.session-scoped]
+    #[tokio::test]
+    async fn acceptor_rejects_incompatible_peer_message_schema_with_sorry() {
+        let (client_link, server_link) = crate::memory_link_pair(4);
+        let (client_tx, mut client_rx) = client_link.split();
+        let (server_tx, mut server_rx) = server_link.split();
+
+        let acceptor = tokio::spawn(async move {
+            handshake_as_acceptor(
+                &server_tx,
+                &mut server_rx,
+                settings(Parity::Even, 16),
+                vox_types::Metadata::default(),
+            )
+            .await
+        });
+
+        let incompatible_schema = vox_phon::schema_bytes::<u32>().expect("u32 schema");
+        send_handshake(
+            &client_tx,
+            &HandshakeMessage::Hello(vox_types::Hello {
+                parity: Parity::Odd,
+                connection_settings: settings(Parity::Odd, 16),
+                message_payload_schema: incompatible_schema,
+                metadata: vox_types::Metadata::default(),
+            }),
+        )
+        .await
+        .expect("send hello");
+
+        let response = recv_handshake(&mut client_rx).await.expect("recv sorry");
+        assert!(
+            matches!(
+                response,
+                HandshakeMessage::Sorry(vox_types::Sorry { ref reason })
+                    if reason.contains("peer Message schema is incompatible")
+            ),
+            "expected Sorry for incompatible peer schema, got: {response:?}"
+        );
+
+        let result = acceptor.await.expect("acceptor task");
+        assert!(
+            matches!(result, Err(HandshakeError::Protocol(ref reason)) if reason.contains("peer Message schema is incompatible")),
+            "expected acceptor protocol error for incompatible peer schema, got: {result:?}"
+        );
     }
 
     // r[verify rpc.flow-control.credit.initial.zero]

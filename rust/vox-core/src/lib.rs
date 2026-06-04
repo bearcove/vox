@@ -41,6 +41,7 @@ pub use driver::*;
 /// schema was exchanged, the writer schema defaults to our own, which is the
 /// schema-identical degenerate output of the one compat path (the identical
 /// `lower_decode`), not a second code path.
+// r[impl session.handshake.protocol-schema.session-scoped]
 pub struct MessagePlan {
     /// The peer's `Message` envelope schema as phon self-describing bytes
     /// (`vox_phon::schema_bytes`). Used lazily in the Rx half against the
@@ -60,8 +61,19 @@ impl MessagePlan {
         } else {
             result.peer_schema.clone()
         };
+        validate_message_writer_schema(&writer_schema)?;
         Ok(MessagePlan { writer_schema })
     }
+}
+
+// r[impl session.handshake.protocol-schema.session-scoped]
+// r[impl session.handshake.unversioned]
+pub(crate) fn validate_message_writer_schema(writer_schema: &[u8]) -> Result<(), String> {
+    let writer = vox_phon::parse_schema_bytes(writer_schema)
+        .map_err(|error| format!("peer Message schema is invalid: {error}"))?;
+    vox_phon::build_decode_program::<vox_types::Message<'static>>(&writer)
+        .map(|_| ())
+        .map_err(|error| format!("peer Message schema is incompatible: {error}"))
 }
 
 pub mod testing;

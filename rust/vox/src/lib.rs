@@ -172,6 +172,8 @@ pub use vox_types::{
     MethodDescriptor,
     MethodId,
     MsgFamily,
+    ObserverMetricKind,
+    ObserverMetricLabels,
     Parity,
     Payload,
     ProtocolErrorKind,

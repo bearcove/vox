@@ -321,6 +321,7 @@ async fn cancel_aborts_in_flight_handler() {
 
 /// Verify that a `MessagePlan` built from identical schemas (the schema-identical
 /// degenerate of the envelope compat path) can round-trip a message.
+// r[verify session.handshake.protocol-schema.session-scoped]
 #[test]
 fn message_plan_from_identical_schemas_round_trips() {
     // The handshake carries the peer's Message schema as phon bytes; here it is
@@ -733,6 +734,7 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
     drop(server_guard);
 }
 
+// r[verify session.keepalive]
 #[tokio::test]
 async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
     let (client_link, server_link) = memory_link_pair(64);
