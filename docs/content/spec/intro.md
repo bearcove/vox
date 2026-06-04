@@ -11,8 +11,9 @@ weight = 10
 > TypeScript, etc.) are generated from Rust definitions.
 
 This specification describes the current protocol model. The current line
-introduces a transport prologue below the conduit/session layers so conduit
-mode is selected on the wire before session establishment.
+introduces a transport prologue below the conduit/session layers so a fresh
+link attachment is rejected before session establishment if the peer is not
+speaking a compatible vox transport protocol.
 
 ## Defining a service
 
