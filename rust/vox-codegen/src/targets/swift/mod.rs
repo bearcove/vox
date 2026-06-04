@@ -31,6 +31,7 @@ pub struct WireType {
 /// named types, per-service phon schemas/descriptors/programs, and the typed
 /// client and server.
 /// This is the main entry point for Swift service code generation.
+/// r[impl service-macro.is-source-of-truth]
 pub fn generate_service(service: &ServiceDescriptor) -> String {
     validate_channel_rules(service);
 

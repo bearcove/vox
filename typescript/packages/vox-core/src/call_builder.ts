@@ -40,6 +40,7 @@ export type CallExecutor<T> = (metadata: ClientMetadata) => Promise<T>;
  * await call;                           // Wait for completion
  * ```
  */
+// r[impl rpc.caller]
 export class CallBuilder<T> implements PromiseLike<T> {
   private resultPromise: Promise<T>;
 

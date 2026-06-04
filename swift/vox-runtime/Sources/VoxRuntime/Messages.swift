@@ -20,6 +20,10 @@ func messageRequest(
     connectionId: UInt64 = 0,
     schemas: [UInt8] = []
 ) -> Message {
+    // r[impl rpc.request]
+    // r[impl session.message]
+    // r[impl session.message.connection-id]
+    // r[impl session.message.payloads]
     Message(
         connectionId: connectionId,
         payload: .requestMessage(RequestMessage(
@@ -39,6 +43,10 @@ func messageResponse(
     connectionId: UInt64 = 0,
     schemas: [UInt8] = []
 ) -> Message {
+    // r[impl rpc.response]
+    // r[impl session.message]
+    // r[impl session.message.connection-id]
+    // r[impl session.message.payloads]
     Message(
         connectionId: connectionId,
         payload: .requestMessage(RequestMessage(
@@ -73,6 +81,7 @@ func messageCancel(
     metadata: Metadata = .null,
     connectionId: UInt64 = 0
 ) -> Message {
+    // r[impl rpc.cancel]
     Message(
         connectionId: connectionId,
         payload: .requestMessage(RequestMessage(
@@ -85,6 +94,7 @@ func messageConnect(
     settings: ConnectionSettings,
     metadata: Metadata = .null
 ) -> Message {
+    // r[impl session.connection-settings.open]
     Message(
         connectionId: connectionId,
         payload: .connectionOpen(ConnectionOpen(connectionSettings: settings, metadata: metadata)))
@@ -95,12 +105,14 @@ func messageAccept(
     settings: ConnectionSettings,
     metadata: Metadata = .null
 ) -> Message {
+    // r[impl session.connection-settings.open]
     Message(
         connectionId: connectionId,
         payload: .connectionAccept(ConnectionAccept(connectionSettings: settings, metadata: metadata)))
 }
 
 func messageReject(connectionId: UInt64, metadata: Metadata = .null) -> Message {
+    // r[impl connection.open.rejection]
     Message(connectionId: connectionId, payload: .connectionReject(ConnectionReject(metadata: metadata)))
 }
 

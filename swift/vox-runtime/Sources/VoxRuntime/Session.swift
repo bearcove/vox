@@ -19,6 +19,8 @@ private func injectExpectedRootService(
     return metadata.metaSetting("vox-service", .string(serviceName))
 }
 
+// r[impl session]
+// r[impl connection.root]
 public final class Session: @unchecked Sendable {
     public let role: Role
     public let rootConnection: Connection
@@ -70,6 +72,7 @@ public final class Session: @unchecked Sendable {
         keepalive: SessionKeepaliveConfig? = nil,
         metadata: Metadata = .null
     ) async throws -> Session {
+        // r[impl rpc.session-setup]
         let metadata = injectExpectedRootService(
             metadata, serviceName: ExpectedClient.voxServiceName)
         return try await initiator(
@@ -88,6 +91,7 @@ public final class Session: @unchecked Sendable {
         keepalive: SessionKeepaliveConfig? = nil,
         metadata: Metadata = .null
     ) async throws -> Session {
+        // r[impl rpc.session-setup]
         let attachment = try await connector.openAttachment()
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
@@ -114,6 +118,7 @@ public final class Session: @unchecked Sendable {
         keepalive: SessionKeepaliveConfig? = nil,
         metadata: Metadata = .null
     ) async throws -> Session {
+        // r[impl rpc.session-setup]
         let attachment = try await connector.openAttachment()
         return try await acceptFreshAttachment(
             attachment,
@@ -148,6 +153,7 @@ public final class Session: @unchecked Sendable {
         onConnection: (any ConnectionAcceptor)? = nil,
         keepalive: SessionKeepaliveConfig? = nil
     ) async throws -> Session {
+        // r[impl rpc.session-setup]
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
                 attachment: .fresh(link),
@@ -172,6 +178,7 @@ public final class Session: @unchecked Sendable {
         keepalive: SessionKeepaliveConfig? = nil,
         metadata: Metadata = .null
     ) async throws -> Session {
+        // r[impl rpc.session-setup]
         let metadata = injectExpectedRootService(
             metadata, serviceName: ExpectedClient.voxServiceName)
         let (connection, driver, handle, peerMetadata) =

@@ -1,18 +1,20 @@
 // RPC error types matching the Vox spec
-// r[impl core.error.vox-error] - VoxError wraps call results
-// r[impl call.error.protocol] - Protocol errors use discriminants 1-3
+// r[impl rpc.error.scope]
+// r[impl rpc.fallible]
+// r[impl rpc.fallible.vox-error]
+// r[impl rpc.fallible.vox-error.retryable]
 
 /** RPC error discriminants */
 export const RpcErrorCode = {
-  /** User-defined application error */
+  /** r[impl rpc.fallible.vox-error] User-defined application error */
   USER: 0,
-  /** r[impl call.error.unknown-method] - Method ID not recognized */
+  /** r[impl rpc.unknown-method] - Method ID not recognized */
   UNKNOWN_METHOD: 1,
-  /** r[impl call.error.invalid-payload] - Request payload deserialization failed */
+  /** r[impl rpc.error.scope] Request payload deserialization failed */
   INVALID_PAYLOAD: 2,
-  /** Call was cancelled */
+  /** r[impl rpc.fallible.vox-error] Call was cancelled */
   CANCELLED: 3,
-  /** Recovery completed, but the runtime refused to guess */
+  /** r[impl rpc.fallible.vox-error.retryable] Recovery completed, but the runtime refused to guess */
   INDETERMINATE: 4,
 } as const;
 
@@ -21,7 +23,10 @@ export type RpcErrorCode = (typeof RpcErrorCode)[keyof typeof RpcErrorCode];
 /**
  * RPC call error with structured error information.
  *
- * r[impl core.error.call-vs-connection] - Call errors affect only this call, not the connection.
+ * r[impl rpc.error.scope]
+ * r[impl rpc.fallible]
+ * r[impl rpc.fallible.caller-signature]
+ * r[impl rpc.fallible.vox-error]
  */
 export class RpcError extends Error {
   /** The error code discriminant */

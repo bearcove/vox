@@ -1,5 +1,16 @@
 import type { Link } from "@bearcove/vox-core";
 
+// r[impl transport.memory]
+// r[impl transport.inprocess]
+// r[impl transport.inprocess.platforms]
+// r[impl link]
+// r[impl link.message]
+// r[impl link.message.empty]
+// r[impl link.order]
+// r[impl link.rx.recv]
+// r[impl link.rx.eof]
+// r[impl link.tx.send]
+// r[impl link.tx.close]
 export class InProcessLink implements Link {
   lastReceived: Uint8Array | undefined;
   private pendingMessages: Uint8Array[] = [];
@@ -55,4 +66,3 @@ export class InProcessLink implements Link {
     return this.closed;
   }
 }
-

@@ -13,6 +13,8 @@ function parseAddress(addr: string): { host: string; port: number } {
   };
 }
 
+// r[impl transport.stream]
+// r[impl transport.stream.kinds]
 export class TcpLinkSource implements LinkSource<LengthPrefixedFramed> {
   private readonly addr: string;
 

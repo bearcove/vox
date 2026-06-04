@@ -1,6 +1,7 @@
 import Foundation
 
 /// Handle for making outgoing RPC calls.
+/// r[impl rpc.caller]
 final class ConnectionHandle: @unchecked Sendable {
     private let commandTx: @Sendable (HandleCommand) -> Bool
     private let taskTx: @Sendable (TaskMessage) -> Bool
@@ -22,6 +23,7 @@ final class ConnectionHandle: @unchecked Sendable {
         self.channelAllocator = ChannelIdAllocator(role: role)
         self.channelRegistry = ChannelRegistry()
         if maxConcurrentRequests < UInt32.max {
+            // r[impl rpc.flow-control.max-concurrent-requests.outbound]
             self.requestSemaphore = AsyncSemaphore(permits: Int(maxConcurrentRequests))
         } else {
             self.requestSemaphore = nil
@@ -31,6 +33,9 @@ final class ConnectionHandle: @unchecked Sendable {
     /// Make a raw RPC call.
     ///
     /// r[impl rpc.flow-control.max-concurrent-requests] - Blocks if maxConcurrentRequests are in-flight.
+    /// r[impl rpc.flow-control.max-concurrent-requests.counting]
+    /// r[impl rpc.flow-control.max-concurrent-requests.outbound]
+    /// r[impl rpc.caller]
     func callRaw(
         methodId: UInt64,
         metadata: Metadata = .null,

@@ -1,6 +1,7 @@
 import Foundation
 import PhonSchema
 
+// r[impl rpc.caller]
 public final class Connection: @unchecked Sendable {
     let handle: ConnectionHandle
     /// Writer schema closures the peer advertised — the generated client uses them for
@@ -35,6 +36,7 @@ public final class Connection: @unchecked Sendable {
         finalizeChannels: (@Sendable () -> Void)? = nil,
         schemaInfo: ClientSchemaInfo? = nil
     ) async throws -> [UInt8] {
+        // r[impl rpc.caller]
         try await callRaw(
             methodId: methodId,
             metadata: metadata,
@@ -55,6 +57,7 @@ public final class Connection: @unchecked Sendable {
         finalizeChannels: (@Sendable () -> Void)? = nil,
         schemaInfo: ClientSchemaInfo? = nil
     ) async throws -> [UInt8] {
+        // r[impl rpc.request]
         try await handle.callRaw(
             methodId: methodId,
             metadata: metadata,

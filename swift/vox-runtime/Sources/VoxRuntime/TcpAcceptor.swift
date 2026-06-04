@@ -7,6 +7,8 @@ import Foundation
 ///
 /// The server binds lazily on first use (optionally to an OS-assigned port when `port` is 0),
 /// and keeps accepting connections across multiple `openAttachment()` calls.
+/// r[impl transport.stream]
+/// r[impl transport.stream.kinds]
 public final class TcpAcceptor: SessionConnector, Sendable {
     public let host: String
     public let port: Int  // 0 = OS assigns port

@@ -7,6 +7,8 @@ import Foundation
 ///
 /// The server binds lazily on first use (removing any stale socket file first),
 /// and keeps accepting connections across multiple `openAttachment()` calls.
+/// r[impl transport.stream.local]
+/// r[impl transport.stream.kinds]
 public final class UnixAcceptor: SessionConnector, Sendable {
     public let path: String
 

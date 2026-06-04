@@ -1,10 +1,14 @@
 import Foundation
 
 extension Driver {
+    // r[impl rpc.virtual-connection.accept]
+    // r[impl connection.virtual]
     func addVirtualConnection(_ connId: UInt64, dispatcher: any ServiceDispatcher) async {
         await virtualConnState.addConnection(connId, dispatcher: dispatcher)
     }
 
+    // r[impl connection.close]
+    // r[impl connection.virtual]
     func removeVirtualConnection(_ connId: UInt64) async {
         await virtualConnState.removeConnection(connId)
     }
@@ -14,6 +18,11 @@ extension Driver {
     /// r[impl connection.close.semantics] - Stop sending, close connection, fail in-flight.
     /// r[impl rpc.request] - Request before Response in message sequence.
     /// r[impl session.protocol-error] - Unknown message variant triggers Goodbye.
+    /// r[impl session.message]
+    /// r[impl session.message.connection-id]
+    /// r[impl session.message.payloads]
+    /// r[impl rpc.cancel.channels]
+    /// r[impl rpc.channel.connection-closure]
     func handleMessage(
         _ msg: Message,
         keepaliveRuntime: inout DriverKeepaliveRuntime?
@@ -51,6 +60,8 @@ extension Driver {
             await failAllPending()
             throw ConnectionError.protocolViolation(rule: error.description)
         case .connectionOpen(let open):
+            // r[impl rpc.virtual-connection.accept]
+            // r[impl connection.open.rejection]
             if let acceptor = connectionAcceptor {
                 let metadata = open.metadata
                 guard let service = metadata.metaStr("vox-service") else {
@@ -90,6 +101,7 @@ extension Driver {
         case .connectionAccept, .connectionReject:
             break
         case .connectionClose:
+            // r[impl connection.close]
             warnLog("received ConnectionClose conn_id=\(msg.connectionId)")
             if msg.connectionId == 0 {
                 warnLog("received ConnectionClose for root connection; shutting down driver")
@@ -117,6 +129,8 @@ extension Driver {
                     channels: call.channels
                 )
             case .response(let response):
+                // r[impl rpc.response]
+                // r[impl rpc.response.one-per-request]
                 let payload = [UInt8](response.ret)
                 guard let pending = await state.claimPendingResponse(request.id, reason: "response")
                 else {
@@ -148,6 +162,7 @@ extension Driver {
                 pending.timeoutTask?.cancel()
                 pending.responseTx(.success(payload))
             case .cancel:
+                // r[impl rpc.cancel]
                 let _ = await state.removeInFlight(request.id)
             }
         case .channelMessage(let channel):
@@ -170,6 +185,12 @@ extension Driver {
 
     /// r[impl session.connection-settings.hello] - Exceeding limit requires Goodbye.
     /// r[impl rpc.request.id-allocation] - Each request uses a unique ID.
+    /// r[impl rpc]
+    /// r[impl rpc.service]
+    /// r[impl rpc.handler]
+    /// r[impl rpc.service.methods]
+    /// r[impl rpc.one-service-per-connection]
+    /// r[impl rpc.pipelining]
     func handleRequest(
         connId: UInt64,
         requestId: UInt64,
@@ -233,6 +254,7 @@ extension Driver {
     /// r[impl rpc.channel.allocation] - Channel ID 0 is reserved.
     /// r[impl rpc.channel.item] - Data messages routed by channel_id; an item for a
     /// not-yet-bound channel is buffered (its declaring Call may not be processed yet).
+    /// r[impl rpc.flow-control]
     func handleData(channelId: UInt64, payload: [UInt8]) async throws {
         if channelId == 0 {
             try await sendProtocolError("rpc.channel.allocation")
@@ -259,6 +281,7 @@ extension Driver {
 
     /// r[impl rpc.channel.allocation] - Channel ID 0 is reserved.
     /// r[impl rpc.channel.close] - Close terminates the channel.
+    /// r[impl rpc.channel.connection-closure]
     func handleClose(channelId: UInt64) async throws {
         if channelId == 0 {
             try await sendProtocolError("rpc.channel.allocation")
@@ -283,6 +306,8 @@ extension Driver {
     }
 
     func failAllPending() async {
+        // r[impl rpc.flow-control.max-concurrent-requests.session-failure]
+        // r[impl rpc.channel.connection-closure]
         await handle.closeRequestSemaphore()
 
         let responses = await state.claimAllPendingResponses(reason: "connection-closed")

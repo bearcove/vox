@@ -1,10 +1,15 @@
 /// Protocol for dispatching incoming requests.
+/// r[impl rpc.service]
+/// r[impl rpc.service.methods]
+/// r[impl rpc.handler]
 public protocol ServiceDispatcher: Sendable {
     /// Encode a runtime-originated `VoxRuntimeError` (cancelled, indeterminate,
     /// invalid payload, …) as a response payload. The wire type is
     /// `Result<T, VoxError<E>>`, whose `Err` arm is independent of the method's
     /// `T`/`E`, so the generated dispatcher encodes it through any method's response
     /// descriptor (mirrors TS `encodeVoxError`).
+    /// r[impl rpc.fallible]
+    /// r[impl rpc.fallible.vox-error]
     func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8]
 
     /// Pre-register the call's out-of-band channels synchronously BEFORE spawning the

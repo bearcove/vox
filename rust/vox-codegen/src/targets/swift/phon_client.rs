@@ -48,6 +48,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
     let svc = service.service_name.to_lower_camel_case();
     let mut out = String::new();
 
+    // r[impl rpc.caller]
     // The caller protocol.
     if let Some(doc) = &service.doc {
         out.push_str(&format_doc(doc, ""));
@@ -69,6 +70,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
     out.push_str("}\n\n");
 
     // The client.
+    // r[impl rpc.caller]
     out.push_str(&format!(
         "public final class {service_name}Client: {service_name}Caller, Sendable {{\n"
     ));
@@ -101,6 +103,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         let mut arg_exprs: Vec<String> = Vec::new();
         let mut finalizers: Vec<String> = Vec::new();
         if has_channels {
+            // r[impl rpc.channel.discovery]
             out.push_str("        var channelIds: [UInt64] = []\n");
         }
         for (i, a) in method.args.iter().enumerate() {
@@ -157,6 +160,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         }
 
         // Call the runtime with this method's schema info (advertises args closure).
+        // r[impl rpc.request]
         let channels_arg = if has_channels {
             "channels: channelIds, "
         } else {

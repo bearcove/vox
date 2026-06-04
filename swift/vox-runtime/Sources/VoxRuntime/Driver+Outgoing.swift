@@ -1,6 +1,7 @@
 import Foundation
 
 extension Driver {
+    // r[impl rpc.flow-control]
     private func sendOrEnqueue(_ message: Message) async throws {
         if !pendingTaskMessages.isEmpty {
             pendingTaskMessages.append(DriverQueuedTaskMessage(message: message))
@@ -21,6 +22,8 @@ extension Driver {
         payload: [UInt8],
         schemas: [UInt8] = []
     ) async -> Message? {
+        // r[impl rpc.response]
+        // r[impl rpc.response.one-per-request]
         let responseContext = await state.removeInFlight(requestId)
         guard responseContext.removed else {
             return nil
@@ -47,6 +50,8 @@ extension Driver {
     }
 
     /// Handle a task message from a handler.
+    /// r[impl rpc.response]
+    /// r[impl rpc.channel.connection-closure]
     func handleTaskMessage(_ msg: TaskMessage) async throws {
         let wireMsg: Message
         switch msg {
@@ -97,6 +102,9 @@ extension Driver {
     }
 
     /// Handle a command from ConnectionHandle.
+    /// r[impl rpc.caller]
+    /// r[impl rpc.request]
+    /// r[impl rpc.pipelining]
     func handleCommand(_ cmd: HandleCommand) async {
         switch cmd {
         case .call(

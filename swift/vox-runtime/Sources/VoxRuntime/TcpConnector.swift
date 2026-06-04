@@ -2,6 +2,8 @@ public protocol SessionConnector: Sendable {
     func openAttachment() async throws -> LinkAttachment
 }
 
+// r[impl transport.stream]
+// r[impl transport.stream.kinds]
 public struct TcpConnector: SessionConnector, LinkSource, Sendable {
     public let host: String
     public let port: Int
@@ -43,6 +45,7 @@ public func connect(unixPath: String) async throws -> any Conduit {
     )
 }
 
+// r[impl transport.stream.local]
 func connect(
     unixPath: String,
     prologueTimeoutNs: UInt64
@@ -65,6 +68,7 @@ public func connect(host: String, port: Int) async throws
     )
 }
 
+// r[impl transport.stream]
 func connect(
     host: String,
     port: Int,

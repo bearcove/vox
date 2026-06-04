@@ -1,6 +1,7 @@
 import Foundation
 
 extension Driver {
+    // r[impl session.keepalive]
     func makeKeepaliveRuntime() -> DriverKeepaliveRuntime? {
         guard let keepalive else {
             return nil
@@ -39,6 +40,7 @@ extension Driver {
     }
 
     func handleKeepaliveTick(keepaliveRuntime: inout DriverKeepaliveRuntime?) async throws {
+        // r[impl session.keepalive]
         guard var runtime = keepaliveRuntime else {
             return
         }

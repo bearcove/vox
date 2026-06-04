@@ -1,7 +1,18 @@
 // Length-prefixed framing for TCP streams.
 //
-// r[impl transport.bytestream.length-prefix] - Messages are prefixed with a
-// 4-byte little-endian length header.
+// r[impl transport.stream]
+// r[impl transport.stream.kinds]
+// r[impl link]
+// r[impl link.message]
+// r[impl link.message.empty]
+// r[impl link.order]
+// r[impl link.rx.recv]
+// r[impl link.rx.eof]
+// r[impl link.rx.error]
+// r[impl link.tx.alloc.limits]
+// r[impl link.tx.cancel-safe]
+// r[impl link.tx.send]
+// r[impl link.tx.close]
 
 import net from "node:net";
 import type { Link } from "@bearcove/vox-core";
@@ -81,7 +92,7 @@ export class LengthPrefixedFramed implements Link {
   /**
    * Send raw payload bytes over the connection.
    *
-   * r[impl transport.bytestream.length-prefix] - 4-byte little-endian length + payload.
+   * r[impl transport.stream] - 4-byte little-endian length + payload.
    */
   send(payload: Uint8Array): Promise<void> {
     return new Promise<void>((resolve, reject) => {

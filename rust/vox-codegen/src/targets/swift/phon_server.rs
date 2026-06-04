@@ -51,6 +51,8 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
     let service_name = service.service_name.to_upper_camel_case();
     let mut out = String::new();
 
+    // r[impl rpc.service]
+    // r[impl rpc.service.methods]
     // Handler protocol (implemented by the user).
     if let Some(doc) = &service.doc {
         out.push_str(&format_doc(doc, ""));
@@ -83,6 +85,7 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
     }
     out.push_str("}\n\n");
 
+    // r[impl rpc.handler]
     // Dispatcher.
     out.push_str(&format!(
         "public final class {service_name}Dispatcher: ServiceDispatcher {{\n"
@@ -113,10 +116,13 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
         }
     }
 
+    // r[impl rpc.channel.discovery]
     // preregister — mark the call's out-of-band channel ids known so incoming Data on
     // them buffers (instead of being rejected as unknown) before dispatch binds them.
     out.push_str("    public func preregister(methodId: UInt64, payload: [UInt8], channels: [UInt64], registry: ChannelRegistry) async {\n        for id in channels { await registry.markKnown(id) }\n    }\n\n");
 
+    // r[impl rpc.service.methods]
+    // r[impl rpc.unknown-method]
     // dispatch — route to per-method helpers.
     out.push_str("    public func dispatch(methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async {\n        switch methodId {\n");
     for m in service.methods {
@@ -179,6 +185,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         ));
     }
 
+    // r[impl rpc.channel.discovery]
     // Bind out-of-band channels: a channel arg in the decoded tuple is the u32 LE wire
     // index into `channels`; resolve it to a `ChannelId` and create a server-side
     // `Tx`/`Rx`. A `Tx` arg means the handler SENDS (callee→caller); an `Rx` arg means
@@ -247,6 +254,8 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         .collect();
     let call = format!("handler.{name}({})", call_args.join(", "));
 
+    // r[impl rpc.fallible]
+    // r[impl rpc.fallible.vox-error]
     // Call + wrap into the wire `Result<T, VoxError<E>>`. A fallible handler returns
     // `Result<T, E>` (its `.failure(e)` becomes the wire `User(e)`); an infallible one
     // returns `T`/`Void`. An unexpected throw maps to `Indeterminate`.
@@ -273,6 +282,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         "        } catch {\n            voxResult = .failure(.indeterminate)\n        }\n",
     );
 
+    // r[impl rpc.response]
     // Encode the response and reply, carrying the method's response schema closure.
     // The driver advertises it idempotently at the sequential send point, so the first
     // response written for this method carries the schema even under pipelining (the

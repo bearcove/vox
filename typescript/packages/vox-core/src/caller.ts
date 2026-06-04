@@ -81,6 +81,8 @@ export interface CallerRequest {
  * Implementations handle the actual wire protocol, while middleware
  * can be composed using the with() method.
  */
+// r[impl rpc.caller]
+// r[impl rpc.caller.liveness.refcounted]
 export interface Caller {
   /**
    * Make an RPC call.

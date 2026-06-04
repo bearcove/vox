@@ -23,7 +23,11 @@ import type { ConnectionHandle, IncomingCall } from "./session.ts";
 import { voxLogger } from "./logger.ts";
 
 export interface Dispatcher {
+  // r[impl rpc.service]
+  // r[impl rpc.service.methods]
+  // r[impl service-macro.is-source-of-truth]
   getDescriptor(): ServiceDescriptor;
+  // r[impl rpc.handler]
   dispatch(
     context: RequestContext,
     method: MethodDescriptor,
@@ -82,6 +86,7 @@ class VoxCallImpl implements VoxCall {
     return this.replied;
   }
 
+  // r[impl rpc.response.one-per-request]
   reply(value: unknown): void {
     if (this.replied) {
       return;
@@ -93,6 +98,9 @@ class VoxCallImpl implements VoxCall {
     this.sendPayload(payload);
   }
 
+  // r[impl rpc.fallible]
+  // r[impl rpc.fallible.vox-error]
+  // r[impl rpc.response.one-per-request]
   replyErr(error: unknown): void {
     if (this.replied) {
       return;
@@ -102,6 +110,10 @@ class VoxCallImpl implements VoxCall {
     this.sendPayload(payload);
   }
 
+  // r[impl rpc.error.scope]
+  // r[impl rpc.fallible]
+  // r[impl rpc.fallible.vox-error]
+  // r[impl rpc.response.one-per-request]
   replyInternalError(message = "Invalid payload"): void {
     if (this.replied) {
       return;
@@ -185,6 +197,11 @@ export class Driver {
   }
 
   async run(): Promise<void> {
+    // r[impl rpc]
+    // r[impl rpc.service]
+    // r[impl rpc.handler]
+    // r[impl rpc.one-service-per-connection]
+    // r[impl rpc.pipelining]
     // r[impl rpc.session-setup]
     let pendingIncoming: Promise<IncomingCall | null> | null = null;
     let pendingCancel: Promise<bigint | null> | null = null;
@@ -287,6 +304,9 @@ export class Driver {
   }
 
   private async handleCall(incoming: IncomingCall): Promise<void> {
+    // r[impl rpc.service]
+    // r[impl rpc.service.methods]
+    // r[impl rpc.handler]
     // r[impl rpc.unknown-method]
     // r[impl rpc.response.one-per-request]
     const descriptor = this.dispatcher.getDescriptor();

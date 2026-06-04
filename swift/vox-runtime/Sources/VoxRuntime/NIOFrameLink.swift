@@ -4,6 +4,11 @@
 
 private let defaultMaxFrameBytes = 1024 * 1024
 
+// r[impl transport.stream]
+// r[impl transport.stream.kinds]
+// r[impl link]
+// r[impl link.message]
+// r[impl link.order]
 public final class NIOFrameLink: Link, @unchecked Sendable {
     private let channel: Channel
     private let frameLimit: FrameLimit
@@ -28,6 +33,9 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
         try await writeRawFrame(channel: channel, bytes: bytes)
     }
 
+    // r[impl link.rx.recv]
+    // r[impl link.rx.eof]
+    // r[impl link.rx.error]
     public func recvFrame() async throws -> [UInt8]? {
         guard let result = await inboundIterator.next() else {
             return nil
@@ -35,6 +43,7 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
         return try result.get()
     }
 
+    // r[impl link.tx.alloc.limits]
     public func setMaxFrameSize(_ size: Int) async throws {
         let frameLimit = self.frameLimit
         try await channel.eventLoop.submit {
@@ -42,6 +51,7 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
         }.get()
     }
 
+    // r[impl link.tx.close]
     public func close() async throws {
         if channel.isActive {
             try? await channel.close()
@@ -58,6 +68,8 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
     }
 }
 
+// r[impl transport.stream]
+// r[impl link.message.empty]
 final class LengthPrefixDecoder: ByteToMessageDecoder, @unchecked Sendable {
     typealias InboundOut = [UInt8]
     private let frameLimit: FrameLimit
@@ -121,15 +133,20 @@ final class RawFrameStreamHandler: ChannelInboundHandler, RemovableChannelHandle
         continuation.yield(.success(unwrapInboundIn(data)))
     }
 
+    // r[impl link.rx.error]
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         continuation.yield(.failure(error))
     }
 
+    // r[impl link.rx.eof]
     func channelInactive(context: ChannelHandlerContext) {
         continuation.finish()
     }
 }
 
+// r[impl transport.stream]
+// r[impl link.message.empty]
+// r[impl link.tx.send]
 func writeRawFrame(channel: Channel, bytes: [UInt8]) async throws {
     guard let len = UInt32(exactly: bytes.count) else {
         throw TransportError.frameEncoding("frame too large for u32 length prefix")
@@ -141,6 +158,8 @@ func writeRawFrame(channel: Channel, bytes: [UInt8]) async throws {
     try await channel.writeAndFlush(buffer)
 }
 
+// r[impl transport.stream.local]
+// r[impl transport.stream.kinds]
 func connectLink(unixPath: String) async throws -> NIOFrameLink {
     let frameLimit = FrameLimit(defaultMaxFrameBytes)
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -178,6 +197,8 @@ func connectLink(unixPath: String) async throws -> NIOFrameLink {
     }
 }
 
+// r[impl transport.stream]
+// r[impl transport.stream.kinds]
 func connectLink(host: String, port: Int) async throws -> NIOFrameLink {
     let frameLimit = FrameLimit(defaultMaxFrameBytes)
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

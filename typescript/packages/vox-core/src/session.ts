@@ -139,6 +139,17 @@ interface EstablishedTransport {
   handshake: HandshakeResult;
 }
 
+// r[impl session]
+// r[impl session.handshake]
+// r[impl session.handshake.phon]
+// r[impl session.handshake.protocol-schema]
+// r[impl session.handshake.protocol-schema.session-scoped]
+// r[impl session.handshake.unversioned]
+// r[impl session.connection-settings]
+// r[impl session.connection-settings.hello]
+// r[impl session.peer]
+// r[impl session.role]
+// r[impl session.symmetry]
 // r[impl transport.prologue.first-payload]
 // r[impl transport.prologue.post-accept]
 async function makeInitiatorEstablishedTransport(
@@ -181,6 +192,18 @@ async function makeInitiatorEstablishedTransport(
   };
 }
 
+// r[impl session]
+// r[impl session.handshake]
+// r[impl session.handshake.phon]
+// r[impl session.handshake.protocol-schema]
+// r[impl session.handshake.protocol-schema.session-scoped]
+// r[impl session.handshake.sorry]
+// r[impl session.handshake.unversioned]
+// r[impl session.connection-settings]
+// r[impl session.connection-settings.hello]
+// r[impl session.peer]
+// r[impl session.role]
+// r[impl session.symmetry]
 // r[impl transport.prologue.first-payload]
 // r[impl transport.prologue.post-accept]
 async function makeAcceptorEstablishedTransport(
@@ -285,6 +308,8 @@ class SessionCore {
   }
 
   rootConnection(): ConnectionHandle {
+    // r[impl connection]
+    // r[impl connection.root]
     if (!this.rootConnectionValue) {
       this.rootConnectionValue = new ConnectionHandle(
         this,
@@ -365,7 +390,10 @@ class SessionCore {
     settings: ConnectionSettings,
     metadata: Metadata = emptyMetadata(),
   ): Promise<ConnectionHandle> {
+    // r[impl connection]
+    // r[impl connection.virtual]
     // r[impl connection.open]
+    // r[impl rpc.virtual-connection.open]
     this.assertOpen();
     if (settings.initial_channel_credit <= 0) {
       throw SessionError.protocol("initial_channel_credit must be greater than zero");
@@ -389,7 +417,10 @@ class SessionCore {
   }
 
   async closeConnection(connectionId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
+    // r[impl connection]
+    // r[impl connection.virtual]
     // r[impl connection.close]
+    // r[impl connection.close.semantics]
     this.assertOpen();
     if (connectionId === 0n) {
       throw new SessionError("cannot close root connection");
@@ -463,6 +494,8 @@ class SessionCore {
 
   private async run(): Promise<void> {
     // r[impl session.message]
+    // r[impl session.message.connection-id]
+    // r[impl session.message.payloads]
     while (!this.closed) {
       const message = await this.conduit.recv();
       if (!message) {
@@ -552,7 +585,10 @@ class SessionCore {
     connectionId: bigint,
     value: { connection_settings: ConnectionSettings; metadata: unknown },
   ): Promise<void> {
+    // r[impl connection]
+    // r[impl connection.virtual]
     // r[impl connection.open]
+    // r[impl rpc.virtual-connection.accept]
     // r[impl connection.open.rejection]
     // r[impl session.connection-settings.open]
     if (!this.onConnection) {
@@ -628,9 +664,13 @@ class SessionCore {
     connectionId: bigint,
     request: RequestMessage,
   ): Promise<void> {
+    // r[impl rpc]
     // r[impl rpc.request]
+    // r[impl rpc.request.id-allocation]
     // r[impl rpc.response]
     // r[impl rpc.cancel]
+    // r[impl rpc.cancel.channels]
+    // r[impl rpc.pipelining]
     const connection = this.getConnection(connectionId);
     switch (request.body.tag) {
       case "Call": {
@@ -703,7 +743,9 @@ class SessionCore {
   ): void {
     // r[impl rpc.channel.item]
     // r[impl rpc.channel.close]
+    // r[impl rpc.channel.connection-closure]
     // r[impl rpc.channel.reset]
+    // r[impl rpc.flow-control]
     // r[impl rpc.flow-control.credit.grant]
     const connection = this.getConnection(connectionId);
     switch (channel.body.tag) {

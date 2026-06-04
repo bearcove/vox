@@ -3,6 +3,8 @@
 @preconcurrency import NIOPosix
 
 /// Listens on a Unix domain socket and yields NIOFrameLink connections.
+/// r[impl transport.stream.local]
+/// r[impl transport.stream.kinds]
 public final class UnixListener: Sendable {
     private let group: MultiThreadedEventLoopGroup
     private let channel: Channel

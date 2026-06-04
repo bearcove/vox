@@ -17,7 +17,6 @@ public enum Role: Sendable {
 
 /// Allocates unique channel IDs with correct parity.
 ///
-/// r[impl rpc.request.id-allocation] - IDs are unique within a connection.
 /// r[impl session.parity] - Initiator uses odd, Acceptor uses even.
 /// r[impl rpc.channel.allocation] - Caller allocates ALL channel IDs.
 public final class ChannelIdAllocator: @unchecked Sendable {

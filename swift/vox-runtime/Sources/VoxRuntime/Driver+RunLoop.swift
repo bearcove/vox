@@ -1,6 +1,8 @@
 import Foundation
 
 extension Driver {
+    // r[impl rpc.observability.runtime]
+    // r[impl rpc.observability.driver]
     func drainInjectedQueues() async throws {
         let commands = commandQueue.popAll()
         for command in commands {
@@ -13,6 +15,7 @@ extension Driver {
     }
 
     /// Spawn a reader task that reads from the conduit and yields events.
+    /// r[impl rpc.observability.session-errors]
     private func spawnReaderTask(
         for conduit: any Conduit,
         continuation: AsyncStream<DriverEvent>.Continuation
@@ -39,6 +42,13 @@ extension Driver {
     }
 
     /// Run the driver until connection closes.
+    /// r[impl rpc]
+    /// r[impl rpc.service]
+    /// r[impl rpc.handler]
+    /// r[impl rpc.pipelining]
+    /// r[impl rpc.observability.runtime]
+    /// r[impl rpc.observability.driver]
+    /// r[impl rpc.observability.session-errors]
     public func run() async throws {
         var keepaliveRuntime = makeKeepaliveRuntime()
         traceLog(.driver, "run start")

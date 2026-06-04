@@ -28,13 +28,18 @@ specs (
                     scripts/check-schema-compat.sh
                     rust/vox-codegen/src/schema_compat.rs
                     rust/vox-codegen/src/targets/typescript/**/*.rs
+                    typescript/packages/vox-core/src/call_builder.ts
+                    typescript/packages/vox-core/src/caller.ts
                     typescript/packages/vox-core/src/session.ts
                     typescript/packages/vox-core/src/session.test.ts
                     typescript/packages/vox-core/src/conduit.ts
+                    typescript/packages/vox-core/src/link.ts
+                    typescript/packages/vox-core/src/transport.ts
                     typescript/packages/vox-core/src/transport_prologue.ts
                     typescript/packages/vox-core/src/transport_prologue.test.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
+                    typescript/packages/vox-core/src/logger.ts
                     typescript/packages/vox-core/src/logging.ts
                     typescript/packages/vox-core/src/metadata.ts
                     typescript/packages/vox-core/src/metadata.test.ts
@@ -53,6 +58,11 @@ specs (
                     typescript/packages/vox-wire/src/types.ts
                     typescript/packages/vox-wire/src/codec.ts
                     typescript/packages/vox-wire/src/codec.test.ts
+                    typescript/packages/vox-wire/src/rpc_error.ts
+                    typescript/packages/vox-inprocess/src/transport.ts
+                    typescript/packages/vox-tcp/src/framing.ts
+                    typescript/packages/vox-tcp/src/transport.ts
+                    typescript/packages/vox-ws/src/transport.ts
                 )
             }
         )

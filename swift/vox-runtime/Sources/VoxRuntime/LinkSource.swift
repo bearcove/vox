@@ -35,6 +35,7 @@ public struct LinkAttachment: Sendable {
 }
 
 public protocol LinkSource: Sendable {
+    // r[impl link.split]
     func nextLink() async throws -> LinkAttachment
 }
 
@@ -70,6 +71,7 @@ public func singleAttachmentSource(_ attachment: LinkAttachment) -> some LinkSou
     SingleAttachmentSource(attachment: attachment)
 }
 
+// r[impl link.split]
 public func singleLinkSource(_ link: any Link) -> some LinkSource {
     singleAttachmentSource(.initiator(link))
 }

@@ -32,6 +32,9 @@ function metadataForLog(context: RequestContext): Record<string, unknown> {
 export function serverLoggingMiddleware(
   options: ServerLoggingOptions = {},
 ): ServerMiddleware {
+  // r[impl rpc.observability.runtime]
+  // r[impl rpc.observability.driver]
+  // r[impl rpc.observability.session-errors]
   const logger = options.logger ?? console;
   const logMetadata = options.logMetadata ?? false;
 
