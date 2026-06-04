@@ -467,6 +467,7 @@ export class Driver {
     const serverTxTaskSender = ms.channels.some((ch) => ch.direction === "tx")
       ? this.argsSchemaAdvertisingTaskSender(method, ms, taskSender)
       : taskSender;
+    // r[impl rpc.channel.discovery]
     for (const ch of ms.channels) {
       const wireIndex = readU32LE(values[ch.index] as Uint8Array);
       const channelId = incoming.channels[wireIndex];

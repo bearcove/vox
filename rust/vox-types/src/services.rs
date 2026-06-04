@@ -51,10 +51,8 @@ pub struct MethodDescriptor {
     /// wrapping is invisible to reflection on `return_shape` alone.
     pub response_wire_shape: &'static Shape,
 
-    /// Whether `args_shape` reaches a channel (Tx/Rx) anywhere in its tree.
-    /// Computed once via `shape_contains_channel` when the descriptor is
-    /// built, so the driver's cancel/failure paths can short-circuit
-    /// instead of re-walking the shape per request.
+    /// Whether any direct method argument is a channel (Tx/Rx).
+    /// Nested channels are rejected while the descriptor is built.
     pub args_have_channels: bool,
 
     /// Documentation string, if any.
@@ -88,7 +86,7 @@ pub struct ArgDescriptor {
     /// Argument type shape.
     pub shape: &'static Shape,
 
-    /// For a `Tx<T>`/`Rx<T>` argument, the element type's shape (`T::SHAPE`).
+    /// For a direct `Tx<T>`/`Rx<T>` argument, the element type's shape (`T::SHAPE`).
     ///
     /// `Tx`/`Rx` are `#[facet(opaque)]`, so their `Shape` carries no
     /// `type_params` — the element type is invisible to reflection. The service

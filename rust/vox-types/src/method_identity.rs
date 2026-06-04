@@ -44,6 +44,11 @@ pub fn method_descriptor<'a, 'r, A: Facet<'a>, R: Facet<'r>>(
         !shape_contains_channel_in_collection(A::SHAPE),
         "channels are not allowed inside collections: {service_name}.{method_name}"
     );
+    // r[impl rpc.channel.direct-args]
+    assert!(
+        !shape_contains_indirect_channel_arg(A::SHAPE),
+        "channels are only allowed as direct method arguments: {service_name}.{method_name}"
+    );
     let args_have_channels = shape_contains_channel(A::SHAPE);
 
     let id = method_id_name_only(service_name, method_name);
@@ -210,6 +215,17 @@ pub fn shape_contains_channel_in_collection(shape: &'static Shape) -> bool {
     visit(shape, false, &mut seen)
 }
 
+// r[impl rpc.channel.direct-args]
+pub fn shape_contains_indirect_channel_arg(args_shape: &'static Shape) -> bool {
+    match args_shape.ty {
+        Type::User(UserType::Struct(s)) => s.fields.iter().any(|field| {
+            let field_shape = field.shape();
+            !(is_tx(field_shape) || is_rx(field_shape)) && shape_contains_channel(field_shape)
+        }),
+        _ => shape_contains_channel(args_shape),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,6 +286,75 @@ mod tests {
             .expect("panic payload should be a string");
         assert!(
             message.contains("channels are not allowed inside collections: StreamService.bad"),
+            "unexpected panic message: {message}"
+        );
+    }
+
+    // r[verify rpc.channel.direct-args]
+    #[test]
+    fn method_descriptor_rejects_channel_inside_nested_struct_arg() {
+        #[derive(Facet)]
+        struct Nested {
+            stream: crate::Tx<u8>,
+        }
+
+        #[derive(Facet)]
+        struct Args {
+            nested: Nested,
+        }
+
+        let result = std::panic::catch_unwind(|| {
+            let _ = method_descriptor::<Args, ()>(
+                "StreamService",
+                "bad",
+                &["nested"],
+                &[None],
+                unit_response_options(),
+            );
+        });
+
+        let panic = result.expect_err("descriptor should reject nested channel args");
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&'static str>().copied())
+            .expect("panic payload should be a string");
+        assert!(
+            message.contains(
+                "channels are only allowed as direct method arguments: StreamService.bad"
+            ),
+            "unexpected panic message: {message}"
+        );
+    }
+
+    // r[verify rpc.channel.direct-args]
+    #[test]
+    fn method_descriptor_rejects_channel_inside_option_arg() {
+        #[derive(Facet)]
+        struct Args {
+            maybe: Option<crate::Tx<u8>>,
+        }
+
+        let result = std::panic::catch_unwind(|| {
+            let _ = method_descriptor::<Args, ()>(
+                "StreamService",
+                "bad",
+                &["maybe"],
+                &[None],
+                unit_response_options(),
+            );
+        });
+
+        let panic = result.expect_err("descriptor should reject optional channel args");
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&'static str>().copied())
+            .expect("panic payload should be a string");
+        assert!(
+            message.contains(
+                "channels are only allowed as direct method arguments: StreamService.bad"
+            ),
             "unexpected panic message: {message}"
         );
     }

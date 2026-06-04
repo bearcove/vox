@@ -278,15 +278,20 @@ registered on the session builder; otherwise they are rejected.
 
 > r[rpc.channel.placement]
 >
-> `Tx<T>` and `Rx<T>` may appear in argument types of service methods.
-> They MUST NOT appear in method return types or in the error variant of a
-> `Result` return type.
+> `Tx<T>` and `Rx<T>` may appear only as direct arguments of service
+> methods. They MUST NOT appear in method return types or in the error
+> variant of a `Result` return type.
+
+> r[rpc.channel.direct-args]
+>
+> `Tx<T>` and `Rx<T>` MUST NOT be nested inside structs, enums, tuples,
+> `Option`, `Result`, pointers, or other container/wrapper types used as
+> method arguments.
 
 > r[rpc.channel.no-collections]
 >
 > `Tx<T>` and `Rx<T>` MUST NOT appear inside collections (lists,
-> arrays, maps, sets). They may be nested arbitrarily deep inside structs
-> and enums.
+> arrays, maps, sets).
 
 > r[rpc.channel.allocation]
 >
@@ -637,11 +642,10 @@ On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
 > r[rpc.channel.discovery]
 >
 > Channel IDs in `Request.channels` MUST be listed in the order produced by a
-> schema-driven traversal of the argument types. The traversal visits struct
-> fields and active enum variant fields in declaration order. It does not
-> descend into collections, since channels MUST NOT appear there (see
-> `r[rpc.channel.no-collections]`). Channels inside an `Option` that is
-> `None` at runtime are simply absent from the list.
+> left-to-right scan of the direct method arguments. Since channels are
+> rejected anywhere below a direct argument position (see
+> `r[rpc.channel.direct-args]`), implementations do not perform recursive
+> channel discovery over user structs, enum variants, options, or collections.
 
 > r[rpc.channel.payload-encoding]
 >
@@ -681,9 +685,9 @@ On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
 > r[rpc.channel.binding.caller-args]
 >
 > When the caller sends a request containing channel handles in the
-> arguments, the framework iterates the channel locations from the
-> `RpcPlan`, allocates a channel ID for each, and binds the handle
-> in the args tuple. Channel IDs are collected into `Request.channels`.
+> arguments, the framework iterates direct channel arguments in method
+> declaration order, allocates a channel ID for each, and binds the handle in
+> the args tuple. Channel IDs are collected into `Request.channels`.
 
 > r[rpc.channel.binding.caller-args.rx]
 >
@@ -704,8 +708,8 @@ On the wire this is a `Value` map `{ "trace-id": "abc123", "attempt": 2,
 > r[rpc.channel.binding.callee-args]
 >
 > When the callee receives a request, channel handles in the deserialized
-> arguments are standalone (not part of a pair). The framework iterates
-> the channel locations from the `RpcPlan` and binds each handle directly
+> arguments are standalone (not part of a pair). The framework iterates direct
+> channel arguments in method declaration order and binds each handle directly
 > using the channel IDs from `Request.channels`.
 
 > r[rpc.channel.binding.callee-args.rx]

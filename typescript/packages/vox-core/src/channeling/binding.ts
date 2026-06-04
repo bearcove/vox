@@ -105,6 +105,7 @@ export function bindPhonChannels(
   const bound: Array<Tx<unknown> | Rx<unknown>> = [];
 
   // Allocate in argument-position order so the wire index is stable.
+  // r[impl rpc.channel.discovery]
   const metas = [...channelMetas].sort((a, b) => a.index - b.index);
   for (const meta of metas) {
     const handle = values[meta.index] as Tx<unknown> | Rx<unknown>;

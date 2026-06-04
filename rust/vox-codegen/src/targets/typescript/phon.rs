@@ -139,8 +139,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
                 None
             };
             if let Some(dir) = dir {
-                // `Tx`/`Rx` are opaque — their `Shape` hides the element type, so the
-                // service macro captures it in `ArgDescriptor::channel_element`.
+                // `Tx`/`Rx` are opaque; the service macro captures the element.
                 let element = arg
                     .channel_element
                     .expect("Tx/Rx arg must carry its channel element shape");

@@ -160,6 +160,13 @@ fn validate_channel_rules(service: &ServiceDescriptor) {
             method.service_name,
             method.method_name
         );
+        // r[impl rpc.channel.direct-args]
+        assert!(
+            !vox_types::shape_contains_indirect_channel_arg(method.args_shape),
+            "channels are only allowed as direct method arguments: {}.{}",
+            method.service_name,
+            method.method_name
+        );
     }
 }
 
@@ -313,6 +320,16 @@ mod tests {
     #[derive(Facet)]
     struct NestedOuter {
         inner: NestedInner,
+    }
+
+    #[derive(Facet)]
+    struct NestedChannels {
+        stream: Tx<u32>,
+    }
+
+    #[derive(Facet)]
+    struct OuterChannels {
+        inner: NestedChannels,
     }
 
     #[derive(Facet)]
@@ -655,6 +672,22 @@ mod tests {
 
         assert!(
             message.contains("channels are not allowed in return types: BadSvc.bad"),
+            "unexpected panic message: {message}"
+        );
+    }
+
+    // r[verify rpc.channel.direct-args]
+    #[test]
+    fn generated_typescript_rejects_nested_channel_args() {
+        let service = service_with_shapes(<(OuterChannels,) as Facet>::SHAPE, <() as Facet>::SHAPE);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            generate_service(&service);
+        }));
+        let message = panic_message(result.expect_err("generator should reject nested channels"));
+
+        assert!(
+            message.contains("channels are only allowed as direct method arguments: BadSvc.bad"),
             "unexpected panic message: {message}"
         );
     }
