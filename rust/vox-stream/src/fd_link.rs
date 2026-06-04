@@ -69,11 +69,9 @@ impl Link for FdStreamLink {
         let writer_sock = Arc::clone(&sock);
         let writer_task = tokio::spawn(async move {
             while let Some(Outgoing::Frame(body, fds)) = rx_chan.recv().await {
-                if body.len() > u32::MAX as usize {
-                    return Err(io::Error::other("frame exceeds 4GiB"));
-                }
+                let body_len = super::frame_len_prefix(body.len())?;
                 let mut framed = Vec::with_capacity(8 + body.len());
-                framed.extend_from_slice(&(body.len() as u32).to_le_bytes());
+                framed.extend_from_slice(&body_len);
                 framed.extend_from_slice(&(fds.len() as u32).to_le_bytes());
                 framed.extend_from_slice(&body);
                 let raw: Vec<RawFd> = fds.iter().map(|f| f.as_raw_fd()).collect();
@@ -163,6 +161,10 @@ pub struct FdStreamLinkTx {
 
 impl LinkTx for FdStreamLinkTx {
     async fn send(&self, bytes: Vec<u8>) -> io::Result<()> {
+        let _ = super::frame_len_prefix(bytes.len())?;
+        // r[impl link.tx.send]
+        // r[impl link.tx.cancel-safe]
+        // r[impl link.message.empty]
         self.tx
             .send(Outgoing::Frame(bytes, Vec::new()))
             .await
@@ -179,6 +181,7 @@ impl LinkTx for FdStreamLinkTx {
     }
 
     async fn send_with_fds(&self, bytes: Vec<u8>, fds: Vec<OwnedFd>) -> io::Result<()> {
+        let _ = super::frame_len_prefix(bytes.len())?;
         if fds.len() > SCM_MAX_FD {
             return Err(io::Error::other(format!(
                 "too many fds in one message: {} > SCM_MAX_FD ({SCM_MAX_FD})",

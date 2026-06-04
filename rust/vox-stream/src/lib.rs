@@ -197,16 +197,14 @@ where
 
         let writer_task = tokio::spawn(async move {
             while let Some(bytes) = rx_chan.recv().await {
-                writer
-                    .write_all(&(bytes.len() as u32).to_le_bytes())
-                    .await?;
+                let len = frame_len_prefix(bytes.len())?;
+                writer.write_all(&len).await?;
                 writer.write_all(&bytes).await?;
                 // Drain any already-queued messages before flushing,
                 // so bursts coalesce into fewer syscalls.
                 while let Ok(bytes) = rx_chan.try_recv() {
-                    writer
-                        .write_all(&(bytes.len() as u32).to_le_bytes())
-                        .await?;
+                    let len = frame_len_prefix(bytes.len())?;
+                    writer.write_all(&len).await?;
                     writer.write_all(&bytes).await?;
                 }
                 writer.flush().await?;
@@ -241,6 +239,10 @@ pub struct StreamLinkTx {
 
 impl LinkTx for StreamLinkTx {
     async fn send(&self, bytes: Vec<u8>) -> io::Result<()> {
+        let _ = frame_len_prefix(bytes.len())?;
+        // r[impl link.tx.send]
+        // r[impl link.tx.cancel-safe]
+        // r[impl link.message.empty]
         let permit = self.tx.clone().reserve_owned().await.map_err(|_| {
             io::Error::new(io::ErrorKind::ConnectionReset, "stream writer task stopped")
         })?;
@@ -252,6 +254,17 @@ impl LinkTx for StreamLinkTx {
         drop(self.tx);
         self.writer_task.await.map_err(io::Error::other)?
     }
+}
+
+// r[impl link.tx.alloc.limits]
+fn frame_len_prefix(len: usize) -> io::Result<[u8; 4]> {
+    let len = u32::try_from(len).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "link payload exceeds 4GiB length-prefix limit",
+        )
+    })?;
+    Ok(len.to_le_bytes())
 }
 
 // ---------------------------------------------------------------------------
@@ -743,6 +756,7 @@ mod tests {
         }
     }
 
+    // r[verify link.tx.send]
     #[tokio::test]
     async fn round_trip_single() {
         let (a, b) = duplex_pair();
@@ -783,6 +797,43 @@ mod tests {
 
         let msg = rx_b.recv().await.unwrap().unwrap();
         assert_eq!(payload(&msg), b"");
+    }
+
+    // r[verify link.tx.alloc.limits]
+    #[test]
+    fn frame_len_prefix_rejects_payloads_that_exceed_u32_prefix() {
+        let err = frame_len_prefix(u32::MAX as usize + 1).expect_err("payload should be too large");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    // r[verify link.tx.cancel-safe]
+    #[tokio::test]
+    async fn send_cancel_before_capacity_does_not_enqueue() {
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1);
+        let link_tx = StreamLinkTx {
+            tx,
+            writer_task: tokio::spawn(async { Ok(()) }),
+        };
+
+        link_tx.send(b"first".to_vec()).await.unwrap();
+        {
+            let pending = link_tx.send(b"second".to_vec());
+            tokio::pin!(pending);
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(20), &mut pending)
+                    .await
+                    .is_err(),
+                "second send should wait for queue capacity"
+            );
+        }
+
+        assert_eq!(rx.recv().await.unwrap(), b"first".to_vec());
+        assert!(matches!(
+            rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
+
+        link_tx.close().await.unwrap();
     }
 
     // r[verify link.rx.eof]
