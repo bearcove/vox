@@ -89,6 +89,10 @@ struct TransportReject {
     reserved: [u8; 2],
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 pub async fn initiate_transport<L: Link>(
     link: L,
 ) -> Result<SplitLink<L::Tx, L::Rx>, TransportPrologueError> {
@@ -154,6 +158,11 @@ pub async fn initiate_transport<L: Link>(
     ))
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 pub async fn accept_transport<L: Link>(
     link: L,
 ) -> Result<SplitLink<L::Tx, L::Rx>, TransportPrologueError> {
@@ -186,6 +195,8 @@ pub async fn accept_transport<L: Link>(
     Ok(SplitLink { tx, rx })
 }
 
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 pub async fn reject_transport<L: LinkTx>(
     tx: &L,
     reason: TransportRejectReason,

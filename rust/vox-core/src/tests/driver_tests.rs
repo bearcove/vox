@@ -339,9 +339,9 @@ fn message_plan_from_identical_schemas_round_trips() {
     }
 }
 
-/// Minimal test: establish via real CBOR handshake, send one call, verify handler runs.
+/// Minimal test: establish via real phon handshake, send one call, verify handler runs.
 #[tokio::test]
-async fn call_through_cbor_handshake_reaches_handler() {
+async fn call_through_phon_handshake_reaches_handler() {
     let (client_link, server_link) = memory_link_pair(64);
 
     let (server_result, client_result) = tokio::try_join!(

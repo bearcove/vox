@@ -68,6 +68,9 @@ private func stopLocalServer(_ server: LocalServer) async {
 
 @Suite(.serialized)
 struct TransportTests {
+    // r[verify transport.prologue]
+    // r[verify transport.prologue.request]
+    // r[verify transport.prologue.accept]
     @Test func connectEnablesSocketKeepalive() async throws {
         let server = try await startLocalServer()
         do {
@@ -75,6 +78,34 @@ struct TransportTests {
             try await performInitiatorLinkPrologue(link: link)
             let keepalive = try await link.socketKeepaliveEnabled()
             #expect(keepalive)
+            try? await link.close()
+        } catch {
+            await stopLocalServer(server)
+            throw error
+        }
+        await stopLocalServer(server)
+    }
+
+    // r[verify transport.prologue.reject-close]
+    @Test func transportPrologueRejectsUnsupportedPrologue() async throws {
+        let server = try await startLocalServer { channel in
+            channel.pipeline.addHandler(
+                WriteOnActiveHandler(bytes: encodeTransportRejectUnsupported()))
+        }
+        do {
+            let link = try await connectLink(host: "127.0.0.1", port: server.port)
+            do {
+                try await performInitiatorLinkPrologue(link: link)
+                Issue.record("connect unexpectedly accepted rejected transport prologue")
+            } catch let error as TransportError {
+                guard case .protocolViolation(let message) = error else {
+                    Issue.record("unexpected error: \(error)")
+                    try? await link.close()
+                    await stopLocalServer(server)
+                    return
+                }
+                #expect(message == "transport rejected unsupported prologue")
+            }
             try? await link.close()
         } catch {
             await stopLocalServer(server)

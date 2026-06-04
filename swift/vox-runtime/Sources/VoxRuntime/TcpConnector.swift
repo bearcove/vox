@@ -82,6 +82,7 @@ private struct TimedTransportedLinkSource<Base: LinkSource>: LinkSource {
     let source: Base
     let timeoutNs: UInt64
 
+    // r[impl transport.prologue.first-payload]
     func nextLink() async throws -> LinkAttachment {
         let attachment = try await source.nextLink()
         guard !attachment.hasCompletedPrologue else {

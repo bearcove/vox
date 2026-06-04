@@ -283,6 +283,8 @@ func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     #expect(session.peerMetadata == metadata)
 }
 
+// r[verify transport.prologue.first-payload]
+// r[verify transport.prologue.post-accept]
 @Test func acceptorSessionConsumesTransportPrologueBeforeHandshake() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
     let link = ScriptedTransport(initialHandshake: nil)
@@ -486,6 +488,9 @@ struct ConnectionFailureTests {
         #expect(Array(hello.messagePayloadSchema) == MessageSchemaClosure)
     }
 
+    // r[verify conduit]
+    // r[verify conduit.bare]
+    // r[verify conduit.typeplan]
     @Test func serverResponsePreservesPeepsRequestMetadata() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(

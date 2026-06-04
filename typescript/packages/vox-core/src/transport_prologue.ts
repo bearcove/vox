@@ -56,6 +56,10 @@ function reservedBytesAreZero(bytes: Uint8Array): boolean {
   return sameBytes(bytes, TRANSPORT_RESERVED_ZERO);
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 export async function performInitiatorTransportPrologue(link: Link): Promise<void> {
   await link.send(encodeHello());
   const response = await link.recv();
@@ -84,6 +88,11 @@ export async function performInitiatorTransportPrologue(link: Link): Promise<voi
   throw new TransportPrologueError("expected TransportAccept or TransportReject");
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 export async function performAcceptorTransportPrologue(link: Link): Promise<void> {
   const hello = await link.recv();
   if (!hello) {

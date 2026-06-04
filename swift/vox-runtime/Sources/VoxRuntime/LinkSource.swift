@@ -95,6 +95,7 @@ public actor PrefetchedLinkSource<Base: LinkSource>: LinkSource {
 struct TransportedLinkSource<Base: LinkSource>: LinkSource {
     let source: Base
 
+    // r[impl transport.prologue.first-payload]
     func nextLink() async throws -> LinkAttachment {
         let attachment = try await source.nextLink()
         guard !attachment.hasCompletedPrologue else {

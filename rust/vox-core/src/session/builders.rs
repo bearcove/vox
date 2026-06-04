@@ -416,6 +416,8 @@ impl<S> SessionSourceInitiatorBuilder<S> {
         }
     }
 
+    // r[impl transport.prologue.first-payload]
+    // r[impl transport.prologue.post-accept]
     async fn establish_inner<Client: FromVoxSession>(self) -> Result<Client, SessionError>
     where
         S: LinkSource,
@@ -550,6 +552,8 @@ impl<L> SessionTransportInitiatorBuilder<L> {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    // r[impl transport.prologue.first-payload]
+    // r[impl transport.prologue.post-accept]
     async fn establish_inner<Client: FromVoxSession>(self) -> Result<Client, SessionError>
     where
         L: Link + Send + 'static,
@@ -565,6 +569,8 @@ impl<L> SessionTransportInitiatorBuilder<L> {
     }
 
     #[cfg(target_arch = "wasm32")]
+    // r[impl transport.prologue.first-payload]
+    // r[impl transport.prologue.post-accept]
     pub async fn establish<Client: FromVoxSession>(self) -> Result<Client, SessionError>
     where
         L: Link + 'static,

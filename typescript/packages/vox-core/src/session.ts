@@ -137,6 +137,8 @@ interface EstablishedTransport {
   handshake: HandshakeResult;
 }
 
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.post-accept]
 async function makeInitiatorEstablishedTransport(
   transport: SessionTransport,
   options: SessionTransportOptions,
@@ -177,6 +179,8 @@ async function makeInitiatorEstablishedTransport(
   };
 }
 
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.post-accept]
 async function makeAcceptorEstablishedTransport(
   transport: SessionTransport,
   options: SessionTransportOptions,

@@ -149,7 +149,9 @@ weight = 11
 
 > r[transport.prologue.post-accept]
 >
-> After `TransportAccept`, all subsequent payloads on that link attachment are
+> After `TransportAccept`, the link attachment is eligible for vox session
+> establishment. The next payloads are the phon self-describing session
+> handshake. After that handshake succeeds, subsequent session traffic is
 > interpreted as `BareConduit` payloads.
 
 > r[transport.prologue.reject-close]
@@ -174,8 +176,8 @@ weight = 11
 > r[conduit.bare]
 >
 > `BareConduit` does not provide any feature on top of
-> serialization/deserialization. It begins immediately after the transport
-> prologue has accepted the link attachment.
+> serialization/deserialization. It carries post-handshake session traffic on an
+> accepted link attachment.
 
 # Sessions
 
@@ -185,8 +187,9 @@ weight = 11
 > any number of connections, on which calls (requests) can be made, and data can be
 > exchanged over channels.
 
-The transport prologue completes first. Session establishment starts only after
-the `BareConduit` has been initialized on the accepted link attachment.
+The transport prologue completes first. Session establishment exchanges phon
+self-describing handshake messages on the accepted link attachment. After the
+handshake succeeds, the `BareConduit` carries session `Message` traffic.
 
 > r[session.peer]
 >
@@ -244,7 +247,7 @@ the `BareConduit` has been initialized on the accepted link attachment.
 
 > r[session.handshake]
 >
-> To establish a session on top of an existing conduit, a three-step phon
+> To establish a session on an accepted link attachment, a three-step phon
 > self-describing handshake MUST be performed. The handshake messages are phon
 > self-describing values, NOT phon-compact `MessagePayload` variants. This is
 > the bootstrap: phon's self-describing mode needs no prior schema to read

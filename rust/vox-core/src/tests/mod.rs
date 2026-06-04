@@ -5,10 +5,14 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use tokio::sync::Notify;
 use vox_types::{
     Backing, ChannelClose, ChannelItem, ChannelReset, ChannelSink, Conduit, ConduitRx, ConduitTx,
-    IncomingChannelMessage, Metadata, MsgFamily, Payload, Rx, RxError, SelfRef, Tx, TxError,
+    IncomingChannelMessage, Link, LinkRx, Metadata, MsgFamily, Payload, Rx, RxError, SelfRef, Tx,
+    TxError,
 };
 
-use crate::{BareConduit, MemoryLink, accept_transport, initiate_transport, memory_link_pair};
+use crate::{
+    BareConduit, MemoryLink, TransportPrologueError, TransportRejectReason, accept_transport,
+    initiate_transport, memory_link_pair, reject_transport,
+};
 
 mod credit_tests;
 mod driver_tests;
@@ -34,6 +38,9 @@ fn conduit_pair() -> (StringConduit, StringConduit) {
 }
 
 #[tokio::test]
+// r[verify transport.prologue]
+// r[verify transport.prologue.request]
+// r[verify transport.prologue.accept]
 async fn transport_prologue_accepts_bare_mode() {
     let (client, server) = memory_link_pair(16);
     let acceptor = tokio::spawn(async move { accept_transport(server).await.unwrap() });
@@ -42,6 +49,31 @@ async fn transport_prologue_accepts_bare_mode() {
 }
 
 #[tokio::test]
+// r[verify transport.prologue.reject-close]
+async fn transport_prologue_reject_abandons_link() {
+    let (client, server) = memory_link_pair(16);
+    let rejector = tokio::spawn(async move {
+        let (server_tx, mut server_rx) = server.split();
+        let _hello = server_rx.recv().await.unwrap().unwrap();
+        reject_transport(&server_tx, TransportRejectReason::UnsupportedPrologue)
+            .await
+            .unwrap();
+    });
+
+    let err = match initiate_transport(client).await {
+        Ok(_) => panic!("transport prologue unexpectedly accepted"),
+        Err(err) => err,
+    };
+    assert!(matches!(
+        err,
+        TransportPrologueError::Rejected(TransportRejectReason::UnsupportedPrologue)
+    ));
+    rejector.await.unwrap();
+}
+
+#[tokio::test]
+// r[verify conduit]
+// r[verify conduit.bare]
 async fn send_recv_single() {
     let (client, server) = conduit_pair();
     let (client_tx, _client_rx) = client.split();
@@ -56,6 +88,7 @@ async fn send_recv_single() {
 }
 
 #[tokio::test]
+// r[verify conduit.typeplan]
 async fn send_recv_multiple_in_order() {
     let (client, server) = conduit_pair();
     let (client_tx, _client_rx) = client.split();

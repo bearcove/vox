@@ -162,6 +162,7 @@ func performAcceptorHandshake(
     )
 }
 
+// r[impl transport.prologue.post-accept]
 func buildEstablishedConduit(
     role: Role,
     attachment: LinkAttachment,
@@ -253,6 +254,8 @@ func establishInitiator(
     )
 }
 
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.post-accept]
 func establishAcceptor(
     attachment: LinkAttachment,
     dispatcher: any ServiceDispatcher,

@@ -131,6 +131,38 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("session", () => {
+  // r[verify transport.prologue.first-payload]
+  // r[verify transport.prologue.post-accept]
+  // r[verify conduit]
+  // r[verify conduit.bare]
+  // r[verify conduit.typeplan]
+  it("establishes over transport prologue before BareConduit traffic", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const [clientSession, serverSession] = await withTimeout(
+      Promise.all([
+        session.initiatorOn(clientLink),
+        session.acceptorOn(serverLink),
+      ]),
+      "transport session establishment",
+    );
+    const serverRoot = serverSession.rootConnection();
+
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(1n, ECHO_METHOD.id, new Uint8Array(), emptyMetadata(), [], 0n, []),
+      ),
+    );
+
+    await withTimeout(serverSession.closed(), "server protocol-error close");
+    expect(serverRoot.isClosed()).toBe(true);
+
+    clientLink.close();
+    serverLink.close();
+    clientSession.handle().shutdown();
+    serverSession.handle().shutdown();
+    await Promise.allSettled([clientSession.closed(), serverSession.closed()]);
+  });
+
   // r[verify schema.exchange.caller]
   it("advertises caller args schemas with the first request on a connection", async () => {
     const settings: ConnectionSettings = {

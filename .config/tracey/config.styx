@@ -31,6 +31,8 @@ specs (
                     typescript/packages/vox-core/src/session.ts
                     typescript/packages/vox-core/src/session.test.ts
                     typescript/packages/vox-core/src/conduit.ts
+                    typescript/packages/vox-core/src/transport_prologue.ts
+                    typescript/packages/vox-core/src/transport_prologue.test.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
                     typescript/packages/vox-core/src/metadata.ts

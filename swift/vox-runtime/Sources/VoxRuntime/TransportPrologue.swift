@@ -79,6 +79,10 @@ func validateTransportAccept(_ bytes: [UInt8]) throws {
     throw TransportError.protocolViolation("expected TransportAccept or TransportReject")
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 public func performInitiatorLinkPrologue(
     link: some Link
 ) async throws {
@@ -94,6 +98,11 @@ public func performInitiatorLinkPrologue(
     warnLog("[vox-prologue] initiator: transport accepted")
 }
 
+// r[impl transport.prologue]
+// r[impl transport.prologue.first-payload]
+// r[impl transport.prologue.request]
+// r[impl transport.prologue.accept]
+// r[impl transport.prologue.reject-close]
 public func performAcceptorLinkPrologue(
     link: some Link
 ) async throws {
