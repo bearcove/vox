@@ -122,6 +122,10 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .expect("server session task failed");
 }
 
+// r[verify rpc.channel]
+// r[verify rpc.channel.allocation]
+// r[verify rpc.channel.direction]
+// r[verify rpc.channel.lifecycle]
 // r[verify rpc.channel.binding.caller-args.tx]
 #[tokio::test]
 async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists() {
