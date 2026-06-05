@@ -2035,6 +2035,7 @@ struct ConnectionFailureTests {
     // r[verify rpc.virtual-connection.accept]
     // r[verify connection.virtual]
     // r[verify session.symmetry]
+    // r[verify rpc.one-service-per-connection]
     @Test func inboundOpenConnectionAcceptsAndDispatchesOnVirtualConnection() async throws {
         let transport = ScriptedTransport()
         let (rootConnection, driver, _, _) = try await establishInitiator(
