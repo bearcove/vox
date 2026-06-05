@@ -7,8 +7,8 @@ use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
     ChannelItem, ChannelMessage, ChannelSink, ConnectionSettings, HandshakeResult,
     IncomingChannelMessage, Message, MessagePayload, Metadata, MethodId, Parity, Payload,
-    RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage, RequestResponse, Rx,
-    SelfRef, SessionRole, Tx, VoxError, channel,
+    ReplySink, RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage, RequestResponse,
+    Rx, SelfRef, SessionRole, Tx, VoxError, channel,
 };
 
 use super::utils::*;
@@ -431,6 +431,116 @@ impl vox_types::Handler<crate::DriverReplySink> for PanicHandler {
     ) {
         panic!("intentional handler panic");
     }
+}
+
+#[derive(Clone, Copy)]
+struct PipeliningHandler;
+
+impl vox_types::Handler<crate::DriverReplySink> for PipeliningHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let method_id = call.get().method_id;
+        if method_id == MethodId(1) {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        let result = if method_id == MethodId(1) {
+            1_u32
+        } else {
+            2_u32
+        };
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&result),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+// r[verify rpc.pipelining]
+#[tokio::test]
+async fn slow_incoming_request_does_not_block_later_request() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(PipeliningHandler)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+
+    let _server_caller_guard = server_task.await.expect("server setup failed");
+
+    let first_caller = caller.caller.clone();
+    let first_call = tokio::spawn(async move {
+        first_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&1_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    let second_caller = caller.caller.clone();
+    let second_call = tokio::spawn(async move {
+        second_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(2),
+                args: Payload::outgoing(&2_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    let second_response = tokio::time::timeout(Duration::from_millis(100), second_call)
+        .await
+        .expect("second request should complete before delayed first request")
+        .expect("second call task join")
+        .expect("second call should succeed");
+    let second_response = second_response.get();
+    let second_ret_bytes = match &second_response.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in response"),
+    };
+    let second_value: u32 = vox_phon::from_slice(second_ret_bytes).expect("deserialize response");
+    assert_eq!(second_value, 2);
+
+    assert!(
+        !first_call.is_finished(),
+        "first delayed request should still be pending after second response"
+    );
+
+    let first_response = tokio::time::timeout(Duration::from_millis(500), first_call)
+        .await
+        .expect("first delayed request should eventually complete")
+        .expect("first call task join")
+        .expect("first call should succeed");
+    let first_response = first_response.get();
+    let first_ret_bytes = match &first_response.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in response"),
+    };
+    let first_value: u32 = vox_phon::from_slice(first_ret_bytes).expect("deserialize response");
+    assert_eq!(first_value, 1);
 }
 
 #[tokio::test]
