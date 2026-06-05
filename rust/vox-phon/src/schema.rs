@@ -22,6 +22,8 @@ use facet::{Facet, Shape};
 use phon::derive::{of, of_shape};
 use phon_engine::{Registry, typed};
 use phon_ir::Lowered;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use phon_ir::MemOp;
 use phon_schema::bytes::Reader;
 use phon_schema::{Schema, SchemaId, schema_from_bytes, schema_to_bytes};
 
@@ -249,16 +251,18 @@ unsafe impl Sync for NativeDecodeProgram {}
 pub struct DecodeProgram {
     lowered: Lowered,
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    native: Arc<NativeDecodeProgram>,
+    native: Option<Arc<NativeDecodeProgram>>,
 }
 
 impl DecodeProgram {
     fn new(lowered: Lowered) -> Self {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
-            let native = Arc::new(NativeDecodeProgram(
-                phon_jit::native::NativeDecode::compile_lowered(&lowered),
-            ));
+            let native = native_decode_supported(&lowered).then(|| {
+                Arc::new(NativeDecodeProgram(
+                    phon_jit::native::NativeDecode::compile_lowered(&lowered),
+                ))
+            });
             Self { lowered, native }
         }
 
@@ -276,23 +280,61 @@ impl DecodeProgram {
     ) -> Result<(), Error> {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
-            let _lowered_kept_for_fallback_and_inspection = &self.lowered;
-            unsafe { self.native.0.run(bytes, base) }
-                .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+            if let Some(native) = &self.native {
+                return unsafe { native.0.run(bytes, base) }
+                    .map_err(|e| Error(format!("decode {type_name}: {e:?}")));
+            }
         }
 
-        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-        {
-            unsafe { typed::decode_with(&self.lowered, bytes, base) }
-                .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
-        }
+        unsafe { typed::decode_with(&self.lowered, bytes, base) }
+            .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
     }
 
     /// Whether this compatibility decode program uses the native JIT backend on
     /// this build target.
     pub fn uses_native_jit(&self) -> bool {
-        cfg!(all(target_os = "macos", target_arch = "aarch64"))
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            self.native.is_some()
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            false
+        }
     }
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn native_decode_supported(lowered: &Lowered) -> bool {
+    decode_program_supported(&lowered.program)
+        && lowered
+            .blocks
+            .values()
+            .all(|block| decode_program_supported(block))
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn decode_program_supported(program: &[MemOp]) -> bool {
+    program.iter().all(|op| match op {
+        MemOp::Scalar { .. }
+        | MemOp::Bytes(_)
+        | MemOp::Borrow(_)
+        | MemOp::Default(_)
+        | MemOp::SkipWire(_) => true,
+        MemOp::NativeInt { .. } => false,
+        MemOp::Sequence(s) => decode_program_supported(&s.element),
+        MemOp::Set(s) => decode_program_supported(&s.element),
+        MemOp::Option(o) => decode_program_supported(&o.some),
+        MemOp::Enum(e) => e
+            .variants
+            .iter()
+            .all(|variant| decode_program_supported(&variant.payload)),
+        MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
+        MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
+        MemOp::Pointer(_) => false,
+        MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
+    })
 }
 
 // A built program is immutable, and its thunk `ctx` pointers are all `&'static`

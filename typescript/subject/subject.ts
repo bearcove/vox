@@ -29,9 +29,12 @@ import type {
   DodecaCodeExecutionMetadata,
   DodecaCodeExecutionResult,
   DodecaCodeSample,
+  DodecaDataFormat,
   DodecaDependencySpec,
   DodecaExecuteSamplesInput,
   DodecaExecutionResult,
+  DodecaLoadDataResult,
+  DodecaParseResult,
   DodecaHtmlProcessInput,
   DodecaHtmlProcessResult,
   DodecaResponsiveImageInfo,
@@ -280,6 +283,75 @@ function sampleDodecaTemplateCall(): DodecaTemplateCall {
     name: "render-card",
     args: [context, "docs"],
     kwargs: [["path", "/guide/"]],
+  };
+}
+
+function sampleDodecaDataContent(): string {
+  return "{\"title\":\"Phon\",\"sidebar\":true,\"count\":42}";
+}
+
+function sampleDodecaDataFormat(): DodecaDataFormat {
+  return { tag: "Json" };
+}
+
+function sampleDodecaLoadDataResult(): DodecaLoadDataResult {
+  return {
+    tag: "Success",
+    value: new Map<string, Value>([
+      ["title", "Phon"],
+      ["sidebar", true],
+      ["count", 42n],
+    ]),
+  };
+}
+
+function sampleDodecaMarkdownSourcePath(): string {
+  return "content/guide.md";
+}
+
+function sampleDodecaMarkdownContent(): string {
+  return "+++\ntitle = \"Phon migration\"\n+++\n\n# Intro\n\nr[vox.dodeca.markdown]\n";
+}
+
+function sampleDodecaParseResult(): DodecaParseResult {
+  return {
+    tag: "Success",
+    frontmatter: {
+      title: "Phon migration",
+      weight: 10,
+      description: "Generated fixture for Dodeca markdown",
+      template: "page.html",
+      extra: new Map<string, Value>([
+        ["sidebar", true],
+        ["icon", "book"],
+        ["custom_value", 42n],
+      ]),
+    },
+    html: "<h1 data-sid=\"h1\">Intro</h1><p data-sid=\"p1\">Generated fixture</p>",
+    headings: [{ title: "Intro", id: "intro", level: 1 }],
+    reqs: [{ id: "vox.dodeca.markdown", anchor_id: "r-vox-dodeca-markdown" }],
+    head_injections: ["<link rel=\"stylesheet\" href=\"/assets/arborium.css\">"],
+    source_map: {
+      source_path: sampleDodecaMarkdownSourcePath(),
+      entries: [
+        {
+          id: "h1",
+          kind: { tag: "Heading" },
+          line_start: 5,
+          line_end: 5,
+          byte_start: 38n,
+          byte_end: 45n,
+        },
+        {
+          id: "p1",
+          kind: { tag: "Paragraph" },
+          line_start: 7,
+          line_end: 7,
+          byte_start: 47n,
+          byte_end: 71n,
+        },
+      ],
+    },
   };
 }
 
@@ -3639,6 +3711,24 @@ class TestbedService implements TestbedHandler {
     return { tag: "Error", message: `unexpected input: ${String(input.samples.length)}` };
   }
 
+  dodecaLoadData(content: string, format: DodecaDataFormat): DodecaLoadDataResult {
+    if (content === sampleDodecaDataContent() && sameHelixDeep(format, sampleDodecaDataFormat())) {
+      return sampleDodecaLoadDataResult();
+    }
+    return { tag: "Error", message: `unexpected load_data input: ${content}` };
+  }
+
+  dodecaParseAndRender(sourcePath: string, content: string, sourceMap: boolean): DodecaParseResult {
+    if (
+      sourcePath === sampleDodecaMarkdownSourcePath()
+      && content === sampleDodecaMarkdownContent()
+      && sourceMap
+    ) {
+      return sampleDodecaParseResult();
+    }
+    return { tag: "Error", message: `unexpected parse input: ${sourcePath}` };
+  }
+
   echoStyxValue(value: StyxValue): StyxValue {
     return value;
   }
@@ -4395,6 +4485,28 @@ async function runClient() {
         throw new Error("dodeca_execute_code_samples: payload mismatch");
       }
       console.error(`dodeca_execute_code_samples OK`);
+      break;
+    }
+    case "dodeca_load_data": {
+      const expected = sampleDodecaLoadDataResult();
+      const result = await client.dodecaLoadData(sampleDodecaDataContent(), sampleDodecaDataFormat());
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_load_data: payload mismatch");
+      }
+      console.error(`dodeca_load_data OK`);
+      break;
+    }
+    case "dodeca_parse_and_render": {
+      const expected = sampleDodecaParseResult();
+      const result = await client.dodecaParseAndRender(
+        sampleDodecaMarkdownSourcePath(),
+        sampleDodecaMarkdownContent(),
+        true,
+      );
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_parse_and_render: payload mismatch");
+      }
+      console.error(`dodeca_parse_and_render OK`);
       break;
     }
     case "echo_styx_value": {

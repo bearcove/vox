@@ -223,6 +223,7 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| decode_program_supported(&variant.payload)),
         MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
         MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
+        MemOp::Pointer(_) => false,
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })
 }
@@ -241,6 +242,7 @@ fn encode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| encode_program_supported(&variant.payload)),
         MemOp::Map(m) => encode_program_supported(&m.key) && encode_program_supported(&m.value),
         MemOp::Result(r) => encode_program_supported(&r.ok) && encode_program_supported(&r.err),
+        MemOp::Pointer(_) => false,
         MemOp::SkipWire(_) | MemOp::Default(_) => false,
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })

@@ -233,6 +233,22 @@ pub trait Testbed {
         input: DodecaExecuteSamplesInput,
     ) -> DodecaCodeExecutionResult;
 
+    /// Dodeca data-loader root carrying parsed dynamic values.
+    async fn dodeca_load_data(
+        &self,
+        content: String,
+        format: DodecaDataFormat,
+    ) -> DodecaLoadDataResult;
+
+    /// Dodeca markdown parse/render root with frontmatter, headings, reqs,
+    /// injections, and source maps.
+    async fn dodeca_parse_and_render(
+        &self,
+        source_path: String,
+        content: String,
+        source_map: bool,
+    ) -> DodecaParseResult;
+
     /// Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
     /// structs/enums with tags, spans, sequences, objects, and entry key/value
     /// recursion.
@@ -583,6 +599,103 @@ pub struct DodecaTemplateCall {
     pub name: String,
     pub args: Vec<Value>,
     pub kwargs: Vec<(String, Value)>,
+}
+
+/// Data format selector from `cell-data-proto::DataFormat`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaDataFormat {
+    Json,
+    Toml,
+    Yaml,
+}
+
+/// Data-loader response from `cell-data-proto::LoadDataResult`.
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaLoadDataResult {
+    Success { value: Value },
+    Error { message: String },
+}
+
+/// Markdown heading from `cell-markdown-proto::Heading`.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaMarkdownHeading {
+    pub title: String,
+    pub id: String,
+    pub level: u8,
+}
+
+/// Requirement definition found by Dodeca markdown processing.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaReqDefinition {
+    pub id: String,
+    pub anchor_id: String,
+}
+
+/// Source-map node kind from `cell-markdown-proto::SourceKind`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaSourceKind {
+    Heading,
+    Paragraph,
+    BlockQuote,
+    List,
+    ListItem,
+    DefinitionList,
+    DefinitionListTitle,
+    DefinitionListDefinition,
+    ThematicBreak,
+    Table,
+    TableHead,
+    TableRow,
+    TableCell,
+    Image,
+}
+
+/// One Dodeca markdown source-map entry.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaSourceMapEntry {
+    pub id: String,
+    pub kind: DodecaSourceKind,
+    pub line_start: u32,
+    pub line_end: u32,
+    pub byte_start: u64,
+    pub byte_end: u64,
+}
+
+/// Dodeca markdown source map.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaSourceMap {
+    pub source_path: Option<String>,
+    pub entries: Vec<DodecaSourceMapEntry>,
+}
+
+/// Dodeca markdown frontmatter with dynamic extra fields.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaFrontmatter {
+    pub title: String,
+    pub weight: i32,
+    pub description: Option<String>,
+    pub template: Option<String>,
+    pub extra: Value,
+}
+
+/// Combined Dodeca markdown parse/render response.
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaParseResult {
+    Success {
+        frontmatter: DodecaFrontmatter,
+        html: String,
+        headings: Vec<DodecaMarkdownHeading>,
+        reqs: Vec<DodecaReqDefinition>,
+        head_injections: Vec<String>,
+        source_map: Box<DodecaSourceMap>,
+    },
+    Error {
+        message: String,
+    },
 }
 
 /// Dodeca HTML minification options from `cell-html-proto`.

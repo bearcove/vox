@@ -15,14 +15,16 @@ use subject_rust::{
     sample_dibs_list_response, sample_dibs_logs, sample_dibs_migrate_request,
     sample_dibs_migrate_result, sample_dibs_migration_status, sample_dibs_migration_status_request,
     sample_dibs_row_one, sample_dibs_schema, sample_dibs_update_request,
-    sample_dibs_update_response, sample_dodeca_code_execution_result,
-    sample_dodeca_execute_samples_input, sample_dodeca_html_process_input,
-    sample_dodeca_html_process_result, sample_helix_pulse_bundle, sample_helix_pulse_bundle_fields,
-    sample_helix_pulses, sample_helix_stream_metrics, sample_helix_verify_evidence,
-    sample_hotmeal_apply_patches_result, sample_hotmeal_live_reload_events,
-    sample_stax_flamegraph_update, sample_stax_flamegraph_updates,
-    sample_stax_linux_broker_control_fixture, sample_stax_view_params,
-    sample_styx_lsp_code_action_params, sample_styx_lsp_code_actions,
+    sample_dibs_update_response, sample_dodeca_code_execution_result, sample_dodeca_data_content,
+    sample_dodeca_data_format, sample_dodeca_execute_samples_input,
+    sample_dodeca_html_process_input, sample_dodeca_html_process_result,
+    sample_dodeca_load_data_result, sample_dodeca_markdown_content,
+    sample_dodeca_markdown_source_path, sample_dodeca_parse_result, sample_helix_pulse_bundle,
+    sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
+    sample_helix_verify_evidence, sample_hotmeal_apply_patches_result,
+    sample_hotmeal_live_reload_events, sample_stax_flamegraph_update,
+    sample_stax_flamegraph_updates, sample_stax_linux_broker_control_fixture,
+    sample_stax_view_params, sample_styx_lsp_code_action_params, sample_styx_lsp_code_actions,
     sample_styx_lsp_completion_params, sample_styx_lsp_completions,
     sample_styx_lsp_definition_params, sample_styx_lsp_diagnostic_params,
     sample_styx_lsp_diagnostics, sample_styx_lsp_get_document_params,
@@ -952,6 +954,36 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("dodeca_execute_code_samples OK");
+        }
+        "dodeca_load_data" => {
+            let expected = sample_dodeca_load_data_result();
+            let result = client
+                .dodeca_load_data(sample_dodeca_data_content(), sample_dodeca_data_format())
+                .await
+                .map_err(|e| format!("dodeca_load_data failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_load_data: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_load_data OK");
+        }
+        "dodeca_parse_and_render" => {
+            let expected = sample_dodeca_parse_result();
+            let result = client
+                .dodeca_parse_and_render(
+                    sample_dodeca_markdown_source_path(),
+                    sample_dodeca_markdown_content(),
+                    true,
+                )
+                .await
+                .map_err(|e| format!("dodeca_parse_and_render failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_parse_and_render: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_parse_and_render OK");
         }
         "echo_styx_value" => {
             let value = sample_styx_value();

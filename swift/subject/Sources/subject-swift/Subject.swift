@@ -370,6 +370,29 @@ struct TestbedService: TestbedHandler {
         return .error(message: "unexpected input")
     }
 
+    func dodecaLoadData(content: String, format: DodecaDataFormat) async throws
+        -> DodecaLoadDataResult
+    {
+        if content == sampleDodecaDataContent()
+            && sameReflecting(format, sampleDodecaDataFormat())
+        {
+            return sampleDodecaLoadDataResult()
+        }
+        return .error(message: "unexpected load_data input")
+    }
+
+    func dodecaParseAndRender(sourcePath: String, content: String, sourceMap: Bool) async throws
+        -> DodecaParseResult
+    {
+        if sourcePath == sampleDodecaMarkdownSourcePath()
+            && content == sampleDodecaMarkdownContent()
+            && sourceMap
+        {
+            return sampleDodecaParseResult()
+        }
+        return .error(message: "unexpected parse input")
+    }
+
     func echoStyxValue(value: StyxValue) async throws -> StyxValue {
         value
     }
@@ -968,6 +991,73 @@ func sampleDodecaTemplateCall() -> DodecaTemplateCall {
     )
 }
 
+func sampleDodecaDataContent() -> String {
+    "{\"title\":\"Phon\",\"sidebar\":true,\"count\":42}"
+}
+
+func sampleDodecaDataFormat() -> DodecaDataFormat {
+    .json
+}
+
+func sampleDodecaLoadDataResult() -> DodecaLoadDataResult {
+    .success(
+        value: .object([
+            .init(key: "title", value: .string("Phon")),
+            .init(key: "sidebar", value: .bool(true)),
+            .init(key: "count", value: .number(.i64(42))),
+        ])
+    )
+}
+
+func sampleDodecaMarkdownSourcePath() -> String {
+    "content/guide.md"
+}
+
+func sampleDodecaMarkdownContent() -> String {
+    "+++\ntitle = \"Phon migration\"\n+++\n\n# Intro\n\nr[vox.dodeca.markdown]\n"
+}
+
+func sampleDodecaParseResult() -> DodecaParseResult {
+    .success(
+        frontmatter: DodecaFrontmatter(
+            title: "Phon migration",
+            weight: 10,
+            description: "Generated fixture for Dodeca markdown",
+            template: "page.html",
+            extra: .object([
+                .init(key: "sidebar", value: .bool(true)),
+                .init(key: "icon", value: .string("book")),
+                .init(key: "custom_value", value: .number(.i64(42))),
+            ])
+        ),
+        html: "<h1 data-sid=\"h1\">Intro</h1><p data-sid=\"p1\">Generated fixture</p>",
+        headings: [DodecaMarkdownHeading(title: "Intro", id: "intro", level: 1)],
+        reqs: [DodecaReqDefinition(id: "vox.dodeca.markdown", anchorId: "r-vox-dodeca-markdown")],
+        headInjections: ["<link rel=\"stylesheet\" href=\"/assets/arborium.css\">"],
+        sourceMap: DodecaSourceMap(
+            sourcePath: sampleDodecaMarkdownSourcePath(),
+            entries: [
+                DodecaSourceMapEntry(
+                    id: "h1",
+                    kind: .heading,
+                    lineStart: 5,
+                    lineEnd: 5,
+                    byteStart: 38,
+                    byteEnd: 45
+                ),
+                DodecaSourceMapEntry(
+                    id: "p1",
+                    kind: .paragraph,
+                    lineStart: 7,
+                    lineEnd: 7,
+                    byteStart: 47,
+                    byteEnd: 71
+                ),
+            ]
+        )
+    )
+}
+
 func sampleDodecaResolvedDependency() -> DodecaResolvedDependency {
     DodecaResolvedDependency(
         name: "facet",
@@ -1209,6 +1299,20 @@ func sameDodecaHtmlProcessResult(
 func sameDodecaCodeExecutionResult(
     _ lhs: DodecaCodeExecutionResult,
     _ rhs: DodecaCodeExecutionResult
+) -> Bool {
+    sameReflecting(lhs, rhs)
+}
+
+func sameDodecaLoadDataResult(
+    _ lhs: DodecaLoadDataResult,
+    _ rhs: DodecaLoadDataResult
+) -> Bool {
+    sameReflecting(lhs, rhs)
+}
+
+func sameDodecaParseResult(
+    _ lhs: DodecaParseResult,
+    _ rhs: DodecaParseResult
 ) -> Bool {
     sameReflecting(lhs, rhs)
 }
@@ -4262,6 +4366,29 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("dodeca_execute_code_samples OK")
+    case "dodeca_load_data":
+        let expected = sampleDodecaLoadDataResult()
+        let result = try await client.dodecaLoadData(
+            content: sampleDodecaDataContent(),
+            format: sampleDodecaDataFormat()
+        )
+        guard sameDodecaLoadDataResult(result, expected) else {
+            log("dodeca_load_data payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_load_data OK")
+    case "dodeca_parse_and_render":
+        let expected = sampleDodecaParseResult()
+        let result = try await client.dodecaParseAndRender(
+            sourcePath: sampleDodecaMarkdownSourcePath(),
+            content: sampleDodecaMarkdownContent(),
+            sourceMap: true
+        )
+        guard sameDodecaParseResult(result, expected) else {
+            log("dodeca_parse_and_render payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_parse_and_render OK")
     case "echo_styx_value":
         let value = sampleStyxValue()
         let result = try await client.echoStyxValue(value: value)

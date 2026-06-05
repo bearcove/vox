@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use facet_value::{VObject, VString, Value};
 use spec_proto::{
     Canvas, Color, Config, DibsAppliedMigration, DibsColumnInfo, DibsCreateRequest,
     DibsDeleteRequest, DibsError, DibsFilter, DibsFilterOp, DibsForeignKeyInfo, DibsGetRequest,
@@ -48,6 +49,11 @@ use spec_proto::{
     TraceyUncoveredResponse, TraceyUnmappedEntry, TraceyUnmappedRequest, TraceyUnmappedResponse,
     TraceyUnmappedUnit, TraceyUntestedRequest, TraceyUntestedResponse, TraceyValidateRequest,
     TraceyValidationError, TraceyValidationErrorCode, TraceyValidationResult, Tree,
+};
+use spec_proto::{
+    DodecaDataFormat, DodecaFrontmatter, DodecaLoadDataResult, DodecaMarkdownHeading,
+    DodecaParseResult, DodecaReqDefinition, DodecaSourceKind, DodecaSourceMap,
+    DodecaSourceMapEntry,
 };
 use spec_proto::{
     StyxLspCapability, StyxLspCodeAction, StyxLspCodeActionKind, StyxLspCodeActionParams,
@@ -112,6 +118,90 @@ pub async fn sum_post_reply_values(mut input: Rx<i32>, result: Tx<i64>) {
         }
         result.close(Default::default()).await.ok();
     });
+}
+
+pub fn sample_dodeca_data_content() -> String {
+    "{\"title\":\"Phon\",\"sidebar\":true,\"count\":42}".to_string()
+}
+
+pub fn sample_dodeca_data_format() -> DodecaDataFormat {
+    DodecaDataFormat::Json
+}
+
+fn sample_dodeca_dynamic_data_value() -> Value {
+    let mut object = VObject::new();
+    object.insert(VString::new("title"), Value::from("Phon"));
+    object.insert(VString::new("sidebar"), Value::from(true));
+    object.insert(VString::new("count"), Value::from(42i64));
+    object.into()
+}
+
+pub fn sample_dodeca_load_data_result() -> DodecaLoadDataResult {
+    DodecaLoadDataResult::Success {
+        value: sample_dodeca_dynamic_data_value(),
+    }
+}
+
+pub fn sample_dodeca_markdown_source_path() -> String {
+    "content/guide.md".to_string()
+}
+
+pub fn sample_dodeca_markdown_content() -> String {
+    "+++\ntitle = \"Phon migration\"\n+++\n\n# Intro\n\nr[vox.dodeca.markdown]\n".to_string()
+}
+
+fn sample_dodeca_frontmatter_extra() -> Value {
+    let mut object = VObject::new();
+    object.insert(VString::new("sidebar"), Value::from(true));
+    object.insert(VString::new("icon"), Value::from("book"));
+    object.insert(VString::new("custom_value"), Value::from(42i64));
+    object.into()
+}
+
+pub fn sample_dodeca_parse_result() -> DodecaParseResult {
+    DodecaParseResult::Success {
+        frontmatter: DodecaFrontmatter {
+            title: "Phon migration".to_string(),
+            weight: 10,
+            description: Some("Generated fixture for Dodeca markdown".to_string()),
+            template: Some("page.html".to_string()),
+            extra: sample_dodeca_frontmatter_extra(),
+        },
+        html: "<h1 data-sid=\"h1\">Intro</h1><p data-sid=\"p1\">Generated fixture</p>".to_string(),
+        headings: vec![DodecaMarkdownHeading {
+            title: "Intro".to_string(),
+            id: "intro".to_string(),
+            level: 1,
+        }],
+        reqs: vec![DodecaReqDefinition {
+            id: "vox.dodeca.markdown".to_string(),
+            anchor_id: "r-vox-dodeca-markdown".to_string(),
+        }],
+        head_injections: vec![
+            "<link rel=\"stylesheet\" href=\"/assets/arborium.css\">".to_string(),
+        ],
+        source_map: Box::new(DodecaSourceMap {
+            source_path: Some(sample_dodeca_markdown_source_path()),
+            entries: vec![
+                DodecaSourceMapEntry {
+                    id: "h1".to_string(),
+                    kind: DodecaSourceKind::Heading,
+                    line_start: 5,
+                    line_end: 5,
+                    byte_start: 38,
+                    byte_end: 45,
+                },
+                DodecaSourceMapEntry {
+                    id: "p1".to_string(),
+                    kind: DodecaSourceKind::Paragraph,
+                    line_start: 7,
+                    line_end: 7,
+                    byte_start: 47,
+                    byte_end: 71,
+                },
+            ],
+        }),
+    }
 }
 
 pub fn sample_dodeca_resolved_dependency() -> DodecaResolvedDependency {
@@ -2849,6 +2939,40 @@ impl Testbed for TestbedService {
         } else {
             DodecaCodeExecutionResult::Error {
                 message: format!("unexpected input: {input:?}"),
+            }
+        }
+    }
+
+    async fn dodeca_load_data(
+        &self,
+        content: String,
+        format: DodecaDataFormat,
+    ) -> DodecaLoadDataResult {
+        if content == sample_dodeca_data_content() && format == sample_dodeca_data_format() {
+            sample_dodeca_load_data_result()
+        } else {
+            DodecaLoadDataResult::Error {
+                message: format!("unexpected load_data input: {content:?} {format:?}"),
+            }
+        }
+    }
+
+    async fn dodeca_parse_and_render(
+        &self,
+        source_path: String,
+        content: String,
+        source_map: bool,
+    ) -> DodecaParseResult {
+        if source_path == sample_dodeca_markdown_source_path()
+            && content == sample_dodeca_markdown_content()
+            && source_map
+        {
+            sample_dodeca_parse_result()
+        } else {
+            DodecaParseResult::Error {
+                message: format!(
+                    "unexpected parse input: {source_path:?} {content:?} {source_map:?}"
+                ),
             }
         }
     }

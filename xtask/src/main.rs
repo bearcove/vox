@@ -791,6 +791,14 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_dodeca_execute_code_samples",
         },
         TestCase {
+            name: "rpc_dodeca_load_data",
+            call: "testbed::run_rpc_dodeca_load_data",
+        },
+        TestCase {
+            name: "rpc_dodeca_parse_and_render",
+            call: "testbed::run_rpc_dodeca_parse_and_render",
+        },
+        TestCase {
             name: "rpc_echo_styx_value",
             call: "testbed::run_rpc_echo_styx_value",
         },
@@ -1123,6 +1131,14 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_dodeca_execute_code_samples",
             call: "testbed::run_subject_calls_dodeca_execute_code_samples",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_load_data",
+            call: "testbed::run_subject_calls_dodeca_load_data",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_parse_and_render",
+            call: "testbed::run_subject_calls_dodeca_parse_and_render",
         },
         TestCase {
             name: "subject_calls_echo_styx_value",

@@ -138,6 +138,14 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_dodeca_execute_code_samples(SPEC);
         }
         #[test]
+        fn rpc_dodeca_load_data() {
+            testbed::run_rpc_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_parse_and_render() {
+            testbed::run_rpc_dodeca_parse_and_render(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -471,6 +479,14 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_dodeca_execute_code_samples() {
             testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_load_data() {
+            testbed::run_subject_calls_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_parse_and_render() {
+            testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
         fn subject_calls_echo_styx_value() {
@@ -803,6 +819,14 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_dodeca_execute_code_samples(SPEC);
         }
         #[test]
+        fn rpc_dodeca_load_data() {
+            testbed::run_rpc_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_parse_and_render() {
+            testbed::run_rpc_dodeca_parse_and_render(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -1136,6 +1160,14 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_dodeca_execute_code_samples() {
             testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_load_data() {
+            testbed::run_subject_calls_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_parse_and_render() {
+            testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
         fn subject_calls_echo_styx_value() {
@@ -1468,6 +1500,14 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_dodeca_execute_code_samples(SPEC);
         }
         #[test]
+        fn rpc_dodeca_load_data() {
+            testbed::run_rpc_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_parse_and_render() {
+            testbed::run_rpc_dodeca_parse_and_render(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -1801,6 +1841,14 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_dodeca_execute_code_samples() {
             testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_load_data() {
+            testbed::run_subject_calls_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_parse_and_render() {
+            testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
         fn subject_calls_echo_styx_value() {
@@ -2133,6 +2181,14 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_dodeca_execute_code_samples(SPEC);
         }
         #[test]
+        fn rpc_dodeca_load_data() {
+            testbed::run_rpc_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_parse_and_render() {
+            testbed::run_rpc_dodeca_parse_and_render(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -2466,6 +2522,14 @@ mod lang_swift_transport_tcp {
         #[test]
         fn subject_calls_dodeca_execute_code_samples() {
             testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_load_data() {
+            testbed::run_subject_calls_dodeca_load_data(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_parse_and_render() {
+            testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
         fn subject_calls_echo_styx_value() {

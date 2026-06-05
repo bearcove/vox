@@ -225,6 +225,12 @@ pub fn blocks_literal(blocks: &std::collections::BTreeMap<u64, String>) -> Strin
 /// One descriptor node. Schema refs come from Rust's derived descriptor; access and
 /// witness expressions are Swift-specific and are emitted from the shape.
 fn descriptor_node(shape: &'static Shape, rust_desc: &ir::Descriptor, ctx: &mut RecCtx) -> String {
+    if let ir::Access::Pointer(pointer) = &rust_desc.access {
+        let ShapeKind::Pointer { pointee } = classify_shape(shape) else {
+            panic!("Swift pointer descriptor got non-pointer shape {shape:?}");
+        };
+        return descriptor_node(pointee, &pointer.pointee, ctx);
+    }
     if matches!(rust_desc.access, ir::Access::Recurse) {
         let id = concrete_schema_id(&rust_desc.schema);
         ctx.ensure_block(shape, id);
@@ -638,6 +644,13 @@ mod tests {
         // A scalar / string has no recursion, so `descriptor_expr` exercises `access_expr`.
         assert!(descriptor_expr(<u32 as Facet>::SHAPE).contains("access: .scalar"));
         assert!(descriptor_expr(<String as Facet>::SHAPE).contains("witness: .string"));
+    }
+
+    #[test]
+    fn boxed_pointer_descriptor_uses_pointee_swift_layout() {
+        let expr = descriptor_expr(<Box<u32> as Facet>::SHAPE);
+        assert!(expr.contains("MemoryLayout<UInt32>"), "got: {expr}");
+        assert!(expr.contains("access: .scalar"), "got: {expr}");
     }
 
     #[test]

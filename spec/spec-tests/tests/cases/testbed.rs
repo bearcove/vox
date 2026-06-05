@@ -55,6 +55,11 @@ use spec_proto::{
     TraceyValidationError, TraceyValidationErrorCode, TraceyValidationResult, Tree,
 };
 use spec_proto::{
+    DodecaDataFormat, DodecaFrontmatter, DodecaLoadDataResult, DodecaMarkdownHeading,
+    DodecaParseResult, DodecaReqDefinition, DodecaSourceKind, DodecaSourceMap,
+    DodecaSourceMapEntry,
+};
+use spec_proto::{
     TraceyApiCodeUnit, TraceyApiFileData, TraceyApiFileEntry, TraceyApiReverseData, TraceyApiRule,
     TraceyApiSpecData, TraceyApiSpecForward, TraceyApiStaleRef, TraceyConfigPatternRequest,
     TraceyFileRequest, TraceyOutlineCoverage, TraceyOutlineEntry, TraceySearchResult,
@@ -743,6 +748,90 @@ fn sample_dodeca_template_call() -> DodecaTemplateCall {
         name: "render-card".to_string(),
         args: vec![sample_dynamic_template_object(), Value::from("docs")],
         kwargs: vec![("path".to_string(), Value::from("/guide/"))],
+    }
+}
+
+fn sample_dodeca_data_content() -> String {
+    "{\"title\":\"Phon\",\"sidebar\":true,\"count\":42}".to_string()
+}
+
+fn sample_dodeca_data_format() -> DodecaDataFormat {
+    DodecaDataFormat::Json
+}
+
+fn sample_dodeca_dynamic_data_value() -> Value {
+    let mut object = VObject::new();
+    object.insert(VString::new("title"), Value::from("Phon"));
+    object.insert(VString::new("sidebar"), Value::from(true));
+    object.insert(VString::new("count"), Value::from(42i64));
+    object.into()
+}
+
+fn sample_dodeca_load_data_result() -> DodecaLoadDataResult {
+    DodecaLoadDataResult::Success {
+        value: sample_dodeca_dynamic_data_value(),
+    }
+}
+
+fn sample_dodeca_markdown_source_path() -> String {
+    "content/guide.md".to_string()
+}
+
+fn sample_dodeca_markdown_content() -> String {
+    "+++\ntitle = \"Phon migration\"\n+++\n\n# Intro\n\nr[vox.dodeca.markdown]\n".to_string()
+}
+
+fn sample_dodeca_frontmatter_extra() -> Value {
+    let mut object = VObject::new();
+    object.insert(VString::new("sidebar"), Value::from(true));
+    object.insert(VString::new("icon"), Value::from("book"));
+    object.insert(VString::new("custom_value"), Value::from(42i64));
+    object.into()
+}
+
+fn sample_dodeca_parse_result() -> DodecaParseResult {
+    DodecaParseResult::Success {
+        frontmatter: DodecaFrontmatter {
+            title: "Phon migration".to_string(),
+            weight: 10,
+            description: Some("Generated fixture for Dodeca markdown".to_string()),
+            template: Some("page.html".to_string()),
+            extra: sample_dodeca_frontmatter_extra(),
+        },
+        html: "<h1 data-sid=\"h1\">Intro</h1><p data-sid=\"p1\">Generated fixture</p>".to_string(),
+        headings: vec![DodecaMarkdownHeading {
+            title: "Intro".to_string(),
+            id: "intro".to_string(),
+            level: 1,
+        }],
+        reqs: vec![DodecaReqDefinition {
+            id: "vox.dodeca.markdown".to_string(),
+            anchor_id: "r-vox-dodeca-markdown".to_string(),
+        }],
+        head_injections: vec![
+            "<link rel=\"stylesheet\" href=\"/assets/arborium.css\">".to_string(),
+        ],
+        source_map: Box::new(DodecaSourceMap {
+            source_path: Some(sample_dodeca_markdown_source_path()),
+            entries: vec![
+                DodecaSourceMapEntry {
+                    id: "h1".to_string(),
+                    kind: DodecaSourceKind::Heading,
+                    line_start: 5,
+                    line_end: 5,
+                    byte_start: 38,
+                    byte_end: 45,
+                },
+                DodecaSourceMapEntry {
+                    id: "p1".to_string(),
+                    kind: DodecaSourceKind::Paragraph,
+                    line_start: 7,
+                    line_end: 7,
+                    byte_start: 47,
+                    byte_end: 71,
+                },
+            ],
+        }),
     }
 }
 
@@ -3234,6 +3323,55 @@ pub fn run_rpc_dodeca_execute_code_samples(spec: SubjectSpec) {
     .unwrap();
 }
 
+// r[verify type-system.dynamic]
+// r[verify encoding.enum]
+pub fn run_rpc_dodeca_load_data(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_load_data_result();
+        let result = client
+            .dodeca_load_data(sample_dodeca_data_content(), sample_dodeca_data_format())
+            .await
+            .map_err(|e| format!("dodeca_load_data: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_load_data: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify type-system.dynamic]
+// r[verify encoding.struct]
+// r[verify encoding.option]
+// r[verify encoding.vec]
+// r[verify encoding.enum]
+pub fn run_rpc_dodeca_parse_and_render(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_parse_result();
+        let result = client
+            .dodeca_parse_and_render(
+                sample_dodeca_markdown_source_path(),
+                sample_dodeca_markdown_content(),
+                true,
+            )
+            .await
+            .map_err(|e| format!("dodeca_parse_and_render: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_parse_and_render: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
 // r[verify encoding.struct.recursive]
 // r[verify encoding.enum.newtype-variants]
 // r[verify encoding.option]
@@ -4841,6 +4979,21 @@ pub fn run_subject_calls_dodeca_html_process(spec: SubjectSpec) {
 // r[verify encoding.tuple]
 pub fn run_subject_calls_dodeca_execute_code_samples(spec: SubjectSpec) {
     run_subject_client_scenario(spec, "dodeca_execute_code_samples");
+}
+
+// r[verify type-system.dynamic]
+// r[verify encoding.enum]
+pub fn run_subject_calls_dodeca_load_data(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_load_data");
+}
+
+// r[verify type-system.dynamic]
+// r[verify encoding.struct]
+// r[verify encoding.option]
+// r[verify encoding.vec]
+// r[verify encoding.enum]
+pub fn run_subject_calls_dodeca_parse_and_render(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_parse_and_render");
 }
 
 // r[verify encoding.struct.recursive]
