@@ -9,6 +9,8 @@ import {
   messagePing,
   messageRequest,
   messageResponse,
+  messageCancel,
+  messageData,
   messageAccept,
   messageConnect,
   messageGoodbye,
@@ -907,6 +909,63 @@ describe("session", () => {
 
     connection.close(SessionError.closed());
     await expect(call).rejects.toBeInstanceOf(SessionError);
+  });
+
+  // r[verify rpc.cancel]
+  // r[verify rpc.cancel.channels]
+  it("queues inbound cancel without closing request channels", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSession = await withTimeout(
+      establishRawAcceptor(clientLink, serverLink),
+      "raw acceptor establishment",
+    );
+    const serverRoot = serverSession.rootConnection();
+    const schemas = Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.argsSchemaClosure));
+
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(
+          1n,
+          ECHO_METHOD.id,
+          new Uint8Array(),
+          emptyMetadata(),
+          [11n],
+          0n,
+          schemas,
+        ),
+      ),
+    );
+    const incoming = await withTimeout(serverRoot.nextIncomingCall(), "incoming cancellable call");
+    expect(incoming?.requestId).toBe(1n);
+    expect(incoming?.channels).toEqual([11n]);
+
+    const receiver = serverRoot.getChannelRegistry().registerIncoming(11n, 4);
+    await clientLink.send(encodeMessage(messageCancel(1n)));
+    expect(await withTimeout(serverRoot.nextIncomingCancel(), "incoming cancel")).toBe(1n);
+    expect(serverRoot.debugSnapshot()).toMatchObject({
+      closed: false,
+      inboundLiveRequestCount: 0,
+    });
+
+    await clientLink.send(encodeMessage(messageData(11n, Uint8Array.of(4, 5, 6))));
+    expect(Array.from((await withTimeout(receiver.recv(), "post-cancel channel item")) ?? []))
+      .toEqual([4, 5, 6]);
+
+    await serverRoot.sendResponse(1n, Uint8Array.of(9));
+    const lateResponse = decodeMessage(
+      (await withTimeout(clientLink.recv(), "post-cancel response"))!,
+    );
+    expect(lateResponse.connection_id).toBe(0n);
+    expect(lateResponse.payload.tag).toBe("RequestMessage");
+    if (lateResponse.payload.tag === "RequestMessage") {
+      expect(lateResponse.payload.value.id).toBe(1n);
+      expect(lateResponse.payload.value.body.tag).toBe("Response");
+    }
+
+    clientLink.close();
+    serverLink.close();
+    serverSession.handle().shutdown();
+    await Promise.allSettled([serverSession.closed()]);
   });
 
   // r[verify rpc.flow-control.max-concurrent-requests.session-failure]
