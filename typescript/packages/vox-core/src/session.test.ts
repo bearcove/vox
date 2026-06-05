@@ -203,6 +203,7 @@ const ECHO_METHOD: MethodDescriptor = {
 
 describe("session", () => {
   // r[verify session.parity]
+  // r[verify connection.open]
   // r[verify rpc.virtual-connection.open]
   it("allocates virtual connection ids from local session parity", async () => {
     const requestedSettings: ConnectionSettings = {
@@ -332,6 +333,34 @@ describe("session", () => {
       expect(response.payload.value.id).toBe(77n);
       expect(response.payload.value.body.tag).toBe("Response");
     }
+
+    clientLink.close();
+    rawServerLink.close();
+    initiatorSession.handle().shutdown();
+    await Promise.allSettled([initiatorSession.closed()]);
+  });
+
+  // r[verify connection.open.rejection]
+  it("rejects inbound virtual connections when no acceptor is configured", async () => {
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [clientLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(clientLink, rawServerLink),
+      "raw initiator establishment",
+    );
+
+    await rawServerLink.send(
+      encodeMessage(messageConnect(2n, peerSettings, emptyMetadata())),
+    );
+    const reject = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection reject"))!,
+    );
+    expect(reject.connection_id).toBe(2n);
+    expect(reject.payload.tag).toBe("ConnectionReject");
 
     clientLink.close();
     rawServerLink.close();
