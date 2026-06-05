@@ -265,6 +265,7 @@ private struct NoopDispatcher: ServiceDispatcher {
 
 @Test
 // r[verify connection.root]
+// r[verify rpc.session-setup]
 // r[verify schema.interaction.metadata]
 func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
@@ -281,6 +282,11 @@ func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     let session = try await Session.acceptFreshLink(link, dispatcher: NoopDispatcher())
 
     #expect(session.rootConnection.connectionId == 0)
+    #expect(session.connection.connectionId == 0)
+    #expect(session.role == .acceptor)
+    #expect(session.driver.role == .acceptor)
+    #expect(session.driver.dispatcher is NoopDispatcher)
+    #expect(session.rootConnection.handle === session.driver.handle)
     #expect(session.peerMetadata == metadata)
 }
 
