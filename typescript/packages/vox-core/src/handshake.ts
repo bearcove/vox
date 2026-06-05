@@ -1,6 +1,14 @@
 import { hexToBytes } from "@bearcove/phon-schema";
-import { decodeTyped, encodeTyped } from "@bearcove/phon-engine";
-import { parseSchemaClosure, messageSchemaClosure, type Metadata, emptyMetadata, coerceMetadata } from "@bearcove/vox-wire";
+import { buildPlan, decodeTyped, encodeTyped } from "@bearcove/phon-engine";
+import {
+  parseSchemaClosure,
+  messageRegistry,
+  messageSchemaClosure,
+  messageSchemaId,
+  type Metadata,
+  emptyMetadata,
+  coerceMetadata,
+} from "@bearcove/vox-wire";
 import type { ConnectionSettings, Parity } from "@bearcove/vox-wire";
 import type { Link } from "./link.ts";
 import {
@@ -65,6 +73,27 @@ async function sendHandshake(link: Link, message: HandshakeMessage): Promise<voi
   await link.send(encodeHandshake(message));
 }
 
+const UNSUPPORTED_MESSAGE_COMPATIBILITY_PLAN = "unsupported message compatibility plan";
+
+function peerMessageSchemaRejectionReason(peerSchema: Uint8Array): string | null {
+  try {
+    const { root, schemas } = parseSchemaClosure(peerSchema);
+    buildPlan(root, messageSchemaId.Message, messageRegistry.with(schemas));
+    return null;
+  } catch {
+    return UNSUPPORTED_MESSAGE_COMPATIBILITY_PLAN;
+  }
+}
+
+async function sendSorryAndReject(link: Link, reason: string): Promise<never> {
+  await sendHandshake(link, { tag: "Sorry", value: { reason } });
+  throw new Error(reason);
+}
+
+function oppositeParity(parity: Parity): Parity {
+  return parity.tag === "Odd" ? { tag: "Even" } : { tag: "Odd" };
+}
+
 // The sender's Message-envelope schema closure, sent verbatim as a byte list.
 function localMessagePayloadSchema(): number[] {
   return Array.from(hexToBytes(messageSchemaClosure));
@@ -93,6 +122,12 @@ export async function handshakeAsInitiator(
     throw new Error("expected HelloYourself during handshake");
   }
 
+  const peerMessageSchema = new Uint8Array(response.value.message_payload_schema);
+  const rejectionReason = peerMessageSchemaRejectionReason(peerMessageSchema);
+  if (rejectionReason !== null) {
+    await sendSorryAndReject(link, rejectionReason);
+  }
+
   await sendHandshake(link, { tag: "LetsGo", value: {} });
 
   const helloYourself = response;
@@ -100,7 +135,7 @@ export async function handshakeAsInitiator(
   return {
     localSettings: settings,
     peerSettings: helloYourself.value.connection_settings,
-    peerMessageSchema: new Uint8Array(helloYourself.value.message_payload_schema),
+    peerMessageSchema,
     peerMetadata,
   };
 }
@@ -115,11 +150,20 @@ export async function handshakeAsAcceptor(
     throw new Error("expected Hello during handshake");
   }
   const hello = first;
+  const peerMessageSchema = new Uint8Array(hello.value.message_payload_schema);
+  const rejectionReason = peerMessageSchemaRejectionReason(peerMessageSchema);
+  if (rejectionReason !== null) {
+    await sendSorryAndReject(link, rejectionReason);
+  }
+  const localSettings = {
+    ...settings,
+    parity: oppositeParity(hello.value.parity),
+  };
 
   await sendHandshake(link, {
     tag: "HelloYourself",
     value: {
-      connection_settings: settings,
+      connection_settings: localSettings,
       message_payload_schema: localMessagePayloadSchema(),
       metadata,
     },
@@ -135,9 +179,9 @@ export async function handshakeAsAcceptor(
 
   const peerMetadata = coerceMetadata(hello.value.metadata);
   return {
-    localSettings: settings,
+    localSettings,
     peerSettings: hello.value.connection_settings,
-    peerMessageSchema: new Uint8Array(hello.value.message_payload_schema),
+    peerMessageSchema,
     peerMetadata,
   };
 }

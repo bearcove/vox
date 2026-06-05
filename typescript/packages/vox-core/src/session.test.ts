@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { decodeTyped, encodeTyped } from "@bearcove/phon-engine";
 import {
   type ConnectionSettings,
   decodeMessage,
@@ -11,6 +12,8 @@ import {
   messageAccept,
   messageConnect,
   messageGoodbye,
+  messageSchemaClosure,
+  parseSchemaClosure,
 } from "@bearcove/vox-wire";
 import { Registry, hexToBytes, primitiveId, resolveIds } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
@@ -28,6 +31,12 @@ import {
   SESSION_ECHO_METHOD_ID,
 } from "./session_echo.fixture.ts";
 import { SchemaCompatibilityError, type PhonMethodSchemas } from "./schema_tracker.ts";
+import {
+  handshakeSchemaClosure,
+  registry as handshakeRegistry,
+  schemaId as handshakeSchemaId,
+  type HandshakeMessage,
+} from "./handshake.phon.generated.ts";
 
 const ECHO_METHOD_KEY = `0x${SESSION_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
 const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
@@ -117,6 +126,31 @@ function memoryLinkPair(): [MemoryLink, MemoryLink] {
   return [left, right];
 }
 
+function encodeHandshakeFrame(message: HandshakeMessage): Uint8Array {
+  const value = encodeTyped(message as never, handshakeSchemaId.HandshakeMessage, handshakeRegistry);
+  const closure = hexToBytes(handshakeSchemaClosure);
+  const out = new Uint8Array(4 + closure.length + value.length);
+  const dv = new DataView(out.buffer, out.byteOffset, out.byteLength);
+  dv.setUint32(0, closure.length, true);
+  out.set(closure, 4);
+  out.set(value, 4 + closure.length);
+  return out;
+}
+
+function decodeHandshakeFrame(bytes: Uint8Array): HandshakeMessage {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const len = dv.getUint32(0, true);
+  const closure = bytes.subarray(4, 4 + len);
+  const value = bytes.subarray(4 + len);
+  const { root, schemas } = parseSchemaClosure(closure);
+  return decodeTyped(
+    value,
+    root,
+    handshakeSchemaId.HandshakeMessage,
+    handshakeRegistry.with(schemas),
+  ) as unknown as HandshakeMessage;
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   label: string,
@@ -203,6 +237,149 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("session", () => {
+  // r[verify session]
+  // r[verify session.handshake]
+  // r[verify session.handshake.phon]
+  // r[verify session.handshake.protocol-schema]
+  // r[verify session.handshake.protocol-schema.session-scoped]
+  // r[verify session.handshake.unversioned]
+  // r[verify session.connection-settings]
+  // r[verify session.connection-settings.hello]
+  // r[verify session.peer]
+  // r[verify session.role]
+  // r[verify session.symmetry]
+  it("exchanges phon handshake schemas, settings, roles, and metadata", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const clientSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const serverSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 8,
+      initial_channel_credit: 4,
+    };
+    const acceptorSeedSettings: ConnectionSettings = {
+      ...serverSettings,
+      parity: { tag: "Odd" },
+    };
+    const clientMetadata = new Map([["client", "browser"]]);
+    const serverMetadata = new Map([["server", "runtime"]]);
+
+    const [clientHandshake, serverHandshake] = await Promise.all([
+      handshakeAsInitiator(clientLink, clientSettings, clientMetadata),
+      handshakeAsAcceptor(serverLink, acceptorSeedSettings, serverMetadata),
+    ]);
+
+    expect(clientHandshake.localSettings).toEqual(clientSettings);
+    expect(clientHandshake.peerSettings).toEqual(serverSettings);
+    expect(clientHandshake.peerMetadata.get("server")).toBe("runtime");
+    expect(Array.from(clientHandshake.peerMessageSchema)).toEqual(
+      Array.from(hexToBytes(messageSchemaClosure)),
+    );
+
+    expect(serverHandshake.localSettings).toEqual(serverSettings);
+    expect(serverHandshake.peerSettings).toEqual(clientSettings);
+    expect(serverHandshake.peerMetadata.get("client")).toBe("browser");
+    expect(Array.from(serverHandshake.peerMessageSchema)).toEqual(
+      Array.from(hexToBytes(messageSchemaClosure)),
+    );
+
+    clientLink.close();
+    serverLink.close();
+  });
+
+  // r[verify session.handshake.sorry]
+  // r[verify session.handshake.protocol-schema]
+  it("acceptor sends Sorry when peer Message schema is invalid", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const acceptor = handshakeAsAcceptor(serverLink, serverSettings)
+      .then(() => undefined, (error: unknown) => error);
+
+    await clientLink.send(
+      encodeHandshakeFrame({
+        tag: "Hello",
+        value: {
+          parity: { tag: "Odd" },
+          connection_settings: {
+            parity: { tag: "Odd" },
+            max_concurrent_requests: 64,
+            initial_channel_credit: 16,
+          },
+          message_payload_schema: [0xFF, 0x00, 0xFF],
+          metadata: emptyMetadata(),
+        },
+      }),
+    );
+
+    const response = decodeHandshakeFrame(
+      (await withTimeout(clientLink.recv(), "acceptor handshake Sorry"))!,
+    );
+    expect(response.tag).toBe("Sorry");
+    if (response.tag === "Sorry") {
+      expect(response.value.reason).toBe("unsupported message compatibility plan");
+    }
+    const error = await withTimeout(acceptor, "acceptor rejection");
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).toContain("unsupported message compatibility plan");
+
+    clientLink.close();
+    serverLink.close();
+  });
+
+  // r[verify session.handshake.sorry]
+  // r[verify session.handshake.protocol-schema]
+  it("initiator sends Sorry when peer Message schema is invalid", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const clientSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const initiator = handshakeAsInitiator(clientLink, clientSettings)
+      .then(() => undefined, (error: unknown) => error);
+
+    const hello = decodeHandshakeFrame(
+      (await withTimeout(serverLink.recv(), "initiator Hello"))!,
+    );
+    expect(hello.tag).toBe("Hello");
+
+    await serverLink.send(
+      encodeHandshakeFrame({
+        tag: "HelloYourself",
+        value: {
+          connection_settings: {
+            parity: { tag: "Even" },
+            max_concurrent_requests: 64,
+            initial_channel_credit: 16,
+          },
+          message_payload_schema: [0xFF, 0x00, 0xFF],
+          metadata: emptyMetadata(),
+        },
+      }),
+    );
+
+    const response = decodeHandshakeFrame(
+      (await withTimeout(serverLink.recv(), "initiator handshake Sorry"))!,
+    );
+    expect(response.tag).toBe("Sorry");
+    if (response.tag === "Sorry") {
+      expect(response.value.reason).toBe("unsupported message compatibility plan");
+    }
+    const error = await withTimeout(initiator, "initiator rejection");
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).toContain("unsupported message compatibility plan");
+
+    clientLink.close();
+    serverLink.close();
+  });
+
   // r[verify session.parity]
   // r[verify connection.virtual]
   // r[verify connection.open]
@@ -278,6 +455,14 @@ describe("session", () => {
 
   // r[verify connection.virtual]
   // r[verify rpc.virtual-connection.accept]
+  // r[verify session.symmetry]
+  // r[verify session.connection-settings.open]
+  // r[verify session.message]
+  // r[verify session.message.connection-id]
+  // r[verify session.message.payloads]
+  // r[verify rpc.request]
+  // r[verify rpc.response]
+  // r[verify rpc.response.one-per-request]
   it("accepts inbound virtual connections and routes calls on them", async () => {
     const peerSettings: ConnectionSettings = {
       parity: { tag: "Odd" },
@@ -550,6 +735,11 @@ describe("session", () => {
   });
 
   // r[verify connection.parity]
+  // r[verify session.message]
+  // r[verify session.message.connection-id]
+  // r[verify session.message.payloads]
+  // r[verify rpc.request]
+  // r[verify rpc.request.id-allocation]
   it("allocates request ids from virtual connection parity", async () => {
     const settings: ConnectionSettings = {
       parity: { tag: "Even" },
