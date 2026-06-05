@@ -174,6 +174,13 @@ extension Driver {
                 responseTx(.failure(.connectionClosed))
                 return
             }
+            if connectionId != 0 {
+                let isVirtualOpen = await virtualConnState.contains(connectionId)
+                guard isVirtualOpen else {
+                    responseTx(.failure(.connectionClosed))
+                    return
+                }
+            }
 
             let queuedCall = DriverQueuedCall(
                 connectionId: connectionId,

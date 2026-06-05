@@ -46,6 +46,21 @@ actor DriverState {
         return pending
     }
 
+    func claimPendingResponses(connectionId: UInt64, reason: String) -> [UInt64: PendingCall] {
+        let requestIds = pendingResponses.compactMap { requestId, pending in
+            pending.request.connectionId == connectionId ? requestId : nil
+        }
+        var claimed: [UInt64: PendingCall] = [:]
+        for requestId in requestIds {
+            guard let pending = pendingResponses.removeValue(forKey: requestId) else {
+                continue
+            }
+            claimed[requestId] = pending
+            markFinalizedRequest(requestId, reason: reason)
+        }
+        return claimed
+    }
+
     func markFinalizedRequest(_ requestId: UInt64, reason: String) {
         guard retainFinalizedRequests else {
             return

@@ -156,6 +156,7 @@ extension Driver {
                 throw ConnectionError.connectionClosed
             }
             await removeVirtualConnection(msg.connectionId)
+            await failPendingResponses(connectionId: msg.connectionId)
         case .requestMessage(let request):
             switch request.body {
             case .call(let call):
@@ -358,6 +359,18 @@ extension Driver {
         await handle.closeRequestSemaphore()
 
         let responses = await state.claimAllPendingResponses(reason: "connection-closed")
+
+        for (_, pending) in responses {
+            pending.timeoutTask?.cancel()
+            pending.responseTx(.failure(.connectionClosed))
+        }
+    }
+
+    func failPendingResponses(connectionId: UInt64) async {
+        let responses = await state.claimPendingResponses(
+            connectionId: connectionId,
+            reason: "connection-closed"
+        )
 
         for (_, pending) in responses {
             pending.timeoutTask?.cancel()

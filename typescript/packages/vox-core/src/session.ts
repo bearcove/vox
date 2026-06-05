@@ -479,7 +479,7 @@ class SessionCore {
 
     const connection = this.connections.get(connectionId);
     if (!connection) {
-      throw new SessionError(`unknown connection ${connectionId}`);
+      throw SessionError.protocol(`unknown connection ${connectionId}`);
     }
 
     connection.close(SessionError.closed());
@@ -569,7 +569,7 @@ class SessionCore {
   private getConnection(connectionId: bigint): ConnectionHandle {
     const connection = this.connections.get(connectionId);
     if (!connection) {
-      throw new SessionError(`unknown connection ${connectionId}`);
+      throw SessionError.protocol(`unknown connection ${connectionId}`);
     }
     return connection;
   }

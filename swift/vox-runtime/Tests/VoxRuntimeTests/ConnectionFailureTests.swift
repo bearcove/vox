@@ -1178,6 +1178,113 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify connection.close]
+    // r[verify connection.close.semantics]
+    @Test func incomingVirtualConnectionCloseTearsDownLocalHandle() async throws {
+        let transport = ScriptedTransport()
+        let (_, driver, sessionHandle, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let localSettings = ConnectionSettings(
+                parity: .even,
+                maxConcurrentRequests: 8,
+                initialChannelCredit: 16
+            )
+            let openTask: Task<Connection, Error> = Task {
+                try await sessionHandle.openConnection(
+                    settings: localSettings,
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            }
+
+            guard let connId = await awaitConnectionOpenId(transport) else {
+                Issue.record("expected ConnectionOpen")
+                return
+            }
+            await transport.enqueueMessage(
+                messageAccept(
+                    connectionId: connId,
+                    settings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: .null
+                )
+            )
+            let connection = try await awaitTaskResult(openTask)
+
+            let pendingCall: Task<[UInt8], Error> = Task {
+                try await connection.callRaw(methodId: 99, payload: [0x09], timeout: 1.0)
+            }
+            guard await awaitRequest(transport, connectionId: connId) != nil else {
+                Issue.record("expected request on virtual connection")
+                return
+            }
+
+            await transport.enqueueMessage(messageConnectionClose(connectionId: connId))
+            do {
+                _ = try await awaitTaskResult(pendingCall)
+                Issue.record("expected pending virtual call to fail")
+            } catch {
+                #expect(isConnectionClosed(error))
+            }
+
+            let staleCall: Task<[UInt8], Error> = Task {
+                try await connection.callRaw(methodId: 100, payload: [0x0A], timeout: 1.0)
+            }
+            do {
+                _ = try await awaitTaskResult(staleCall)
+                Issue.record("expected stale virtual call to fail")
+            } catch {
+                #expect(isConnectionClosed(error))
+            }
+
+            let sentAfterClose = await transport.sent()
+            let virtualCallCount = sentAfterClose.reduce(0) { count, message in
+                guard message.connectionId == connId else {
+                    return count
+                }
+                if case .requestMessage(let request) = message.payload,
+                    case .call = request.body
+                {
+                    return count + 1
+                }
+                return count
+            }
+            #expect(virtualCallCount == 1)
+
+            await transport.enqueueMessage(
+                .request(
+                    connId: connId,
+                    requestId: 88,
+                    methodId: 42,
+                    metadata: .null,
+                    payload: []
+                )
+            )
+            #expect(
+                await awaitProtocolReason(transport)
+                    == "call.lifecycle.unknown-connection-id"
+            )
+
+            do {
+                _ = try await awaitTaskResult(driverTask)
+                Issue.record("expected protocol violation")
+            } catch {
+                #expect(isProtocolViolation(error, rule: "call.lifecycle.unknown-connection-id"))
+            }
+        }
+    }
+
     // r[verify rpc.virtual-connection.accept]
     // r[verify connection.virtual]
     @Test func inboundOpenConnectionAcceptsAndDispatchesOnVirtualConnection() async throws {

@@ -10,6 +10,7 @@ import {
   messageResponse,
   messageAccept,
   messageConnect,
+  messageGoodbye,
 } from "@bearcove/vox-wire";
 import { Registry, hexToBytes, primitiveId, resolveIds } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
@@ -806,6 +807,7 @@ describe("session", () => {
     serverLink.close();
   });
 
+  // r[verify connection.close]
   // r[verify rpc.caller.liveness.last-drop-closes-connection]
   it("closes a virtual connection when its last caller is disposed", async () => {
     const settings: ConnectionSettings = {
@@ -845,6 +847,64 @@ describe("session", () => {
     rawServerLink.close();
     initiatorSession.handle().shutdown();
     await Promise.allSettled([initiatorSession.closed()]);
+  });
+
+  // r[verify connection.close.semantics]
+  it("tears down a virtual connection after receiving close", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [initiatorLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(initiatorLink, rawServerLink),
+      "raw initiator establishment",
+    );
+
+    const opened = initiatorSession.handle().openConnection(settings);
+    const open = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection open"))!,
+    );
+    await rawServerLink.send(encodeMessage(messageAccept(open.connection_id, peerSettings)));
+    const connection = await withTimeout(opened, "virtual connection accept");
+    expect(connection.isClosed()).toBe(false);
+
+    await rawServerLink.send(encodeMessage(messageGoodbye(open.connection_id)));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(connection.isClosed()).toBe(true);
+
+    await rawServerLink.send(
+      encodeMessage(
+        messageRequest(
+          7n,
+          ECHO_METHOD.id,
+          new Uint8Array(),
+          emptyMetadata(),
+          [],
+          open.connection_id,
+          [],
+        ),
+      ),
+    );
+    const errorPayload = await withTimeout(rawServerLink.recv(), "post-close protocol error");
+    expect(errorPayload).not.toBeNull();
+    const errorMessage = decodeMessage(errorPayload!);
+    expect(errorMessage.connection_id).toBe(0n);
+    expect(errorMessage.payload.tag).toBe("ProtocolError");
+    if (errorMessage.payload.tag === "ProtocolError") {
+      expect(errorMessage.payload.value.description).toContain(
+        `unknown connection ${open.connection_id}`,
+      );
+    }
+
+    await withTimeout(initiatorSession.closed(), "post-close protocol teardown");
+    rawServerLink.close();
   });
 
   // r[verify rpc.caller.liveness.root-internal-close]
