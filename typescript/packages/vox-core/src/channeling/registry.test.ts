@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { ChannelRegistry } from "./registry.ts";
 import { Tx } from "./tx.ts";
+import { setVoxLogger } from "../logger.ts";
+
+afterEach(() => {
+  setVoxLogger(null);
+});
 
 describe("ChannelRegistry", () => {
   // r[verify rpc.channel.binding]
@@ -160,6 +165,7 @@ describe("ChannelRegistry", () => {
   });
 
   // r[verify rpc.debug.snapshot]
+  // r[verify rpc.observability.channel]
   // r[verify rpc.observability.channel.context]
   it("preserves channel debug context in snapshots after close", () => {
     const registry = new ChannelRegistry();
@@ -205,5 +211,86 @@ describe("ChannelRegistry", () => {
         side: "client",
       },
     });
+  });
+
+  // r[verify rpc.observability.channel]
+  it("emits local channel observer events through the installed logger", async () => {
+    const events: Array<{ message: string; data: unknown }> = [];
+    setVoxLogger({
+      debug(message, data) {
+        events.push({ message, data });
+      },
+      error(message, ...args) {
+        events.push({ message, data: args });
+      },
+    });
+
+    const registry = new ChannelRegistry();
+    const incoming = registry.registerIncoming(41n, 2);
+    registry.routeData(41n, Uint8Array.of(1, 2));
+    await expect(incoming.recv()).resolves.toEqual(Uint8Array.of(1, 2));
+
+    const outgoing = registry.registerOutgoing(43n, 2);
+    await outgoing.sendData(Uint8Array.of(3, 4, 5));
+    expect(registry.pollOutgoing()).toEqual({
+      kind: "credit",
+      channelId: 41n,
+      additional: 1,
+    });
+    expect(registry.pollOutgoing()).toEqual({
+      kind: "data",
+      channelId: 43n,
+      payload: Uint8Array.of(3, 4, 5),
+    });
+    registry.grantCredit(43n, 1);
+    registry.close(41n);
+    outgoing.sendClose();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(registry.pollOutgoing()).toEqual({ kind: "close", channelId: 43n });
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        {
+          message: "[vox:channel] open",
+          data: expect.objectContaining({ channelId: 41n, direction: "incoming" }),
+        },
+        {
+          message: "[vox:channel] receive",
+          data: expect.objectContaining({ channelId: 41n, bytes: 2 }),
+        },
+        {
+          message: "[vox:channel] open",
+          data: expect.objectContaining({ channelId: 43n, direction: "outgoing" }),
+        },
+        {
+          message: "[vox:channel] send",
+          data: expect.objectContaining({ channelId: 43n, bytes: 3 }),
+        },
+        {
+          message: "[vox:channel] credit",
+          data: expect.objectContaining({
+            channelId: 41n,
+            direction: "outgoing",
+            additional: 1,
+          }),
+        },
+        {
+          message: "[vox:channel] credit",
+          data: expect.objectContaining({
+            channelId: 43n,
+            direction: "incoming",
+            additional: 1,
+          }),
+        },
+        {
+          message: "[vox:channel] close",
+          data: expect.objectContaining({ channelId: 41n }),
+        },
+        {
+          message: "[vox:channel] close",
+          data: expect.objectContaining({ channelId: 43n, direction: "outgoing" }),
+        },
+      ]),
+    );
   });
 });

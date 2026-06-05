@@ -2,6 +2,7 @@
 
 import { type ChannelId, ChannelError, DEFAULT_INITIAL_CREDIT } from "./types.ts";
 import { createChannel, type Channel, ChannelReceiver } from "./channel.ts";
+import { voxLogger } from "../logger.ts";
 
 /** Message sent on an outgoing channel. */
 export type OutgoingMessage =
@@ -41,6 +42,13 @@ export interface ChannelDebugSnapshot {
 export interface ChannelRegistryDebugSnapshot {
   channels: ChannelDebugSnapshot[];
   pendingCreditCount: number;
+}
+
+function logChannelEvent(event: string, channelId: ChannelId, fields: Record<string, unknown> = {}): void {
+  voxLogger()?.debug(`[vox:channel] ${event}`, {
+    channelId,
+    ...fields,
+  });
 }
 
 class AsyncQueue<T> {
@@ -364,6 +372,7 @@ export class ChannelRegistry {
       this.incoming.set(channelId, channel);
       this.incomingCredit.set(channelId, creditState);
     }
+    logChannelEvent("open", channelId, { direction: "incoming", initialCredit });
 
     if (pending) {
       this.pendingIncoming.delete(channelId);
@@ -418,6 +427,7 @@ export class ChannelRegistry {
     initialCredit: number = DEFAULT_INITIAL_CREDIT,
   ): OutgoingSender {
     const state = this.ensureOutgoing(channelId, initialCredit);
+    logChannelEvent("open", channelId, { direction: "outgoing", initialCredit });
     return new OutgoingSender(channelId, state, this.notifyOutgoing, this.keepaliveOwner);
   }
 
@@ -450,6 +460,7 @@ export class ChannelRegistry {
     }
 
     const channel = this.incoming.get(channelId);
+    logChannelEvent("receive", channelId, { bytes: payload.length });
     if (!channel) {
       const pending = this.pendingIncoming.get(channelId);
       if (pending) {
@@ -464,6 +475,7 @@ export class ChannelRegistry {
   }
 
   grantCredit(channelId: ChannelId, additional: number): void {
+    logChannelEvent("credit", channelId, { direction: "incoming", additional });
     this.outgoing.get(channelId)?.credit.grant(additional);
   }
 
@@ -474,6 +486,7 @@ export class ChannelRegistry {
     }
 
     const credit = { channelId, additional };
+    logChannelEvent("credit", channelId, { direction: "outgoing", additional });
     if (this.creditWaiter) {
       const waiter = this.creditWaiter;
       this.creditWaiter = null;
@@ -503,12 +516,14 @@ export class ChannelRegistry {
       }
 
       if (msg.kind === "data") {
+        logChannelEvent("send", channelId, { bytes: msg.payload.length });
         return { kind: "data", channelId, payload: msg.payload };
       }
 
       if (msg.kind === "close") {
         this.outgoing.delete(channelId);
         this.closed.add(channelId);
+        logChannelEvent("close", channelId, { direction: "outgoing" });
         return { kind: "close", channelId };
       }
 
@@ -533,6 +548,7 @@ export class ChannelRegistry {
    * r[impl rpc.channel.reset] - Reset also terminates the channel locally.
    */
   close(channelId: ChannelId): void {
+    logChannelEvent("close", channelId);
     const pending = this.pendingIncoming.get(channelId);
     if (pending) {
       pending.terminal = true;

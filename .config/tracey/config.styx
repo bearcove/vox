@@ -53,6 +53,7 @@ specs (
                     typescript/packages/vox-core/src/internal/async_semaphore.ts
                     typescript/packages/vox-core/src/logger.ts
                     typescript/packages/vox-core/src/logging.ts
+                    typescript/packages/vox-core/src/logging.test.ts
                     typescript/packages/vox-core/src/metadata.ts
                     typescript/packages/vox-core/src/metadata.test.ts
                     typescript/packages/vox-core/src/observer.ts

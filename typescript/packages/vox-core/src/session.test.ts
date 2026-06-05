@@ -663,6 +663,7 @@ describe("session", () => {
   });
 
   // r[verify session.protocol-error]
+  // r[verify rpc.observability.session-errors]
   it("sends protocol error before tearing down on local protocol violation", async () => {
     const [clientLink, serverLink] = memoryLinkPair();
     const serverSession = await withTimeout(
