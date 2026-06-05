@@ -18,14 +18,16 @@ use subject_rust::{
     sample_dibs_update_response, sample_dodeca_code_execution_result, sample_dodeca_data_content,
     sample_dodeca_data_format, sample_dodeca_execute_samples_input,
     sample_dodeca_html_process_input, sample_dodeca_html_process_result,
-    sample_dodeca_load_data_result, sample_dodeca_markdown_content,
-    sample_dodeca_markdown_source_path, sample_dodeca_parse_result, sample_helix_pulse_bundle,
+    sample_dodeca_image_processor_fixture, sample_dodeca_load_data_result,
+    sample_dodeca_markdown_content, sample_dodeca_markdown_source_path, sample_dodeca_parse_result,
+    sample_dodeca_search_indexer_fixture, sample_helix_pulse_bundle,
     sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
-    sample_helix_verify_evidence, sample_hotmeal_apply_patches_result,
-    sample_hotmeal_live_reload_events, sample_stax_flamegraph_update,
-    sample_stax_flamegraph_updates, sample_stax_linux_broker_control_fixture,
-    sample_stax_view_params, sample_styx_lsp_code_action_params, sample_styx_lsp_code_actions,
-    sample_styx_lsp_completion_params, sample_styx_lsp_completions,
+    sample_helix_trace_service_surface, sample_helix_verify_evidence,
+    sample_hotmeal_apply_patches_result, sample_hotmeal_live_reload_events,
+    sample_stax_flamegraph_update, sample_stax_flamegraph_updates,
+    sample_stax_linux_broker_control_fixture, sample_stax_macos_batches, sample_stax_macos_config,
+    sample_stax_macos_record_summary, sample_stax_view_params, sample_styx_lsp_code_action_params,
+    sample_styx_lsp_code_actions, sample_styx_lsp_completion_params, sample_styx_lsp_completions,
     sample_styx_lsp_definition_params, sample_styx_lsp_diagnostic_params,
     sample_styx_lsp_diagnostics, sample_styx_lsp_get_document_params,
     sample_styx_lsp_get_schema_params, sample_styx_lsp_get_source_params,
@@ -58,6 +60,7 @@ use vox_core::initiator;
 use vox_stream::{local_link_source, tcp_link_source};
 
 const DEFAULT_SUBJECT_INACTIVITY_TIMEOUT_SECS: u64 = 60;
+const SUBJECT_RUNTIME_STACK_BYTES: usize = 32 * 1024 * 1024;
 
 fn main() -> Result<(), String> {
     tracing_subscriber::fmt()
@@ -69,6 +72,7 @@ fn main() -> Result<(), String> {
         .init();
 
     let rt = tokio::runtime::Builder::new_multi_thread()
+        .thread_stack_size(SUBJECT_RUNTIME_STACK_BYTES)
         .enable_all()
         .build()
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
@@ -985,6 +989,32 @@ async fn run_client() -> Result<(), String> {
             }
             info!("dodeca_parse_and_render OK");
         }
+        "echo_dodeca_image_processor_fixture" => {
+            let payload = sample_dodeca_image_processor_fixture();
+            let result = client
+                .echo_dodeca_image_processor_fixture(payload.clone())
+                .await
+                .map_err(|e| format!("echo_dodeca_image_processor_fixture failed: {e:?}"))?;
+            if result != payload {
+                return Err(format!(
+                    "echo_dodeca_image_processor_fixture: expected {payload:?}, got {result:?}"
+                ));
+            }
+            info!("echo_dodeca_image_processor_fixture OK");
+        }
+        "echo_dodeca_search_indexer_fixture" => {
+            let payload = sample_dodeca_search_indexer_fixture();
+            let result = client
+                .echo_dodeca_search_indexer_fixture(payload.clone())
+                .await
+                .map_err(|e| format!("echo_dodeca_search_indexer_fixture failed: {e:?}"))?;
+            if result != payload {
+                return Err(format!(
+                    "echo_dodeca_search_indexer_fixture: expected {payload:?}, got {result:?}"
+                ));
+            }
+            info!("echo_dodeca_search_indexer_fixture OK");
+        }
         "echo_styx_value" => {
             let value = sample_styx_value();
             let result = client
@@ -1236,6 +1266,36 @@ async fn run_client() -> Result<(), String> {
             }
             info!("echo_stax_linux_broker_control OK");
         }
+        "stax_macos_record" => {
+            let (batch_tx, mut batch_rx) = vox::channel::<spec_proto::StaxMacKdBufBatch>();
+            let expected_batches = sample_stax_macos_batches();
+            let recv_task = tokio::spawn(async move {
+                let mut batches = Vec::new();
+                while let Ok(Some(batch)) = batch_rx.recv().await {
+                    batches.push(batch.get().clone());
+                }
+                batches
+            });
+            let result = client
+                .stax_macos_record(sample_stax_macos_config(), batch_tx)
+                .await
+                .map_err(|e| format!("stax_macos_record failed: {e:?}"))?;
+            let batches = recv_task
+                .await
+                .map_err(|e| format!("macos batches recv: {e}"))?;
+            let expected_summary = sample_stax_macos_record_summary();
+            if result != expected_summary {
+                return Err(format!(
+                    "stax_macos_record: expected {expected_summary:?}, got {result:?}"
+                ));
+            }
+            if batches != expected_batches {
+                return Err(format!(
+                    "stax_macos_record batches: expected {expected_batches:?}, got {batches:?}"
+                ));
+            }
+            info!("stax_macos_record OK");
+        }
         "echo_hotmeal_live_reload_event" => {
             for event in sample_hotmeal_live_reload_events() {
                 let result = client
@@ -1326,6 +1386,19 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("helix_pulse_bundle OK");
+        }
+        "helix_trace_service_surface" => {
+            let expected = sample_helix_trace_service_surface();
+            let result = client
+                .helix_trace_service_surface()
+                .await
+                .map_err(|e| format!("helix_trace_service_surface failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "helix_trace_service_surface: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("helix_trace_service_surface OK");
         }
         "tracey_status" => {
             let expected = sample_tracey_status_response();

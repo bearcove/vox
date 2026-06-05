@@ -799,6 +799,14 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_dodeca_parse_and_render",
         },
         TestCase {
+            name: "rpc_echo_dodeca_image_processor_fixture",
+            call: "testbed::run_rpc_echo_dodeca_image_processor_fixture",
+        },
+        TestCase {
+            name: "rpc_echo_dodeca_search_indexer_fixture",
+            call: "testbed::run_rpc_echo_dodeca_search_indexer_fixture",
+        },
+        TestCase {
             name: "rpc_echo_styx_value",
             call: "testbed::run_rpc_echo_styx_value",
         },
@@ -875,6 +883,10 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_stax_linux_broker_control",
         },
         TestCase {
+            name: "rpc_stax_macos_record",
+            call: "testbed::run_rpc_stax_macos_record",
+        },
+        TestCase {
             name: "rpc_echo_hotmeal_live_reload_event",
             call: "testbed::run_rpc_echo_hotmeal_live_reload_event",
         },
@@ -897,6 +909,10 @@ fn generate_spec_matrix(
         TestCase {
             name: "rpc_helix_pulse_bundle",
             call: "testbed::run_rpc_helix_pulse_bundle",
+        },
+        TestCase {
+            name: "rpc_helix_trace_service_surface",
+            call: "testbed::run_rpc_helix_trace_service_surface",
         },
         TestCase {
             name: "rpc_tracey_status",
@@ -1141,6 +1157,14 @@ fn generate_spec_matrix(
             call: "testbed::run_subject_calls_dodeca_parse_and_render",
         },
         TestCase {
+            name: "subject_calls_echo_dodeca_image_processor_fixture",
+            call: "testbed::run_subject_calls_echo_dodeca_image_processor_fixture",
+        },
+        TestCase {
+            name: "subject_calls_echo_dodeca_search_indexer_fixture",
+            call: "testbed::run_subject_calls_echo_dodeca_search_indexer_fixture",
+        },
+        TestCase {
             name: "subject_calls_echo_styx_value",
             call: "testbed::run_subject_calls_echo_styx_value",
         },
@@ -1217,6 +1241,10 @@ fn generate_spec_matrix(
             call: "testbed::run_subject_calls_echo_stax_linux_broker_control",
         },
         TestCase {
+            name: "subject_calls_stax_macos_record",
+            call: "testbed::run_subject_calls_stax_macos_record",
+        },
+        TestCase {
             name: "subject_calls_echo_hotmeal_live_reload_event",
             call: "testbed::run_subject_calls_echo_hotmeal_live_reload_event",
         },
@@ -1239,6 +1267,10 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_helix_pulse_bundle",
             call: "testbed::run_subject_calls_helix_pulse_bundle",
+        },
+        TestCase {
+            name: "subject_calls_helix_trace_service_surface",
+            call: "testbed::run_subject_calls_helix_trace_service_surface",
         },
         TestCase {
             name: "subject_calls_tracey_status",

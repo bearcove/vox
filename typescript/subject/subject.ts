@@ -30,15 +30,18 @@ import type {
   DodecaCodeExecutionResult,
   DodecaCodeSample,
   DodecaDataFormat,
+  DodecaDecodedImage,
   DodecaDependencySpec,
   DodecaExecuteSamplesInput,
   DodecaExecutionResult,
+  DodecaImageProcessorFixture,
   DodecaLoadDataResult,
   DodecaParseResult,
   DodecaHtmlProcessInput,
   DodecaHtmlProcessResult,
   DodecaResponsiveImageInfo,
   DodecaRustConfig,
+  DodecaSearchIndexerFixture,
   DodecaTemplateCall,
   DibsCreateRequest,
   DibsDeleteRequest,
@@ -98,6 +101,11 @@ import type {
   StaxLinuxPerfSessionConfig,
   StaxLinuxPerfSessionError,
   StaxLinuxWakingFieldOffsets,
+  StaxMacKdBuf,
+  StaxMacKdBufBatch,
+  StaxMacRecordError,
+  StaxMacRecordSummary,
+  StaxMacSessionConfig,
   StaxOffCpuBreakdown,
   StaxViewParams,
   HotmealApplyPatchesResult,
@@ -107,11 +115,28 @@ import type {
   HotmealPatchStep,
   HelixAudioTokenRange,
   HelixAudioTokenProvenance,
+  HelixAttentionSummaryBatch,
+  HelixAttentionSupportSummary,
+  HelixAudioAttendanceRow,
+  HelixAudioEncoderSupportRecord,
+  HelixDecoderEvidenceReport,
+  HelixDecoderEvidenceVariantCounts,
+  HelixAudioSelfAttentionRow,
   HelixPulseBundle,
   HelixPulseBundleFields,
   HelixPulseAvailable,
+  HelixQueryRowAttentionRecord,
+  HelixRefreshAttendanceRow,
   HelixStreamMetrics,
+  HelixStreamMeta,
   HelixStreamingTraceEvent,
+  HelixTextAttendanceRow,
+  HelixTextAttentionSupportRecord,
+  HelixTraceServiceSurface,
+  HelixTranscriptToken,
+  HelixRunInfo,
+  HelixPieceEvalReference,
+  HelixPieceEvalSnapshot,
   HelixVerifyDraftRow,
   HelixVerifyDraftStatus,
   HelixVerifyEvidenceDigest,
@@ -352,6 +377,61 @@ function sampleDodecaParseResult(): DodecaParseResult {
         },
       ],
     },
+  };
+}
+
+function byteRamp(length: number, seed: number): Uint8Array {
+  return Uint8Array.from({ length }, (_, i) => (seed + i) & 0xff);
+}
+
+function sampleDodecaDecodedImage(seed: number, width: number, height: number): DodecaDecodedImage {
+  return {
+    pixels: byteRamp(width * height * 4, seed),
+    width,
+    height,
+    channels: 4,
+  };
+}
+
+function sampleDodecaImageProcessorFixture(): DodecaImageProcessorFixture {
+  const decoded = sampleDodecaDecodedImage(0x20, 96, 64);
+  const resized = sampleDodecaDecodedImage(0x80, 48, 32);
+  return {
+    png_data: byteRamp(16_384, 0),
+    decoded_result: { tag: "Success", image: decoded },
+    resize_input: {
+      pixels: decoded.pixels,
+      width: decoded.width,
+      height: decoded.height,
+      channels: decoded.channels,
+      target_width: resized.width,
+    },
+    resize_result: { tag: "Success", image: resized },
+    thumbhash_input: {
+      pixels: decoded.pixels,
+      width: decoded.width,
+      height: decoded.height,
+    },
+    thumbhash_result: { tag: "ThumbhashSuccess", data_url: "data:image/thumbhash;base64,BwgJCgsMDQ4PEA==" },
+    error_result: { tag: "Error", message: "unsupported color profile in source image" },
+  };
+}
+
+function sampleDodecaSearchIndexerFixture(): DodecaSearchIndexerFixture {
+  return {
+    pages: Array.from({ length: 32 }, (_, i) => ({
+      url: `/guide/topic-${i}/`,
+      source: `content/guide/topic-${i}.md`,
+      html: `<article><h1>Topic ${i}</h1><p>Search body ${i}</p></article>`,
+    })),
+    result: {
+      tag: "Success",
+      files: Array.from({ length: 8 }, (_, i) => ({
+        path: `public/search/chunk-${i}.json`,
+        contents: byteRamp(1_024, i * 17),
+      })),
+    },
+    error_result: { tag: "Error", message: "search index could not write public/search/index.json" },
   };
 }
 
@@ -1461,6 +1541,108 @@ function sampleStaxLinuxBrokerControlFixture(): StaxLinuxBrokerControlFixture {
   };
 }
 
+function sampleStaxMacosConfig(): StaxMacSessionConfig {
+  return {
+    target_pid: 42_424,
+    frequency_hz: 997,
+    buf_records: 1_048_576,
+    samplers: 0x13,
+    pmu_event_configs: [0xfeed_beefn, 0x1_0000_0001n],
+    class_mask: 0b1011,
+    filter_range_value1: 0x3100_0000,
+    filter_range_value2: 0x31ff_ffff,
+    typefilter_cscs: [0x3101, 0x3102, 0x3108],
+  };
+}
+
+function sampleStaxMacosBatches(): StaxMacKdBufBatch[] {
+  return [
+    {
+      records: [
+        {
+          timestamp: 900_000n,
+          arg1: 0x1000n,
+          arg2: 0x2000n,
+          arg3: 0x3000n,
+          arg4: 0x4000n,
+          arg5: 0xfeed_facen,
+          debugid: 0x3101_0004,
+          cpuid: 3,
+          unused: 0n,
+        },
+        {
+          timestamp: 900_128n,
+          arg1: 0x1008n,
+          arg2: 0x2008n,
+          arg3: 0x3008n,
+          arg4: 0x4008n,
+          arg5: 0xfeed_facen,
+          debugid: 0x3101_0008,
+          cpuid: 4,
+          unused: 0n,
+        },
+      ],
+      read_started_mach_ticks: 899_900n,
+      drained_mach_ticks: 900_140n,
+      queued_for_send_mach_ticks: 900_150n,
+      send_started_mach_ticks: 900_180n,
+      drained_at_unix_ns: 1_801_000_000_123_456_789n,
+    },
+    {
+      records: [{
+        timestamp: 900_256n,
+        arg1: 0x1010n,
+        arg2: 0x2010n,
+        arg3: 0x3010n,
+        arg4: 0x4010n,
+        arg5: 0xfeed_facen,
+        debugid: 0x3101_000c,
+        cpuid: 5,
+        unused: 0n,
+      }],
+      read_started_mach_ticks: 900_200n,
+      drained_mach_ticks: 900_270n,
+      queued_for_send_mach_ticks: 900_290n,
+      send_started_mach_ticks: 900_310n,
+      drained_at_unix_ns: 1_801_000_000_123_556_789n,
+    },
+  ];
+}
+
+function sampleStaxMacosRecordSummary(): StaxMacRecordSummary {
+  return {
+    records_drained: BigInt(sampleStaxMacosBatches().reduce((count, batch) => count + batch.records.length, 0)),
+    session_ns: 240_000n,
+  };
+}
+
+function sameStaxMacKdBuf(lhs: StaxMacKdBuf, rhs: StaxMacKdBuf): boolean {
+  return lhs.timestamp === rhs.timestamp
+    && lhs.arg1 === rhs.arg1
+    && lhs.arg2 === rhs.arg2
+    && lhs.arg3 === rhs.arg3
+    && lhs.arg4 === rhs.arg4
+    && lhs.arg5 === rhs.arg5
+    && lhs.debugid === rhs.debugid
+    && lhs.cpuid === rhs.cpuid
+    && lhs.unused === rhs.unused;
+}
+
+function sameStaxMacBatch(lhs: StaxMacKdBufBatch, rhs: StaxMacKdBufBatch): boolean {
+  return lhs.records.length === rhs.records.length
+    && lhs.records.every((record, idx) => sameStaxMacKdBuf(record, rhs.records[idx] as StaxMacKdBuf))
+    && lhs.read_started_mach_ticks === rhs.read_started_mach_ticks
+    && lhs.drained_mach_ticks === rhs.drained_mach_ticks
+    && lhs.queued_for_send_mach_ticks === rhs.queued_for_send_mach_ticks
+    && lhs.send_started_mach_ticks === rhs.send_started_mach_ticks
+    && lhs.drained_at_unix_ns === rhs.drained_at_unix_ns;
+}
+
+function sameStaxMacBatches(lhs: StaxMacKdBufBatch[], rhs: StaxMacKdBufBatch[]): boolean {
+  return lhs.length === rhs.length
+    && lhs.every((batch, idx) => sameStaxMacBatch(batch, rhs[idx] as StaxMacKdBufBatch));
+}
+
 function sampleHotmealLiveReloadEvents(): HotmealLiveReloadEvent[] {
   return [
     { tag: "Reload" },
@@ -2055,6 +2237,274 @@ function sampleHelixPulseBundle(): HelixPulseBundle {
   };
 }
 
+function sampleHelixAudioClip() {
+  return {
+    sample_rate: 16_000,
+    first_sample: 262_144n,
+    samples: [-0.25, -0.10, 0.0, 0.10, 0.25, 0.50, 0.25, 0.0],
+  };
+}
+
+function sampleHelixMelClip() {
+  return {
+    num_mel_bins: 4,
+    first_mel_frame: 128,
+    num_mel_frames: 3,
+    values: [0.10, 0.20, 0.30, 0.40, 0.15, 0.25, 0.35, 0.45, 0.05, 0.12, 0.18, 0.22],
+    min_value: 0.05,
+    max_value: 0.45,
+    corpus_min_value: -1.25,
+    corpus_max_value: 2.75,
+  };
+}
+
+function sampleHelixChromeEvents() {
+  return [{
+    name: "metal.dispatch",
+    cat: "gpu",
+    ph: "X",
+    ts: 1_006_000.0,
+    dur: 420.0,
+    pid: 2,
+    tid: 7,
+    s: null,
+    args: new Map<string, Value>(),
+  }];
+}
+
+function sampleHelixSupport(): HelixAttentionSupportSummary {
+  return {
+    total_audio_mass: 0.42,
+    observed_audio: helixAudioRange(10, 18),
+    dominant_audio: helixAudioRange(16, 18),
+    dominant_audio_mass: 0.21,
+    center_audio_token: 17.25,
+    width_audio_tokens: 3.5,
+  };
+}
+
+function sampleHelixTextSupport(): HelixTextAttentionSupportRecord[] {
+  return [{
+    text_token_id: 47,
+    query_position: 118,
+    decoder_layer_index: 2,
+    head_index: 3,
+    support: sampleHelixSupport(),
+    audio_weights: [0.03125, 0.0625, 0.125, 0.25, 0.5],
+  }];
+}
+
+function sampleHelixAttentionBatch(): HelixAttentionSummaryBatch {
+  return {
+    schema_version: 2,
+    pulse_id: 102n,
+    audio_context_id: 77n,
+    text_context_id: 99n,
+    audio_representation_spans: [helixAudioSpan(10, 18, 7)],
+    changed_audio_representation_spans: [helixAudioSpan(16, 18, 8)],
+    text_support: sampleHelixTextSupport(),
+    header_text_support: [{
+      query_position: 80,
+      decoder_layer_index: 1,
+      head_index: 0,
+      support: sampleHelixSupport(),
+      audio_weights: [0.125, 0.25, 0.375, 0.25],
+    } satisfies HelixQueryRowAttentionRecord],
+    audio_encoder_support: [{
+      audio_token_id: 16,
+      audio_representation_version: 7,
+      encoder_layer_index: 0,
+      head_index: 1,
+      support: sampleHelixSupport(),
+      frontier_debt: 0.125,
+    } satisfies HelixAudioEncoderSupportRecord],
+    decoder_evidence: [
+      {
+        text_token_id: 47,
+        query_position: 118,
+        expected_observed_audio: helixAudioRange(10, 18),
+        records: sampleHelixTextSupport(),
+        kind: { tag: "Decode", input_token_id: 1401 },
+      },
+      {
+        text_token_id: 45,
+        query_position: 116,
+        expected_observed_audio: helixAudioRange(18, 26),
+        records: sampleHelixTextSupport(),
+        kind: {
+          tag: "VerifyPrediction",
+          verified_draft_index: 1,
+          draft_token_id: 927,
+          query_row: 2,
+          max_logit: 11.25,
+          draft_logit: 9.875,
+        },
+      },
+      {
+        text_token_id: null,
+        query_position: 117,
+        expected_observed_audio: helixAudioRange(32, 40),
+        records: sampleHelixTextSupport(),
+        kind: { tag: "VerifySeed", query_row: 3, next_token_seed: 1401, max_logit: 10.75 },
+      },
+      {
+        text_token_id: null,
+        query_position: 80,
+        expected_observed_audio: helixAudioRange(10, 18),
+        records: sampleHelixTextSupport(),
+        kind: { tag: "PromptPrefill" },
+      },
+    ],
+  };
+}
+
+function sampleHelixTraceServiceSurface(): HelixTraceServiceSurface {
+  const bundle = sampleHelixPulseBundle();
+  return {
+    meta: {
+      schema_version: 2,
+      pulse_ids: [101n, 102n],
+      timeline_event_count: 420n,
+      attention_batch_count: 17n,
+    } satisfies HelixStreamMeta,
+    pulse_rollup: bundle.pulse_rollup,
+    timeline: sampleHelixTimeline(),
+    attention_batch: sampleHelixAttentionBatch(),
+    prompt_layout: bundle.prompt_layout,
+    audio_attended_by: [{
+      text_token_id: 47,
+      decoder_layer_index: 2,
+      head_index: 3,
+      dominant_audio_mass: 0.21,
+      total_audio_mass: 0.42,
+      observed_audio: helixAudioRange(10, 18),
+      dominant_audio: helixAudioRange(16, 18),
+      audio_weights: [0.03125, 0.0625, 0.125, 0.25, 0.5],
+      queried_audio_weight: 0.25,
+    } satisfies HelixTextAttendanceRow],
+    text_attends_to: [{
+      decoder_layer_index: 2,
+      head_index: 3,
+      dominant_audio_mass: 0.21,
+      total_audio_mass: 0.42,
+      center_audio_token: 17.25,
+      width_audio_tokens: 3.5,
+      observed_audio: helixAudioRange(10, 18),
+      dominant_audio: helixAudioRange(16, 18),
+      audio_weights: [0.03125, 0.0625, 0.125, 0.25, 0.5],
+    } satisfies HelixAudioAttendanceRow],
+    refresh_attends_to: [{
+      query_position: 80,
+      decoder_layer_index: 1,
+      head_index: 0,
+      dominant_audio_mass: 0.375,
+      total_audio_mass: 1.0,
+      center_audio_token: 15.5,
+      width_audio_tokens: 4.0,
+      observed_audio: helixAudioRange(10, 18),
+      dominant_audio: helixAudioRange(14, 18),
+      audio_weights: [0.125, 0.25, 0.375, 0.25],
+    } satisfies HelixRefreshAttendanceRow],
+    audio_token_provenance: sampleHelixAudioProvenance()[0] ?? null,
+    audio_provenance_for_pulse: sampleHelixAudioProvenance(),
+    audio_tokens_for_mel_frame: [16, 17],
+    audio_clip_for_audio_token: sampleHelixAudioClip(),
+    audio_clip_for_prompt: sampleHelixAudioClip(),
+    audio_clip_for_audio_range: sampleHelixAudioClip(),
+    mel_clip_for_prompt: sampleHelixMelClip(),
+    audio_self_attention: [{
+      encoder_layer_index: 0,
+      head_index: 1,
+      audio_representation_version: 7,
+      dominant_audio_mass: 0.25,
+      total_audio_mass: 0.5,
+      center_audio_token: 16.5,
+      width_audio_tokens: 2.0,
+      observed_audio: helixAudioRange(10, 18),
+      dominant_audio: helixAudioRange(16, 18),
+      frontier_debt: 0.125,
+    } satisfies HelixAudioSelfAttentionRow],
+    transcript: [
+      { text_token_id: 40, decoded_in_pulse: 101n, text: "hel", committed: true },
+      { text_token_id: 41, decoded_in_pulse: 102n, text: "ix", committed: false },
+    ] satisfies HelixTranscriptToken[],
+    pulse_attention_heatmap: bundle.attention_heatmap,
+    encoder_frontier: bundle.encoder_frontier,
+    stream_metrics: sampleHelixStreamMetrics(),
+    verify_evidence: sampleHelixVerifyEvidence(),
+    decoder_evidence_report: {
+      total_batches: 7n,
+      batches_without_decoder_evidence: 1n,
+      pulses_without_decoder_evidence: [101n],
+      variant_evidence_counts: {
+        decode: 12n,
+        verify_prediction: 6n,
+        verify_seed: 3n,
+        prompt_prefill: 4n,
+      } satisfies HelixDecoderEvidenceVariantCounts,
+      variant_record_counts: {
+        decode: 96n,
+        verify_prediction: 48n,
+        verify_seed: 24n,
+        prompt_prefill: 32n,
+      } satisfies HelixDecoderEvidenceVariantCounts,
+      observed_decoder_layer_indices: [0, 1, 2],
+      observed_decoder_head_indices: [0, 1, 2, 3],
+    } satisfies HelixDecoderEvidenceReport,
+    pulse_evidence_snapshot: bundle.scheduler_snapshot,
+    gpu_chrome_events_for_pulse: sampleHelixChromeEvents(),
+    run_info: {
+      backend: "metal",
+      model_dir: "/models/helix-mini",
+      input: "helix fixture",
+      piece: "demo",
+      pulse_ms: 8,
+      audio_ring_capacity: 4096,
+      text_ring_capacity: 512,
+      commit_revisable_tail_text_tokens: 4,
+      revise_logit_margin: 0.75,
+      sample_rate: 16_000,
+      mel_hop_samples: 160,
+      num_mel_bins: 80,
+      num_mel_frames: 384,
+      audio_tokens_per_chunk: 2,
+      native_window_tokens: 16,
+      realtime_pacing: true,
+      profile_phases: true,
+      attention_trace_schema_version: 3,
+      trace_server_schema_version: 5,
+    } satisfies HelixRunInfo,
+    piece_eval_reference: {
+      piece: "demo",
+      language: "en",
+      words: ["helix", "fixture"],
+    } satisfies HelixPieceEvalReference,
+    piece_eval_for_pulse: {
+      audio_now_ms: 1234.5,
+      reference_words_available: 16,
+      hypothesis_words: 15,
+      substitutions: 1,
+      deletions: 0,
+      insertions: 1,
+      rolling_wer: 0.125,
+      s2d_matched_words: 14,
+      s2d_new_words: 2,
+      s2d_p50_ms: 41.5,
+      s2d_p90_ms: 75.0,
+      s2d_p100_ms: 101.25,
+      s2d_avg_ms: 50.0,
+      audio_frontier: 160,
+      displayed_frontier: 156,
+      committed_frontier: 152,
+      lag_ms: 250.0,
+    } satisfies HelixPieceEvalSnapshot,
+    encoder_provenance_report: bundle.encoder_provenance,
+    pulse_bundle_fields: sampleHelixPulseBundleFields(),
+    pulse_bundle: bundle,
+    pulse_available: { pulse_id: 102n },
+  };
+}
+
 function sameBigints(lhs: bigint[], rhs: bigint[]): boolean {
   return lhs.length === rhs.length && lhs.every((value, idx) => rhs[idx] === value);
 }
@@ -2178,6 +2628,10 @@ function sameHelixPulses(lhs: HelixPulseAvailable[], rhs: HelixPulseAvailable[])
 }
 
 function sameHelixPulseBundle(lhs: HelixPulseBundle, rhs: HelixPulseBundle): boolean {
+  return sameHelixDeep(lhs, rhs);
+}
+
+function sameHelixTraceServiceSurface(lhs: HelixTraceServiceSurface, rhs: HelixTraceServiceSurface): boolean {
   return sameHelixDeep(lhs, rhs);
 }
 
@@ -3729,6 +4183,14 @@ class TestbedService implements TestbedHandler {
     return { tag: "Error", message: `unexpected parse input: ${sourcePath}` };
   }
 
+  echoDodecaImageProcessorFixture(fixture: DodecaImageProcessorFixture): DodecaImageProcessorFixture {
+    return fixture;
+  }
+
+  echoDodecaSearchIndexerFixture(fixture: DodecaSearchIndexerFixture): DodecaSearchIndexerFixture {
+    return fixture;
+  }
+
   echoStyxValue(value: StyxValue): StyxValue {
     return value;
   }
@@ -3846,6 +4308,21 @@ class TestbedService implements TestbedHandler {
     return fixture;
   }
 
+  async staxMacosRecord(
+    config: StaxMacSessionConfig,
+    records: unknown,
+  ): Promise<{ ok: true; value: StaxMacRecordSummary } | { ok: false; error: StaxMacRecordError }> {
+    if (!sameHelixDeep(config, sampleStaxMacosConfig())) {
+      throw new Error("stax_macos_record: unexpected config");
+    }
+    const tx = records as Tx<StaxMacKdBufBatch>;
+    for (const batch of sampleStaxMacosBatches()) {
+      await tx.send(batch);
+    }
+    tx.close();
+    return { ok: true, value: sampleStaxMacosRecordSummary() };
+  }
+
   echoHotmealLiveReloadEvent(event: HotmealLiveReloadEvent): HotmealLiveReloadEvent {
     return event;
   }
@@ -3872,6 +4349,10 @@ class TestbedService implements TestbedHandler {
 
   helixPulseBundle(_pulseId: bigint, _fields: HelixPulseBundleFields): HelixPulseBundle {
     return sampleHelixPulseBundle();
+  }
+
+  helixTraceServiceSurface(): HelixTraceServiceSurface {
+    return sampleHelixTraceServiceSurface();
   }
 
   traceyStatus(): TraceyStatusResponse {
@@ -4509,6 +4990,24 @@ async function runClient() {
       console.error(`dodeca_parse_and_render OK`);
       break;
     }
+    case "echo_dodeca_image_processor_fixture": {
+      const payload = sampleDodecaImageProcessorFixture();
+      const result = await client.echoDodecaImageProcessorFixture(payload);
+      if (!sameHelixDeep(result, payload)) {
+        throw new Error("echo_dodeca_image_processor_fixture: payload mismatch");
+      }
+      console.error(`echo_dodeca_image_processor_fixture OK`);
+      break;
+    }
+    case "echo_dodeca_search_indexer_fixture": {
+      const payload = sampleDodecaSearchIndexerFixture();
+      const result = await client.echoDodecaSearchIndexerFixture(payload);
+      if (!sameHelixDeep(result, payload)) {
+        throw new Error("echo_dodeca_search_indexer_fixture: payload mismatch");
+      }
+      console.error(`echo_dodeca_search_indexer_fixture OK`);
+      break;
+    }
     case "echo_styx_value": {
       const payload = sampleStyxValue();
       const result = await client.echoStyxValue(payload);
@@ -4685,6 +5184,26 @@ async function runClient() {
       console.error(`echo_stax_linux_broker_control OK`);
       break;
     }
+    case "stax_macos_record": {
+      const [batchTx, batchRx] = channel<StaxMacKdBufBatch>();
+      const resultPromise = client.staxMacosRecord(sampleStaxMacosConfig(), batchTx);
+      await waitForBound(batchRx);
+      const received: StaxMacKdBufBatch[] = [];
+      const recvTask = (async () => {
+        for await (const batch of batchRx) received.push(batch);
+      })();
+      const result = await resultPromise;
+      await recvTask;
+      if (!result.ok || !sameHelixDeep(result.value, sampleStaxMacosRecordSummary())) {
+        throw new Error("stax_macos_record: summary mismatch");
+      }
+      const expected = sampleStaxMacosBatches();
+      if (!sameStaxMacBatches(received, expected)) {
+        throw new Error("stax_macos_record: batches mismatch");
+      }
+      console.error(`stax_macos_record OK`);
+      break;
+    }
     case "echo_hotmeal_live_reload_event": {
       for (const event of sampleHotmealLiveReloadEvents()) {
         const result = await client.echoHotmealLiveReloadEvent(event);
@@ -4746,6 +5265,15 @@ async function runClient() {
         throw new Error("helix_pulse_bundle: payload mismatch");
       }
       console.error(`helix_pulse_bundle OK`);
+      break;
+    }
+    case "helix_trace_service_surface": {
+      const expected = sampleHelixTraceServiceSurface();
+      const result = await client.helixTraceServiceSurface();
+      if (!sameHelixTraceServiceSurface(result, expected)) {
+        throw new Error("helix_trace_service_surface: payload mismatch");
+      }
+      console.error(`helix_trace_service_surface OK`);
       break;
     }
     case "tracey_status": {

@@ -249,6 +249,20 @@ pub trait Testbed {
         source_map: bool,
     ) -> DodecaParseResult;
 
+    /// Echo Dodeca image processor byte/scalar/result roots from
+    /// `cell-image-proto`.
+    async fn echo_dodeca_image_processor_fixture(
+        &self,
+        fixture: DodecaImageProcessorFixture,
+    ) -> DodecaImageProcessorFixture;
+
+    /// Echo Dodeca search indexer page/file/result roots from
+    /// `cell-search-proto`.
+    async fn echo_dodeca_search_indexer_fixture(
+        &self,
+        fixture: DodecaSearchIndexerFixture,
+    ) -> DodecaSearchIndexerFixture;
+
     /// Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
     /// structs/enums with tags, spans, sequences, objects, and entry key/value
     /// recursion.
@@ -336,6 +350,15 @@ pub trait Testbed {
         fixture: StaxLinuxBrokerControlFixture,
     ) -> StaxLinuxBrokerControlFixture;
 
+    /// Stax macOS daemon record shape: session config in, raw kdebug record
+    /// batches streamed back through a non-nested channel, and a terminal
+    /// record result returned as a normal user-error result.
+    async fn stax_macos_record(
+        &self,
+        config: StaxMacSessionConfig,
+        records: Tx<StaxMacKdBufBatch>,
+    ) -> Result<StaxMacRecordSummary, StaxMacRecordError>;
+
     /// Echo a Hotmeal live-reload event. This mirrors
     /// `hotmeal_server::LiveReloadEvent`, including reload, patch bytes, and
     /// head-change notifications.
@@ -373,6 +396,10 @@ pub trait Testbed {
         pulse_id: HelixSchedulerPulseId,
         fields: HelixPulseBundleFields,
     ) -> HelixPulseBundle;
+
+    /// Helix broad trace-service query surface. Mirrors the live standalone
+    /// query return families as one generated bridge root.
+    async fn helix_trace_service_surface(&self) -> HelixTraceServiceSurface;
 
     /// Tracey daemon status query, mirrored from the current roam
     /// `TraceyDaemon::status` migration surface.
@@ -696,6 +723,85 @@ pub enum DodecaParseResult {
     Error {
         message: String,
     },
+}
+
+/// Decoded image bytes from `cell-image-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaDecodedImage {
+    pub pixels: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub channels: u8,
+}
+
+/// Image-processing result from `cell-image-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaImageResult {
+    Success { image: DodecaDecodedImage },
+    ThumbhashSuccess { data_url: String },
+    Error { message: String },
+}
+
+/// Resize request from `cell-image-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaResizeInput {
+    pub pixels: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub channels: u8,
+    pub target_width: u32,
+}
+
+/// Thumbhash request from `cell-image-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaThumbhashInput {
+    pub pixels: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Aggregate Dodeca image processor fixture root.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaImageProcessorFixture {
+    pub png_data: Vec<u8>,
+    pub decoded_result: DodecaImageResult,
+    pub resize_input: DodecaResizeInput,
+    pub resize_result: DodecaImageResult,
+    pub thumbhash_input: DodecaThumbhashInput,
+    pub thumbhash_result: DodecaImageResult,
+    pub error_result: DodecaImageResult,
+}
+
+/// Page input to the Dodeca search indexer.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSearchPage {
+    pub url: String,
+    pub source: String,
+    pub html: String,
+}
+
+/// Search index output file.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSearchFile {
+    pub path: String,
+    pub contents: Vec<u8>,
+}
+
+/// Search-indexing result from `cell-search-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaSearchIndexResult {
+    Success { files: Vec<DodecaSearchFile> },
+    Error { message: String },
+}
+
+/// Aggregate Dodeca search indexer fixture root.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSearchIndexerFixture {
+    pub pages: Vec<DodecaSearchPage>,
+    pub result: DodecaSearchIndexResult,
+    pub error_result: DodecaSearchIndexResult,
 }
 
 /// Dodeca HTML minification options from `cell-html-proto`.
@@ -1380,6 +1486,81 @@ pub struct StaxLinuxBrokerControlFixture {
     pub waking_field_offsets: Option<StaxLinuxWakingFieldOffsets>,
 }
 
+/// One macOS kdebug record. Mirrors xnu `kd_buf` on LP64.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(C)]
+pub struct StaxMacKdBuf {
+    pub timestamp: u64,
+    pub arg1: u64,
+    pub arg2: u64,
+    pub arg3: u64,
+    pub arg4: u64,
+    pub arg5: u64,
+    pub debugid: u32,
+    pub cpuid: u32,
+    pub unused: u64,
+}
+
+/// Stax macOS perf/kdebug session configuration.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct StaxMacSessionConfig {
+    pub target_pid: u32,
+    pub frequency_hz: u32,
+    pub buf_records: u32,
+    pub samplers: u32,
+    pub pmu_event_configs: Vec<u64>,
+    pub class_mask: u32,
+    pub filter_range_value1: u32,
+    pub filter_range_value2: u32,
+    pub typefilter_cscs: Vec<u16>,
+}
+
+/// One macOS kdebug drain pass streamed over Vox.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct StaxMacKdBufBatch {
+    pub records: Vec<StaxMacKdBuf>,
+    pub read_started_mach_ticks: u64,
+    pub drained_mach_ticks: u64,
+    pub queued_for_send_mach_ticks: u64,
+    pub send_started_mach_ticks: u64,
+    pub drained_at_unix_ns: u64,
+}
+
+vox_schema::impl_reborrow_owned!(StaxMacKdBufBatch);
+
+/// Successful macOS record-session summary.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct StaxMacRecordSummary {
+    pub records_drained: u64,
+    pub session_ns: u64,
+}
+
+/// macOS record-session errors surfaced as Vox user errors.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum StaxMacRecordError {
+    NotRoot = 0,
+    NotAuthorized {
+        caller_uid: u32,
+        target_uid: u32,
+    } = 1,
+    Busy {
+        holder_uid: u32,
+        holder_pid: u32,
+        since_unix_ns: u64,
+    } = 2,
+    NoSuchTarget(u32) = 3,
+    Kperf {
+        op: String,
+        code: i32,
+    } = 4,
+    Sysctl {
+        op: String,
+        message: String,
+    } = 5,
+    Evicted = 6,
+}
+
 /// Hotmeal live-reload event.
 #[derive(Debug, Clone, PartialEq, Eq, Facet)]
 #[repr(u8)]
@@ -2031,6 +2212,283 @@ pub struct HelixPulseAvailable {
 }
 
 vox_schema::impl_reborrow_owned!(HelixPulseAvailable);
+
+/// Helix trace stream metadata shared by broad trace queries.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct HelixStreamMeta {
+    pub schema_version: u32,
+    pub pulse_ids: Vec<HelixSchedulerPulseId>,
+    pub timeline_event_count: u64,
+    pub attention_batch_count: u64,
+}
+
+/// Helix run configuration metadata reported by the trace service.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixRunInfo {
+    pub backend: String,
+    pub model_dir: String,
+    pub input: String,
+    pub piece: Option<String>,
+    pub pulse_ms: u32,
+    pub audio_ring_capacity: u32,
+    pub text_ring_capacity: u32,
+    pub commit_revisable_tail_text_tokens: u32,
+    pub revise_logit_margin: f32,
+    pub sample_rate: u32,
+    pub mel_hop_samples: u32,
+    pub num_mel_bins: u32,
+    pub num_mel_frames: u32,
+    pub audio_tokens_per_chunk: u32,
+    pub native_window_tokens: u32,
+    pub realtime_pacing: bool,
+    pub profile_phases: bool,
+    pub attention_trace_schema_version: u32,
+    pub trace_server_schema_version: u32,
+}
+
+/// Compact attention support summary used by trace-service attention queries.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixAttentionSupportSummary {
+    pub total_audio_mass: f32,
+    pub observed_audio: HelixAudioTokenRange,
+    pub dominant_audio: HelixAudioTokenRange,
+    pub dominant_audio_mass: f32,
+    pub center_audio_token: Option<f32>,
+    pub width_audio_tokens: Option<f32>,
+}
+
+/// One text-token attention support record.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixTextAttentionSupportRecord {
+    pub text_token_id: HelixTextTokenId,
+    pub query_position: HelixLogicalPosition,
+    pub decoder_layer_index: u32,
+    pub head_index: u32,
+    pub support: HelixAttentionSupportSummary,
+    pub audio_weights: Vec<f32>,
+}
+
+/// One encoder audio-token support record.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixAudioEncoderSupportRecord {
+    pub audio_token_id: HelixAudioTokenId,
+    pub audio_representation_version: HelixAudioRepresentationVersion,
+    pub encoder_layer_index: u32,
+    pub head_index: u32,
+    pub support: HelixAttentionSupportSummary,
+    pub frontier_debt: f32,
+}
+
+/// The reason a decoder-evidence record exists.
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum HelixDecoderEvidenceKind {
+    Decode {
+        input_token_id: u32,
+    },
+    VerifyPrediction {
+        verified_draft_index: u32,
+        draft_token_id: u32,
+        query_row: u32,
+        max_logit: f32,
+        draft_logit: f32,
+    },
+    VerifySeed {
+        query_row: u32,
+        next_token_seed: u32,
+        max_logit: f32,
+    },
+    PromptPrefill,
+}
+
+/// One decoder-evidence query result row.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixDecoderEvidenceRecord {
+    pub text_token_id: Option<HelixTextTokenId>,
+    pub query_position: HelixLogicalPosition,
+    pub expected_observed_audio: HelixAudioTokenRange,
+    pub records: Vec<HelixTextAttentionSupportRecord>,
+    pub kind: HelixDecoderEvidenceKind,
+}
+
+/// One header/query-row attention support record.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixQueryRowAttentionRecord {
+    pub query_position: HelixLogicalPosition,
+    pub decoder_layer_index: u32,
+    pub head_index: u32,
+    pub support: HelixAttentionSupportSummary,
+    pub audio_weights: Vec<f32>,
+}
+
+/// A full attention summary batch for one Helix pulse.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixAttentionSummaryBatch {
+    pub schema_version: u32,
+    pub pulse_id: HelixSchedulerPulseId,
+    pub audio_context_id: u64,
+    pub text_context_id: u64,
+    pub audio_representation_spans: Vec<HelixAudioRepresentationSpan>,
+    pub changed_audio_representation_spans: Vec<HelixAudioRepresentationSpan>,
+    pub text_support: Vec<HelixTextAttentionSupportRecord>,
+    pub header_text_support: Vec<HelixQueryRowAttentionRecord>,
+    pub audio_encoder_support: Vec<HelixAudioEncoderSupportRecord>,
+    pub decoder_evidence: Vec<HelixDecoderEvidenceRecord>,
+}
+
+/// A text token's audio-attention row.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixTextAttendanceRow {
+    pub text_token_id: HelixTextTokenId,
+    pub decoder_layer_index: u32,
+    pub head_index: u32,
+    pub dominant_audio_mass: f32,
+    pub total_audio_mass: f32,
+    pub observed_audio: HelixAudioTokenRange,
+    pub dominant_audio: HelixAudioTokenRange,
+    pub audio_weights: Vec<f32>,
+    pub queried_audio_weight: f32,
+}
+
+/// An audio-token attendance row for a text query.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixAudioAttendanceRow {
+    pub decoder_layer_index: u32,
+    pub head_index: u32,
+    pub dominant_audio_mass: f32,
+    pub total_audio_mass: f32,
+    pub center_audio_token: Option<f32>,
+    pub width_audio_tokens: Option<f32>,
+    pub observed_audio: HelixAudioTokenRange,
+    pub dominant_audio: HelixAudioTokenRange,
+    pub audio_weights: Vec<f32>,
+}
+
+/// A refresh-prompt attendance row.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixRefreshAttendanceRow {
+    pub query_position: HelixLogicalPosition,
+    pub decoder_layer_index: u32,
+    pub head_index: u32,
+    pub dominant_audio_mass: f32,
+    pub total_audio_mass: f32,
+    pub center_audio_token: Option<f32>,
+    pub width_audio_tokens: Option<f32>,
+    pub observed_audio: HelixAudioTokenRange,
+    pub dominant_audio: HelixAudioTokenRange,
+    pub audio_weights: Vec<f32>,
+}
+
+/// One encoder self-attention row over audio tokens.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixAudioSelfAttentionRow {
+    pub encoder_layer_index: u32,
+    pub head_index: u32,
+    pub audio_representation_version: HelixAudioRepresentationVersion,
+    pub dominant_audio_mass: f32,
+    pub total_audio_mass: f32,
+    pub center_audio_token: Option<f32>,
+    pub width_audio_tokens: Option<f32>,
+    pub observed_audio: HelixAudioTokenRange,
+    pub dominant_audio: HelixAudioTokenRange,
+    pub frontier_debt: f32,
+}
+
+/// One decoded transcript token.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct HelixTranscriptToken {
+    pub text_token_id: HelixTextTokenId,
+    pub decoded_in_pulse: HelixSchedulerPulseId,
+    pub text: String,
+    pub committed: bool,
+}
+
+/// Decoder-evidence aggregate counts by variant.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct HelixDecoderEvidenceVariantCounts {
+    pub decode: u64,
+    pub verify_prediction: u64,
+    pub verify_seed: u64,
+    pub prompt_prefill: u64,
+}
+
+/// Decoder-evidence coverage report.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct HelixDecoderEvidenceReport {
+    pub total_batches: u64,
+    pub batches_without_decoder_evidence: u64,
+    pub pulses_without_decoder_evidence: Vec<HelixSchedulerPulseId>,
+    pub variant_evidence_counts: HelixDecoderEvidenceVariantCounts,
+    pub variant_record_counts: HelixDecoderEvidenceVariantCounts,
+    pub observed_decoder_layer_indices: Vec<u32>,
+    pub observed_decoder_head_indices: Vec<u32>,
+}
+
+/// Rolling piece-evaluation snapshot for the trace viewer.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixPieceEvalSnapshot {
+    pub audio_now_ms: f64,
+    pub reference_words_available: u32,
+    pub hypothesis_words: u32,
+    pub substitutions: u32,
+    pub deletions: u32,
+    pub insertions: u32,
+    pub rolling_wer: f64,
+    pub s2d_matched_words: u32,
+    pub s2d_new_words: u32,
+    pub s2d_p50_ms: Option<f64>,
+    pub s2d_p90_ms: Option<f64>,
+    pub s2d_p100_ms: Option<f64>,
+    pub s2d_avg_ms: Option<f64>,
+    pub audio_frontier: u32,
+    pub displayed_frontier: u32,
+    pub committed_frontier: u32,
+    pub lag_ms: f64,
+}
+
+/// Reference text metadata for piece evaluation.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct HelixPieceEvalReference {
+    pub piece: String,
+    pub language: String,
+    pub words: Vec<String>,
+}
+
+/// Broad Helix trace-service surface mirrored as one generated bridge root.
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct HelixTraceServiceSurface {
+    pub meta: HelixStreamMeta,
+    pub pulse_rollup: Option<HelixPulseRollup>,
+    pub timeline: Vec<HelixStreamingTraceEvent>,
+    pub attention_batch: Option<HelixAttentionSummaryBatch>,
+    pub prompt_layout: Option<HelixPromptLayout>,
+    pub audio_attended_by: Vec<HelixTextAttendanceRow>,
+    pub text_attends_to: Vec<HelixAudioAttendanceRow>,
+    pub refresh_attends_to: Vec<HelixRefreshAttendanceRow>,
+    pub audio_token_provenance: Option<HelixAudioTokenProvenance>,
+    pub audio_provenance_for_pulse: Vec<HelixAudioTokenProvenance>,
+    pub audio_tokens_for_mel_frame: Vec<HelixAudioTokenId>,
+    pub audio_clip_for_audio_token: Option<HelixAudioClip>,
+    pub audio_clip_for_prompt: Option<HelixAudioClip>,
+    pub audio_clip_for_audio_range: Option<HelixAudioClip>,
+    pub mel_clip_for_prompt: Option<HelixMelClip>,
+    pub audio_self_attention: Vec<HelixAudioSelfAttentionRow>,
+    pub transcript: Vec<HelixTranscriptToken>,
+    pub pulse_attention_heatmap: Option<HelixPulseAttentionHeatmap>,
+    pub encoder_frontier: Option<HelixEncoderFrontierSeries>,
+    pub stream_metrics: HelixStreamMetrics,
+    pub verify_evidence: Option<HelixVerifyEvidenceDigest>,
+    pub decoder_evidence_report: HelixDecoderEvidenceReport,
+    pub pulse_evidence_snapshot: Option<HelixPulseEvidenceSnapshot>,
+    pub gpu_chrome_events_for_pulse: Vec<HelixChromeTraceEvent>,
+    pub run_info: Option<HelixRunInfo>,
+    pub piece_eval_reference: Option<HelixPieceEvalReference>,
+    pub piece_eval_for_pulse: Option<HelixPieceEvalSnapshot>,
+    pub encoder_provenance_report: Option<HelixEncoderProvenanceReport>,
+    pub pulse_bundle_fields: HelixPulseBundleFields,
+    pub pulse_bundle: HelixPulseBundle,
+    pub pulse_available: HelixPulseAvailable,
+}
 
 /// Tracey structured rule ID.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Facet)]

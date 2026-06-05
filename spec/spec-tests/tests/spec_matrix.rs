@@ -146,6 +146,14 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_image_processor_fixture() {
+            testbed::run_rpc_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_search_indexer_fixture() {
+            testbed::run_rpc_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -222,6 +230,10 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn rpc_stax_macos_record() {
+            testbed::run_rpc_stax_macos_record(SPEC);
+        }
+        #[test]
         fn rpc_echo_hotmeal_live_reload_event() {
             testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -244,6 +256,10 @@ mod lang_rust_transport_tcp {
         #[test]
         fn rpc_helix_pulse_bundle() {
             testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_helix_trace_service_surface() {
+            testbed::run_rpc_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn rpc_tracey_status() {
@@ -489,6 +505,14 @@ mod lang_rust_transport_tcp {
             testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn subject_calls_echo_dodeca_image_processor_fixture() {
+            testbed::run_subject_calls_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_search_indexer_fixture() {
+            testbed::run_subject_calls_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_styx_value() {
             testbed::run_subject_calls_echo_styx_value(SPEC);
         }
@@ -565,6 +589,10 @@ mod lang_rust_transport_tcp {
             testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn subject_calls_stax_macos_record() {
+            testbed::run_subject_calls_stax_macos_record(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_hotmeal_live_reload_event() {
             testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -587,6 +615,10 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_helix_pulse_bundle() {
             testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_trace_service_surface() {
+            testbed::run_subject_calls_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn subject_calls_tracey_status() {
@@ -827,6 +859,14 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_image_processor_fixture() {
+            testbed::run_rpc_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_search_indexer_fixture() {
+            testbed::run_rpc_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -903,6 +943,10 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn rpc_stax_macos_record() {
+            testbed::run_rpc_stax_macos_record(SPEC);
+        }
+        #[test]
         fn rpc_echo_hotmeal_live_reload_event() {
             testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -925,6 +969,10 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn rpc_helix_pulse_bundle() {
             testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_helix_trace_service_surface() {
+            testbed::run_rpc_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn rpc_tracey_status() {
@@ -1170,6 +1218,14 @@ mod lang_typescript_transport_tcp {
             testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn subject_calls_echo_dodeca_image_processor_fixture() {
+            testbed::run_subject_calls_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_search_indexer_fixture() {
+            testbed::run_subject_calls_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_styx_value() {
             testbed::run_subject_calls_echo_styx_value(SPEC);
         }
@@ -1246,6 +1302,10 @@ mod lang_typescript_transport_tcp {
             testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn subject_calls_stax_macos_record() {
+            testbed::run_subject_calls_stax_macos_record(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_hotmeal_live_reload_event() {
             testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -1268,6 +1328,10 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_helix_pulse_bundle() {
             testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_trace_service_surface() {
+            testbed::run_subject_calls_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn subject_calls_tracey_status() {
@@ -1508,6 +1572,14 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_image_processor_fixture() {
+            testbed::run_rpc_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_search_indexer_fixture() {
+            testbed::run_rpc_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -1584,6 +1656,10 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn rpc_stax_macos_record() {
+            testbed::run_rpc_stax_macos_record(SPEC);
+        }
+        #[test]
         fn rpc_echo_hotmeal_live_reload_event() {
             testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -1606,6 +1682,10 @@ mod lang_typescript_transport_ws {
         #[test]
         fn rpc_helix_pulse_bundle() {
             testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_helix_trace_service_surface() {
+            testbed::run_rpc_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn rpc_tracey_status() {
@@ -1851,6 +1931,14 @@ mod lang_typescript_transport_ws {
             testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn subject_calls_echo_dodeca_image_processor_fixture() {
+            testbed::run_subject_calls_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_search_indexer_fixture() {
+            testbed::run_subject_calls_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_styx_value() {
             testbed::run_subject_calls_echo_styx_value(SPEC);
         }
@@ -1927,6 +2015,10 @@ mod lang_typescript_transport_ws {
             testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn subject_calls_stax_macos_record() {
+            testbed::run_subject_calls_stax_macos_record(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_hotmeal_live_reload_event() {
             testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -1949,6 +2041,10 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_helix_pulse_bundle() {
             testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_trace_service_surface() {
+            testbed::run_subject_calls_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn subject_calls_tracey_status() {
@@ -2189,6 +2285,14 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_image_processor_fixture() {
+            testbed::run_rpc_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_search_indexer_fixture() {
+            testbed::run_rpc_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_styx_value() {
             testbed::run_rpc_echo_styx_value(SPEC);
         }
@@ -2265,6 +2369,10 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn rpc_stax_macos_record() {
+            testbed::run_rpc_stax_macos_record(SPEC);
+        }
+        #[test]
         fn rpc_echo_hotmeal_live_reload_event() {
             testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -2287,6 +2395,10 @@ mod lang_swift_transport_tcp {
         #[test]
         fn rpc_helix_pulse_bundle() {
             testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_helix_trace_service_surface() {
+            testbed::run_rpc_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn rpc_tracey_status() {
@@ -2532,6 +2644,14 @@ mod lang_swift_transport_tcp {
             testbed::run_subject_calls_dodeca_parse_and_render(SPEC);
         }
         #[test]
+        fn subject_calls_echo_dodeca_image_processor_fixture() {
+            testbed::run_subject_calls_echo_dodeca_image_processor_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_search_indexer_fixture() {
+            testbed::run_subject_calls_echo_dodeca_search_indexer_fixture(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_styx_value() {
             testbed::run_subject_calls_echo_styx_value(SPEC);
         }
@@ -2608,6 +2728,10 @@ mod lang_swift_transport_tcp {
             testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
         }
         #[test]
+        fn subject_calls_stax_macos_record() {
+            testbed::run_subject_calls_stax_macos_record(SPEC);
+        }
+        #[test]
         fn subject_calls_echo_hotmeal_live_reload_event() {
             testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
         }
@@ -2630,6 +2754,10 @@ mod lang_swift_transport_tcp {
         #[test]
         fn subject_calls_helix_pulse_bundle() {
             testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_trace_service_surface() {
+            testbed::run_subject_calls_helix_trace_service_surface(SPEC);
         }
         #[test]
         fn subject_calls_tracey_status() {

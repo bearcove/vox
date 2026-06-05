@@ -12,43 +12,53 @@ use spec_proto::{
     DibsMigrationStatusRequest, DibsRanMigration, DibsRow, DibsRowField, DibsSchemaInfo, DibsSort,
     DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaBuildMetadata,
     DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata, DodecaCodeExecutionResult,
-    DodecaCodeSample, DodecaDependencySource, DodecaDependencySpec, DodecaExecuteSamplesInput,
-    DodecaExecuteSamplesOutput, DodecaExecutionResult, DodecaExecutionStatus,
-    DodecaHtmlProcessInput, DodecaHtmlProcessResult, DodecaInjection, DodecaMinifyOptions,
-    DodecaMountLocalization, DodecaResolvedDependency, DodecaResponsiveImageInfo, DodecaRustConfig,
-    DodecaTemplateCall, DodecaWikiLinkRef, EcosystemBridgePayload, GnarlyPayload,
-    HelixAdmissionSegmentId, HelixArDecodeEarlyExitReason, HelixAudioClip,
-    HelixAudioRepresentationSpan, HelixAudioRepresentationVersion,
+    DodecaCodeSample, DodecaDecodedImage, DodecaDependencySource, DodecaDependencySpec,
+    DodecaExecuteSamplesInput, DodecaExecuteSamplesOutput, DodecaExecutionResult,
+    DodecaExecutionStatus, DodecaHtmlProcessInput, DodecaHtmlProcessResult,
+    DodecaImageProcessorFixture, DodecaImageResult, DodecaInjection, DodecaMinifyOptions,
+    DodecaMountLocalization, DodecaResizeInput, DodecaResolvedDependency,
+    DodecaResponsiveImageInfo, DodecaRustConfig, DodecaSearchFile, DodecaSearchIndexResult,
+    DodecaSearchIndexerFixture, DodecaSearchPage, DodecaTemplateCall, DodecaThumbhashInput,
+    DodecaWikiLinkRef, EcosystemBridgePayload, GnarlyPayload, HelixAdmissionSegmentId,
+    HelixArDecodeEarlyExitReason, HelixAttentionSummaryBatch, HelixAttentionSupportSummary,
+    HelixAudioAttendanceRow, HelixAudioClip, HelixAudioEncoderSupportRecord,
+    HelixAudioRepresentationSpan, HelixAudioRepresentationVersion, HelixAudioSelfAttentionRow,
     HelixAudioTokenAdmissionProvenance, HelixAudioTokenId, HelixAudioTokenMergeProvenance,
     HelixAudioTokenProvenance, HelixAudioTokenRange, HelixChromeTraceEvent, HelixConvStemChunkId,
-    HelixDecodeFact, HelixDecoderEvidenceFactCounts, HelixEncoderFactsSnapshot,
-    HelixEncoderFrontierLayer, HelixEncoderFrontierPoint, HelixEncoderFrontierSeries,
-    HelixEncoderProvenanceReport, HelixEncoderProvenanceViolation,
+    HelixDecodeFact, HelixDecoderEvidenceFactCounts, HelixDecoderEvidenceKind,
+    HelixDecoderEvidenceRecord, HelixDecoderEvidenceReport, HelixDecoderEvidenceVariantCounts,
+    HelixEncoderFactsSnapshot, HelixEncoderFrontierLayer, HelixEncoderFrontierPoint,
+    HelixEncoderFrontierSeries, HelixEncoderProvenanceReport, HelixEncoderProvenanceViolation,
     HelixEncoderProvenanceViolationKind, HelixLogicalPosition, HelixMelClip, HelixMelFrameRange,
-    HelixNativeEncoderWindowId, HelixPromptLayout, HelixPromptPrefillFact,
-    HelixPulseAttentionHeatmap, HelixPulseAvailable, HelixPulseBundle, HelixPulseBundleFields,
-    HelixPulseEvidenceSnapshot, HelixPulseRollup, HelixSchedulerPulseId, HelixStreamMetrics,
-    HelixStreamingTraceEvent, HelixTextTokenId, HelixTextTokenSnapshot, HelixTracePositionSpan,
-    HelixVerifyDraftRow, HelixVerifyDraftStatus, HelixVerifyEvidenceDigest, HelixVerifyOutcome,
+    HelixNativeEncoderWindowId, HelixPieceEvalReference, HelixPieceEvalSnapshot, HelixPromptLayout,
+    HelixPromptPrefillFact, HelixPulseAttentionHeatmap, HelixPulseAvailable, HelixPulseBundle,
+    HelixPulseBundleFields, HelixPulseEvidenceSnapshot, HelixPulseRollup,
+    HelixQueryRowAttentionRecord, HelixRefreshAttendanceRow, HelixRunInfo, HelixSchedulerPulseId,
+    HelixStreamMeta, HelixStreamMetrics, HelixStreamingTraceEvent, HelixTextAttendanceRow,
+    HelixTextAttentionSupportRecord, HelixTextTokenId, HelixTextTokenSnapshot,
+    HelixTracePositionSpan, HelixTraceServiceSurface, HelixTranscriptToken, HelixVerifyDraftRow,
+    HelixVerifyDraftStatus, HelixVerifyEvidenceDigest, HelixVerifyOutcome,
     HelixVerifyPredictionFact, HelixVerifySeedFact, HelixVerifySeedRow, HelixVerifySkippedReason,
     HotmealApplyPatchesResult, HotmealDomAttr, HotmealDomNode, HotmealLiveReloadEvent,
     HotmealPatchStep, LookupError, MathError, Measurement, Message, Person, Point, Profile, Record,
     Rectangle, Shape, Status, StaxFlameNode, StaxFlamegraphUpdate, StaxLinuxBrokerControlFixture,
     StaxLinuxDaemonStatus, StaxLinuxPerfSessionConfig, StaxLinuxPerfSessionError,
-    StaxLinuxWakingFieldOffsets, StaxLiveFilter, StaxOffCpuBreakdown, StaxSymbolRef, StaxTimeRange,
-    StaxViewParams, StyxEntry, StyxObject, StyxPayload, StyxScalar, StyxScalarKind, StyxSequence,
-    StyxSpan, StyxTag, StyxValue, Tag, TaggedPoint, Testbed, TraceyCodeRef, TraceyCoverageChange,
-    TraceyDataUpdate, TraceyDeltaSummary, TraceyHealthResponse, TraceyHoverInfo, TraceyImplStatus,
-    TraceyLspCodeAction, TraceyLspCodeLens, TraceyLspCompletionItem, TraceyLspDiagnostic,
-    TraceyLspDocumentRequest, TraceyLspFileDiagnostics, TraceyLspInlayHint,
-    TraceyLspInlayHintsRequest, TraceyLspLocation, TraceyLspPositionRequest,
-    TraceyLspReferencesRequest, TraceyLspRenameRequest, TraceyLspSemanticToken, TraceyLspSymbol,
-    TraceyLspTextEdit, TraceyPrepareRenameResult, TraceyReloadResponse, TraceyRuleCoverage,
-    TraceyRuleId, TraceyRuleInfo, TraceyRuleRef, TraceySectionRules, TraceyStaleEntry,
-    TraceyStaleRequest, TraceyStaleResponse, TraceyStatusResponse, TraceyUncoveredRequest,
-    TraceyUncoveredResponse, TraceyUnmappedEntry, TraceyUnmappedRequest, TraceyUnmappedResponse,
-    TraceyUnmappedUnit, TraceyUntestedRequest, TraceyUntestedResponse, TraceyValidateRequest,
-    TraceyValidationError, TraceyValidationErrorCode, TraceyValidationResult, Tree,
+    StaxLinuxWakingFieldOffsets, StaxLiveFilter, StaxMacKdBuf, StaxMacKdBufBatch,
+    StaxMacRecordError, StaxMacRecordSummary, StaxMacSessionConfig, StaxOffCpuBreakdown,
+    StaxSymbolRef, StaxTimeRange, StaxViewParams, StyxEntry, StyxObject, StyxPayload, StyxScalar,
+    StyxScalarKind, StyxSequence, StyxSpan, StyxTag, StyxValue, Tag, TaggedPoint, Testbed,
+    TraceyCodeRef, TraceyCoverageChange, TraceyDataUpdate, TraceyDeltaSummary,
+    TraceyHealthResponse, TraceyHoverInfo, TraceyImplStatus, TraceyLspCodeAction,
+    TraceyLspCodeLens, TraceyLspCompletionItem, TraceyLspDiagnostic, TraceyLspDocumentRequest,
+    TraceyLspFileDiagnostics, TraceyLspInlayHint, TraceyLspInlayHintsRequest, TraceyLspLocation,
+    TraceyLspPositionRequest, TraceyLspReferencesRequest, TraceyLspRenameRequest,
+    TraceyLspSemanticToken, TraceyLspSymbol, TraceyLspTextEdit, TraceyPrepareRenameResult,
+    TraceyReloadResponse, TraceyRuleCoverage, TraceyRuleId, TraceyRuleInfo, TraceyRuleRef,
+    TraceySectionRules, TraceyStaleEntry, TraceyStaleRequest, TraceyStaleResponse,
+    TraceyStatusResponse, TraceyUncoveredRequest, TraceyUncoveredResponse, TraceyUnmappedEntry,
+    TraceyUnmappedRequest, TraceyUnmappedResponse, TraceyUnmappedUnit, TraceyUntestedRequest,
+    TraceyUntestedResponse, TraceyValidateRequest, TraceyValidationError,
+    TraceyValidationErrorCode, TraceyValidationResult, Tree,
 };
 use spec_proto::{
     DodecaDataFormat, DodecaFrontmatter, DodecaLoadDataResult, DodecaMarkdownHeading,
@@ -201,6 +211,72 @@ pub fn sample_dodeca_parse_result() -> DodecaParseResult {
                 },
             ],
         }),
+    }
+}
+
+fn byte_ramp(len: usize, seed: u8) -> Vec<u8> {
+    (0..len).map(|i| seed.wrapping_add(i as u8)).collect()
+}
+
+pub fn sample_dodeca_decoded_image(seed: u8, width: u32, height: u32) -> DodecaDecodedImage {
+    DodecaDecodedImage {
+        pixels: byte_ramp(width as usize * height as usize * 4, seed),
+        width,
+        height,
+        channels: 4,
+    }
+}
+
+pub fn sample_dodeca_image_processor_fixture() -> DodecaImageProcessorFixture {
+    let decoded = sample_dodeca_decoded_image(0x20, 96, 64);
+    let resized = sample_dodeca_decoded_image(0x80, 48, 32);
+    DodecaImageProcessorFixture {
+        png_data: byte_ramp(16_384, 0),
+        decoded_result: DodecaImageResult::Success {
+            image: decoded.clone(),
+        },
+        resize_input: DodecaResizeInput {
+            pixels: decoded.pixels.clone(),
+            width: decoded.width,
+            height: decoded.height,
+            channels: decoded.channels,
+            target_width: resized.width,
+        },
+        resize_result: DodecaImageResult::Success { image: resized },
+        thumbhash_input: DodecaThumbhashInput {
+            pixels: decoded.pixels,
+            width: decoded.width,
+            height: decoded.height,
+        },
+        thumbhash_result: DodecaImageResult::ThumbhashSuccess {
+            data_url: "data:image/thumbhash;base64,BwgJCgsMDQ4PEA==".to_string(),
+        },
+        error_result: DodecaImageResult::Error {
+            message: "unsupported color profile in source image".to_string(),
+        },
+    }
+}
+
+pub fn sample_dodeca_search_indexer_fixture() -> DodecaSearchIndexerFixture {
+    let pages = (0..32)
+        .map(|i| DodecaSearchPage {
+            url: format!("/guide/topic-{i}/"),
+            source: format!("content/guide/topic-{i}.md"),
+            html: format!("<article><h1>Topic {i}</h1><p>Search body {i}</p></article>"),
+        })
+        .collect();
+    let files = (0..8)
+        .map(|i| DodecaSearchFile {
+            path: format!("public/search/chunk-{i}.json"),
+            contents: byte_ramp(1_024, (i * 17) as u8),
+        })
+        .collect();
+    DodecaSearchIndexerFixture {
+        pages,
+        result: DodecaSearchIndexResult::Success { files },
+        error_result: DodecaSearchIndexResult::Error {
+            message: "search index could not write public/search/index.json".to_string(),
+        },
     }
 }
 
@@ -1316,6 +1392,84 @@ pub fn sample_stax_linux_broker_control_fixture() -> StaxLinuxBrokerControlFixtu
     }
 }
 
+pub fn sample_stax_macos_config() -> StaxMacSessionConfig {
+    StaxMacSessionConfig {
+        target_pid: 42_424,
+        frequency_hz: 997,
+        buf_records: 1_048_576,
+        samplers: 0x1 | 0x2 | 0x10,
+        pmu_event_configs: vec![0xfeed_beef, 0x1_0000_0001],
+        class_mask: 0b1011,
+        filter_range_value1: 0x3100_0000,
+        filter_range_value2: 0x31ff_ffff,
+        typefilter_cscs: vec![0x3101, 0x3102, 0x3108],
+    }
+}
+
+pub fn sample_stax_macos_batches() -> Vec<StaxMacKdBufBatch> {
+    vec![
+        StaxMacKdBufBatch {
+            records: vec![
+                StaxMacKdBuf {
+                    timestamp: 900_000,
+                    arg1: 0x1000,
+                    arg2: 0x2000,
+                    arg3: 0x3000,
+                    arg4: 0x4000,
+                    arg5: 0xfeed_face,
+                    debugid: 0x3101_0004,
+                    cpuid: 3,
+                    unused: 0,
+                },
+                StaxMacKdBuf {
+                    timestamp: 900_128,
+                    arg1: 0x1008,
+                    arg2: 0x2008,
+                    arg3: 0x3008,
+                    arg4: 0x4008,
+                    arg5: 0xfeed_face,
+                    debugid: 0x3101_0008,
+                    cpuid: 4,
+                    unused: 0,
+                },
+            ],
+            read_started_mach_ticks: 899_900,
+            drained_mach_ticks: 900_140,
+            queued_for_send_mach_ticks: 900_150,
+            send_started_mach_ticks: 900_180,
+            drained_at_unix_ns: 1_801_000_000_123_456_789,
+        },
+        StaxMacKdBufBatch {
+            records: vec![StaxMacKdBuf {
+                timestamp: 900_256,
+                arg1: 0x1010,
+                arg2: 0x2010,
+                arg3: 0x3010,
+                arg4: 0x4010,
+                arg5: 0xfeed_face,
+                debugid: 0x3101_000c,
+                cpuid: 5,
+                unused: 0,
+            }],
+            read_started_mach_ticks: 900_200,
+            drained_mach_ticks: 900_270,
+            queued_for_send_mach_ticks: 900_290,
+            send_started_mach_ticks: 900_310,
+            drained_at_unix_ns: 1_801_000_000_123_556_789,
+        },
+    ]
+}
+
+pub fn sample_stax_macos_record_summary() -> StaxMacRecordSummary {
+    StaxMacRecordSummary {
+        records_drained: sample_stax_macos_batches()
+            .iter()
+            .map(|batch| batch.records.len() as u64)
+            .sum(),
+        session_ns: 240_000,
+    }
+}
+
 pub fn sample_hotmeal_live_reload_events() -> Vec<HotmealLiveReloadEvent> {
     vec![
         HotmealLiveReloadEvent::Reload,
@@ -1912,6 +2066,292 @@ pub fn sample_helix_pulse_bundle() -> HelixPulseBundle {
         ]),
         verify_evidence: Some(sample_helix_verify_evidence()),
         scheduler_snapshot: Some(sample_helix_pulse_evidence()),
+    }
+}
+
+fn sample_helix_audio_clip() -> HelixAudioClip {
+    HelixAudioClip {
+        sample_rate: 16_000,
+        first_sample: 262_144,
+        samples: vec![-0.25, -0.10, 0.0, 0.10, 0.25, 0.50, 0.25, 0.0],
+    }
+}
+
+fn sample_helix_mel_clip() -> HelixMelClip {
+    HelixMelClip {
+        num_mel_bins: 4,
+        first_mel_frame: 128,
+        num_mel_frames: 3,
+        values: vec![
+            0.10, 0.20, 0.30, 0.40, 0.15, 0.25, 0.35, 0.45, 0.05, 0.12, 0.18, 0.22,
+        ],
+        min_value: 0.05,
+        max_value: 0.45,
+        corpus_min_value: -1.25,
+        corpus_max_value: 2.75,
+    }
+}
+
+fn sample_helix_chrome_events() -> Vec<HelixChromeTraceEvent> {
+    vec![HelixChromeTraceEvent {
+        name: "metal.dispatch".to_string(),
+        cat: "gpu".to_string(),
+        ph: "X".to_string(),
+        ts: 1_006_000.0,
+        dur: Some(420.0),
+        pid: 2,
+        tid: 7,
+        s: None,
+        args: BTreeMap::new(),
+    }]
+}
+
+fn sample_helix_support() -> HelixAttentionSupportSummary {
+    HelixAttentionSupportSummary {
+        total_audio_mass: 0.42,
+        observed_audio: helix_audio_range(10, 18),
+        dominant_audio: helix_audio_range(16, 18),
+        dominant_audio_mass: 0.21,
+        center_audio_token: Some(17.25),
+        width_audio_tokens: Some(3.5),
+    }
+}
+
+fn sample_helix_text_support() -> Vec<HelixTextAttentionSupportRecord> {
+    vec![HelixTextAttentionSupportRecord {
+        text_token_id: HelixTextTokenId(47),
+        query_position: HelixLogicalPosition(118),
+        decoder_layer_index: 2,
+        head_index: 3,
+        support: sample_helix_support(),
+        audio_weights: vec![0.03125, 0.0625, 0.125, 0.25, 0.5],
+    }]
+}
+
+fn sample_helix_attention_batch() -> HelixAttentionSummaryBatch {
+    HelixAttentionSummaryBatch {
+        schema_version: 2,
+        pulse_id: HelixSchedulerPulseId(102),
+        audio_context_id: 77,
+        text_context_id: 99,
+        audio_representation_spans: vec![helix_audio_span(10, 18, 7)],
+        changed_audio_representation_spans: vec![helix_audio_span(16, 18, 8)],
+        text_support: sample_helix_text_support(),
+        header_text_support: vec![HelixQueryRowAttentionRecord {
+            query_position: HelixLogicalPosition(80),
+            decoder_layer_index: 1,
+            head_index: 0,
+            support: sample_helix_support(),
+            audio_weights: vec![0.125, 0.25, 0.375, 0.25],
+        }],
+        audio_encoder_support: vec![HelixAudioEncoderSupportRecord {
+            audio_token_id: HelixAudioTokenId(16),
+            audio_representation_version: HelixAudioRepresentationVersion(7),
+            encoder_layer_index: 0,
+            head_index: 1,
+            support: sample_helix_support(),
+            frontier_debt: 0.125,
+        }],
+        decoder_evidence: vec![
+            HelixDecoderEvidenceRecord {
+                text_token_id: Some(HelixTextTokenId(47)),
+                query_position: HelixLogicalPosition(118),
+                expected_observed_audio: helix_audio_range(10, 18),
+                records: sample_helix_text_support(),
+                kind: HelixDecoderEvidenceKind::Decode {
+                    input_token_id: 1401,
+                },
+            },
+            HelixDecoderEvidenceRecord {
+                text_token_id: Some(HelixTextTokenId(45)),
+                query_position: HelixLogicalPosition(116),
+                expected_observed_audio: helix_audio_range(18, 26),
+                records: sample_helix_text_support(),
+                kind: HelixDecoderEvidenceKind::VerifyPrediction {
+                    verified_draft_index: 1,
+                    draft_token_id: 927,
+                    query_row: 2,
+                    max_logit: 11.25,
+                    draft_logit: 9.875,
+                },
+            },
+            HelixDecoderEvidenceRecord {
+                text_token_id: None,
+                query_position: HelixLogicalPosition(117),
+                expected_observed_audio: helix_audio_range(32, 40),
+                records: sample_helix_text_support(),
+                kind: HelixDecoderEvidenceKind::VerifySeed {
+                    query_row: 3,
+                    next_token_seed: 1401,
+                    max_logit: 10.75,
+                },
+            },
+            HelixDecoderEvidenceRecord {
+                text_token_id: None,
+                query_position: HelixLogicalPosition(80),
+                expected_observed_audio: helix_audio_range(10, 18),
+                records: sample_helix_text_support(),
+                kind: HelixDecoderEvidenceKind::PromptPrefill,
+            },
+        ],
+    }
+}
+
+pub fn sample_helix_trace_service_surface() -> HelixTraceServiceSurface {
+    HelixTraceServiceSurface {
+        meta: HelixStreamMeta {
+            schema_version: 2,
+            pulse_ids: vec![HelixSchedulerPulseId(101), HelixSchedulerPulseId(102)],
+            timeline_event_count: 420,
+            attention_batch_count: 17,
+        },
+        pulse_rollup: Some(sample_helix_pulse_rollup()),
+        timeline: sample_helix_timeline(),
+        attention_batch: Some(sample_helix_attention_batch()),
+        prompt_layout: Some(sample_helix_prompt_layout()),
+        audio_attended_by: vec![HelixTextAttendanceRow {
+            text_token_id: HelixTextTokenId(47),
+            decoder_layer_index: 2,
+            head_index: 3,
+            dominant_audio_mass: 0.21,
+            total_audio_mass: 0.42,
+            observed_audio: helix_audio_range(10, 18),
+            dominant_audio: helix_audio_range(16, 18),
+            audio_weights: vec![0.03125, 0.0625, 0.125, 0.25, 0.5],
+            queried_audio_weight: 0.25,
+        }],
+        text_attends_to: vec![HelixAudioAttendanceRow {
+            decoder_layer_index: 2,
+            head_index: 3,
+            dominant_audio_mass: 0.21,
+            total_audio_mass: 0.42,
+            center_audio_token: Some(17.25),
+            width_audio_tokens: Some(3.5),
+            observed_audio: helix_audio_range(10, 18),
+            dominant_audio: helix_audio_range(16, 18),
+            audio_weights: vec![0.03125, 0.0625, 0.125, 0.25, 0.5],
+        }],
+        refresh_attends_to: vec![HelixRefreshAttendanceRow {
+            query_position: HelixLogicalPosition(80),
+            decoder_layer_index: 1,
+            head_index: 0,
+            dominant_audio_mass: 0.375,
+            total_audio_mass: 1.0,
+            center_audio_token: Some(15.5),
+            width_audio_tokens: Some(4.0),
+            observed_audio: helix_audio_range(10, 18),
+            dominant_audio: helix_audio_range(14, 18),
+            audio_weights: vec![0.125, 0.25, 0.375, 0.25],
+        }],
+        audio_token_provenance: sample_helix_audio_provenance().into_iter().next(),
+        audio_provenance_for_pulse: sample_helix_audio_provenance(),
+        audio_tokens_for_mel_frame: vec![HelixAudioTokenId(16), HelixAudioTokenId(17)],
+        audio_clip_for_audio_token: Some(sample_helix_audio_clip()),
+        audio_clip_for_prompt: Some(sample_helix_audio_clip()),
+        audio_clip_for_audio_range: Some(sample_helix_audio_clip()),
+        mel_clip_for_prompt: Some(sample_helix_mel_clip()),
+        audio_self_attention: vec![HelixAudioSelfAttentionRow {
+            encoder_layer_index: 0,
+            head_index: 1,
+            audio_representation_version: HelixAudioRepresentationVersion(7),
+            dominant_audio_mass: 0.25,
+            total_audio_mass: 0.5,
+            center_audio_token: Some(16.5),
+            width_audio_tokens: Some(2.0),
+            observed_audio: helix_audio_range(10, 18),
+            dominant_audio: helix_audio_range(16, 18),
+            frontier_debt: 0.125,
+        }],
+        transcript: vec![
+            HelixTranscriptToken {
+                text_token_id: HelixTextTokenId(40),
+                decoded_in_pulse: HelixSchedulerPulseId(101),
+                text: "hel".to_string(),
+                committed: true,
+            },
+            HelixTranscriptToken {
+                text_token_id: HelixTextTokenId(41),
+                decoded_in_pulse: HelixSchedulerPulseId(102),
+                text: "ix".to_string(),
+                committed: false,
+            },
+        ],
+        pulse_attention_heatmap: Some(sample_helix_attention_heatmap()),
+        encoder_frontier: Some(sample_helix_encoder_frontier()),
+        stream_metrics: sample_helix_stream_metrics(),
+        verify_evidence: Some(sample_helix_verify_evidence()),
+        decoder_evidence_report: HelixDecoderEvidenceReport {
+            total_batches: 7,
+            batches_without_decoder_evidence: 1,
+            pulses_without_decoder_evidence: vec![HelixSchedulerPulseId(101)],
+            variant_evidence_counts: HelixDecoderEvidenceVariantCounts {
+                decode: 12,
+                verify_prediction: 6,
+                verify_seed: 3,
+                prompt_prefill: 4,
+            },
+            variant_record_counts: HelixDecoderEvidenceVariantCounts {
+                decode: 96,
+                verify_prediction: 48,
+                verify_seed: 24,
+                prompt_prefill: 32,
+            },
+            observed_decoder_layer_indices: vec![0, 1, 2],
+            observed_decoder_head_indices: vec![0, 1, 2, 3],
+        },
+        pulse_evidence_snapshot: Some(sample_helix_pulse_evidence()),
+        gpu_chrome_events_for_pulse: sample_helix_chrome_events(),
+        run_info: Some(HelixRunInfo {
+            backend: "metal".to_string(),
+            model_dir: "/models/helix-mini".to_string(),
+            input: "helix fixture".to_string(),
+            piece: Some("demo".to_string()),
+            pulse_ms: 8,
+            audio_ring_capacity: 4096,
+            text_ring_capacity: 512,
+            commit_revisable_tail_text_tokens: 4,
+            revise_logit_margin: 0.75,
+            sample_rate: 16_000,
+            mel_hop_samples: 160,
+            num_mel_bins: 80,
+            num_mel_frames: 384,
+            audio_tokens_per_chunk: 2,
+            native_window_tokens: 16,
+            realtime_pacing: true,
+            profile_phases: true,
+            attention_trace_schema_version: 3,
+            trace_server_schema_version: 5,
+        }),
+        piece_eval_reference: Some(HelixPieceEvalReference {
+            piece: "demo".to_string(),
+            language: "en".to_string(),
+            words: vec!["helix".to_string(), "fixture".to_string()],
+        }),
+        piece_eval_for_pulse: Some(HelixPieceEvalSnapshot {
+            audio_now_ms: 1234.5,
+            reference_words_available: 16,
+            hypothesis_words: 15,
+            substitutions: 1,
+            deletions: 0,
+            insertions: 1,
+            rolling_wer: 0.125,
+            s2d_matched_words: 14,
+            s2d_new_words: 2,
+            s2d_p50_ms: Some(41.5),
+            s2d_p90_ms: Some(75.0),
+            s2d_p100_ms: Some(101.25),
+            s2d_avg_ms: Some(50.0),
+            audio_frontier: 160,
+            displayed_frontier: 156,
+            committed_frontier: 152,
+            lag_ms: 250.0,
+        }),
+        encoder_provenance_report: Some(sample_helix_encoder_provenance_report()),
+        pulse_bundle_fields: sample_helix_pulse_bundle_fields(),
+        pulse_bundle: sample_helix_pulse_bundle(),
+        pulse_available: HelixPulseAvailable {
+            pulse_id: HelixSchedulerPulseId(102),
+        },
     }
 }
 
@@ -2977,6 +3417,20 @@ impl Testbed for TestbedService {
         }
     }
 
+    async fn echo_dodeca_image_processor_fixture(
+        &self,
+        fixture: DodecaImageProcessorFixture,
+    ) -> DodecaImageProcessorFixture {
+        fixture
+    }
+
+    async fn echo_dodeca_search_indexer_fixture(
+        &self,
+        fixture: DodecaSearchIndexerFixture,
+    ) -> DodecaSearchIndexerFixture {
+        fixture
+    }
+
     async fn echo_styx_value(&self, value: StyxValue) -> StyxValue {
         value
     }
@@ -3099,6 +3553,21 @@ impl Testbed for TestbedService {
         fixture
     }
 
+    async fn stax_macos_record(
+        &self,
+        config: StaxMacSessionConfig,
+        records: Tx<StaxMacKdBufBatch>,
+    ) -> Result<StaxMacRecordSummary, StaxMacRecordError> {
+        assert_eq!(config, sample_stax_macos_config());
+        for batch in sample_stax_macos_batches() {
+            if records.send(batch).await.is_err() {
+                break;
+            }
+        }
+        records.close(Default::default()).await.ok();
+        Ok(sample_stax_macos_record_summary())
+    }
+
     async fn echo_hotmeal_live_reload_event(
         &self,
         event: HotmealLiveReloadEvent,
@@ -3139,6 +3608,10 @@ impl Testbed for TestbedService {
         _fields: HelixPulseBundleFields,
     ) -> HelixPulseBundle {
         sample_helix_pulse_bundle()
+    }
+
+    async fn helix_trace_service_surface(&self) -> HelixTraceServiceSurface {
+        sample_helix_trace_service_surface()
     }
 
     async fn tracey_status(&self) -> TraceyStatusResponse {

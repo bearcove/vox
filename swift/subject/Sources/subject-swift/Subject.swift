@@ -393,6 +393,18 @@ struct TestbedService: TestbedHandler {
         return .error(message: "unexpected parse input")
     }
 
+    func echoDodecaImageProcessorFixture(fixture: DodecaImageProcessorFixture) async throws
+        -> DodecaImageProcessorFixture
+    {
+        fixture
+    }
+
+    func echoDodecaSearchIndexerFixture(fixture: DodecaSearchIndexerFixture) async throws
+        -> DodecaSearchIndexerFixture
+    {
+        fixture
+    }
+
     func echoStyxValue(value: StyxValue) async throws -> StyxValue {
         value
     }
@@ -533,6 +545,24 @@ struct TestbedService: TestbedHandler {
         fixture
     }
 
+    func staxMacosRecord(
+        config: StaxMacSessionConfig,
+        records: Tx<StaxMacKdBufBatch>
+    ) async throws -> Result<StaxMacRecordSummary, StaxMacRecordError> {
+        guard sameReflecting(config, sampleStaxMacosConfig()) else {
+            return .failure(.sysctl(op: "config", message: "unexpected macOS Stax config"))
+        }
+        for batch in sampleStaxMacosBatches() {
+            do {
+                try await records.send(batch)
+            } catch {
+                break
+            }
+        }
+        records.close()
+        return .success(sampleStaxMacosRecordSummary())
+    }
+
     func echoHotmealLiveReloadEvent(event: HotmealLiveReloadEvent) async throws
         -> HotmealLiveReloadEvent
     {
@@ -570,6 +600,10 @@ struct TestbedService: TestbedHandler {
         -> HelixPulseBundle
     {
         sampleHelixPulseBundle()
+    }
+
+    func helixTraceServiceSurface() async throws -> HelixTraceServiceSurface {
+        sampleHelixTraceServiceSurface()
     }
 
     func traceyStatus() async throws -> TraceyStatusResponse {
@@ -1055,6 +1089,66 @@ func sampleDodecaParseResult() -> DodecaParseResult {
                 ),
             ]
         )
+    )
+}
+
+func byteRamp(_ length: Int, seed: UInt8) -> Data {
+    Data((0..<length).map { UInt8((Int(seed) + $0) & 0xff) })
+}
+
+func sampleDodecaDecodedImage(seed: UInt8, width: UInt32, height: UInt32) -> DodecaDecodedImage {
+    DodecaDecodedImage(
+        pixels: byteRamp(Int(width) * Int(height) * 4, seed: seed),
+        width: width,
+        height: height,
+        channels: 4
+    )
+}
+
+func sampleDodecaImageProcessorFixture() -> DodecaImageProcessorFixture {
+    let decoded = sampleDodecaDecodedImage(seed: 0x20, width: 96, height: 64)
+    let resized = sampleDodecaDecodedImage(seed: 0x80, width: 48, height: 32)
+    return DodecaImageProcessorFixture(
+        pngData: byteRamp(16_384, seed: 0),
+        decodedResult: .success(image: decoded),
+        resizeInput: DodecaResizeInput(
+            pixels: decoded.pixels,
+            width: decoded.width,
+            height: decoded.height,
+            channels: decoded.channels,
+            targetWidth: resized.width
+        ),
+        resizeResult: .success(image: resized),
+        thumbhashInput: DodecaThumbhashInput(
+            pixels: decoded.pixels,
+            width: decoded.width,
+            height: decoded.height
+        ),
+        thumbhashResult: .thumbhashSuccess(
+            dataUrl: "data:image/thumbhash;base64,BwgJCgsMDQ4PEA=="
+        ),
+        errorResult: .error(message: "unsupported color profile in source image")
+    )
+}
+
+func sampleDodecaSearchIndexerFixture() -> DodecaSearchIndexerFixture {
+    let pages = (0..<32).map { i in
+        DodecaSearchPage(
+            url: "/guide/topic-\(i)/",
+            source: "content/guide/topic-\(i).md",
+            html: "<article><h1>Topic \(i)</h1><p>Search body \(i)</p></article>"
+        )
+    }
+    let files = (0..<8).map { i in
+        DodecaSearchFile(
+            path: "public/search/chunk-\(i).json",
+            contents: byteRamp(1_024, seed: UInt8(i * 17))
+        )
+    }
+    return DodecaSearchIndexerFixture(
+        pages: pages,
+        result: .success(files: files),
+        errorResult: .error(message: "search index could not write public/search/index.json")
     )
 }
 
@@ -1882,6 +1976,103 @@ func sampleStaxLinuxBrokerControlFixture() -> StaxLinuxBrokerControlFixture {
     )
 }
 
+func sampleStaxMacosConfig() -> StaxMacSessionConfig {
+    StaxMacSessionConfig(
+        targetPid: 42_424,
+        frequencyHz: 997,
+        bufRecords: 1_048_576,
+        samplers: 0x13,
+        pmuEventConfigs: [0xfeed_beef, 0x1_0000_0001],
+        classMask: 0b1011,
+        filterRangeValue1: 0x3100_0000,
+        filterRangeValue2: 0x31ff_ffff,
+        typefilterCscs: [0x3101, 0x3102, 0x3108]
+    )
+}
+
+func sampleStaxMacosBatches() -> [StaxMacKdBufBatch] {
+    [
+        StaxMacKdBufBatch(
+            records: [
+                StaxMacKdBuf(
+                    timestamp: 900_000,
+                    arg1: 0x1000,
+                    arg2: 0x2000,
+                    arg3: 0x3000,
+                    arg4: 0x4000,
+                    arg5: 0xfeed_face,
+                    debugid: 0x3101_0004,
+                    cpuid: 3,
+                    unused: 0
+                ),
+                StaxMacKdBuf(
+                    timestamp: 900_128,
+                    arg1: 0x1008,
+                    arg2: 0x2008,
+                    arg3: 0x3008,
+                    arg4: 0x4008,
+                    arg5: 0xfeed_face,
+                    debugid: 0x3101_0008,
+                    cpuid: 4,
+                    unused: 0
+                ),
+            ],
+            readStartedMachTicks: 899_900,
+            drainedMachTicks: 900_140,
+            queuedForSendMachTicks: 900_150,
+            sendStartedMachTicks: 900_180,
+            drainedAtUnixNs: 1_801_000_000_123_456_789
+        ),
+        StaxMacKdBufBatch(
+            records: [
+                StaxMacKdBuf(
+                    timestamp: 900_256,
+                    arg1: 0x1010,
+                    arg2: 0x2010,
+                    arg3: 0x3010,
+                    arg4: 0x4010,
+                    arg5: 0xfeed_face,
+                    debugid: 0x3101_000c,
+                    cpuid: 5,
+                    unused: 0
+                )
+            ],
+            readStartedMachTicks: 900_200,
+            drainedMachTicks: 900_270,
+            queuedForSendMachTicks: 900_290,
+            sendStartedMachTicks: 900_310,
+            drainedAtUnixNs: 1_801_000_000_123_556_789
+        ),
+    ]
+}
+
+func sampleStaxMacosRecordSummary() -> StaxMacRecordSummary {
+    StaxMacRecordSummary(
+        recordsDrained: UInt64(sampleStaxMacosBatches().reduce(0) { $0 + $1.records.count }),
+        sessionNs: 240_000
+    )
+}
+
+func sameStaxMacKdBuf(_ lhs: StaxMacKdBuf, _ rhs: StaxMacKdBuf) -> Bool {
+    lhs.timestamp == rhs.timestamp && lhs.arg1 == rhs.arg1 && lhs.arg2 == rhs.arg2
+        && lhs.arg3 == rhs.arg3 && lhs.arg4 == rhs.arg4 && lhs.arg5 == rhs.arg5
+        && lhs.debugid == rhs.debugid && lhs.cpuid == rhs.cpuid && lhs.unused == rhs.unused
+}
+
+func sameStaxMacBatch(_ lhs: StaxMacKdBufBatch, _ rhs: StaxMacKdBufBatch) -> Bool {
+    lhs.records.count == rhs.records.count
+        && zip(lhs.records, rhs.records).allSatisfy { sameStaxMacKdBuf($0, $1) }
+        && lhs.readStartedMachTicks == rhs.readStartedMachTicks
+        && lhs.drainedMachTicks == rhs.drainedMachTicks
+        && lhs.queuedForSendMachTicks == rhs.queuedForSendMachTicks
+        && lhs.sendStartedMachTicks == rhs.sendStartedMachTicks
+        && lhs.drainedAtUnixNs == rhs.drainedAtUnixNs
+}
+
+func sameStaxMacBatches(_ lhs: [StaxMacKdBufBatch], _ rhs: [StaxMacKdBufBatch]) -> Bool {
+    lhs.count == rhs.count && zip(lhs, rhs).allSatisfy { sameStaxMacBatch($0, $1) }
+}
+
 func sampleHotmealLiveReloadEvents() -> [HotmealLiveReloadEvent] {
     [
         .reload,
@@ -2481,6 +2672,291 @@ func sampleHelixPulseBundle() -> HelixPulseBundle {
     )
 }
 
+func sampleHelixAudioClip() -> HelixAudioClip {
+    HelixAudioClip(
+        sampleRate: 16_000,
+        firstSample: 262_144,
+        samples: [-0.25, -0.10, 0.0, 0.10, 0.25, 0.50, 0.25, 0.0]
+    )
+}
+
+func sampleHelixMelClip() -> HelixMelClip {
+    HelixMelClip(
+        numMelBins: 4,
+        firstMelFrame: 128,
+        numMelFrames: 3,
+        values: [
+            0.10, 0.20, 0.30, 0.40, 0.15, 0.25, 0.35, 0.45, 0.05, 0.12, 0.18,
+            0.22,
+        ],
+        minValue: 0.05,
+        maxValue: 0.45,
+        corpusMinValue: -1.25,
+        corpusMaxValue: 2.75
+    )
+}
+
+func sampleHelixChromeEvents() -> [HelixChromeTraceEvent] {
+    [
+        HelixChromeTraceEvent(
+            name: "metal.dispatch",
+            cat: "gpu",
+            ph: "X",
+            ts: 1_006_000.0,
+            dur: 420.0,
+            pid: 2,
+            tid: 7,
+            s: nil,
+            args: [:]
+        )
+    ]
+}
+
+func sampleHelixSupport() -> HelixAttentionSupportSummary {
+    HelixAttentionSupportSummary(
+        totalAudioMass: 0.42,
+        observedAudio: helixAudioRange(10, 18),
+        dominantAudio: helixAudioRange(16, 18),
+        dominantAudioMass: 0.21,
+        centerAudioToken: 17.25,
+        widthAudioTokens: 3.5
+    )
+}
+
+func sampleHelixTextSupport() -> [HelixTextAttentionSupportRecord] {
+    [
+        HelixTextAttentionSupportRecord(
+            textTokenId: 47,
+            queryPosition: 118,
+            decoderLayerIndex: 2,
+            headIndex: 3,
+            support: sampleHelixSupport(),
+            audioWeights: [0.03125, 0.0625, 0.125, 0.25, 0.5]
+        )
+    ]
+}
+
+func sampleHelixAttentionBatch() -> HelixAttentionSummaryBatch {
+    HelixAttentionSummaryBatch(
+        schemaVersion: 2,
+        pulseId: 102,
+        audioContextId: 77,
+        textContextId: 99,
+        audioRepresentationSpans: [helixAudioSpan(10, 18, 7)],
+        changedAudioRepresentationSpans: [helixAudioSpan(16, 18, 8)],
+        textSupport: sampleHelixTextSupport(),
+        headerTextSupport: [
+            HelixQueryRowAttentionRecord(
+                queryPosition: 80,
+                decoderLayerIndex: 1,
+                headIndex: 0,
+                support: sampleHelixSupport(),
+                audioWeights: [0.125, 0.25, 0.375, 0.25]
+            )
+        ],
+        audioEncoderSupport: [
+            HelixAudioEncoderSupportRecord(
+                audioTokenId: 16,
+                audioRepresentationVersion: 7,
+                encoderLayerIndex: 0,
+                headIndex: 1,
+                support: sampleHelixSupport(),
+                frontierDebt: 0.125
+            )
+        ],
+        decoderEvidence: [
+            HelixDecoderEvidenceRecord(
+                textTokenId: 47,
+                queryPosition: 118,
+                expectedObservedAudio: helixAudioRange(10, 18),
+                records: sampleHelixTextSupport(),
+                kind: .decode(inputTokenId: 1401)
+            ),
+            HelixDecoderEvidenceRecord(
+                textTokenId: 45,
+                queryPosition: 116,
+                expectedObservedAudio: helixAudioRange(18, 26),
+                records: sampleHelixTextSupport(),
+                kind: .verifyPrediction(
+                    verifiedDraftIndex: 1,
+                    draftTokenId: 927,
+                    queryRow: 2,
+                    maxLogit: 11.25,
+                    draftLogit: 9.875
+                )
+            ),
+            HelixDecoderEvidenceRecord(
+                textTokenId: nil,
+                queryPosition: 117,
+                expectedObservedAudio: helixAudioRange(32, 40),
+                records: sampleHelixTextSupport(),
+                kind: .verifySeed(queryRow: 3, nextTokenSeed: 1401, maxLogit: 10.75)
+            ),
+            HelixDecoderEvidenceRecord(
+                textTokenId: nil,
+                queryPosition: 80,
+                expectedObservedAudio: helixAudioRange(10, 18),
+                records: sampleHelixTextSupport(),
+                kind: .promptPrefill
+            ),
+        ]
+    )
+}
+
+func sampleHelixTraceServiceSurface() -> HelixTraceServiceSurface {
+    HelixTraceServiceSurface(
+        meta: HelixStreamMeta(
+            schemaVersion: 2,
+            pulseIds: [101, 102],
+            timelineEventCount: 420,
+            attentionBatchCount: 17
+        ),
+        pulseRollup: sampleHelixPulseBundle().pulseRollup,
+        timeline: sampleHelixTimeline(),
+        attentionBatch: sampleHelixAttentionBatch(),
+        promptLayout: sampleHelixPulseBundle().promptLayout,
+        audioAttendedBy: [
+            HelixTextAttendanceRow(
+                textTokenId: 47,
+                decoderLayerIndex: 2,
+                headIndex: 3,
+                dominantAudioMass: 0.21,
+                totalAudioMass: 0.42,
+                observedAudio: helixAudioRange(10, 18),
+                dominantAudio: helixAudioRange(16, 18),
+                audioWeights: [0.03125, 0.0625, 0.125, 0.25, 0.5],
+                queriedAudioWeight: 0.25
+            )
+        ],
+        textAttendsTo: [
+            HelixAudioAttendanceRow(
+                decoderLayerIndex: 2,
+                headIndex: 3,
+                dominantAudioMass: 0.21,
+                totalAudioMass: 0.42,
+                centerAudioToken: 17.25,
+                widthAudioTokens: 3.5,
+                observedAudio: helixAudioRange(10, 18),
+                dominantAudio: helixAudioRange(16, 18),
+                audioWeights: [0.03125, 0.0625, 0.125, 0.25, 0.5]
+            )
+        ],
+        refreshAttendsTo: [
+            HelixRefreshAttendanceRow(
+                queryPosition: 80,
+                decoderLayerIndex: 1,
+                headIndex: 0,
+                dominantAudioMass: 0.375,
+                totalAudioMass: 1.0,
+                centerAudioToken: 15.5,
+                widthAudioTokens: 4.0,
+                observedAudio: helixAudioRange(10, 18),
+                dominantAudio: helixAudioRange(14, 18),
+                audioWeights: [0.125, 0.25, 0.375, 0.25]
+            )
+        ],
+        audioTokenProvenance: sampleHelixAudioProvenance().first,
+        audioProvenanceForPulse: sampleHelixAudioProvenance(),
+        audioTokensForMelFrame: [16, 17],
+        audioClipForAudioToken: sampleHelixAudioClip(),
+        audioClipForPrompt: sampleHelixAudioClip(),
+        audioClipForAudioRange: sampleHelixAudioClip(),
+        melClipForPrompt: sampleHelixMelClip(),
+        audioSelfAttention: [
+            HelixAudioSelfAttentionRow(
+                encoderLayerIndex: 0,
+                headIndex: 1,
+                audioRepresentationVersion: 7,
+                dominantAudioMass: 0.25,
+                totalAudioMass: 0.5,
+                centerAudioToken: 16.5,
+                widthAudioTokens: 2.0,
+                observedAudio: helixAudioRange(10, 18),
+                dominantAudio: helixAudioRange(16, 18),
+                frontierDebt: 0.125
+            )
+        ],
+        transcript: [
+            HelixTranscriptToken(textTokenId: 40, decodedInPulse: 101, text: "hel", committed: true),
+            HelixTranscriptToken(textTokenId: 41, decodedInPulse: 102, text: "ix", committed: false),
+        ],
+        pulseAttentionHeatmap: sampleHelixPulseBundle().attentionHeatmap,
+        encoderFrontier: sampleHelixPulseBundle().encoderFrontier,
+        streamMetrics: sampleHelixStreamMetrics(),
+        verifyEvidence: sampleHelixVerifyEvidence(),
+        decoderEvidenceReport: HelixDecoderEvidenceReport(
+            totalBatches: 7,
+            batchesWithoutDecoderEvidence: 1,
+            pulsesWithoutDecoderEvidence: [101],
+            variantEvidenceCounts: HelixDecoderEvidenceVariantCounts(
+                decode: 12,
+                verifyPrediction: 6,
+                verifySeed: 3,
+                promptPrefill: 4
+            ),
+            variantRecordCounts: HelixDecoderEvidenceVariantCounts(
+                decode: 96,
+                verifyPrediction: 48,
+                verifySeed: 24,
+                promptPrefill: 32
+            ),
+            observedDecoderLayerIndices: [0, 1, 2],
+            observedDecoderHeadIndices: [0, 1, 2, 3]
+        ),
+        pulseEvidenceSnapshot: sampleHelixPulseBundle().schedulerSnapshot,
+        gpuChromeEventsForPulse: sampleHelixChromeEvents(),
+        runInfo: HelixRunInfo(
+            backend: "metal",
+            modelDir: "/models/helix-mini",
+            input: "helix fixture",
+            piece: "demo",
+            pulseMs: 8,
+            audioRingCapacity: 4096,
+            textRingCapacity: 512,
+            commitRevisableTailTextTokens: 4,
+            reviseLogitMargin: 0.75,
+            sampleRate: 16_000,
+            melHopSamples: 160,
+            numMelBins: 80,
+            numMelFrames: 384,
+            audioTokensPerChunk: 2,
+            nativeWindowTokens: 16,
+            realtimePacing: true,
+            profilePhases: true,
+            attentionTraceSchemaVersion: 3,
+            traceServerSchemaVersion: 5
+        ),
+        pieceEvalReference: HelixPieceEvalReference(
+            piece: "demo",
+            language: "en",
+            words: ["helix", "fixture"]
+        ),
+        pieceEvalForPulse: HelixPieceEvalSnapshot(
+            audioNowMs: 1234.5,
+            referenceWordsAvailable: 16,
+            hypothesisWords: 15,
+            substitutions: 1,
+            deletions: 0,
+            insertions: 1,
+            rollingWer: 0.125,
+            s2dMatchedWords: 14,
+            s2dNewWords: 2,
+            s2dP50Ms: 41.5,
+            s2dP90Ms: 75.0,
+            s2dP100Ms: 101.25,
+            s2dAvgMs: 50.0,
+            audioFrontier: 160,
+            displayedFrontier: 156,
+            committedFrontier: 152,
+            lagMs: 250.0
+        ),
+        encoderProvenanceReport: sampleHelixPulseBundle().encoderProvenance,
+        pulseBundleFields: sampleHelixPulseBundleFields(),
+        pulseBundle: sampleHelixPulseBundle(),
+        pulseAvailable: HelixPulseAvailable(pulseId: 102)
+    )
+}
+
 func sameHelixStreamMetrics(_ lhs: HelixStreamMetrics, _ rhs: HelixStreamMetrics) -> Bool {
     lhs.pulseIds == rhs.pulseIds
         && lhs.pulseDurationUs == rhs.pulseDurationUs
@@ -2570,6 +3046,13 @@ func sameHelixPulses(_ lhs: [HelixPulseAvailable], _ rhs: [HelixPulseAvailable])
 
 func sameHelixPulseBundle(_ lhs: HelixPulseBundle, _ rhs: HelixPulseBundle) -> Bool {
     String(reflecting: lhs) == String(reflecting: rhs)
+}
+
+func sameHelixTraceServiceSurface(
+    _ lhs: HelixTraceServiceSurface,
+    _ rhs: HelixTraceServiceSurface
+) -> Bool {
+    sameReflecting(lhs, rhs)
 }
 
 func traceyRuleId(_ base: String, _ version: UInt32) -> TraceyRuleId {
@@ -4389,6 +4872,22 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("dodeca_parse_and_render OK")
+    case "echo_dodeca_image_processor_fixture":
+        let payload = sampleDodecaImageProcessorFixture()
+        let result = try await client.echoDodecaImageProcessorFixture(fixture: payload)
+        guard sameReflecting(result, payload) else {
+            log("echo_dodeca_image_processor_fixture payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_dodeca_image_processor_fixture OK")
+    case "echo_dodeca_search_indexer_fixture":
+        let payload = sampleDodecaSearchIndexerFixture()
+        let result = try await client.echoDodecaSearchIndexerFixture(fixture: payload)
+        guard sameReflecting(result, payload) else {
+            log("echo_dodeca_search_indexer_fixture payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_dodeca_search_indexer_fixture OK")
     case "echo_styx_value":
         let value = sampleStyxValue()
         let result = try await client.echoStyxValue(value: value)
@@ -4550,6 +5049,32 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("echo_stax_linux_broker_control OK")
+    case "stax_macos_record":
+        let (batchTx, batchRx): (UnboundTx<StaxMacKdBufBatch>, UnboundRx<StaxMacKdBufBatch>) =
+            channel()
+        async let result = client.staxMacosRecord(
+            config: sampleStaxMacosConfig(),
+            records: batchTx
+        )
+        async let batches: [StaxMacKdBufBatch] = {
+            var values: [StaxMacKdBufBatch] = []
+            for try await batch in batchRx {
+                values.append(batch)
+            }
+            return values
+        }()
+        let (recordResult, receivedBatches) = try await (result, batches)
+        guard case .success(let summary) = recordResult,
+            sameReflecting(summary, sampleStaxMacosRecordSummary())
+        else {
+            log("stax_macos_record summary mismatch")
+            throw SubjectError.invalidResponse
+        }
+        guard sameStaxMacBatches(receivedBatches, sampleStaxMacosBatches()) else {
+            log("stax_macos_record batches mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("stax_macos_record OK")
     case "echo_hotmeal_live_reload_event":
         for event in sampleHotmealLiveReloadEvents() {
             let result = try await client.echoHotmealLiveReloadEvent(event: event)
@@ -4611,6 +5136,14 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("helix_pulse_bundle OK")
+    case "helix_trace_service_surface":
+        let expected = sampleHelixTraceServiceSurface()
+        let result = try await client.helixTraceServiceSurface()
+        guard sameHelixTraceServiceSurface(result, expected) else {
+            log("helix_trace_service_surface payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("helix_trace_service_surface OK")
     case "tracey_status":
         let status = try await client.traceyStatus()
         guard sameTraceyStatusResponse(status, sampleTraceyStatusResponse()) else {
