@@ -39,6 +39,72 @@ const ECHO_METHOD: MethodDescriptor = {
 };
 
 describe("Driver channel schema exchange", () => {
+  // r[verify rpc.unknown-method]
+  it("responds with unknown method without closing the connection", async () => {
+    const sent: Array<{ requestId: bigint; payload: Uint8Array }> = [];
+    let dispatchCount = 0;
+    let closeCount = 0;
+    const driver = new Driver(
+      {
+        currentEpoch: () => 0,
+        sendResponse: async (requestId: bigint, payload: Uint8Array) => {
+          sent.push({ requestId, payload });
+        },
+        close: () => {
+          closeCount += 1;
+          throw new Error("unknown method must be a call-level response");
+        },
+      } as never,
+      {
+        getDescriptor: () => ({
+          service_name: "Test",
+          send_schemas: { [ECHO_METHOD_KEY]: ECHO_METHOD_SCHEMAS },
+          registry: sessionEchoRegistry,
+          methods: new Map([[ECHO_METHOD.id, ECHO_METHOD]]),
+        }),
+        dispatch: async () => {
+          dispatchCount += 1;
+        },
+      },
+    ) as unknown as {
+      handleCall(call: {
+        requestId: bigint;
+        methodId: bigint;
+        args: Uint8Array;
+        channels: bigint[];
+        metadata: ReturnType<typeof emptyMetadata>;
+        connectionEpoch: number;
+      }): Promise<void>;
+    };
+
+    await driver.handleCall({
+      requestId: 12n,
+      methodId: 0xdead_beefn,
+      args: Uint8Array.of(0xff),
+      channels: [99n],
+      metadata: emptyMetadata(),
+      connectionEpoch: 0,
+    });
+
+    expect(dispatchCount).toBe(0);
+    expect(closeCount).toBe(0);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].requestId).toBe(12n);
+    expect(
+      decodeTyped(
+        sent[0].payload,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        sessionEchoRegistry,
+      ),
+    ).toEqual({
+      tag: "Err",
+      value: {
+        tag: "UnknownMethod",
+      },
+    });
+  });
+
   // r[verify schema.errors.call-level]
   // r[verify schema.errors.call-level.callee]
   it("responds with invalid payload when callee args decode fails", async () => {
