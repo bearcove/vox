@@ -3251,6 +3251,7 @@ dependencies = [
  "phon-ir",
  "phon-jit",
  "phon-schema",
+ "spec-proto",
  "vox-types",
 ]
 

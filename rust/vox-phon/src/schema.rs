@@ -332,7 +332,7 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| decode_program_supported(&variant.payload)),
         MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
         MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
-        MemOp::Pointer(_) => false,
+        MemOp::Pointer(p) => decode_program_supported(&p.pointee),
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })
 }
@@ -474,6 +474,8 @@ pub fn from_self_describing<T: Facet<'static>>(bytes: &[u8]) -> Result<T, Error>
 mod tests {
     use super::*;
 
+    use spec_proto::DodecaParseResult;
+
     // Writer and reader compatibility: the writer struct has an extra field the reader
     // lacks (skipped), and the reader has a defaulted field the writer lacks
     // (defaulted). The compatibility decode handles both — the compat path, exercised end to end
@@ -529,6 +531,19 @@ mod tests {
         let writer_bytes = schema_bytes::<Writer>().expect("writer schema bytes");
         let bundle = parse_schema_bytes(&writer_bytes).expect("parse bundle");
         let program = build_decode_program::<Reader2>(&bundle).expect("build decode program");
+
+        assert_eq!(
+            program.uses_native_jit(),
+            cfg!(all(target_os = "macos", target_arch = "aarch64"))
+        );
+    }
+
+    #[test]
+    fn dodeca_parse_result_compat_program_compiles_native_jit_when_available() {
+        let writer_bytes = schema_bytes::<DodecaParseResult>().expect("dodeca writer schema bytes");
+        let bundle = parse_schema_bytes(&writer_bytes).expect("parse dodeca bundle");
+        let program = build_decode_program::<DodecaParseResult>(&bundle)
+            .expect("build dodeca decode program");
 
         assert_eq!(
             program.uses_native_jit(),

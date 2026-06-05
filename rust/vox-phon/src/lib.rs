@@ -223,7 +223,7 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| decode_program_supported(&variant.payload)),
         MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
         MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
-        MemOp::Pointer(_) => false,
+        MemOp::Pointer(p) => decode_program_supported(&p.pointee),
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })
 }
@@ -242,7 +242,7 @@ fn encode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| encode_program_supported(&variant.payload)),
         MemOp::Map(m) => encode_program_supported(&m.key) && encode_program_supported(&m.value),
         MemOp::Result(r) => encode_program_supported(&r.ok) && encode_program_supported(&r.err),
-        MemOp::Pointer(_) => false,
+        MemOp::Pointer(p) => encode_program_supported(&p.pointee),
         MemOp::SkipWire(_) | MemOp::Default(_) => false,
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })
@@ -331,6 +331,7 @@ mod tests {
 
     use phon::derive::of;
     use phon_engine::typed;
+    use spec_proto::DodecaParseResult;
     use vox_types::{
         BindingDirection, ConnectionId, Message, MessagePayload, MethodId, Payload, RequestBody,
         RequestCall, RequestId, RequestMessage, SchemaBytes, SchemaMessage,
@@ -409,6 +410,7 @@ mod tests {
             ("RequestMessage", RequestMessage::SHAPE),
             ("SchemaMessage", SchemaMessage::SHAPE),
             ("Payload", Payload::SHAPE),
+            ("DodecaParseResult", DodecaParseResult::SHAPE),
         ] {
             let status = jit_status_for_shape(shape).unwrap_or_else(|err| {
                 panic!("failed to build JIT status for {name}: {err}");

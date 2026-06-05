@@ -21,4 +21,5 @@ phon-schema = { workspace = true }
 facet = { workspace = true }
 
 [dev-dependencies]
+spec-proto = { path = "../../spec/spec-proto" }
 vox-types = { path = "../vox-types" }
