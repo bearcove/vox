@@ -194,6 +194,7 @@ mod tests {
     // r[verify schema.method-id]
     // r[verify rpc.method-id]
     // r[verify rpc.method-id.algorithm]
+    // r[verify service-macro.is-source-of-truth]
     fn generated_swift_uses_phon_schema_closures_and_canonical_method_ids() {
         let echo = method_descriptor::<(NestedOuter,), NestedOuter>(
             "SchemaSvc",

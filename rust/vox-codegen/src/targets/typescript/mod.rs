@@ -683,6 +683,7 @@ mod tests {
     // r[verify schema.method-id]
     // r[verify rpc.method-id]
     // r[verify rpc.method-id.algorithm]
+    // r[verify service-macro.is-source-of-truth]
     fn generated_typescript_uses_canonical_service_schemas() {
         let recurse = method_descriptor::<(NestedOuter,), NestedOuter>(
             "RecursiveSvc",

@@ -10,6 +10,7 @@ fn message_conduit_pair() -> (MessageConduit, MessageConduit) {
 }
 
 #[tokio::test]
+// r[verify service-macro.is-source-of-truth]
 async fn adder_service_macro_end_to_end() {
     service_macro_shared::run_adder_end_to_end(message_conduit_pair).await;
 }
