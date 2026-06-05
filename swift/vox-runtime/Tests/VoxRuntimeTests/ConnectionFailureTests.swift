@@ -284,6 +284,40 @@ func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     #expect(session.peerMetadata == metadata)
 }
 
+@Test
+// r[verify session.handshake.sorry]
+func acceptorSendsSorryForInvalidPeerMessageSchema() async throws {
+    let link = ScriptedTransport(
+        initialHandshake: .hello(
+            Hello(
+                parity: .odd,
+                connectionSettings: ConnectionSettings(
+                    parity: .odd,
+                    maxConcurrentRequests: 64,
+                    initialChannelCredit: 16
+                ),
+                messagePayloadSchema: Data([0xFF, 0x00, 0xFF]),
+                metadata: .null
+            ))
+    )
+
+    do {
+        _ = try await Session.acceptFreshLink(link, dispatcher: NoopDispatcher())
+        Issue.record("expected handshake rejection")
+    } catch ConnectionError.handshakeFailed(let reason) {
+        #expect(reason == "unsupported message compatibility plan")
+    } catch {
+        Issue.record("expected handshakeFailed, got \(String(describing: error))")
+    }
+
+    let sent = await link.sentHandshakeMessages()
+    guard case .sorry(let sorry) = sent.first else {
+        Issue.record("expected Sorry handshake")
+        return
+    }
+    #expect(sorry.reason == "unsupported message compatibility plan")
+}
+
 // r[verify transport.prologue.first-payload]
 // r[verify transport.prologue.post-accept]
 @Test func acceptorSessionConsumesTransportPrologueBeforeHandshake() async throws {
@@ -580,6 +614,11 @@ private func awaitTaskResult<T: Sendable>(
 
 @Suite(.serialized)
 struct ConnectionFailureTests {
+    // r[verify session.handshake]
+    // r[verify session.handshake.phon]
+    // r[verify session.handshake.protocol-schema]
+    // r[verify session.handshake.protocol-schema.session-scoped]
+    // r[verify session.handshake.unversioned]
     @Test func initiatorHelloCarriesMessagePayloadSchema() async throws {
         let transport = ScriptedTransport()
         _ = try await establishInitiator(
@@ -602,6 +641,11 @@ struct ConnectionFailureTests {
     // r[verify conduit]
     // r[verify conduit.bare]
     // r[verify conduit.typeplan]
+    // r[verify session.message]
+    // r[verify session.message.connection-id]
+    // r[verify session.message.payloads]
+    // r[verify rpc.request]
+    // r[verify rpc.response]
     @Test func serverResponsePreservesPeepsRequestMetadata() async throws {
         let transport = ScriptedTransport(
             initialHandshake: .hello(
@@ -673,6 +717,9 @@ struct ConnectionFailureTests {
 
     // r[verify connection]
     // r[verify connection.root]
+    // r[verify rpc.request]
+    // r[verify rpc.response]
+    // r[verify rpc.response.one-per-request]
     @Test func immediateResponseAfterSendStillCompletesCall() async throws {
         let transport = ScriptedTransport(autoRespondRequestCount: 1)
         let (handle, driver, _, _) = try await establishInitiator(
@@ -1141,6 +1188,10 @@ struct ConnectionFailureTests {
     // r[verify connection.open]
     // r[verify connection.parity]
     // r[verify rpc.virtual-connection.open]
+    // r[verify session.message.connection-id]
+    // r[verify rpc.request]
+    // r[verify rpc.request.id-allocation]
+    // r[verify rpc.response]
     @Test func sessionHandleOpenConnectionCompletesOnAcceptAndUsesVirtualConnectionId() async throws {
         let transport = ScriptedTransport()
         let (rootConnection, driver, sessionHandle, _) = try await establishInitiator(
