@@ -766,6 +766,83 @@ mod tests {
     }
 
     #[test]
+    // r[verify rpc.caller]
+    // r[verify rpc.service]
+    // r[verify rpc.service.methods]
+    // r[verify rpc.handler]
+    // r[verify rpc.session-setup]
+    fn generated_typescript_emits_rpc_caller_handler_and_session_shapes() {
+        let echo = method_descriptor::<(String,), String>(
+            "TestSvc",
+            "echo",
+            &["message"],
+            &[None],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<String, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
+            "TestSvc",
+            "divide",
+            &["lhs", "rhs"],
+            &[None, None],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![echo, divide].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "TestSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+
+        assert!(
+            generated.contains("export interface TestSvcCaller {")
+                && generated.contains("  async echo(message: string): Promise<string> {")
+                && generated.contains("  async divide(lhs: bigint, rhs: bigint):"),
+            "generated TypeScript must expose async caller methods matching the source service:\n{generated}"
+        );
+        assert!(
+            generated.contains("export class TestSvcClient implements TestSvcCaller")
+                && generated.contains("private caller: Caller;")
+                && generated.contains("const __voxResult = await this.caller.call({")
+                && generated.contains("method: \"TestSvc.echo\",")
+                && generated.contains("descriptor: testSvc_echo_method,")
+                && generated.contains("methodSchemas: testSvcMethods["),
+            "generated TypeScript client must delegate request serialization/response handling to Caller:\n{generated}"
+        );
+        assert!(
+            generated.contains("const established = await session.initiator(wsConnector(url),")
+                && generated.contains("metadata: voxServiceMetadata(\"TestSvc\")")
+                && generated
+                    .contains("return new TestSvcClient(established.rootConnection().caller());"),
+            "generated TypeScript connect helper must build a client from the root connection caller:\n{generated}"
+        );
+        assert!(
+            generated.contains("export interface TestSvcHandler {")
+                && generated.contains("  echo(message: string): Promise<string> | string;")
+                && generated.contains("  divide(lhs: bigint, rhs: bigint):"),
+            "generated TypeScript handler must expose service methods with server-side argument types:\n{generated}"
+        );
+        assert!(
+            generated.contains("export class TestSvcDispatcher implements Dispatcher")
+                && generated.contains("private readonly handler: TestSvcHandler;")
+                && generated.contains("getDescriptor(): ServiceDescriptor")
+                && generated.contains("return testSvc_descriptor;")
+                && generated.contains("const result = await this.handler.echo(args[0] as string);")
+                && generated.contains(
+                    "if (result.ok) call.reply(result.value); else call.replyErr(result.error);"
+                ),
+            "generated TypeScript dispatcher must route decoded args to the handler and reply through VoxCall:\n{generated}"
+        );
+    }
+
+    #[test]
     // r[verify rpc.method-id.no-collisions]
     fn generated_typescript_method_ids_include_service_name() {
         let alpha = method_descriptor::<(), ()>(
