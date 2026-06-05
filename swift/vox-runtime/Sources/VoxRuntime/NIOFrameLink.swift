@@ -30,6 +30,13 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
     }
 
     public func sendFrame(_ bytes: [UInt8]) async throws {
+        let frameLimit = self.frameLimit
+        let maxFrameBytes = try await channel.eventLoop.submit {
+            frameLimit.maxFrameBytes
+        }.get()
+        guard bytes.count <= maxFrameBytes else {
+            throw TransportError.frameEncoding("Frame exceeds \(maxFrameBytes) bytes")
+        }
         try await writeRawFrame(channel: channel, bytes: bytes)
     }
 
@@ -136,6 +143,8 @@ final class RawFrameStreamHandler: ChannelInboundHandler, RemovableChannelHandle
     // r[impl link.rx.error]
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         continuation.yield(.failure(error))
+        continuation.finish()
+        context.close(promise: nil)
     }
 
     // r[impl link.rx.eof]
