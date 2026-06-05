@@ -334,6 +334,92 @@ mod tests {
     }
 
     #[test]
+    // r[verify rpc.caller]
+    // r[verify rpc.service]
+    // r[verify rpc.service.methods]
+    // r[verify rpc.handler]
+    fn generated_swift_emits_rpc_caller_handler_and_dispatch_shapes() {
+        let echo = method_descriptor::<(String,), String>(
+            "TestSvc",
+            "echo",
+            &["message"],
+            &[None],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<String, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
+            "TestSvc",
+            "divide",
+            &["lhs", "rhs"],
+            &[None, None],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<u64, vox_types::VoxError<String>> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![echo, divide].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "TestSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+        let echo_id = hex_u64(crate::method_id(echo));
+        let divide_id = hex_u64(crate::method_id(divide));
+
+        assert!(
+            generated.contains("public protocol TestSvcCaller: Sendable {")
+                && generated.contains("    func echo(message: String) async throws -> String")
+                && generated.contains(
+                    "    func divide(lhs: UInt64, rhs: UInt64) async throws -> Result<UInt64, String>",
+                ),
+            "generated Swift must expose async caller methods matching the source service:\n{generated}"
+        );
+        assert!(
+            generated.contains("public final class TestSvcClient: TestSvcCaller, Sendable {")
+                && generated.contains("    private let connection: VoxConnection")
+                && generated
+                    .contains("    public init(connection: VoxConnection, timeout: TimeInterval? = 30.0)")
+                && generated.contains("let payload = encodeVoxTyped(message, testSvc_echo_ArgsEncoder)")
+                && generated.contains(&format!(
+                    "methodId: {echo_id}, metadata: .null, payload: payload, timeout: timeout,"
+                ))
+                && generated.contains(&format!(
+                    "schemaInfo: ClientSchemaInfo(methodSchemas: testSvcMethods[{echo_id}]!, registry: testSvcRegistry)"
+                ))
+                && generated.contains("let result: Result<String, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)"),
+            "generated Swift client must delegate request serialization and response handling to VoxConnection:\n{generated}"
+        );
+        assert!(
+            generated.contains("public protocol TestSvcHandler: Sendable {")
+                && generated.contains("    func echo(message: String) async throws -> String")
+                && generated.contains(
+                    "    func divide(lhs: UInt64, rhs: UInt64) async throws -> Result<UInt64, String>",
+                ),
+            "generated Swift handler must expose service methods with server-side argument types:\n{generated}"
+        );
+        assert!(
+            generated.contains("public final class TestSvcDispatcher: ServiceDispatcher {")
+                && generated.contains("    private let handler: TestSvcHandler")
+                && generated.contains("    public init(handler: TestSvcHandler) { self.handler = handler }")
+                && generated.contains("public func dispatch(methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64], registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker, schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void) async")
+                && generated.contains(&format!(
+                    "case {echo_id}: await dispatch_echo(payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)"
+                ))
+                && generated.contains(&format!(
+                    "case {divide_id}: await dispatch_divide(payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)"
+                ))
+                && generated.contains("let voxValue = try await handler.echo(message: args)")
+                && generated.contains("let voxValue = try await handler.divide(lhs: args.0, rhs: args.1)")
+                && generated.contains("case .failure(let e): voxResult = .failure(.user(e))"),
+            "generated Swift dispatcher must route decoded args to the handler and reply through TaskMessage:\n{generated}"
+        );
+    }
+
+    #[test]
     // r[verify schema.errors.call-level.callee]
     // r[verify schema.errors.call-level.caller]
     // r[verify schema.errors.same-peer-terminal]
