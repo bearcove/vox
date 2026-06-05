@@ -9,6 +9,7 @@ import {
   messageRequest,
   messageResponse,
   messageAccept,
+  messageConnect,
 } from "@bearcove/vox-wire";
 import { Registry, hexToBytes, primitiveId, resolveIds } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
@@ -202,6 +203,7 @@ const ECHO_METHOD: MethodDescriptor = {
 
 describe("session", () => {
   // r[verify session.parity]
+  // r[verify rpc.virtual-connection.open]
   it("allocates virtual connection ids from local session parity", async () => {
     const requestedSettings: ConnectionSettings = {
       parity: { tag: "Odd" },
@@ -269,6 +271,72 @@ describe("session", () => {
     acceptorLink.close();
     acceptorSession.handle().shutdown();
     await Promise.allSettled([acceptorSession.closed()]);
+  });
+
+  // r[verify rpc.virtual-connection.accept]
+  it("accepts inbound virtual connections and routes calls on them", async () => {
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [clientLink, rawServerLink] = memoryLinkPair();
+    let acceptConnection!: (connection: ConnectionHandle) => void;
+    const acceptedConnection = new Promise<ConnectionHandle>((resolve) => {
+      acceptConnection = resolve;
+    });
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(clientLink, rawServerLink, {
+        onConnection: (connection) => acceptConnection(connection),
+      }),
+      "raw initiator establishment",
+    );
+
+    await rawServerLink.send(
+      encodeMessage(messageConnect(2n, peerSettings, emptyMetadata())),
+    );
+    const accept = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection accept"))!,
+    );
+    expect(accept.connection_id).toBe(2n);
+    expect(accept.payload.tag).toBe("ConnectionAccept");
+    const connection = await withTimeout(acceptedConnection, "accepted connection callback");
+    expect(connection.id).toBe(2n);
+    expect(connection.localSettings.parity).toEqual({ tag: "Even" });
+
+    await rawServerLink.send(
+      encodeMessage(
+        messageRequest(
+          77n,
+          ECHO_METHOD.id,
+          new Uint8Array([0x07]),
+          emptyMetadata(),
+          [],
+          2n,
+          Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.argsSchemaClosure)),
+        ),
+      ),
+    );
+    const incoming = await withTimeout(connection.nextIncomingCall(), "virtual incoming call");
+    expect(incoming?.requestId).toBe(77n);
+    expect(incoming?.methodId).toBe(ECHO_METHOD.id);
+    expect(Array.from(incoming?.args ?? [])).toEqual([0x07]);
+
+    await connection.sendResponse(77n, new Uint8Array([0x01]));
+    const response = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection response"))!,
+    );
+    expect(response.connection_id).toBe(2n);
+    expect(response.payload.tag).toBe("RequestMessage");
+    if (response.payload.tag === "RequestMessage") {
+      expect(response.payload.value.id).toBe(77n);
+      expect(response.payload.value.body.tag).toBe("Response");
+    }
+
+    clientLink.close();
+    rawServerLink.close();
+    initiatorSession.handle().shutdown();
+    await Promise.allSettled([initiatorSession.closed()]);
   });
 
   // r[verify rpc.flow-control.credit.initial.high-level]
