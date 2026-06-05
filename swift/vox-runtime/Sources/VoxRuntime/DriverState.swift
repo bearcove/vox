@@ -4,6 +4,12 @@ import Foundation
 actor DriverState {
     private let retainFinalizedRequests = true
 
+    enum AddInFlightResult: Sendable, Equatable {
+        case inserted
+        case duplicate
+        case limitExceeded(limit: UInt32, inFlight: Int)
+    }
+
     private struct FinalizedRequest: Sendable {
         let reason: String
         let atUptimeNs: UInt64
@@ -113,16 +119,29 @@ actor DriverState {
     func addInFlight(
         _ requestId: UInt64,
         connectionId: UInt64,
-        responseMetadata: Metadata
-    ) -> Bool {
-        let inserted = inFlightRequests.insert(requestId).inserted
-        if inserted {
-            inFlightResponseContext[requestId] = InFlightResponseContext(
-                connectionId: connectionId,
-                responseMetadata: responseMetadata
+        responseMetadata: Metadata,
+        localMaxConcurrentRequests: UInt32
+    ) -> AddInFlightResult {
+        guard !inFlightRequests.contains(requestId) else {
+            return .duplicate
+        }
+
+        let inFlightOnConnection = inFlightResponseContext.values.lazy.filter {
+            $0.connectionId == connectionId
+        }.count
+        if UInt64(inFlightOnConnection) >= UInt64(localMaxConcurrentRequests) {
+            return .limitExceeded(
+                limit: localMaxConcurrentRequests,
+                inFlight: inFlightOnConnection
             )
         }
-        return inserted
+
+        inFlightRequests.insert(requestId)
+        inFlightResponseContext[requestId] = InFlightResponseContext(
+            connectionId: connectionId,
+            responseMetadata: responseMetadata
+        )
+        return .inserted
     }
 
     func removeInFlight(_ requestId: UInt64) -> (
@@ -166,8 +185,13 @@ actor DriverState {
 
 /// Actor for virtual connection state.
 actor VirtualConnectionState {
+    struct VirtualConnectionRecord: Sendable {
+        let dispatcher: any ServiceDispatcher
+        let localSettings: ConnectionSettings
+    }
+
     private var nextConnId: UInt64
-    private var virtualConnections: [UInt64: any ServiceDispatcher] = [:]
+    private var virtualConnections: [UInt64: VirtualConnectionRecord] = [:]
     private var pendingOutbound: [UInt64: PendingVirtualConnection] = [:]
 
     init(role: Role) {
@@ -186,8 +210,15 @@ actor VirtualConnectionState {
         virtualConnections[connId] != nil || pendingOutbound[connId] != nil
     }
 
-    func addConnection(_ connId: UInt64, dispatcher: any ServiceDispatcher) {
-        virtualConnections[connId] = dispatcher
+    func addConnection(
+        _ connId: UInt64,
+        dispatcher: any ServiceDispatcher,
+        localSettings: ConnectionSettings
+    ) {
+        virtualConnections[connId] = VirtualConnectionRecord(
+            dispatcher: dispatcher,
+            localSettings: localSettings
+        )
     }
 
     @discardableResult
@@ -195,7 +226,7 @@ actor VirtualConnectionState {
         virtualConnections.removeValue(forKey: connId) != nil
     }
 
-    func dispatcher(for connId: UInt64) -> (any ServiceDispatcher)? {
+    func connection(for connId: UInt64) -> VirtualConnectionRecord? {
         virtualConnections[connId]
     }
 

@@ -398,6 +398,55 @@ private struct PipeliningDispatcher: ServiceDispatcher {
     }
 }
 
+private actor BlockingRequestGate {
+    private var started = false
+    private var released = false
+
+    func markStarted() {
+        started = true
+    }
+
+    func hasStarted() -> Bool {
+        started
+    }
+
+    func release() {
+        released = true
+    }
+
+    func waitUntilReleased() async {
+        while !released {
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+    }
+}
+
+private struct BlockingFlowControlDispatcher: ServiceDispatcher {
+    let gate: BlockingRequestGate
+
+    func preregister(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        channels _: [UInt64],
+        registry _: ChannelRegistry
+    ) async {}
+
+    func dispatch(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        requestId: UInt64,
+        channels _: [UInt64],
+        registry _: ChannelRegistry,
+        schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
+        taskTx: @escaping @Sendable (TaskMessage) -> Void
+    ) async {
+        await gate.markStarted()
+        await gate.waitUntilReleased()
+        taskTx(.response(requestId: requestId, payload: [0x01]))
+    }
+}
+
 private func metadataString(_ metadata: Metadata, key: String) -> String? {
     metadata.metaStr(key)
 }
@@ -856,6 +905,80 @@ struct ConnectionFailureTests {
             )
             let secondResponse = try await awaitTaskResult(secondCall)
             #expect(secondResponse == [0x22])
+        }
+    }
+
+    // r[verify rpc.flow-control.max-concurrent-requests.inbound]
+    @Test func inboundMaxConcurrentRequestsViolationClosesConnection() async throws {
+        let rule = "rpc.flow-control.max-concurrent-requests.inbound"
+        let gate = BlockingRequestGate()
+        let transport = ScriptedTransport(
+            initialHandshake: .hello(
+                Hello(
+                    parity: .odd,
+                    connectionSettings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 64,
+                        initialChannelCredit: 16
+                    ),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
+                    metadata: .null
+                ))
+        )
+        let (rootConnection, driver, _, _) = try await establishAcceptor(
+            conduit: transport,
+            dispatcher: BlockingFlowControlDispatcher(gate: gate),
+            maxConcurrentRequests: 1
+        )
+        #expect(rootConnection.connectionId == 0)
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+
+        await withAsyncCleanup({
+            await gate.release()
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            await transport.enqueueMessage(
+                .request(
+                    connId: 0,
+                    requestId: 77,
+                    methodId: 1,
+                    metadata: .null,
+                    payload: []
+                )
+            )
+
+            let start = ContinuousClock.now
+            let timeout = Duration.milliseconds(1_000)
+            while ContinuousClock.now - start < timeout {
+                if await gate.hasStarted() {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 5_000_000)
+            }
+            #expect(await gate.hasStarted())
+
+            await transport.enqueueMessage(
+                .request(
+                    connId: 0,
+                    requestId: 79,
+                    methodId: 1,
+                    metadata: .null,
+                    payload: []
+                )
+            )
+
+            do {
+                try await awaitTaskResult(driverTask, timeoutMs: 1_000)
+                Issue.record("expected inbound max-concurrent violation")
+            } catch {
+                #expect(isProtocolViolation(error, rule: rule))
+            }
+
+            let protocolReason = await awaitProtocolReason(transport)
+            #expect(protocolReason == rule)
         }
     }
 

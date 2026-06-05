@@ -265,7 +265,14 @@ func calleeAdvertisesResponseSchemaWithFirstResponseOnConnection() async throws 
     )
     let schemas: [UInt8] = [4, 5, 6]
 
-    #expect(await driver.state.addInFlight(9, connectionId: 0, responseMetadata: .null))
+    #expect(
+        await driver.state.addInFlight(
+            9,
+            connectionId: 0,
+            responseMetadata: .null,
+            localMaxConcurrentRequests: UInt32.max
+        ) == .inserted
+    )
     try await driver.handleTaskMessage(DriverQueuedTaskMessage(
         connectionId: 0,
         taskMessage: .response(
@@ -276,7 +283,14 @@ func calleeAdvertisesResponseSchemaWithFirstResponseOnConnection() async throws 
         )
     ))
 
-    #expect(await driver.state.addInFlight(11, connectionId: 0, responseMetadata: .null))
+    #expect(
+        await driver.state.addInFlight(
+            11,
+            connectionId: 0,
+            responseMetadata: .null,
+            localMaxConcurrentRequests: UInt32.max
+        ) == .inserted
+    )
     try await driver.handleTaskMessage(DriverQueuedTaskMessage(
         connectionId: 0,
         taskMessage: .response(

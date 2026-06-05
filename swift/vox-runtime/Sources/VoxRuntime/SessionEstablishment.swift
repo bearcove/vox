@@ -233,6 +233,7 @@ func establishInitiator(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -242,7 +243,7 @@ func establishInitiator(
     let handshake = try await performInitiatorHandshake(
         link: attachment.link,
         maxPayloadSize: ourMaxPayload,
-        maxConcurrentRequests: 64,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         metadata: metadata
     )
@@ -275,6 +276,7 @@ func establishInitiator(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -284,6 +286,7 @@ func establishInitiator(
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
         metadata: metadata
@@ -296,6 +299,7 @@ func establishInitiator(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -305,6 +309,7 @@ func establishInitiator(
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
         metadata: metadata
@@ -319,6 +324,7 @@ func establishAcceptor(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -335,7 +341,7 @@ func establishAcceptor(
     let handshake = try await performAcceptorHandshake(
         link: attachment.link,
         maxPayloadSize: ourMaxPayload,
-        maxConcurrentRequests: 64,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         metadata: metadata
     )
@@ -367,6 +373,7 @@ func establishAcceptor(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -376,6 +383,7 @@ func establishAcceptor(
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
         metadata: metadata
@@ -388,6 +396,7 @@ func establishAcceptor(
     dispatcher: any ServiceDispatcher,
     connectionAcceptor: (any ConnectionAcceptor)? = nil,
     maxPayloadSize: UInt32? = nil,
+    maxConcurrentRequests: UInt32 = 64,
     initialChannelCredit: UInt32 = 16,
     keepalive: SessionKeepaliveConfig? = nil,
     metadata: Metadata = .null
@@ -397,6 +406,7 @@ func establishAcceptor(
         dispatcher: dispatcher,
         connectionAcceptor: connectionAcceptor,
         maxPayloadSize: maxPayloadSize,
+        maxConcurrentRequests: maxConcurrentRequests,
         initialChannelCredit: initialChannelCredit,
         keepalive: keepalive,
         metadata: metadata

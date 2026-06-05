@@ -3,8 +3,16 @@ import Foundation
 extension Driver {
     // r[impl rpc.virtual-connection.accept]
     // r[impl connection.virtual]
-    func addVirtualConnection(_ connId: UInt64, dispatcher: any ServiceDispatcher) async {
-        await virtualConnState.addConnection(connId, dispatcher: dispatcher)
+    func addVirtualConnection(
+        _ connId: UInt64,
+        dispatcher: any ServiceDispatcher,
+        localSettings: ConnectionSettings
+    ) async {
+        await virtualConnState.addConnection(
+            connId,
+            dispatcher: dispatcher,
+            localSettings: localSettings
+        )
     }
 
     // r[impl connection.close]
@@ -97,7 +105,11 @@ extension Driver {
                     accept: { [weak self] dispatcher in
                         guard let self else { return }
                         Task {
-                            await self.addVirtualConnection(connId, dispatcher: dispatcher)
+                            await self.addVirtualConnection(
+                                connId,
+                                dispatcher: dispatcher,
+                                localSettings: localSettings
+                            )
                             try? await self.conduit.send(
                                 messageAccept(
                                     connectionId: connId,
@@ -138,7 +150,8 @@ extension Driver {
             )
             await virtualConnState.addConnection(
                 msg.connectionId,
-                dispatcher: pending.dispatcher ?? dispatcher
+                dispatcher: pending.dispatcher ?? dispatcher,
+                localSettings: pending.localSettings
             )
             pending.responseTx(.success(connection))
         case .connectionReject(let reject):
@@ -250,25 +263,38 @@ extension Driver {
     ) async throws {
         // Resolve which dispatcher handles this connection.
         let effectiveDispatcher: any ServiceDispatcher
+        let localMaxConcurrentRequests: UInt32
         if connId == 0 {
             effectiveDispatcher = dispatcher
-        } else if let vconnDispatcher = await virtualConnState.dispatcher(for: connId) {
-            effectiveDispatcher = vconnDispatcher
+            localMaxConcurrentRequests =
+                localRootSettings?.maxConcurrentRequests ?? negotiated.maxConcurrentRequests
+        } else if let vconn = await virtualConnState.connection(for: connId) {
+            effectiveDispatcher = vconn.dispatcher
+            localMaxConcurrentRequests = vconn.localSettings.maxConcurrentRequests
         } else {
             try await sendProtocolError("call.lifecycle.unknown-connection-id")
             throw ConnectionError.protocolViolation(
                 rule: "call.lifecycle.unknown-connection-id")
         }
 
-        let inserted = await state.addInFlight(
+        let addInFlight = await state.addInFlight(
             requestId,
             connectionId: connId,
-            responseMetadata: responseMetadataFromRequest(metadata)
+            responseMetadata: responseMetadataFromRequest(metadata),
+            localMaxConcurrentRequests: localMaxConcurrentRequests
         )
 
-        guard inserted else {
+        switch addInFlight {
+        case .inserted:
+            break
+        case .duplicate:
             try await sendProtocolError("call.request-id.duplicate-detection")
             throw ConnectionError.protocolViolation(rule: "call.request-id.duplicate-detection")
+        case .limitExceeded:
+            // r[impl rpc.flow-control.max-concurrent-requests.inbound]
+            try await sendProtocolError("rpc.flow-control.max-concurrent-requests.inbound")
+            throw ConnectionError.protocolViolation(
+                rule: "rpc.flow-control.max-concurrent-requests.inbound")
         }
 
         if payload.count > Int(negotiated.maxPayloadSize) {
