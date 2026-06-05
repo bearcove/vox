@@ -105,6 +105,96 @@ describe("Driver channel schema exchange", () => {
     });
   });
 
+  // r[verify rpc.pipelining]
+  it("allows a later request to reply while an earlier request is still pending", async () => {
+    const sent: Array<{ requestId: bigint; payload: Uint8Array }> = [];
+    let releaseFirst!: () => void;
+    const firstMayFinish = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let secondReplied!: () => void;
+    const secondReplySent = new Promise<void>((resolve) => {
+      secondReplied = resolve;
+    });
+    const incomingCalls = [
+      {
+        requestId: 1n,
+        methodId: ECHO_METHOD.id,
+        args: new Uint8Array(),
+        channels: [],
+        metadata: emptyMetadata(),
+        connectionEpoch: 0,
+      },
+      {
+        requestId: 2n,
+        methodId: ECHO_METHOD.id,
+        args: new Uint8Array(),
+        channels: [],
+        metadata: emptyMetadata(),
+        connectionEpoch: 0,
+      },
+      null,
+    ];
+    let dispatchCount = 0;
+    const driver = new Driver(
+      {
+        currentEpoch: () => 0,
+        getSchemaSendTracker: () => new SchemaSendTracker(),
+        getSchemaTracker: () => ({
+          requireReceived() {},
+        }),
+        nextIncomingCall: async () => incomingCalls.shift() ?? null,
+        nextIncomingCancel: () => new Promise<bigint | null>(() => {}),
+        sendResponse: async (requestId: bigint, payload: Uint8Array) => {
+          sent.push({ requestId, payload });
+          if (requestId === 2n) {
+            secondReplied();
+          }
+        },
+      } as never,
+      {
+        getDescriptor: () => ({
+          service_name: "Test",
+          send_schemas: { [ECHO_METHOD_KEY]: ECHO_METHOD_SCHEMAS },
+          registry: sessionEchoRegistry,
+          methods: new Map([[ECHO_METHOD.id, ECHO_METHOD]]),
+        }),
+        dispatch: async (_context, _method, _args, call) => {
+          dispatchCount += 1;
+          if (dispatchCount === 1) {
+            await firstMayFinish;
+            call.reply(1);
+          } else {
+            call.reply(2);
+          }
+        },
+      },
+    );
+
+    const run = driver.run();
+    await Promise.race([
+      secondReplySent,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("second request was blocked by first request")), 1_000);
+      }),
+    ]);
+
+    expect(sent.map((response) => response.requestId)).toEqual([2n]);
+
+    releaseFirst();
+    await run;
+
+    expect(sent.map((response) => response.requestId)).toEqual([2n, 1n]);
+    expect(
+      decodeTyped(
+        sent[0].payload,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        sessionEchoRegistry,
+      ),
+    ).toEqual({ tag: "Ok", value: 2 });
+  });
+
   // r[verify schema.errors.call-level]
   // r[verify schema.errors.call-level.callee]
   it("responds with invalid payload when callee args decode fails", async () => {
