@@ -97,4 +97,41 @@ describe("bindPhonChannels", () => {
       payload: Uint8Array.of(9, 0, 0, 0),
     });
   });
+
+  // r[verify rpc.channel.discovery]
+  it("discovers direct channel arguments left-to-right before assigning wire indexes", async () => {
+    const [serverSends, callerReceives] = channel<unknown>();
+    const [callerSends, serverReceives] = channel<unknown>();
+    const registry = new ChannelRegistry();
+    const allocator = new ChannelIdAllocator(Role.Initiator);
+
+    const bound = bindPhonChannels(
+      [serverSends, "ordinary", serverReceives],
+      [
+        { index: 2, direction: "rx", elementRoot: U32_ROOT },
+        { index: 0, direction: "tx", elementRoot: U32_ROOT },
+      ],
+      allocator,
+      registry,
+      sessionEchoRegistry,
+      { incoming: 4, outgoing: 4 },
+    );
+
+    expect(bound.channels).toEqual([1n, 3n]);
+    expect(bound.values).toEqual([
+      Uint8Array.of(0, 0, 0, 0),
+      "ordinary",
+      Uint8Array.of(1, 0, 0, 0),
+    ]);
+
+    registry.routeData(1n, Uint8Array.of(7, 0, 0, 0));
+    await callerSends.send(8);
+
+    await expect(callerReceives.recv()).resolves.toBe(7);
+    expect(registry.pollOutgoing()).toEqual({
+      kind: "data",
+      channelId: 3n,
+      payload: Uint8Array.of(8, 0, 0, 0),
+    });
+  });
 });

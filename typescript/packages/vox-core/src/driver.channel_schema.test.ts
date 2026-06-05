@@ -10,7 +10,7 @@ import {
   type PhonMethodSchemas,
   type SchemaTracker,
 } from "./schema_tracker.ts";
-import type { MethodDescriptor, TaskMessage } from "./channeling/index.ts";
+import { ChannelRegistry, type MethodDescriptor, type TaskMessage } from "./channeling/index.ts";
 import {
   sessionEchoRegistry,
   sessionEchoMethods,
@@ -36,6 +36,24 @@ const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
 const ECHO_METHOD: MethodDescriptor = {
   name: "echo",
   id: SESSION_ECHO_METHOD_ID,
+};
+const CHANNEL_DISCOVERY_METHOD_ID = 0x1234n;
+const CHANNEL_DISCOVERY_METHOD_KEY = `0x${CHANNEL_DISCOVERY_METHOD_ID.toString(16).padStart(16, "0")}`;
+const CHANNEL_DISCOVERY_METHOD: MethodDescriptor = {
+  name: "channels",
+  id: CHANNEL_DISCOVERY_METHOD_ID,
+};
+const U32_ROOT = ECHO_METHOD_SCHEMAS.okRoot;
+const CHANNEL_DISCOVERY_SCHEMAS: PhonMethodSchemas = {
+  argsRoot: 4n,
+  argsSchemaClosure: "",
+  okRoot: U32_ROOT,
+  responseRoot: ECHO_METHOD_SCHEMAS.responseRoot,
+  responseSchemaClosure: ECHO_METHOD_SCHEMAS.responseSchemaClosure,
+  channels: [
+    { index: 2, direction: "tx", elementRoot: U32_ROOT },
+    { index: 0, direction: "rx", elementRoot: U32_ROOT },
+  ],
 };
 
 describe("Driver channel schema exchange", () => {
@@ -193,6 +211,100 @@ describe("Driver channel schema exchange", () => {
         sessionEchoRegistry,
       ),
     ).toEqual({ tag: "Ok", value: 2 });
+  });
+
+  // r[verify rpc.channel.discovery]
+  it("resolves callee channel handles from decoded wire indexes", async () => {
+    const registry = new ChannelRegistry();
+    const sentChannelData: Array<{ channelId: bigint; payload: Uint8Array }> = [];
+    const sentResponses: bigint[] = [];
+    let ordinaryArg: unknown;
+    let rxChannelId: bigint | undefined;
+    let txChannelId: bigint | undefined;
+    let received: unknown;
+    let dispatchError: unknown;
+    const driver = new Driver(
+      {
+        id: 0n,
+        currentEpoch: () => 0,
+        localSettings: { initial_channel_credit: 4 },
+        peerSettings: { initial_channel_credit: 4 },
+        getChannelRegistry: () => registry,
+        getSchemaSendTracker: () => new SchemaSendTracker(),
+        getSchemaTracker: () => ({
+          requireReceived() {},
+          buildDecoder() {
+            return () => [
+              Uint8Array.of(1, 0, 0, 0),
+              "ordinary",
+              Uint8Array.of(0, 0, 0, 0),
+            ];
+          },
+          buildAuxiliaryDecoder() {
+            return undefined;
+          },
+        }),
+        sendChannelData: async (channelId: bigint, payload: Uint8Array) => {
+          sentChannelData.push({ channelId, payload });
+        },
+        sendResponse: async (requestId: bigint) => {
+          sentResponses.push(requestId);
+        },
+      } as never,
+      {
+        getDescriptor: () => ({
+          service_name: "Test",
+          send_schemas: { [CHANNEL_DISCOVERY_METHOD_KEY]: CHANNEL_DISCOVERY_SCHEMAS },
+          registry: sessionEchoRegistry,
+          methods: new Map([[CHANNEL_DISCOVERY_METHOD.id, CHANNEL_DISCOVERY_METHOD]]),
+        }),
+        dispatch: async (_context, _method, args, call) => {
+          try {
+            const rx = args[0] as { channelId: bigint; recv(): Promise<unknown> };
+            const tx = args[2] as { channelId: bigint; send(value: unknown): Promise<void> };
+            ordinaryArg = args[1];
+            rxChannelId = rx.channelId;
+            txChannelId = tx.channelId;
+
+            registry.routeData(43n, Uint8Array.of(5, 0, 0, 0));
+            received = await rx.recv();
+            await tx.send(6);
+            call.reply(7);
+          } catch (error) {
+            dispatchError = error;
+            throw error;
+          }
+        },
+      },
+    ) as unknown as {
+      handleCall(call: {
+        requestId: bigint;
+        methodId: bigint;
+        args: Uint8Array;
+        channels: bigint[];
+        metadata: ReturnType<typeof emptyMetadata>;
+        connectionEpoch: number;
+      }): Promise<void>;
+    };
+
+    await driver.handleCall({
+      requestId: 33n,
+      methodId: CHANNEL_DISCOVERY_METHOD.id,
+      args: Uint8Array.of(0),
+      channels: [41n, 43n],
+      metadata: emptyMetadata(),
+      connectionEpoch: 0,
+    });
+
+    expect(ordinaryArg).toBe("ordinary");
+    expect(rxChannelId).toBe(43n);
+    expect(txChannelId).toBe(41n);
+    expect(dispatchError).toBeUndefined();
+    expect(received).toBe(5);
+    expect(sentChannelData).toEqual([
+      { channelId: 41n, payload: Uint8Array.of(6, 0, 0, 0) },
+    ]);
+    expect(sentResponses).toEqual([33n]);
   });
 
   // r[verify schema.errors.call-level]
