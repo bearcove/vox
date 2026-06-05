@@ -832,6 +832,62 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify rpc.flow-control.max-concurrent-requests.session-failure]
+    @Test func queuedOutboundRequestFailsWhenLimitedSessionCloses() async throws {
+        let transport = ScriptedTransport(
+            initialHandshake: .helloYourself(
+                HelloYourself(
+                    connectionSettings: ConnectionSettings(
+                        parity: .even,
+                        maxConcurrentRequests: 1,
+                        initialChannelCredit: 16
+                    ),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
+                    metadata: .null
+                ))
+        )
+        let (handle, driver, _, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        let driverTask = Task {
+            try await driver.run()
+        }
+
+        let firstCall = Task {
+            try await handle.callRaw(methodId: 1, payload: [1], timeout: TimeInterval?.none)
+        }
+        guard let firstRequestId = await awaitRequestId(transport, index: 0) else {
+            Issue.record("expected first request to be sent")
+            return
+        }
+        #expect(firstRequestId == 1)
+
+        let secondCall = Task {
+            try await handle.callRaw(methodId: 2, payload: [2], timeout: TimeInterval?.none)
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        #expect(await transport.sentRequestIds() == [1])
+
+        try? await transport.close()
+
+        do {
+            _ = try await awaitTaskResult(firstCall)
+            Issue.record("expected in-flight request to fail after session close")
+        } catch {
+            #expect(isConnectionClosed(error))
+        }
+        do {
+            _ = try await awaitTaskResult(secondCall)
+            Issue.record("expected queued request to fail after session close")
+        } catch {
+            #expect(isConnectionClosed(error))
+        }
+        #expect(await transport.sentRequestIds() == [1])
+
+        _ = try? await awaitTaskResult(driverTask)
+    }
+
     @Test func callFailsFastAfterDriverExit() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
@@ -880,6 +936,7 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify rpc.cancel]
     @Test func callTimesOutAndSendsCancel() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
@@ -964,6 +1021,7 @@ struct ConnectionFailureTests {
         #expect(protocolReason == "call.lifecycle.unknown-request-id")
     }
 
+    // r[verify rpc.cancel]
     @Test func lateResponseAfterTimeoutIsIgnoredAndConnectionStaysUsable() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
