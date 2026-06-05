@@ -19,4 +19,5 @@ enum HandleCommand: Sendable {
         dispatcher: (any ServiceDispatcher)?,
         responseTx: @Sendable (Result<Connection, ConnectionError>) -> Void
     )
+    case releaseConnection(connectionId: UInt64)
 }

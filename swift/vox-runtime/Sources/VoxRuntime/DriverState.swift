@@ -20,6 +20,7 @@ actor DriverState {
     var inFlightResponseContext: [UInt64: InFlightResponseContext] = [:]
     private var finalizedRequests: [UInt64: FinalizedRequest] = [:]
     var isClosed = false
+    private var rootInternallyClosed = false
 
     func addPendingResponse(
         _ requestId: UInt64,
@@ -153,6 +154,14 @@ actor DriverState {
     func isConnectionClosed() -> Bool {
         isClosed
     }
+
+    func markRootInternallyClosed() {
+        rootInternallyClosed = true
+    }
+
+    func isRootInternallyClosed() -> Bool {
+        rootInternallyClosed
+    }
 }
 
 /// Actor for virtual connection state.
@@ -181,12 +190,17 @@ actor VirtualConnectionState {
         virtualConnections[connId] = dispatcher
     }
 
-    func removeConnection(_ connId: UInt64) {
-        virtualConnections.removeValue(forKey: connId)
+    @discardableResult
+    func removeConnection(_ connId: UInt64) -> Bool {
+        virtualConnections.removeValue(forKey: connId) != nil
     }
 
     func dispatcher(for connId: UInt64) -> (any ServiceDispatcher)? {
         virtualConnections[connId]
+    }
+
+    func isEmpty() -> Bool {
+        virtualConnections.isEmpty && pendingOutbound.isEmpty
     }
 
     func addPendingOutbound(_ connId: UInt64, pending: PendingVirtualConnection) {

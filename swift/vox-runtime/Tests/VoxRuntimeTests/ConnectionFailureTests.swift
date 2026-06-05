@@ -409,6 +409,25 @@ private func awaitConnectionAccept(
     return nil
 }
 
+private func awaitConnectionClose(
+    _ transport: ScriptedTransport,
+    connectionId: UInt64,
+    timeoutMs: UInt64 = 1_000
+) async -> ConnectionClose? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent where message.connectionId == connectionId {
+            if case .connectionClose(let close) = message.payload {
+                return close
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
 private func awaitRequest(
     _ transport: ScriptedTransport,
     connectionId: UInt64,
@@ -592,10 +611,11 @@ struct ConnectionFailureTests {
                     messagePayloadSchema: Data(MessageSchemaClosure),
                     metadata: .null
                 )))
-        let (_, driver, _, _) = try await establishAcceptor(
+        let (rootConnection, driver, _, _) = try await establishAcceptor(
             conduit: transport,
             dispatcher: ImmediateResponseDispatcher()
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }
@@ -1058,11 +1078,12 @@ struct ConnectionFailureTests {
     // r[verify session.keepalive]
     @Test func keepaliveMissingPongClosesDriver() async throws {
         let transport = ScriptedTransport()
-        let (_, driver, _, _) = try await establishInitiator(
+        let (rootConnection, driver, _, _) = try await establishInitiator(
             conduit: transport,
             dispatcher: NoopDispatcher(),
             keepalive: SessionKeepaliveConfig(pingInterval: 0.02, pongTimeout: 0.05)
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }
@@ -1122,10 +1143,11 @@ struct ConnectionFailureTests {
     // r[verify rpc.virtual-connection.open]
     @Test func sessionHandleOpenConnectionCompletesOnAcceptAndUsesVirtualConnectionId() async throws {
         let transport = ScriptedTransport()
-        let (_, driver, sessionHandle, _) = try await establishInitiator(
+        let (rootConnection, driver, sessionHandle, _) = try await establishInitiator(
             conduit: transport,
             dispatcher: NoopDispatcher()
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }
@@ -1187,10 +1209,11 @@ struct ConnectionFailureTests {
     // r[verify connection.close.semantics]
     @Test func incomingVirtualConnectionCloseTearsDownLocalHandle() async throws {
         let transport = ScriptedTransport()
-        let (_, driver, sessionHandle, _) = try await establishInitiator(
+        let (rootConnection, driver, sessionHandle, _) = try await establishInitiator(
             conduit: transport,
             dispatcher: NoopDispatcher()
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }
@@ -1290,15 +1313,174 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify rpc.caller.liveness.refcounted]
+    // r[verify rpc.caller.liveness.last-drop-closes-connection]
+    @Test func droppingLastOutboundVirtualConnectionReferenceSendsClose() async throws {
+        let transport = ScriptedTransport()
+        let (rootConnection, driver, sessionHandle, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        #expect(rootConnection.connectionId == 0)
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let localSettings = ConnectionSettings(
+                parity: .even,
+                maxConcurrentRequests: 8,
+                initialChannelCredit: 16
+            )
+            var openTask: Task<Connection, Error>? = Task {
+                try await sessionHandle.openConnection(
+                    settings: localSettings,
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            }
+
+            guard let connId = await awaitConnectionOpenId(transport) else {
+                Issue.record("expected ConnectionOpen")
+                return
+            }
+            await transport.enqueueMessage(
+                messageAccept(
+                    connectionId: connId,
+                    settings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: .null
+                )
+            )
+
+            var firstReference: Connection? = try await awaitTaskResult(openTask!)
+            openTask = nil
+            var secondReference = firstReference
+            firstReference = nil
+            #expect(secondReference?.connectionId == connId)
+
+            #expect(
+                await awaitConnectionClose(transport, connectionId: connId, timeoutMs: 100)
+                    == nil)
+
+            secondReference = nil
+            guard await awaitConnectionClose(transport, connectionId: connId) != nil else {
+                Issue.record("expected virtual ConnectionClose after last reference")
+                return
+            }
+        }
+    }
+
+    // r[verify rpc.caller.liveness.root-internal-close]
+    // r[verify rpc.caller.liveness.root-teardown-condition]
+    @Test func droppingRootConnectionWaitsForVirtualConnectionsBeforeTeardown() async throws {
+        let transport = ScriptedTransport()
+        let driver: Driver
+        let sessionHandle: SessionHandle
+        var rootConnection: Connection?
+        do {
+            let established = try await establishInitiator(
+                conduit: transport,
+                dispatcher: NoopDispatcher()
+            )
+            rootConnection = established.0
+            driver = established.1
+            sessionHandle = established.2
+        }
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            #expect(rootConnection?.connectionId == 0)
+            let localSettings = ConnectionSettings(
+                parity: .even,
+                maxConcurrentRequests: 8,
+                initialChannelCredit: 16
+            )
+            var openTask: Task<Connection, Error>? = Task {
+                try await sessionHandle.openConnection(
+                    settings: localSettings,
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            }
+
+            guard let connId = await awaitConnectionOpenId(transport) else {
+                Issue.record("expected ConnectionOpen")
+                return
+            }
+            await transport.enqueueMessage(
+                messageAccept(
+                    connectionId: connId,
+                    settings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: .null
+                )
+            )
+            var virtualConnection: Connection? = try await awaitTaskResult(openTask!)
+            openTask = nil
+
+            rootConnection = nil
+            #expect(
+                await awaitConnectionClose(transport, connectionId: 0, timeoutMs: 100)
+                    == nil)
+
+            do {
+                guard let liveVirtualConnection = virtualConnection else {
+                    Issue.record("expected retained virtual connection")
+                    return
+                }
+                let callTask: Task<[UInt8], Error> = Task {
+                    try await liveVirtualConnection.callRaw(
+                        methodId: 99,
+                        payload: [1, 2, 3],
+                        timeout: 1.0
+                    )
+                }
+                guard let request = await awaitRequest(transport, connectionId: connId) else {
+                    Issue.record("expected request on virtual connection after root drop")
+                    return
+                }
+                await transport.enqueueMessage(
+                    .response(
+                        connId: connId,
+                        requestId: request.id,
+                        metadata: .null,
+                        payload: [0x42]
+                    )
+                )
+                let response = try await awaitTaskResult(callTask)
+                #expect(response == [0x42])
+            }
+
+            virtualConnection = nil
+            guard await awaitConnectionClose(transport, connectionId: connId) != nil else {
+                Issue.record("expected virtual ConnectionClose after virtual drop")
+                return
+            }
+            try await awaitTaskResult(driverTask)
+        }
+    }
+
     // r[verify rpc.virtual-connection.accept]
     // r[verify connection.virtual]
     @Test func inboundOpenConnectionAcceptsAndDispatchesOnVirtualConnection() async throws {
         let transport = ScriptedTransport()
-        let (_, driver, _, _) = try await establishInitiator(
+        let (rootConnection, driver, _, _) = try await establishInitiator(
             conduit: transport,
             dispatcher: NoopDispatcher(),
             connectionAcceptor: DefaultConnectionAcceptor(dispatcher: ImmediateResponseDispatcher())
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }
@@ -1348,10 +1530,11 @@ struct ConnectionFailureTests {
     // r[verify connection.open.rejection]
     @Test func sessionHandleOpenConnectionFailsOnReject() async throws {
         let transport = ScriptedTransport()
-        let (_, driver, sessionHandle, _) = try await establishInitiator(
+        let (rootConnection, driver, sessionHandle, _) = try await establishInitiator(
             conduit: transport,
             dispatcher: NoopDispatcher()
         )
+        #expect(rootConnection.connectionId == 0)
         let driverTask: Task<Void, Error> = Task {
             try await driver.run()
         }

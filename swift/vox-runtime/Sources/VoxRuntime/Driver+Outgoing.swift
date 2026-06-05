@@ -278,6 +278,10 @@ extension Driver {
                 responseTx(.failure(.connectionClosed))
                 return
             }
+            guard !(await state.isRootInternallyClosed()) else {
+                responseTx(.failure(.connectionClosed))
+                return
+            }
             guard settings.initialChannelCredit > 0 else {
                 responseTx(
                     .failure(.protocolViolation(rule: "rpc.flow-control.credit.initial.zero"))
@@ -303,7 +307,33 @@ extension Driver {
                 let pending = await virtualConnState.takePendingOutbound(connId)
                 pending?.responseTx(.failure(.transportError(String(describing: error))))
             }
+        case .releaseConnection(let connectionId):
+            await handleConnectionLivenessRelease(connectionId: connectionId)
         }
+    }
+
+    func handleConnectionLivenessRelease(connectionId: UInt64) async {
+        if connectionId == 0 {
+            // r[impl rpc.caller.liveness.root-internal-close]
+            // r[impl rpc.caller.liveness.root-teardown-condition]
+            await state.markRootInternallyClosed()
+            await finishIfRootClosedAndNoVirtualConnections()
+            return
+        }
+
+        // r[impl rpc.caller.liveness.last-drop-closes-connection]
+        guard await virtualConnState.removeConnection(connectionId) else {
+            return
+        }
+        await failPendingResponses(connectionId: connectionId)
+        do {
+            try await sendOrEnqueue(messageConnectionClose(connectionId: connectionId))
+        } catch {
+            await failAllPending()
+            eventContinuation.finish()
+            return
+        }
+        await finishIfRootClosedAndNoVirtualConnections()
     }
 
     func flushPendingCalls() async throws {

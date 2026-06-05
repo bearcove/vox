@@ -13,6 +13,14 @@ public final class Connection: @unchecked Sendable {
         self.schemaReceiveTracker = schemaReceiveTracker
     }
 
+    deinit {
+        // r[impl rpc.caller.liveness.refcounted]
+        // r[impl rpc.caller.liveness.last-drop-closes-connection]
+        // r[impl rpc.caller.liveness.root-internal-close]
+        // r[impl rpc.caller.liveness.root-teardown-condition]
+        handle.releaseConnectionLiveness()
+    }
+
     public var channelAllocator: ChannelIdAllocator {
         handle.channelAllocator
     }

@@ -98,4 +98,8 @@ final class ConnectionHandle: @unchecked Sendable {
     func sendTaskMessage(_ msg: TaskMessage) {
         _ = taskTx(msg)
     }
+
+    func releaseConnectionLiveness() {
+        _ = commandTx(.releaseConnection(connectionId: connectionId))
+    }
 }

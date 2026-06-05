@@ -157,6 +157,7 @@ extension Driver {
             }
             await removeVirtualConnection(msg.connectionId)
             await failPendingResponses(connectionId: msg.connectionId)
+            await finishIfRootClosedAndNoVirtualConnections()
         case .requestMessage(let request):
             switch request.body {
             case .call(let call):
@@ -376,5 +377,15 @@ extension Driver {
             pending.timeoutTask?.cancel()
             pending.responseTx(.failure(.connectionClosed))
         }
+    }
+
+    func finishIfRootClosedAndNoVirtualConnections() async {
+        guard await state.isRootInternallyClosed() else {
+            return
+        }
+        guard await virtualConnState.isEmpty() else {
+            return
+        }
+        eventContinuation.finish()
     }
 }
