@@ -9,11 +9,16 @@ import Testing
 // scripted-transport tests read unchanged. (Metadata is now a phon `Value`.)
 extension Message {
     static func request(
-        connId: UInt64, requestId: UInt64, methodId: UInt64, metadata: Metadata, payload: [UInt8]
+        connId: UInt64,
+        requestId: UInt64,
+        methodId: UInt64,
+        metadata: Metadata,
+        payload: [UInt8],
+        channels: [UInt64] = []
     ) -> Message {
         messageRequest(
             requestId: requestId, methodId: methodId, payload: payload, metadata: metadata,
-            connectionId: connId)
+            channels: channels, connectionId: connId)
     }
     static func response(
         connId: UInt64, requestId: UInt64, metadata: Metadata, payload: [UInt8]
@@ -445,6 +450,49 @@ private struct BlockingFlowControlDispatcher: ServiceDispatcher {
         await gate.waitUntilReleased()
         taskTx(.response(requestId: requestId, payload: [0x01]))
     }
+}
+
+private actor ChannelReceiverCapture {
+    private var receiver: ChannelReceiver?
+
+    func set(_ receiver: ChannelReceiver) {
+        self.receiver = receiver
+    }
+
+    func get() -> ChannelReceiver? {
+        receiver
+    }
+}
+
+private struct CancelChannelDispatcher: ServiceDispatcher {
+    let capture: ChannelReceiverCapture
+
+    func preregister(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        channels: [UInt64],
+        registry: ChannelRegistry
+    ) async {
+        guard let channelId = channels.first else {
+            return
+        }
+        let receiver = await registry.register(
+            channelId,
+            initialCredit: defaultInitialChannelCredit
+        )
+        await capture.set(receiver)
+    }
+
+    func dispatch(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        requestId _: UInt64,
+        channels _: [UInt64],
+        registry _: ChannelRegistry,
+        schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
+        taskTx _: @escaping @Sendable (TaskMessage) -> Void
+    ) async {}
 }
 
 private func metadataString(_ metadata: Metadata, key: String) -> String? {
@@ -1108,6 +1156,80 @@ struct ConnectionFailureTests {
             }
 
             #expect(await awaitHasCancel(transport))
+        }
+    }
+
+    // r[verify rpc.cancel.channels]
+    @Test func inboundCancelDoesNotCloseRequestChannels() async throws {
+        let channelId: UInt64 = 1
+        let capture = ChannelReceiverCapture()
+        let transport = ScriptedTransport(
+            initialHandshake: .hello(
+                Hello(
+                    parity: .odd,
+                    connectionSettings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 64,
+                        initialChannelCredit: 16
+                    ),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
+                    metadata: .null
+                ))
+        )
+        let (rootConnection, driver, sessionHandle, _) = try await establishAcceptor(
+            conduit: transport,
+            dispatcher: CancelChannelDispatcher(capture: capture)
+        )
+        #expect(rootConnection.connectionId == 0)
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            defer {
+                _ = rootConnection
+                _ = sessionHandle
+            }
+            await transport.enqueueMessage(
+                .request(
+                    connId: 0,
+                    requestId: 77,
+                    methodId: 1,
+                    metadata: .null,
+                    payload: [],
+                    channels: [channelId]
+                )
+            )
+
+            let start = ContinuousClock.now
+            let timeout = Duration.milliseconds(1_000)
+            var receiver: ChannelReceiver? = nil
+            while ContinuousClock.now - start < timeout {
+                if let captured = await capture.get() {
+                    receiver = captured
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 5_000_000)
+            }
+            guard let receiver else {
+                Issue.record("expected request channel to be registered")
+                return
+            }
+
+            await transport.enqueueMessage(messageCancel(requestId: 77))
+            await transport.enqueueMessage(
+                .data(connId: 0, channelId: channelId, payload: [0xCA, 0xFE])
+            )
+
+            let receivedTask = Task<[UInt8]?, Error> {
+                await receiver.recv()
+            }
+            let received = try await awaitTaskResult(receivedTask, timeoutMs: 1_000)
+            #expect(received == [0xCA, 0xFE])
+            #expect(await awaitProtocolReason(transport, timeoutMs: 100) == nil)
         }
     }
 
