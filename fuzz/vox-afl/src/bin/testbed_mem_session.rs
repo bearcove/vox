@@ -3,8 +3,9 @@ use std::time::Duration;
 
 use afl::fuzz;
 use spec_proto::{
-    Canvas, Color, Config, LookupError, MathError, Measurement, Message, Person, Point, Profile,
-    Record, Rectangle, Shape, Status, Tag, Testbed, TestbedClient, TestbedDispatcher,
+    Canvas, Color, Config, EcosystemBridgePayload, LookupError, MathError, Measurement, Message,
+    Person, Point, Profile, Record, Rectangle, Shape, Status, Tag, Testbed, TestbedClient,
+    TestbedDispatcher,
 };
 use vox::Call;
 use vox_core::{BareConduit, DriverReplySink, acceptor, initiator, memory_link_pair};
@@ -221,6 +222,13 @@ impl Testbed for FuzzService {
 
     async fn echo_config(&self, c: Config) -> Config {
         c
+    }
+
+    async fn echo_ecosystem_bridge(
+        &self,
+        payload: EcosystemBridgePayload,
+    ) -> EcosystemBridgePayload {
+        payload
     }
 }
 

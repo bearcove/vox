@@ -25,6 +25,25 @@ pub unsafe trait Reborrow: 'static {
     type Ref<'a>;
 }
 
+/// Implement [`Reborrow`] for owned `'static` types whose shortened view is
+/// exactly the same type.
+///
+/// # Safety
+///
+/// The listed types must not contain borrowed data whose lifetime needs
+/// shortening. This is for owned DTOs such as generated request/response/channel
+/// payload structs.
+#[macro_export]
+macro_rules! impl_reborrow_owned {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            unsafe impl $crate::Reborrow for $ty {
+                type Ref<'a> = $ty;
+            }
+        )*
+    };
+}
+
 // SAFETY: these owned types have no lifetime parameter; Ref<'a> = Self is
 // trivially sound.
 unsafe impl Reborrow for u32 {
@@ -74,6 +93,9 @@ unsafe impl Reborrow for char {
 }
 unsafe impl Reborrow for String {
     type Ref<'a> = String;
+}
+unsafe impl Reborrow for Vec<u8> {
+    type Ref<'a> = Vec<u8>;
 }
 unsafe impl Reborrow for &'static str {
     type Ref<'a> = &'a str;

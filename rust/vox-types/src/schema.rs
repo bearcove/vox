@@ -768,6 +768,23 @@ impl ExtractCtx {
             }
         }
 
+        if matches!(shape.def, Def::DynamicValue(_)) {
+            let key = self.key_for_shape(shape);
+            let id = self.id_for_key(key);
+            self.emit_schema(
+                key,
+                MixedSchema {
+                    id,
+                    type_params: vec![],
+                    kind: SchemaKind::Primitive {
+                        primitive_type: PrimitiveType::Payload,
+                    },
+                },
+            );
+            self.seen.insert(shape);
+            return Ok(TypeRef::concrete(id));
+        }
+
         // Transparent wrappers: follow inner.
         if shape.is_transparent()
             && let Some(inner) = shape.inner
@@ -1318,6 +1335,18 @@ mod tests {
             schemas[0].kind,
             SchemaKind::Primitive {
                 primitive_type: PrimitiveType::Bool
+            }
+        ));
+    }
+
+    #[test]
+    fn dynamic_value_is_terminal_payload_schema() {
+        let extracted = extract_schemas(<facet_value::Value as Facet>::SHAPE).unwrap();
+        assert_eq!(extracted.schemas.len(), 1);
+        assert!(matches!(
+            extracted.schemas[0].kind,
+            SchemaKind::Primitive {
+                primitive_type: PrimitiveType::Payload
             }
         ));
     }

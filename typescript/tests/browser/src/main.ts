@@ -182,7 +182,7 @@ async function testComplex(client: TestbedClient): Promise<void> {
   // Test: processMessage - enum with different payload types
   log("Testing processMessage (Text)...");
   const textMsg = await client.processMessage({ tag: "Text", value: "hello" });
-  if (textMsg.tag !== "Text" || textMsg.value !== "Processed: hello") {
+  if (textMsg.tag !== "Text" || textMsg.value !== "processed: hello") {
     throw new Error(`processMessage (Text) mismatch: got ${JSON.stringify(textMsg)}`);
   }
   addResult("processMessage (Text)", true);

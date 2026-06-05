@@ -36,14 +36,14 @@ pub enum VoxError<E = ::core::convert::Infallible> {
 }
 
 impl<E> VoxError<E> {
-    // r[impl rpc.fallible.vox-error.retryable]
-    // r[impl schema.errors.non-retryable]
-    /// Returns `true` if issuing a new call on a fresh connection may succeed.
+    // r[impl rpc.fallible.vox-error.outcome]
+    // r[impl schema.errors.same-peer-terminal]
+    /// Returns `true` when the call ended because the session or transport died.
     ///
-    /// `InvalidPayload`, `UnknownMethod`, `User`, `Cancelled`, and `Indeterminate`
-    /// are permanent failures — issuing the same call against the same peer will reproduce
-    /// the same outcome.
-    pub fn is_retryable(&self) -> bool {
+    /// `InvalidPayload`, `UnknownMethod`, `User`, and `Cancelled` are terminal
+    /// call outcomes. `Indeterminate` is separate: the runtime explicitly does
+    /// not know whether the call reached a terminal outcome.
+    pub fn is_session_interruption(&self) -> bool {
         matches!(
             self,
             Self::ConnectionClosed | Self::SessionShutdown | Self::SendFailed

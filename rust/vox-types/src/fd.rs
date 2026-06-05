@@ -1,5 +1,7 @@
 //! `Fd` — a file descriptor that travels across a vox connection.
 //!
+//! r[impl transport.fd.capability]
+//!
 //! On the wire an [`Fd`] is encoded as a small varint *index* into a
 //! per-message fd table; the descriptors themselves travel out-of-band in
 //! `SCM_RIGHTS` ancillary data on a Unix-domain socket. This mirrors the

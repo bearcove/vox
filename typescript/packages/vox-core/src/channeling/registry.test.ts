@@ -64,7 +64,15 @@ describe("ChannelRegistry", () => {
   });
 
   // r[verify rpc.flow-control.credit.try-send]
+  // r[verify rpc.observability.channel.try-send-detail]
   it("trySend returns full or closed with the original value", () => {
+    const unbound = new Tx<number>();
+    expect(unbound.trySendDetailed(0)).toEqual({
+      kind: "full",
+      detail: "unbound",
+      value: 0,
+    });
+
     const registry = new ChannelRegistry();
     const channelId = 14n;
     const tx = new Tx<number>();
@@ -81,6 +89,26 @@ describe("ChannelRegistry", () => {
 
     tx.close();
     expect(tx.trySend(3)).toEqual({ kind: "closed", value: 3 });
+    expect(tx.trySendDetailed(3)).toEqual({ kind: "closed", detail: "closed", value: 3 });
+
+    const creditLimited = new Tx<number>();
+    creditLimited.bind(16n, new ChannelRegistry(), (value) => Uint8Array.of(value), 0);
+    expect(creditLimited.trySendDetailed(4)).toEqual({
+      kind: "full",
+      detail: "credit_exhausted",
+      value: 4,
+    });
+
+    const queueLimited = new Tx<number>();
+    queueLimited.bind(17n, new ChannelRegistry(), (value) => Uint8Array.of(value), 65);
+    for (let value = 0; value < 64; value += 1) {
+      expect(queueLimited.trySendDetailed(value)).toEqual({ kind: "sent", detail: "sent" });
+    }
+    expect(queueLimited.trySendDetailed(64)).toEqual({
+      kind: "full",
+      detail: "runtime_queue_full",
+      value: 64,
+    });
   });
 
   // r[verify rpc.flow-control.credit.grant]
@@ -112,5 +140,69 @@ describe("ChannelRegistry", () => {
     await expect(rx.recv()).resolves.toEqual(payload);
     await expect(rx.recv()).resolves.toBeNull();
     expect(() => registry.routeData(channelId, Uint8Array.of(7))).toThrow(/data after close/i);
+  });
+
+  // r[verify rpc.channel.connection-closure]
+  it("closeAll terminates live incoming receivers and blocked outgoing senders", async () => {
+    const registry = new ChannelRegistry();
+    const rx = registry.registerIncoming(31n, 1);
+    const tx = registry.registerOutgoing(33n, 0);
+
+    const blockedSend = tx.sendData(Uint8Array.of(9));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    registry.closeAll();
+
+    await expect(rx.recv()).resolves.toBeNull();
+    await expect(blockedSend).rejects.toMatchObject({ kind: "closed" });
+    expect(registry.pollOutgoing()).toEqual({ kind: "done" });
+  });
+
+  // r[verify rpc.debug.snapshot]
+  // r[verify rpc.observability.channel.context]
+  it("preserves channel debug context in snapshots after close", () => {
+    const registry = new ChannelRegistry();
+    const channelId = 21n;
+    registry.registerOutgoing(channelId, 1);
+    registry.rememberContext(channelId, {
+      connectionId: 0n,
+      requestId: 5n,
+      service: "Echo",
+      method: "stream",
+      channelDirection: "tx",
+      side: "client",
+    });
+
+    expect(registry.debugSnapshot()).toEqual({
+      channels: [
+        {
+          channelId,
+          state: "outgoing",
+          context: {
+            connectionId: 0n,
+            requestId: 5n,
+            service: "Echo",
+            method: "stream",
+            channelDirection: "tx",
+            side: "client",
+          },
+        },
+      ],
+      pendingCreditCount: 0,
+    });
+
+    registry.close(channelId);
+    expect(registry.debugSnapshot().channels).toContainEqual({
+      channelId,
+      state: "closed",
+      context: {
+        connectionId: 0n,
+        requestId: 5n,
+        service: "Echo",
+        method: "stream",
+        channelDirection: "tx",
+        side: "client",
+      },
+    });
   });
 });

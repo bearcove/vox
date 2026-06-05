@@ -108,6 +108,10 @@ pub fn shape_contains_channel(shape: &'static Shape) -> bool {
             return true;
         }
 
+        if matches!(shape.def, Def::DynamicValue(_)) {
+            return false;
+        }
+
         if !seen.insert(shape) {
             return false;
         }
@@ -162,6 +166,10 @@ pub fn shape_contains_channel_in_collection(shape: &'static Shape) -> bool {
     ) -> bool {
         if is_tx(shape) || is_rx(shape) {
             return inside_collection;
+        }
+
+        if matches!(shape.def, Def::DynamicValue(_)) {
+            return false;
         }
 
         if !seen.insert((shape, inside_collection)) {

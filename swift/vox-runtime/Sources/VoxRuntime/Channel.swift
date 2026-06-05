@@ -589,6 +589,7 @@ public actor ChannelRegistry {
 
     /// Close all channels when the connection closes.
     public func closeAllChannels() async {
+        // r[impl rpc.channel.connection-closure]
         for (_, receiver) in receivers {
             receiver.deliverReset()
         }

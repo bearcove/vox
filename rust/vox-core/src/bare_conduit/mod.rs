@@ -120,6 +120,7 @@ impl<F: MsgFamily, LTx: LinkTx + MaybeSend + 'static> ConduitTx for BareConduitT
 
     async fn send_prepared(&self, prepared: Self::Prepared) -> Result<(), Self::Error> {
         let PreparedFrame { bytes, fds } = prepared;
+        // r[impl transport.fd.capability]
         if vox_types::frame_fds_len(&fds) > 0 && !self.link_tx.supports_fd_passing() {
             return Err(BareConduitError::Io(std::io::Error::other(
                 "message carries file descriptors but the transport \

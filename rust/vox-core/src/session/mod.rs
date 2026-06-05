@@ -960,12 +960,12 @@ pub enum SessionError {
 }
 
 impl SessionError {
-    /// Returns `true` if a retry of the same connection attempt may succeed.
+    /// Returns `true` if a later connection attempt may succeed.
     ///
     /// I/O errors and timeouts are transient — the remote might become available
     /// shortly. Protocol errors and explicit rejections are permanent for this
-    /// peer address and will not resolve by retrying.
-    pub fn is_retryable(&self) -> bool {
+    /// peer address.
+    pub fn is_transient_connect_failure(&self) -> bool {
         matches!(self, Self::Io(_) | Self::ConnectTimeout)
     }
 }

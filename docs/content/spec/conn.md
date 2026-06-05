@@ -39,6 +39,15 @@ weight = 11
 > Vox provides a `LocalLink` abstraction that uses named pipes on Windows and
 > Unix sockets on Linux & macOS. Endpoints/addresses are a `String` internally.
 
+> r[transport.fd.capability]
+>
+> `vox::Fd` values are transport capabilities, not ordinary payload bytes. They
+> may travel only over transports that explicitly support descriptor passing
+> (`FdStreamLink` / Unix-domain local transports on Unix). Transports that cannot
+> carry descriptors MUST reject descriptor-bearing frames with a diagnostic
+> error. Generated non-Rust bindings MUST reject service surfaces containing
+> `vox::Fd` instead of lowering them to generic bytes or unknown values.
+
 > r[transport.websocket]
 >
 > Vox provides a WebSocket link, which sends payloads via WebSocket binary
@@ -58,6 +67,17 @@ weight = 11
 > r[transport.inprocess.platforms]
 >
 > The in-process link is available only on `wasm32-unknown-unknown`.
+
+# Hosted compliance subjects
+
+> r[hosted.subject.lifecycle]
+>
+> A hosted Vox compliance subject is a child process owned by the spec harness.
+> The subject MUST exit promptly when its peer disconnects or the session is
+> shut down. It MUST also enforce an inactivity timeout so a stalled harness
+> cannot leave subject processes behind indefinitely. The harness MUST spawn
+> subjects with process ownership that prevents child accumulation if a test
+> exits before normal protocol shutdown completes.
 
 > r[link.split]
 >

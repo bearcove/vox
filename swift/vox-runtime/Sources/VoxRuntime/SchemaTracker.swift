@@ -136,6 +136,7 @@ public final class SchemaTracker: @unchecked Sendable {
     /// Cache of compatibility decode programs (planning is amortized: built once per writer,
     /// reused for every decode). Invalidated when a binding's writer is re-advertised.
     private var programs: [ProgramKey: Lowered] = [:]
+    private var decodeFns: [ProgramKey: (generation: UInt64, fn: TypedDecodeFn)] = [:]
     private let lock = NSLock()
 
     public init() {}
@@ -144,13 +145,23 @@ public final class SchemaTracker: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         received.removeAll()
         programs.removeAll()
+        decodeFns.removeAll()
     }
 
     /// Record the peer's phon schema-closure bytes for a binding (best-effort,
     /// idempotent: a later advertisement overwrites and drops the cached program).
     /// r[impl schema.tracking.bindings]
     public func recordReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection, _ schemaBytes: [UInt8]) {
-        guard !schemaBytes.isEmpty, let bundle = try? parseSchemaClosure(schemaBytes) else { return }
+        guard !schemaBytes.isEmpty else { return }
+        let bundle: (root: SchemaId, schemas: [Schema], auxiliaryRoots: [AuxiliaryRoot])
+        do {
+            bundle = try parseSchemaClosure(schemaBytes)
+        } catch {
+            debugLog(
+                "failed to parse schema closure method=\(methodId) dir=\(direction) "
+                    + "schemasLen=\(schemaBytes.count) error=\(String(describing: error))")
+            return
+        }
         let key = BindingKey(methodId: methodId, direction: direction)
         lock.lock(); defer { lock.unlock() }
         var auxiliaryRoots: [String: SchemaId] = [:]
@@ -163,6 +174,7 @@ public final class SchemaTracker: @unchecked Sendable {
             auxiliaryRoots
         )
         programs = programs.filter { $0.key.binding != key }
+        decodeFns = decodeFns.filter { $0.key.binding != key }
     }
 
     public func hasReceived(_ methodId: UInt64, _ direction: SchemaBindingDirection) -> Bool {
@@ -190,6 +202,24 @@ public final class SchemaTracker: @unchecked Sendable {
         else { return nil }
         programs[key] = program
         return program
+    }
+
+    /// Compile the cached compatibility decode program through the currently selected
+    /// Vox typed engine. Reuses both the semantic phon plan and the compiled function
+    /// until the writer schema changes or the process selects a different engine.
+    /// r[impl conduit.typeplan]
+    /// r[impl schema.tracking.received]
+    public func buildDecodeFn(
+        _ methodId: UInt64, _ direction: SchemaBindingDirection,
+        readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
+    ) -> TypedDecodeFn? {
+        let binding = BindingKey(methodId: methodId, direction: direction)
+        let key = ProgramKey(binding: binding, role: nil)
+        return buildDecodeFnLocked(key: key) {
+            guard let writer = received[binding] else { return nil }
+            return try? lowerDecode(
+                writer.root, readerDescriptor, local.with(writer.schemas), readerBlocks)
+        }
     }
 
     public func auxiliaryRoot(
@@ -220,6 +250,45 @@ public final class SchemaTracker: @unchecked Sendable {
         else { return nil }
         programs[key] = program
         return program
+    }
+
+    /// r[impl schema.exchange.channels]
+    /// r[impl schema.exchange.channels.rx-args]
+    public func buildAuxiliaryDecodeFn(
+        _ methodId: UInt64, _ direction: SchemaBindingDirection, role: String,
+        readerDescriptor: Descriptor, readerBlocks: [SchemaId: Descriptor] = [:], local: Registry
+    ) -> TypedDecodeFn? {
+        let binding = BindingKey(methodId: methodId, direction: direction)
+        let key = ProgramKey(binding: binding, role: role)
+        return buildDecodeFnLocked(key: key) {
+            guard let writer = received[binding],
+                let writerRoot = writer.auxiliaryRoots[role]
+            else { return nil }
+            return try? lowerDecode(
+                writerRoot, readerDescriptor, local.with(writer.schemas), readerBlocks)
+        }
+    }
+
+    private func buildDecodeFnLocked(
+        key: ProgramKey, lower: () -> Lowered?
+    ) -> TypedDecodeFn? {
+        let current = VoxTypedCodec.snapshot()
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = decodeFns[key], cached.generation == current.generation {
+            return cached.fn
+        }
+        let program: Lowered
+        if let cached = programs[key] {
+            program = cached
+        } else {
+            guard let lowered = lower() else { return nil }
+            program = lowered
+            programs[key] = lowered
+        }
+        let compiled = VoxTypedCodec.compileDecode(program)
+        decodeFns[key] = compiled
+        return compiled.fn
     }
 }
 

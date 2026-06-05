@@ -111,7 +111,7 @@ pub fn generate_phon_server(service: &ServiceDescriptor) -> String {
                 _ => "VoxError<Infallible>".to_string(),
             };
             out.push_str(&format!(
-                "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        let r: {resp0} = .failure(wire)\n        return encodeTyped(r, {prefix0}_ResponseEncodeProgram)\n    }}\n\n"
+                "    public func encodeVoxError(_ error: VoxRuntimeError) -> [UInt8] {{\n        let wire: {wire0}\n        switch error {{\n        case .unknownMethod, .notImplemented: wire = .unknownMethod\n        case .invalidPayload(let s), .decodeError(let s), .encodeError(let s): wire = .invalidPayload(s)\n        case .cancelled: wire = .cancelled\n        case .connectionClosed: wire = .connectionClosed\n        case .timeout, .indeterminate: wire = .indeterminate\n        }}\n        let r: {resp0} = .failure(wire)\n        return encodeVoxTyped(r, {prefix0}_ResponseEncoder)\n    }}\n\n"
             ));
         }
     }
@@ -159,6 +159,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     let arity = m.args.len();
     let channels = has_channels(m);
     let mut out = String::new();
+    let response_schema_closure = format!("{svc}Methods[{id}]!.responseSchemaClosure");
 
     let extra_params = if channels {
         "channels: [UInt64], registry: ChannelRegistry, "
@@ -178,10 +179,10 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
         // the only decode path. No same-schema fallback: a missing writer schema is a
         // protocol error (the caller advertises it on the first call).
         out.push_str(&format!(
-            "        guard let argsProgram = schemaReceiveTracker.buildDecodeProgram({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, readerBlocks: {prefix}_ArgsDescriptorBlocks, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}))\n            return\n        }}\n"
+            "        guard let argsDecoder = schemaReceiveTracker.buildDecodeFn({id}, .args, readerDescriptor: {prefix}_ArgsDescriptor, readerBlocks: {prefix}_ArgsDescriptorBlocks, local: {svc}Registry) else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"no args schema advertised\")), methodId: {id}, responseSchemaClosure: {response_schema_closure}))\n            return\n        }}\n"
         ));
         out.push_str(&format!(
-            "        let args: {args_ty}\n        do {{ args = try decodeTyped(argsProgram, payload) }} catch {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"decode args\")), methodId: {id}))\n            return\n        }}\n"
+            "        let args: {args_ty}\n        do {{ args = try decodeVoxTyped(argsDecoder, payload) }} catch {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"decode args\")), methodId: {id}, responseSchemaClosure: {response_schema_closure}))\n            return\n        }}\n"
         ));
     }
 
@@ -204,13 +205,12 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
             "        let {an}WireIndex = channelWireIndex({slot})\n"
         ));
         out.push_str(&format!(
-            "        guard {an}WireIndex < channels.count else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"channel wire index out of range\")), methodId: {id}))\n            return\n        }}\n"
+            "        guard {an}WireIndex < channels.count else {{\n            taskTx(.response(requestId: requestId, payload: encodeVoxError(.invalidPayload(\"channel wire index out of range\")), methodId: {id}, responseSchemaClosure: {response_schema_closure}))\n            return\n        }}\n"
         ));
         let elem_ty = swift_type_base(a.channel_element.expect("channel arg element shape"));
         if is_tx(a.shape) {
             // Handler SENDS → phon element ENCODE codec.
-            let ser =
-                element_encode_closure(&elem_ty, &format!("{prefix}_{an}_ElementEncodeProgram"));
+            let ser = element_encode_closure(&elem_ty, &format!("{prefix}_{an}_ElementEncoder"));
             out.push_str("        // r[impl schema.exchange.channels.tx-args]\n");
             out.push_str(&format!(
                 "        let {an} = await bindServerTx(channelId: channels[{an}WireIndex], registry: registry, taskTx: taskTx, methodId: {id}, argsSchemaClosure: {svc}Methods[{id}]!.argsSchemaClosure, schemaSendTracker: schemaSendTracker, serialize: {ser})\n"
@@ -288,7 +288,7 @@ fn generate_dispatch_method(service: &ServiceDescriptor, m: &MethodDescriptor) -
     // response written for this method carries the schema even under pipelining (the
     // schema decision must NOT be made here in the concurrent dispatch task).
     out.push_str(&format!(
-        "        let respPayload = encodeTyped(voxResult, {prefix}_ResponseEncodeProgram)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, responseSchemaClosure: {svc}Methods[{id}]!.responseSchemaClosure))\n    }}\n\n"
+        "        let respPayload = encodeVoxTyped(voxResult, {prefix}_ResponseEncoder)\n        taskTx(.response(requestId: requestId, payload: respPayload, methodId: {id}, responseSchemaClosure: {response_schema_closure}))\n    }}\n\n"
     ));
 
     out

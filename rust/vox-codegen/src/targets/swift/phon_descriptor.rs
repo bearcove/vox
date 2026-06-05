@@ -13,6 +13,8 @@
 //! Result. Unsupported shapes panic at codegen time (loud, not silent).
 
 use facet_core::{ScalarType, Shape};
+use phon_ir as ir;
+use phon_schema::{SchemaId, SchemaRef};
 use vox_phon::{schema_bytes_for_shape, schema_id_for_shape};
 use vox_types::{
     EnumInfo, ShapeKind, StructInfo, VariantKind, classify_shape, classify_variant, is_bytes,
@@ -88,7 +90,10 @@ pub fn generate_phon_codec(roots: &[(String, &'static Shape)]) -> String {
             "nonisolated(unsafe) private let {name}EncodeProgram: Lowered = try! lowerTyped({name}Descriptor, {name}Registry, {name}DescriptorBlocks)\n\n"
         ));
         out.push_str(&format!(
-            "public func encode{name}(_ value: {ty}) -> [UInt8] {{ encodeTyped(value, {name}EncodeProgram) }}\n\n"
+            "private let {name}Encoder = VoxTypedEncoder({name}EncodeProgram)\n\n"
+        ));
+        out.push_str(&format!(
+            "public func encode{name}(_ value: {ty}) -> [UInt8] {{ encodeVoxTyped(value, {name}Encoder) }}\n\n"
         ));
     }
     out
@@ -106,8 +111,28 @@ fn layout_expr(shape: &'static Shape) -> String {
     format!("Layout(size: MemoryLayout<{ty}>.size, align: MemoryLayout<{ty}>.alignment)")
 }
 
-fn schema_ref(shape: &'static Shape) -> String {
-    format!(".concrete(SchemaId({}))", hex_u64(phon_schema_id(shape)))
+fn schema_ref_expr(schema_ref: &SchemaRef) -> String {
+    match schema_ref {
+        SchemaRef::Concrete { id, args } if args.is_empty() => {
+            format!(".concrete(SchemaId({}))", hex_u64(id.0))
+        }
+        SchemaRef::Concrete { id, args } => {
+            let args = args
+                .iter()
+                .map(schema_ref_expr)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(".concrete(id: SchemaId({}), args: [{args}])", hex_u64(id.0))
+        }
+        SchemaRef::Var { name } => format!(".variable(name: {name:?})"),
+    }
+}
+
+fn concrete_schema_id(schema_ref: &SchemaRef) -> SchemaId {
+    match schema_ref {
+        SchemaRef::Concrete { id, args } if args.is_empty() => *id,
+        other => panic!("Swift recursion descriptor needs a concrete schema id, got {other:?}"),
+    }
 }
 
 /// Whether a shape is a fixed-width scalar (copies as raw bytes) — bool, the
@@ -134,14 +159,30 @@ fn is_fixed_scalar(shape: &'static Shape) -> bool {
     )
 }
 
-/// Recursion context for descriptor emission: which schema ids are cyclic (lower to
-/// callable blocks, not inline), the block-body expressions built so far (keyed by
-/// schema id), and the ids currently being built (to break a back-edge). Mirrors the
-/// Rust derive's `RecCtx` over `build_descriptor`.
+/// Recursion context for descriptor emission. The Rust Phon derive is the oracle for
+/// schema refs: collection/option wrapper ids are root-context ids, not ids that can
+/// be recomputed from each child shape in isolation.
 struct RecCtx {
-    rec_ids: std::collections::BTreeSet<u64>,
+    rust_blocks: std::collections::HashMap<SchemaId, ir::Descriptor>,
     building: std::collections::HashSet<u64>,
     blocks: std::collections::BTreeMap<u64, String>,
+}
+
+impl RecCtx {
+    fn ensure_block(&mut self, shape: &'static Shape, id: SchemaId) {
+        if self.blocks.contains_key(&id.0) || self.building.contains(&id.0) {
+            return;
+        }
+        let rust_body = self
+            .rust_blocks
+            .get(&id)
+            .unwrap_or_else(|| panic!("missing Rust-derived recursion block for {id:?}"))
+            .clone();
+        self.building.insert(id.0);
+        let body = descriptor_node(shape, &rust_body, self);
+        self.building.remove(&id.0);
+        self.blocks.insert(id.0, body);
+    }
 }
 
 /// The full `Descriptor(...)` expression for a (non-recursive) shape. For a possibly
@@ -158,12 +199,13 @@ pub fn descriptor_expr(shape: &'static Shape) -> String {
 pub fn descriptor_with_blocks(
     shape: &'static Shape,
 ) -> (String, std::collections::BTreeMap<u64, String>) {
+    let derived = phon::derive::of_shape(shape).expect("phon descriptor derive");
     let mut ctx = RecCtx {
-        rec_ids: vox_phon::recursive_schema_ids_for_shape(shape).unwrap_or_default(),
+        rust_blocks: derived.descriptor_blocks,
         building: std::collections::HashSet::new(),
         blocks: std::collections::BTreeMap::new(),
     };
-    let desc = descriptor_node(shape, &mut ctx);
+    let desc = descriptor_node(shape, &derived.descriptor, &mut ctx);
     (desc, ctx.blocks)
 }
 
@@ -180,47 +222,33 @@ pub fn blocks_literal(blocks: &std::collections::BTreeMap<u64, String>) -> Strin
     format!("[{}]", entries.join(", "))
 }
 
-/// One descriptor node, with recursion handling. A cyclic schema's first occurrence
-/// builds its body once into `ctx.blocks` and returns the `.recurse` stand-in; every
-/// later occurrence (a back-edge) returns the stand-in directly.
-fn descriptor_node(shape: &'static Shape, ctx: &mut RecCtx) -> String {
-    let id = phon_schema_id(shape);
-    if ctx.rec_ids.contains(&id) {
-        // Already built, or in progress (a back-edge): splice in the stand-in.
-        if ctx.blocks.contains_key(&id) || ctx.building.contains(&id) {
-            return recurse_descriptor(shape);
-        }
-        // First occurrence: build the body once (recursing), then file it as a block.
-        ctx.building.insert(id);
-        let body = format!(
-            "Descriptor(schema: {}, layout: {}, access: {})",
-            schema_ref(shape),
-            layout_expr(shape),
-            access_expr(shape, ctx)
-        );
-        ctx.building.remove(&id);
-        ctx.blocks.insert(id, body);
-        return recurse_descriptor(shape);
+/// One descriptor node. Schema refs come from Rust's derived descriptor; access and
+/// witness expressions are Swift-specific and are emitted from the shape.
+fn descriptor_node(shape: &'static Shape, rust_desc: &ir::Descriptor, ctx: &mut RecCtx) -> String {
+    if matches!(rust_desc.access, ir::Access::Recurse) {
+        let id = concrete_schema_id(&rust_desc.schema);
+        ctx.ensure_block(shape, id);
+        return recurse_descriptor(shape, &rust_desc.schema);
     }
     format!(
         "Descriptor(schema: {}, layout: {}, access: {})",
-        schema_ref(shape),
+        schema_ref_expr(&rust_desc.schema),
         layout_expr(shape),
-        access_expr(shape, ctx)
+        access_expr(shape, rust_desc, ctx)
     )
 }
 
 /// The `Access.recurse` stand-in descriptor for a cyclic position: schema + layout,
 /// no inlined body (the body lives in the block registry, reached by `CallBlock`).
-fn recurse_descriptor(shape: &'static Shape) -> String {
+fn recurse_descriptor(shape: &'static Shape, schema_ref: &SchemaRef) -> String {
     format!(
         "Descriptor(schema: {}, layout: {}, access: .recurse)",
-        schema_ref(shape),
+        schema_ref_expr(schema_ref),
         layout_expr(shape)
     )
 }
 
-fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
+fn access_expr(shape: &'static Shape, rust_desc: &ir::Descriptor, ctx: &mut RecCtx) -> String {
     // A self-describing dynamic `Value` field (e.g. `Metadata`): carried as a phon
     // `Dynamic`. In Swift memory it is a `PhonSchema.Value`; `.dynamic` drives the
     // self-describing codec at the field offset (NOT opaque `Data`).
@@ -239,15 +267,28 @@ fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
         ShapeKind::Scalar(_) => ".scalar".to_string(),
         ShapeKind::Option { inner } => {
             let inner_ty = swift_type_base(inner);
+            let ir::Access::Option(option) = &rust_desc.access else {
+                panic!("Swift option descriptor got {:?}", rust_desc.access);
+            };
             format!(
                 ".option(OptionAccess(witness: .of({inner_ty}.self), some: {}))",
-                descriptor_node(inner, ctx)
+                descriptor_node(inner, &option.some, ctx)
             )
         }
         ShapeKind::List { element }
         | ShapeKind::Slice { element }
-        | ShapeKind::Array { element, .. }
-        | ShapeKind::Set { element } => sequence_or_bulk(element, ctx),
+        | ShapeKind::Array { element, .. } => {
+            let ir::Access::Sequence(sequence) = &rust_desc.access else {
+                panic!("Swift sequence descriptor got {:?}", rust_desc.access);
+            };
+            sequence_or_bulk(element, &sequence.element, ctx)
+        }
+        ShapeKind::Set { element } => {
+            let ir::Access::Set(set) = &rust_desc.access else {
+                panic!("Swift set descriptor got {:?}", rust_desc.access);
+            };
+            sequence_set(element, &set.element, ctx)
+        }
         ShapeKind::Map { key, value } => {
             assert!(
                 matches!(
@@ -256,11 +297,14 @@ fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
                 ),
                 "phon maps must be string-keyed"
             );
+            let ir::Access::Map(map) = &rust_desc.access else {
+                panic!("Swift map descriptor got {:?}", rust_desc.access);
+            };
             let v_ty = swift_type_base(value);
             format!(
                 ".map(MapAccess(key: {}, value: {}, keyStride: MemoryLayout<String>.stride, keyAlign: MemoryLayout<String>.alignment, valueStride: MemoryLayout<{v_ty}>.stride, valueAlign: MemoryLayout<{v_ty}>.alignment, witness: .stringKeyed({v_ty}.self)))",
-                descriptor_node(key, ctx),
-                descriptor_node(value, ctx)
+                descriptor_node(key, &map.key, ctx),
+                descriptor_node(value, &map.value, ctx)
             )
         }
         ShapeKind::Struct(StructInfo {
@@ -268,13 +312,17 @@ fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
             name: Some(type_name),
             ..
         }) => {
+            let ir::Access::Record(record) = &rust_desc.access else {
+                panic!("Swift record descriptor got {:?}", rust_desc.access);
+            };
             let entries: Vec<String> = fields
                 .iter()
-                .map(|f| {
+                .zip(record.fields.iter())
+                .map(|(f, rust_field)| {
                     format!(
                         "FieldAccess(offset: MemoryLayout<{type_name}>.offset(of: \\{type_name}.{})!, descriptor: {})",
                         swift_field_name(f.name),
-                        descriptor_node(f.shape(), ctx)
+                        descriptor_node(f.shape(), &rust_field.descriptor, ctx)
                     )
                 })
                 .collect();
@@ -286,20 +334,36 @@ fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
         ShapeKind::Enum(EnumInfo {
             name: Some(_),
             variants,
-        }) => enum_access(shape, variants, ctx),
+        }) => {
+            let ir::Access::Enum(enumeration) = &rust_desc.access else {
+                panic!("Swift enum descriptor got {:?}", rust_desc.access);
+            };
+            enum_access(shape, variants, enumeration, ctx)
+        }
         // A tuple — chiefly a method's args (the phon schema is a positional struct
         // `(_,…)`; the record's fields zip with it by index). A 1-tuple collapses to
         // its element in Swift (no `.0` keypath), so its single field is at offset 0;
         // a 0-tuple is unit (0 bytes); N≥2 use the Swift tuple's element offsets.
         ShapeKind::Tuple { elements } => {
             let shapes: Vec<&'static Shape> = elements.iter().map(|p| p.shape).collect();
-            tuple_access(shape, &shapes, ctx)
+            let ir::Access::Record(record) = &rust_desc.access else {
+                panic!("Swift tuple descriptor got {:?}", rust_desc.access);
+            };
+            tuple_access(shape, &shapes, record, ctx)
         }
         ShapeKind::TupleStruct { fields } => {
             let shapes: Vec<&'static Shape> = fields.iter().map(|f| f.shape()).collect();
-            tuple_access(shape, &shapes, ctx)
+            let ir::Access::Record(record) = &rust_desc.access else {
+                panic!("Swift tuple-struct descriptor got {:?}", rust_desc.access);
+            };
+            tuple_access(shape, &shapes, record, ctx)
         }
-        ShapeKind::Result { ok, err } => result_access(ok, err, ctx),
+        ShapeKind::Result { ok, err } => {
+            let ir::Access::Result(result) = &rust_desc.access else {
+                panic!("Swift result descriptor got {:?}", rust_desc.access);
+            };
+            result_access(ok, err, result, ctx)
+        }
         // An opaque field (the already-phon-encoded method payload) rides the wire
         // as a length-prefixed byte run — a `Primitive::Bytes`. In memory it is a
         // Swift `Data`.
@@ -313,22 +377,28 @@ fn access_expr(shape: &'static Shape, ctx: &mut RecCtx) -> String {
 /// A tuple as a positional `.record`. The Swift type is `swift_type_base(shape)`:
 /// `Void` for 0 elements, the bare element type for 1 (a Swift 1-tuple collapses —
 /// its field is at offset 0), or `(A, B, …)` for N≥2 (element offsets via keypath).
-fn tuple_access(shape: &'static Shape, elements: &[&'static Shape], ctx: &mut RecCtx) -> String {
+fn tuple_access(
+    shape: &'static Shape,
+    elements: &[&'static Shape],
+    record: &ir::RecordAccess,
+    ctx: &mut RecCtx,
+) -> String {
     match elements.len() {
         0 => ".scalar".to_string(), // unit: 0 bytes
         1 => format!(
             ".record(RecordAccess(fields: [FieldAccess(offset: 0, descriptor: {})], construct: .inPlace))",
-            descriptor_node(elements[0], ctx)
+            descriptor_node(elements[0], &record.fields[0].descriptor, ctx)
         ),
         _ => {
             let ty = swift_type_base(shape);
             let fields: Vec<String> = elements
                 .iter()
+                .zip(record.fields.iter())
                 .enumerate()
-                .map(|(i, e)| {
+                .map(|(i, (e, rust_field))| {
                     format!(
                         "FieldAccess(offset: MemoryLayout<{ty}>.offset(of: \\.{i})!, descriptor: {})",
-                        descriptor_node(e, ctx)
+                        descriptor_node(e, &rust_field.descriptor, ctx)
                     )
                 })
                 .collect();
@@ -341,7 +411,11 @@ fn tuple_access(shape: &'static Shape, elements: &[&'static Shape], ctx: &mut Re
 }
 
 /// A `[T]`: bulk byte run when `T` is a fixed scalar, else a per-element sequence.
-fn sequence_or_bulk(element: &'static Shape, ctx: &mut RecCtx) -> String {
+fn sequence_or_bulk(
+    element: &'static Shape,
+    element_desc: &ir::Descriptor,
+    ctx: &mut RecCtx,
+) -> String {
     let ty = swift_type_base(element);
     if is_fixed_scalar(element) {
         format!(
@@ -350,9 +424,24 @@ fn sequence_or_bulk(element: &'static Shape, ctx: &mut RecCtx) -> String {
     } else {
         format!(
             ".sequence(SequenceAccess(element: {}, stride: MemoryLayout<{ty}>.stride, elemAlign: MemoryLayout<{ty}>.alignment, witness: .of({ty}.self)))",
-            descriptor_node(element, ctx)
+            descriptor_node(element, element_desc, ctx)
         )
     }
+}
+
+/// A `Set<T>`: a unique per-element sequence. Sets cannot use the scalar bulk
+/// array path because the runtime handle is not `[T]`, and decode must rebuild a
+/// `Set<T>`.
+fn sequence_set(
+    element: &'static Shape,
+    element_desc: &ir::Descriptor,
+    ctx: &mut RecCtx,
+) -> String {
+    let ty = swift_type_base(element);
+    format!(
+        ".sequence(SequenceAccess(element: {}, stride: MemoryLayout<{ty}>.stride, elemAlign: MemoryLayout<{ty}>.alignment, witness: .setOf({ty}.self)))",
+        descriptor_node(element, element_desc, ctx)
+    )
 }
 
 /// A variant's payload fields as `(optional Swift label, shape)`. Unit → empty;
@@ -389,6 +478,7 @@ fn is_uninhabited_swift_type(shape: &'static Shape) -> bool {
 fn enum_access(
     shape: &'static Shape,
     variants: &[facet_core::Variant],
+    enumeration: &ir::EnumAccess,
     ctx: &mut RecCtx,
 ) -> String {
     let ty = swift_type_base(shape);
@@ -399,6 +489,8 @@ fn enum_access(
     let mut variant_entries = Vec::new();
 
     for (i, v) in variants.iter().enumerate() {
+        let rust_variant = &enumeration.variants[i];
+        let wire_index = rust_variant.index;
         let case = swift_field_name(v.name);
         tag_cases.push_str(&format!("case .{case}: return {i}\n            "));
         let fields = variant_payload_fields(v);
@@ -406,7 +498,7 @@ fn enum_access(
             project_cases.push_str(&format!("case .{case}: break\n            "));
             inject_cases.push_str(&format!("case {i}: v = .{case}\n            "));
             variant_entries.push(format!(
-                "VariantAccess(wireIndex: {i}, payloadFields: [], payloadLayout: Layout(size: 0, align: 1))"
+                "VariantAccess(wireIndex: {wire_index}, payloadFields: [], payloadLayout: Layout(size: 0, align: 1))"
             ));
             continue;
         }
@@ -436,17 +528,18 @@ fn enum_access(
             ));
             let pfields: Vec<String> = fields
                 .iter()
+                .zip(rust_variant.payload.fields.iter())
                 .enumerate()
-                .map(|(k, (_, s))| {
+                .map(|(k, ((_, s), rust_field))| {
                     format!(
                         "FieldAccess(offset: {}, descriptor: {})",
                         offset(k),
-                        descriptor_node(s, ctx)
+                        descriptor_node(s, &rust_field.descriptor, ctx)
                     )
                 })
                 .collect();
             variant_entries.push(format!(
-                "VariantAccess(wireIndex: {i}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
+                "VariantAccess(wireIndex: {wire_index}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
                 pfields.join(", ")
             ));
             continue;
@@ -494,17 +587,18 @@ fn enum_access(
         // variant entry: payloadFields at the scratch offsets; payloadLayout = tuple.
         let pfields: Vec<String> = fields
             .iter()
+            .zip(rust_variant.payload.fields.iter())
             .enumerate()
-            .map(|(k, (_, s))| {
+            .map(|(k, ((_, s), rust_field))| {
                 format!(
                     "FieldAccess(offset: {}, descriptor: {})",
                     offset(k),
-                    descriptor_node(s, ctx)
+                    descriptor_node(s, &rust_field.descriptor, ctx)
                 )
             })
             .collect();
         variant_entries.push(format!(
-            "VariantAccess(wireIndex: {i}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
+            "VariantAccess(wireIndex: {wire_index}, payloadFields: [{}], payloadLayout: MemoryLayout<{scratch_ty}>.phonLayout)",
             pfields.join(", ")
         ));
     }
@@ -516,14 +610,19 @@ fn enum_access(
 }
 
 /// `Result<Ok, Err>` as a 2-variant enum (`.success`=0, `.failure`=1).
-fn result_access(ok: &'static Shape, err: &'static Shape, ctx: &mut RecCtx) -> String {
+fn result_access(
+    ok: &'static Shape,
+    err: &'static Shape,
+    result: &ir::ResultAccess,
+    ctx: &mut RecCtx,
+) -> String {
     let ok_ty = swift_type_base(ok);
     let err_ty = swift_type_base(err);
     let res_ty = format!("Result<{ok_ty}, {err_ty}>");
     format!(
         ".enumeration(EnumAccess(\n            tag: {{ ptr in switch ptr.assumingMemoryBound(to: {res_ty}.self).pointee {{ case .success: return 0; case .failure: return 1 }} }},\n            projectPayload: {{ value, _, scratch in switch value.assumingMemoryBound(to: {res_ty}.self).pointee {{ case .success(let f0): scratch.assumingMemoryBound(to: {ok_ty}.self).initialize(to: f0); case .failure(let f0): scratch.assumingMemoryBound(to: {err_ty}.self).initialize(to: f0) }} }},\n            destroyPayload: {{ scratch, localIndex in if localIndex == 0 {{ scratch.assumingMemoryBound(to: {ok_ty}.self).deinitialize(count: 1) }} else {{ scratch.assumingMemoryBound(to: {err_ty}.self).deinitialize(count: 1) }} }},\n            inject: {{ slot, localIndex, scratch in\n            let v: {res_ty} = localIndex == 0 ? .success(scratch.assumingMemoryBound(to: {ok_ty}.self).move()) : .failure(scratch.assumingMemoryBound(to: {err_ty}.self).move())\n            slot.assumingMemoryBound(to: {res_ty}.self).initialize(to: v) }},\n            variants: [VariantAccess(wireIndex: 0, payloadFields: [FieldAccess(offset: 0, descriptor: {})], payloadLayout: MemoryLayout<{ok_ty}>.phonLayout), VariantAccess(wireIndex: 1, payloadFields: [FieldAccess(offset: 0, descriptor: {})], payloadLayout: MemoryLayout<{err_ty}>.phonLayout)]))",
-        descriptor_node(ok, ctx),
-        descriptor_node(err, ctx)
+        descriptor_node(ok, &result.ok, ctx),
+        descriptor_node(err, &result.err, ctx)
     )
 }
 
@@ -531,6 +630,8 @@ fn result_access(ok: &'static Shape, err: &'static Shape, ctx: &mut RecCtx) -> S
 mod tests {
     use super::*;
     use facet::Facet;
+    use phon_schema::{Primitive, primitive_id};
+    use std::collections::BTreeSet;
 
     #[test]
     fn scalar_and_string() {
@@ -574,5 +675,70 @@ mod tests {
         );
         assert!(!expr.contains("case .user(let f0)"));
         assert!(!expr.contains("Infallible.self).move(); v = .user"));
+    }
+
+    fn collect_emitted_schema_ids(swift: &str) -> BTreeSet<u64> {
+        let mut ids = BTreeSet::new();
+        let mut rest = swift;
+        let marker = "SchemaId(0x";
+        while let Some(index) = rest.find(marker) {
+            let after_marker = &rest[index + marker.len()..];
+            let mut hex = String::new();
+            for ch in after_marker.chars() {
+                if ch == '_' {
+                    continue;
+                }
+                if ch.is_ascii_hexdigit() {
+                    hex.push(ch);
+                } else {
+                    break;
+                }
+            }
+            ids.insert(u64::from_str_radix(&hex, 16).expect("emitted schema id hex"));
+            rest = after_marker;
+        }
+        ids
+    }
+
+    #[test]
+    fn styx_value_descriptor_ids_are_resolvable_from_schema_closure() {
+        let service = spec_proto::all_services()
+            .into_iter()
+            .find(|service| service.service_name == "Testbed")
+            .expect("testbed service exists");
+        let method = service
+            .methods
+            .iter()
+            .copied()
+            .find(|method| method.method_name == "echo_styx_value")
+            .expect("echo_styx_value method exists");
+
+        let (descriptor, blocks) = descriptor_with_blocks(method.args_shape);
+        let mut descriptor_ids = collect_emitted_schema_ids(&descriptor);
+        for block in blocks.values() {
+            descriptor_ids.extend(collect_emitted_schema_ids(block));
+        }
+
+        let closure = vox_phon::schema_bytes_for_shape(method.args_shape).expect("schema closure");
+        let bundle = vox_phon::parse_schema_bytes(&closure).expect("parse schema closure");
+        let closure_ids = bundle
+            .schemas
+            .iter()
+            .map(|schema| schema.id.0)
+            .collect::<BTreeSet<_>>();
+        let primitive_ids = Primitive::ALL
+            .iter()
+            .map(|&primitive| primitive_id(primitive).0)
+            .collect::<BTreeSet<_>>();
+        let missing = descriptor_ids
+            .difference(&closure_ids)
+            .copied()
+            .filter(|id| !primitive_ids.contains(id))
+            .collect::<Vec<_>>();
+
+        assert!(
+            missing.is_empty(),
+            "Swift descriptor references schemas absent from the method closure: {missing:#x?}"
+        );
     }
 }

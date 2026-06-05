@@ -387,13 +387,12 @@ defines only how a plan failure is surfaced as an RPC outcome.
 > failure is local — the call's result resolves to an error. There is no
 > further message to send; the response has already been received.
 
-> r[schema.errors.non-retryable]
+> r[schema.errors.same-peer-terminal]
 >
-> A decode-plan failure is non-retryable for the life of the connection to
-> that remote peer. The remote peer's schema for a given type does not change
-> while the connection is open, so retrying the same call will always reproduce
-> the same failure. Callers MUST treat a decode-plan failure as non-retryable
-> (see `r[rpc.fallible.vox-error.retryable]`).
+> A decode-plan failure is terminal for that call against the current remote
+> peer schema. The remote peer's schema for a given type does not change while
+> the connection is open, so issuing the same call again against the same peer
+> schema will reproduce the same failure.
 
 # Compatibility checking
 

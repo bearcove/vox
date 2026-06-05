@@ -222,6 +222,12 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         out.push_str(&format!(
             "nonisolated(unsafe) let {name}_{mname}_ResponseEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_ResponseDescriptor, {name}Registry, {name}_{mname}_ResponseDescriptorBlocks)\n"
         ));
+        out.push_str(&format!(
+            "let {name}_{mname}_ArgsEncoder = VoxTypedEncoder({name}_{mname}_ArgsEncodeProgram)\n"
+        ));
+        out.push_str(&format!(
+            "let {name}_{mname}_ResponseEncoder = VoxTypedEncoder({name}_{mname}_ResponseEncodeProgram)\n"
+        ));
     }
     out.push('\n');
 
@@ -254,6 +260,9 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
             out.push_str(&format!(
                 "nonisolated(unsafe) let {name}_{mname}_{an}_ElementEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_{an}_ElementDescriptor, {name}Registry, {name}_{mname}_{an}_ElementDescriptorBlocks)\n"
             ));
+            out.push_str(&format!(
+                "let {name}_{mname}_{an}_ElementEncoder = VoxTypedEncoder({name}_{mname}_{an}_ElementEncodeProgram)\n"
+            ));
         }
     }
     if emitted_elements {
@@ -267,7 +276,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
 /// `elem_ty` annotates the value so the closure type (and thus the `ByteBuffer` buffer
 /// param) is inferable at the call site — keeping NIO out of the generated code.
 pub fn element_encode_closure(elem_ty: &str, program: &str) -> String {
-    format!("{{ (v: {elem_ty}, buf) in buf.writeBytes(encodeTyped(v, {program})) }}")
+    format!("{{ (v: {elem_ty}, buf) in buf.writeBytes(encodeVoxTyped(v, {program})) }}")
 }
 
 /// Swift closure literal `(inout ByteBuffer) throws -> T` that reads a channel Data
@@ -284,7 +293,7 @@ pub fn element_auxiliary_decode_closure(
     registry: &str,
 ) -> String {
     format!(
-        "{{ (buf) throws -> {elem_ty} in let bytes = buf.readBytes(length: buf.readableBytes) ?? []; guard let program = {tracker}.buildAuxiliaryDecodeProgram({method_id}, .args, role: \"{role}\", readerDescriptor: {descriptor}, readerBlocks: {descriptor_blocks}, local: {registry}) else {{ throw VoxError<Infallible>.invalidPayload(\"no channel element schema advertised\") }}; return try decodeTyped(program, bytes) }}"
+        "{{ (buf) throws -> {elem_ty} in let bytes = buf.readBytes(length: buf.readableBytes) ?? []; guard let decoder = {tracker}.buildAuxiliaryDecodeFn({method_id}, .args, role: \"{role}\", readerDescriptor: {descriptor}, readerBlocks: {descriptor_blocks}, local: {registry}) else {{ throw VoxError<Infallible>.invalidPayload(\"no channel element schema advertised\") }}; return try decodeVoxTyped(decoder, bytes) }}"
     )
 }
 

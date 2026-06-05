@@ -113,6 +113,11 @@ export interface Caller {
    * @returns New caller with middleware applied
    */
   with(middleware: ClientMiddleware): Caller;
+
+  /**
+   * Release this caller handle's liveness reference.
+   */
+  dispose(): void;
 }
 
 /**
@@ -129,6 +134,7 @@ export interface Caller {
 export class MiddlewareCaller implements Caller {
   private inner: Caller;
   private middlewares: ClientMiddleware[];
+  private disposed = false;
 
   constructor(inner: Caller, middlewares: ClientMiddleware[]) {
     this.inner = inner;
@@ -215,5 +221,13 @@ export class MiddlewareCaller implements Caller {
 
   with(middleware: ClientMiddleware): Caller {
     return new MiddlewareCaller(this.inner, [...this.middlewares, middleware]);
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.inner.dispose();
   }
 }

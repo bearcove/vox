@@ -8,7 +8,8 @@ let package = Package(
         .macOS(.v15)
     ],
     products: [
-        .library(name: "VoxRuntime", targets: ["VoxRuntime"])
+        .library(name: "VoxRuntime", targets: ["VoxRuntime"]),
+        .library(name: "VoxRuntimeJIT", targets: ["VoxRuntimeJIT"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.99.0"),
@@ -29,6 +30,14 @@ let package = Package(
             resources: [
                 .copy("wireMessageSchemas.bin")
             ]
+        ),
+        .target(
+            name: "VoxRuntimeJIT",
+            dependencies: [
+                "VoxRuntime",
+                .product(name: "PhonJIT", package: "phon"),
+            ],
+            path: "Sources/VoxRuntimeJIT"
         ),
         .testTarget(
             name: "VoxRuntimeTests",

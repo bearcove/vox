@@ -117,6 +117,7 @@ export class LengthPrefixedFramed implements Link {
    *
    * Returns `null` if no frame received within timeout or connection closed.
    */
+  // r[impl rpc.transport.stream.cancel-safe-recv]
   recvTimeout(timeoutMs: number): Promise<Uint8Array | null> {
     // Check for queued frames first
     if (this.pendingFrames.length > 0) {

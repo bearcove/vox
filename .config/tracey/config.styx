@@ -8,6 +8,8 @@ specs (
             {
                 name rust
                 include (
+                    spec/spec-tests/src/harness.rs
+                    spec/spec-tests/tests/subject_lifecycle.rs
                     rust/**/*.rs
                     scripts/**/*.sh
                 )
@@ -17,8 +19,11 @@ specs (
                 name swift
                 include (
                     scripts/check-schema-compat.sh
+                    spec/spec-tests/src/harness.rs
+                    spec/spec-tests/tests/subject_lifecycle.rs
                     rust/vox-codegen/src/schema_compat.rs
                     swift/vox-runtime/**/*.swift
+                    swift/subject/Sources/subject-swift/Subject.swift
                     rust/vox-codegen/src/targets/swift/**/*.rs
                 )
             }
@@ -26,8 +31,13 @@ specs (
                 name typescript
                 include (
                     scripts/check-schema-compat.sh
+                    spec/spec-tests/src/harness.rs
+                    spec/spec-tests/tests/subject_lifecycle.rs
                     rust/vox-codegen/src/schema_compat.rs
                     rust/vox-codegen/src/targets/typescript/**/*.rs
+                    typescript/subject/harness.ts
+                    typescript/subject/subject.ts
+                    typescript/subject/timeout.ts
                     typescript/packages/vox-core/src/call_builder.ts
                     typescript/packages/vox-core/src/caller.ts
                     typescript/packages/vox-core/src/session.ts
@@ -39,10 +49,13 @@ specs (
                     typescript/packages/vox-core/src/transport_prologue.test.ts
                     typescript/packages/vox-core/src/driver.ts
                     typescript/packages/vox-core/src/driver.channel_schema.test.ts
+                    typescript/packages/vox-core/src/internal/async_semaphore.ts
                     typescript/packages/vox-core/src/logger.ts
                     typescript/packages/vox-core/src/logging.ts
                     typescript/packages/vox-core/src/metadata.ts
                     typescript/packages/vox-core/src/metadata.test.ts
+                    typescript/packages/vox-core/src/observer.ts
+                    typescript/packages/vox-core/src/observer.test.ts
                     typescript/packages/vox-core/src/server_logging.ts
                     typescript/packages/vox-core/src/schema_tracker.ts
                     typescript/packages/vox-core/src/schema_tracker.test.ts
@@ -61,7 +74,9 @@ specs (
                     typescript/packages/vox-wire/src/rpc_error.ts
                     typescript/packages/vox-inprocess/src/transport.ts
                     typescript/packages/vox-tcp/src/framing.ts
+                    typescript/packages/vox-tcp/src/framing.test.ts
                     typescript/packages/vox-tcp/src/transport.ts
+                    typescript/packages/vox-tcp/src/transport.test.ts
                     typescript/packages/vox-ws/src/transport.ts
                 )
             }

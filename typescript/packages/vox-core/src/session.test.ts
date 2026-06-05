@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   type ConnectionSettings,
+  decodeMessage,
   emptyMetadata,
   encodeMessage,
   type Message,
+  messagePing,
   messageRequest,
   messageResponse,
+  messageAccept,
 } from "@bearcove/vox-wire";
-import { hexToBytes } from "@bearcove/phon-schema";
+import { Registry, hexToBytes, primitiveId, resolveIds } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
 import { handshakeAsAcceptor, handshakeAsInitiator } from "./handshake.ts";
 import {
@@ -16,16 +19,39 @@ import {
   SessionError,
   session,
 } from "./session.ts";
-import { Role, type MethodDescriptor } from "./channeling/index.ts";
+import { Role, channel, type MethodDescriptor } from "./channeling/index.ts";
 import {
   sessionEchoRegistry,
   sessionEchoMethods,
   SESSION_ECHO_METHOD_ID,
 } from "./session_echo.fixture.ts";
-import { SchemaCompatibilityError } from "./schema_tracker.ts";
+import { SchemaCompatibilityError, type PhonMethodSchemas } from "./schema_tracker.ts";
 
 const ECHO_METHOD_KEY = `0x${SESSION_ECHO_METHOD_ID.toString(16).padStart(16, "0")}`;
 const ECHO_METHOD_SCHEMAS = sessionEchoMethods[ECHO_METHOD_KEY]!;
+const CHANNEL_ARGS_SCHEMAS = resolveIds([
+  {
+    id: 1n,
+    typeParams: [],
+    kind: {
+      kind: "tuple",
+      elements: [{ kind: "concrete", id: primitiveId("bytes"), args: [] }],
+    },
+  },
+]);
+const CHANNEL_METHOD: MethodDescriptor = {
+  name: "sum",
+  id: 77n,
+};
+const CHANNEL_METHOD_SCHEMAS: PhonMethodSchemas = {
+  argsRoot: CHANNEL_ARGS_SCHEMAS[0]!.id,
+  argsSchemaClosure: "",
+  okRoot: primitiveId("u32"),
+  responseRoot: primitiveId("u32"),
+  responseSchemaClosure: "",
+  channels: [{ index: 0, direction: "rx", elementRoot: primitiveId("u32") }],
+};
+const CHANNEL_REGISTRY = new Registry(CHANNEL_ARGS_SCHEMAS);
 
 class MemoryLink {
   private readonly queue: Uint8Array[] = [];
@@ -125,16 +151,136 @@ async function establishPair(
   return [clientSession, serverSession];
 }
 
+async function establishRawAcceptor(
+  clientLink: MemoryLink,
+  serverLink: MemoryLink,
+  options: Parameters<typeof session.acceptorConduit>[2] = {},
+): Promise<Session> {
+  const clientSettings: ConnectionSettings = {
+    parity: { tag: "Odd" },
+    max_concurrent_requests: 64,
+    initial_channel_credit: 16,
+  };
+  const serverSettings: ConnectionSettings = {
+    parity: { tag: "Even" },
+    max_concurrent_requests: options.maxConcurrentRequests ?? 64,
+    initial_channel_credit: 16,
+  };
+  const [, serverHandshake] = await Promise.all([
+    handshakeAsInitiator(clientLink, clientSettings),
+    handshakeAsAcceptor(serverLink, serverSettings),
+  ]);
+  return session.acceptorConduit(new BareConduit(serverLink), serverHandshake, options);
+}
+
+async function establishRawInitiator(
+  clientLink: MemoryLink,
+  serverLink: MemoryLink,
+  options: Parameters<typeof session.initiatorConduit>[2] = {},
+): Promise<Session> {
+  const clientSettings: ConnectionSettings = {
+    parity: { tag: "Odd" },
+    max_concurrent_requests: options.maxConcurrentRequests ?? 64,
+    initial_channel_credit: 16,
+  };
+  const serverSettings: ConnectionSettings = {
+    parity: { tag: "Even" },
+    max_concurrent_requests: 64,
+    initial_channel_credit: 16,
+  };
+  const [clientHandshake] = await Promise.all([
+    handshakeAsInitiator(clientLink, clientSettings),
+    handshakeAsAcceptor(serverLink, serverSettings),
+  ]);
+  return session.initiatorConduit(new BareConduit(clientLink), clientHandshake, options);
+}
+
 const ECHO_METHOD: MethodDescriptor = {
   name: "echo",
   id: SESSION_ECHO_METHOD_ID,
 };
 
 describe("session", () => {
+  // r[verify session.parity]
+  it("allocates virtual connection ids from local session parity", async () => {
+    const requestedSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const acceptedSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+
+    const [initiatorLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(initiatorLink, rawServerLink),
+      "raw initiator establishment",
+    );
+    const initiatorFirst = initiatorSession.handle().openConnection(requestedSettings);
+    const initiatorFirstOpen = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "initiator first connection open"))!,
+    );
+    expect(initiatorFirstOpen.connection_id).toBe(1n);
+    expect(initiatorFirstOpen.payload.tag).toBe("ConnectionOpen");
+    await rawServerLink.send(encodeMessage(messageAccept(1n, acceptedSettings)));
+    await withTimeout(initiatorFirst, "initiator first connection accept");
+
+    const initiatorSecond = initiatorSession.handle().openConnection(requestedSettings);
+    const initiatorSecondOpen = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "initiator second connection open"))!,
+    );
+    expect(initiatorSecondOpen.connection_id).toBe(3n);
+    expect(initiatorSecondOpen.payload.tag).toBe("ConnectionOpen");
+    await rawServerLink.send(encodeMessage(messageAccept(3n, acceptedSettings)));
+    await withTimeout(initiatorSecond, "initiator second connection accept");
+
+    initiatorLink.close();
+    rawServerLink.close();
+    initiatorSession.handle().shutdown();
+    await Promise.allSettled([initiatorSession.closed()]);
+
+    const [rawClientLink, acceptorLink] = memoryLinkPair();
+    const acceptorSession = await withTimeout(
+      establishRawAcceptor(rawClientLink, acceptorLink),
+      "raw acceptor establishment",
+    );
+    const acceptorFirst = acceptorSession.handle().openConnection(requestedSettings);
+    const acceptorFirstOpen = decodeMessage(
+      (await withTimeout(rawClientLink.recv(), "acceptor first connection open"))!,
+    );
+    expect(acceptorFirstOpen.connection_id).toBe(2n);
+    expect(acceptorFirstOpen.payload.tag).toBe("ConnectionOpen");
+    await rawClientLink.send(encodeMessage(messageAccept(2n, acceptedSettings)));
+    await withTimeout(acceptorFirst, "acceptor first connection accept");
+
+    const acceptorSecond = acceptorSession.handle().openConnection(requestedSettings);
+    const acceptorSecondOpen = decodeMessage(
+      (await withTimeout(rawClientLink.recv(), "acceptor second connection open"))!,
+    );
+    expect(acceptorSecondOpen.connection_id).toBe(4n);
+    expect(acceptorSecondOpen.payload.tag).toBe("ConnectionOpen");
+    await rawClientLink.send(encodeMessage(messageAccept(4n, acceptedSettings)));
+    await withTimeout(acceptorSecond, "acceptor second connection accept");
+
+    rawClientLink.close();
+    acceptorLink.close();
+    acceptorSession.handle().shutdown();
+    await Promise.allSettled([acceptorSession.closed()]);
+  });
+
   // r[verify rpc.flow-control.credit.initial.high-level]
   // r[verify rpc.flow-control.credit.initial]
   // r[verify rpc.flow-control.credit.initial.zero]
+  // r[verify rpc.flow-control.max-concurrent-requests.default]
   it("applies and rejects root channel capacity settings", () => {
+    expect(session.rootSettings(Role.Acceptor)).toMatchObject({
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    });
     expect(session.rootSettings(Role.Initiator, 64, 7)).toMatchObject({
       parity: { tag: "Odd" },
       max_concurrent_requests: 64,
@@ -173,6 +319,81 @@ describe("session", () => {
     clientSession.handle().shutdown();
     serverSession.handle().shutdown();
     await Promise.allSettled([clientSession.closed(), serverSession.closed()]);
+  });
+
+  // r[verify session.keepalive]
+  it("answers keepalive pings with matching pongs", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSession = await withTimeout(
+      establishRawAcceptor(clientLink, serverLink),
+      "raw acceptor establishment",
+    );
+
+    await clientLink.send(encodeMessage(messagePing(123n)));
+    const payload = await withTimeout(clientLink.recv(), "keepalive pong");
+    expect(payload).not.toBeNull();
+    const message = decodeMessage(payload!);
+    expect(message).toEqual({
+      connection_id: 0n,
+      payload: { tag: "Pong", value: { nonce: 123n } },
+    });
+
+    clientLink.close();
+    serverLink.close();
+    serverSession.handle().shutdown();
+    await Promise.allSettled([serverSession.closed()]);
+  });
+
+  // r[verify session.keepalive]
+  it("tears down when keepalive pong is missing", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSession = await withTimeout(
+      establishRawAcceptor(clientLink, serverLink, {
+        keepaliveIntervalMs: 10,
+        keepaliveTimeoutMs: 20,
+      }),
+      "raw keepalive acceptor establishment",
+    );
+
+    const payload = await withTimeout(clientLink.recv(), "keepalive ping");
+    expect(payload).not.toBeNull();
+    const message = decodeMessage(payload!);
+    expect(message.payload).toEqual({ tag: "Ping", value: { nonce: 1n } });
+
+    await withTimeout(serverSession.closed(), "keepalive timeout teardown");
+    expect(serverLink.isClosed()).toBe(true);
+
+    clientLink.close();
+    serverLink.close();
+  });
+
+  // r[verify session.protocol-error]
+  it("sends protocol error before tearing down on local protocol violation", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSession = await withTimeout(
+      establishRawAcceptor(clientLink, serverLink),
+      "raw protocol-error acceptor establishment",
+    );
+
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(1n, ECHO_METHOD.id, new Uint8Array(), emptyMetadata(), [], 0n, []),
+      ),
+    );
+
+    const payload = await withTimeout(clientLink.recv(), "protocol error frame");
+    expect(payload).not.toBeNull();
+    const message = decodeMessage(payload!);
+    expect(message.connection_id).toBe(0n);
+    expect(message.payload.tag).toBe("ProtocolError");
+    if (message.payload.tag === "ProtocolError") {
+      expect(message.payload.value.description).toContain("missing args schema binding");
+    }
+
+    await withTimeout(serverSession.closed(), "protocol-error teardown");
+
+    clientLink.close();
+    serverLink.close();
   });
 
   // r[verify schema.exchange.caller]
@@ -220,6 +441,359 @@ describe("session", () => {
       Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.argsSchemaClosure)),
       [],
     ]);
+  });
+
+  // r[verify connection.parity]
+  it("allocates request ids from virtual connection parity", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      13n,
+      settings,
+      settings,
+    );
+
+    const request = () =>
+      connection.caller().call({
+        method: "Test.echo",
+        args: { value: 55 },
+        descriptor: ECHO_METHOD,
+        methodSchemas: ECHO_METHOD_SCHEMAS,
+        registry: sessionEchoRegistry,
+        timeoutMs: 1,
+      });
+
+    await Promise.allSettled([request(), request()]);
+
+    const calls = sent.map((message) => {
+      expect(message.connection_id).toBe(13n);
+      expect(message.payload.tag).toBe("RequestMessage");
+      const requestMessage = message.payload.tag === "RequestMessage"
+        ? message.payload.value
+        : undefined;
+      expect(requestMessage?.body.tag).toBe("Call");
+      return requestMessage?.id;
+    });
+
+    expect(calls).toEqual([2n, 4n]);
+  });
+
+  // r[verify rpc.flow-control.max-concurrent-requests]
+  // r[verify rpc.flow-control.max-concurrent-requests.outbound]
+  // r[verify rpc.flow-control.max-concurrent-requests.counting]
+  // r[verify rpc.debug.snapshot]
+  it("waits for peer request capacity before sending another call", async () => {
+    const localSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 1,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      0n,
+      localSettings,
+      peerSettings,
+    );
+    const request = () =>
+      connection.caller().call({
+        method: "Test.echo",
+        args: { value: 55 },
+        descriptor: ECHO_METHOD,
+        methodSchemas: ECHO_METHOD_SCHEMAS,
+        registry: sessionEchoRegistry,
+        timeoutMs: 1_000,
+      }).catch((error: unknown) => error);
+
+    const first = request();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const second = request();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sent).toHaveLength(1);
+    expect(connection.debugSnapshot()).toMatchObject({
+      connectionId: 0n,
+      pendingResponseCount: 1,
+      inboundLiveRequestCount: 0,
+      flowControl: {
+        localMaxConcurrentRequests: 64,
+        peerMaxConcurrentRequests: 1,
+        outboundRequestLimit: {
+          availablePermits: 0,
+          waitingCount: 1,
+          closed: false,
+        },
+      },
+    });
+    connection.resolveResponse(1n, Uint8Array.of(0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sent).toHaveLength(2);
+    const requestIds = sent.map((message) =>
+      message.payload.tag === "RequestMessage" ? message.payload.value.id : null
+    );
+    expect(requestIds).toEqual([1n, 3n]);
+
+    connection.close(SessionError.closed());
+    await Promise.allSettled([first, second]);
+  });
+
+  // r[verify rpc.channel.binding.caller-args]
+  // r[verify rpc.channel.binding.caller-args.rx]
+  // r[verify rpc.channel.pair.binding-propagation]
+  it("binds call channels before waiting for the first request-capacity turn", async () => {
+    const localSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 1,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      0n,
+      localSettings,
+      peerSettings,
+    );
+    const [tx, rx] = channel<number>();
+
+    const call = connection.caller().call({
+      method: "Test.sum",
+      args: { numbers: rx },
+      descriptor: CHANNEL_METHOD,
+      methodSchemas: CHANNEL_METHOD_SCHEMAS,
+      registry: CHANNEL_REGISTRY,
+      timeoutMs: 1_000,
+    });
+
+    await tx.send(7);
+    tx.close();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sent[0]?.payload.tag).toBe("RequestMessage");
+    const request = sent[0]?.payload.tag === "RequestMessage"
+      ? sent[0].payload.value.body
+      : undefined;
+    expect(request?.tag).toBe("Call");
+    expect(request?.tag === "Call" ? request.value.channels : []).toHaveLength(1);
+    expect(sent.slice(1).some((message) => message.payload.tag === "ChannelMessage")).toBe(true);
+
+    connection.close(SessionError.closed());
+    await expect(call).rejects.toBeInstanceOf(SessionError);
+  });
+
+  // r[verify rpc.flow-control.max-concurrent-requests.session-failure]
+  it("fails calls waiting for request capacity when the connection closes", async () => {
+    const localSettings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 1,
+      initial_channel_credit: 16,
+    };
+    const sent: Message[] = [];
+    const fakeSession = {
+      sendMessage: async (message: Message) => {
+        sent.push(message);
+      },
+    };
+    const connection = new ConnectionHandle(
+      fakeSession as never,
+      0n,
+      localSettings,
+      peerSettings,
+    );
+    const request = () =>
+      connection.caller().call({
+        method: "Test.echo",
+        args: { value: 55 },
+        descriptor: ECHO_METHOD,
+        methodSchemas: ECHO_METHOD_SCHEMAS,
+        registry: sessionEchoRegistry,
+        timeoutMs: 1_000,
+      });
+
+    const first = request();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const second = request();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sent).toHaveLength(1);
+    connection.close(SessionError.closed());
+
+    await expect(first).rejects.toBeInstanceOf(SessionError);
+    await expect(second).rejects.toBeInstanceOf(SessionError);
+    expect(sent).toHaveLength(1);
+  });
+
+  // r[verify rpc.flow-control.max-concurrent-requests]
+  // r[verify rpc.flow-control.max-concurrent-requests.inbound]
+  it("treats inbound request attempts beyond the local limit as protocol errors", async () => {
+    const [clientLink, serverLink] = memoryLinkPair();
+    const serverSession = await withTimeout(
+      establishRawAcceptor(clientLink, serverLink, { maxConcurrentRequests: 1 }),
+      "raw limited acceptor establishment",
+    );
+    const schemas = Array.from(hexToBytes(ECHO_METHOD_SCHEMAS.argsSchemaClosure));
+
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(
+          1n,
+          ECHO_METHOD.id,
+          new Uint8Array(),
+          emptyMetadata(),
+          [],
+          0n,
+          schemas,
+        ),
+      ),
+    );
+    await clientLink.send(
+      encodeMessage(
+        messageRequest(
+          3n,
+          ECHO_METHOD.id,
+          new Uint8Array(),
+          emptyMetadata(),
+          [],
+          0n,
+          schemas,
+        ),
+      ),
+    );
+
+    const payload = await withTimeout(clientLink.recv(), "max-concurrent protocol error");
+    expect(payload).not.toBeNull();
+    const message = decodeMessage(payload!);
+    expect(message.connection_id).toBe(0n);
+    expect(message.payload.tag).toBe("ProtocolError");
+    if (message.payload.tag === "ProtocolError") {
+      expect(message.payload.value.description).toContain("max_concurrent_requests");
+    }
+    await withTimeout(serverSession.closed(), "max-concurrent teardown");
+
+    clientLink.close();
+    serverLink.close();
+  });
+
+  // r[verify rpc.caller.liveness.last-drop-closes-connection]
+  it("closes a virtual connection when its last caller is disposed", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [initiatorLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(initiatorLink, rawServerLink),
+      "raw initiator establishment",
+    );
+
+    const opened = initiatorSession.handle().openConnection(settings);
+    const open = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection open"))!,
+    );
+    expect(open.connection_id).toBe(1n);
+    await rawServerLink.send(encodeMessage(messageAccept(1n, peerSettings)));
+    const connection = await withTimeout(opened, "virtual connection accept");
+
+    const caller = connection.caller();
+    caller.dispose();
+
+    const close = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection close"))!,
+    );
+    expect(close.connection_id).toBe(1n);
+    expect(close.payload.tag).toBe("ConnectionClose");
+
+    initiatorLink.close();
+    rawServerLink.close();
+    initiatorSession.handle().shutdown();
+    await Promise.allSettled([initiatorSession.closed()]);
+  });
+
+  // r[verify rpc.caller.liveness.root-internal-close]
+  // r[verify rpc.caller.liveness.root-teardown-condition]
+  it("tears down after root caller disposal only once virtual callers are gone", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [initiatorLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(initiatorLink, rawServerLink),
+      "raw initiator establishment",
+    );
+
+    const opened = initiatorSession.handle().openConnection(settings);
+    const open = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection open"))!,
+    );
+    await rawServerLink.send(encodeMessage(messageAccept(open.connection_id, peerSettings)));
+    const connection = await withTimeout(opened, "virtual connection accept");
+
+    const rootCaller = initiatorSession.rootConnection().caller();
+    const virtualCaller = connection.caller();
+
+    rootCaller.dispose();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(initiatorLink.isClosed()).toBe(false);
+
+    virtualCaller.dispose();
+    const close = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual close after root disposal"))!,
+    );
+    expect(close.connection_id).toBe(open.connection_id);
+    expect(close.payload.tag).toBe("ConnectionClose");
+
+    await withTimeout(initiatorSession.closed(), "root liveness teardown");
+    expect(initiatorLink.isClosed()).toBe(true);
+
+    rawServerLink.close();
   });
 
   // r[verify schema.exchange.required]
@@ -282,7 +856,7 @@ describe("session", () => {
 
   // r[verify schema.errors.call-level]
   // r[verify schema.errors.call-level.caller]
-  // r[verify schema.errors.non-retryable]
+  // r[verify schema.errors.same-peer-terminal]
   it("rejects only the call when caller response decode fails", async () => {
     const settings: ConnectionSettings = {
       parity: { tag: "Odd" },

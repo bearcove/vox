@@ -11,6 +11,7 @@ import {
   messageAccept,
   messageConnect,
   messageGoodbye,
+  messageProtocolError,
   messageRequest,
   messageResponse,
   messageSchema,
@@ -28,12 +29,14 @@ import {
   DEFAULT_INITIAL_CREDIT,
   Role,
   bindPhonChannels,
+  type ChannelRegistryDebugSnapshot,
 } from "./channeling/index.ts";
 import type { Caller, CallerRequest } from "./caller.ts";
 import { MiddlewareCaller } from "./caller.ts";
 import type { ClientMiddleware } from "./middleware.ts";
 import { ClientMetadata } from "./metadata.ts";
 import type { Conduit } from "./conduit.ts";
+import { AsyncSemaphore } from "./internal/async_semaphore.ts";
 import { AsyncQueue } from "./internal/async_queue.ts";
 import { deferred, type Deferred } from "./internal/deferred.ts";
 import {
@@ -55,6 +58,7 @@ import {
   handshakeAsInitiator,
   type HandshakeResult,
 } from "./handshake.ts";
+import { splitQualifiedMethodName } from "./observer.ts";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -84,6 +88,25 @@ export interface IncomingCall {
   channels: bigint[];
   metadata: Metadata;
   connectionEpoch: number;
+}
+
+export interface ConnectionDebugSnapshot {
+  connectionId: bigint;
+  closed: boolean;
+  pendingResponseCount: number;
+  pendingRequestIds: bigint[];
+  inboundLiveRequestCount: number;
+  inboundLiveRequestIds: bigint[];
+  flowControl: {
+    localMaxConcurrentRequests: number;
+    peerMaxConcurrentRequests: number;
+    outboundRequestLimit: {
+      availablePermits: number;
+      waitingCount: number;
+      closed: boolean;
+    };
+  };
+  channels: ChannelRegistryDebugSnapshot;
 }
 
 export interface SessionBuilderOptions {
@@ -158,6 +181,7 @@ async function makeInitiatorEstablishedTransport(
 ): Promise<EstablishedTransport> {
   const localSettings: ConnectionSettings = {
     parity: { tag: "Odd" },
+    // r[impl rpc.flow-control.max-concurrent-requests.default]
     max_concurrent_requests: options.maxConcurrentRequests ?? 64,
     initial_channel_credit: channelCapacityFromOptions(options),
   };
@@ -217,6 +241,7 @@ async function makeAcceptorEstablishedTransport(
 
   const localSettings: ConnectionSettings = {
     parity: { tag: "Even" },
+    // r[impl rpc.flow-control.max-concurrent-requests.default]
     max_concurrent_requests: options.maxConcurrentRequests ?? 64,
     initial_channel_credit: channelCapacityFromOptions(options),
   };
@@ -235,9 +260,17 @@ async function makeAcceptorEstablishedTransport(
 }
 
 export class SessionError extends Error {
-  constructor(message: string) {
+  readonly isProtocolError: boolean;
+  readonly receivedFromPeer: boolean;
+
+  constructor(
+    message: string,
+    options: { isProtocolError?: boolean; receivedFromPeer?: boolean } = {},
+  ) {
     super(message);
     this.name = "SessionError";
+    this.isProtocolError = options.isProtocolError ?? false;
+    this.receivedFromPeer = options.receivedFromPeer ?? false;
   }
 
   static closed(): SessionError {
@@ -245,7 +278,11 @@ export class SessionError extends Error {
   }
 
   static protocol(message: string): SessionError {
-    return new SessionError(message);
+    return new SessionError(message, { isProtocolError: true });
+  }
+
+  static peerProtocol(message: string): SessionError {
+    return new SessionError(message, { isProtocolError: true, receivedFromPeer: true });
   }
 }
 
@@ -275,6 +312,7 @@ class SessionCore {
   private readonly localRootSettings: ConnectionSettings;
   private readonly peerRootSettings: ConnectionSettings;
   private readonly onConnection?: (connection: ConnectionHandle) => void | Promise<void>;
+  private rootInternallyClosed = false;
 
   constructor(
     conduit: Conduit<Message>,
@@ -287,6 +325,7 @@ class SessionCore {
     this.conduit = conduit;
     this.localRootSettings = localRootSettings;
     this.peerRootSettings = peerRootSettings;
+    // r[impl session.parity]
     this.nextConnectionId = firstIdForParity(localRootSettings.parity);
     this.sessionHandle = new SessionHandle(this);
     this.onConnection = onConnection;
@@ -332,15 +371,27 @@ class SessionCore {
     if (this.runPromise) {
       return;
     }
-    this.runPromise = this.run().catch((error) => {
+    this.runPromise = this.run().catch(async (error) => {
       voxLogger()?.error(`[vox:session] run loop error:`, error);
-      this.fail(error instanceof SessionError ? error : new SessionError(String(error)));
+      const sessionError = error instanceof SessionError
+        ? error
+        : new SessionError(String(error));
+      if (
+        sessionError.isProtocolError &&
+        !sessionError.receivedFromPeer &&
+        !this.closed
+      ) {
+        await this.sendProtocolError(sessionError.message);
+      }
+      this.fail(sessionError);
     });
+    // r[impl session.keepalive]
     if (this.keepaliveIntervalMs > 0) {
       this.scheduleKeepalive();
     }
   }
 
+  // r[impl session.keepalive]
   private scheduleKeepalive(): void {
     if (this.closed || this.keepaliveIntervalMs <= 0) return;
     this.keepaliveTimer = setTimeout(() => {
@@ -348,6 +399,7 @@ class SessionCore {
     }, this.keepaliveIntervalMs);
   }
 
+  // r[impl session.keepalive]
   private sendKeepalivePing(): void {
     if (this.closed) {
       this.scheduleKeepalive();
@@ -364,7 +416,6 @@ class SessionCore {
           `[vox:session] keepalive timeout — no Pong received, treating as dead connection`,
         );
         this.keepalivePendingNonce = null;
-        // Force the conduit closed so the run loop detects the drop.
         this.conduit.close();
       }
     }, this.keepaliveTimeoutMs);
@@ -434,6 +485,7 @@ class SessionCore {
     connection.close(SessionError.closed());
     this.connections.delete(connectionId);
     await this.sendMessage(messageGoodbye(connectionId, metadata));
+    this.maybeShutdownAfterRootInternalClose();
   }
 
   async sendMessage(message: Message): Promise<void> {
@@ -472,6 +524,35 @@ class SessionCore {
     this.fail(SessionError.closed());
   }
 
+  callerLivenessDropped(connectionId: bigint): void {
+    if (connectionId === 0n) {
+      // r[impl rpc.caller.liveness.root-internal-close]
+      this.rootInternallyClosed = true;
+      // r[impl rpc.caller.liveness.root-teardown-condition]
+      this.maybeShutdownAfterRootInternalClose();
+      return;
+    }
+
+    // r[impl rpc.caller.liveness.last-drop-closes-connection]
+    void this.closeConnection(connectionId).catch((error) => {
+      if (!this.closed) {
+        this.fail(error instanceof SessionError ? error : new SessionError(String(error)));
+      }
+    });
+  }
+
+  private maybeShutdownAfterRootInternalClose(): void {
+    if (!this.rootInternallyClosed || this.closed) {
+      return;
+    }
+    for (const connectionId of this.connections.keys()) {
+      if (connectionId !== 0n) {
+        return;
+      }
+    }
+    this.shutdown();
+  }
+
   private assertOpen(): void {
     if (this.closed) {
       throw this.closeError ?? SessionError.closed();
@@ -479,6 +560,7 @@ class SessionCore {
   }
 
   private allocateConnectionId(): bigint {
+    // r[impl session.parity]
     const id = this.nextConnectionId;
     this.nextConnectionId += 2n;
     return id;
@@ -511,7 +593,7 @@ class SessionCore {
     voxLogger()?.debug(`[vox:session] handleMessage: tag=${message.payload.tag} conn=${message.connection_id}`);
     switch (message.payload.tag) {
       case "Ping":
-        // Respond to peer's keepalive ping.
+        // r[impl session.keepalive]
         void this.sendMessage({
           connection_id: 0n,
           payload: { tag: "Pong", value: { nonce: message.payload.value.nonce } },
@@ -519,18 +601,17 @@ class SessionCore {
         return;
 
       case "Pong":
-        // Acknowledge our own keepalive ping.
+        // r[impl session.keepalive]
         if (this.keepalivePendingNonce === message.payload.value.nonce) {
           clearTimeout(this.keepalivePongTimer!);
           this.keepalivePongTimer = null;
           this.keepalivePendingNonce = null;
-          // Schedule the next ping.
           this.scheduleKeepalive();
         }
         return;
 
       case "ProtocolError":
-        throw SessionError.protocol(message.payload.value.description);
+        throw SessionError.peerProtocol(message.payload.value.description);
 
       case "ConnectionOpen":
         await this.handleConnectionOpen(message.connection_id, message.payload.value);
@@ -581,6 +662,15 @@ class SessionCore {
     }
   }
 
+  // r[impl session.protocol-error]
+  private async sendProtocolError(description: string): Promise<void> {
+    try {
+      await this.conduit.send(messageProtocolError(description));
+    } catch (error) {
+      voxLogger()?.debug("[vox:session] failed to send protocol error", error);
+    }
+  }
+
   private async handleConnectionOpen(
     connectionId: bigint,
     value: { connection_settings: ConnectionSettings; metadata: unknown },
@@ -608,6 +698,7 @@ class SessionCore {
     }
 
     const localSettings: ConnectionSettings = {
+      // r[impl connection.parity]
       parity: oppositeParity(value.connection_settings.parity),
       max_concurrent_requests: value.connection_settings.max_concurrent_requests,
       initial_channel_credit: value.connection_settings.initial_channel_credit,
@@ -658,6 +749,7 @@ class SessionCore {
     }
     connection.close(SessionError.closed());
     this.connections.delete(connectionId);
+    this.maybeShutdownAfterRootInternalClose();
   }
 
   private async handleRequestMessage(
@@ -693,6 +785,7 @@ class SessionCore {
         } catch (error) {
           throw SessionError.protocol(error instanceof Error ? error.message : String(error));
         }
+        connection.beginIncomingRequest(request.id);
         connection.enqueueIncomingCall({
           requestId: request.id,
           methodId: request.body.value.method_id,
@@ -800,6 +893,8 @@ export class ConnectionHandle {
   private readonly incomingCalls = new AsyncQueue<IncomingCall>();
   private readonly incomingCancels = new AsyncQueue<bigint>();
   private readonly pendingResponses = new Map<bigint, PendingResponse>();
+  private readonly inboundLiveRequests = new Set<bigint>();
+  private readonly outboundRequestLimit: AsyncSemaphore;
   private readonly schemaTracker = new SchemaTracker();
   private readonly schemaSendTracker = new SchemaSendTracker();
   private epoch = 0;
@@ -807,6 +902,7 @@ export class ConnectionHandle {
   private closed = false;
   private flushPromise: Promise<void> | null = null;
   private flushRequested = false;
+  private callerRefs = 0;
 
   private readonly session: SessionCore;
   readonly id: bigint;
@@ -823,11 +919,16 @@ export class ConnectionHandle {
     this.id = id;
     this.localSettings = localSettings;
     this.peerSettings = peerSettings;
+    // r[impl rpc.flow-control.max-concurrent-requests]
+    // r[impl rpc.flow-control.max-concurrent-requests.outbound]
+    this.outboundRequestLimit = new AsyncSemaphore(peerSettings.max_concurrent_requests);
+    // r[impl connection.parity]
     this.role = roleFromParity(localSettings.parity);
     this.channelAllocator = new ChannelIdAllocator(this.role);
     this.channelRegistry = new ChannelRegistry(undefined, () => {
       void this.flushOutgoing();
     });
+    // r[impl connection.parity]
     this.nextRequestId = firstIdForParity(localSettings.parity);
   }
 
@@ -836,7 +937,7 @@ export class ConnectionHandle {
   }
 
   caller(): Caller {
-    return new ConnectionHandleCaller(this);
+    return new ConnectionHandleCaller(this, this.retainCaller());
   }
 
   getChannelAllocator(): ChannelIdAllocator {
@@ -859,6 +960,25 @@ export class ConnectionHandle {
     return this.epoch;
   }
 
+  // r[impl rpc.debug.snapshot]
+  // r[impl rpc.observability.channel.context]
+  debugSnapshot(): ConnectionDebugSnapshot {
+    return {
+      connectionId: this.id,
+      closed: this.closed,
+      pendingResponseCount: this.pendingResponses.size,
+      pendingRequestIds: [...this.pendingResponses.keys()],
+      inboundLiveRequestCount: this.inboundLiveRequests.size,
+      inboundLiveRequestIds: [...this.inboundLiveRequests],
+      flowControl: {
+        localMaxConcurrentRequests: this.localSettings.max_concurrent_requests,
+        peerMaxConcurrentRequests: this.peerSettings.max_concurrent_requests,
+        outboundRequestLimit: this.outboundRequestLimit.debugSnapshot(),
+      },
+      channels: this.channelRegistry.debugSnapshot(),
+    };
+  }
+
   isClosed(): boolean {
     return this.closed;
   }
@@ -875,7 +995,6 @@ export class ConnectionHandle {
       outgoing: this.peerSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT,
       incoming: this.localSettings.initial_channel_credit ?? DEFAULT_INITIAL_CREDIT,
     };
-
     // Bind any `Tx`/`Rx` arguments (out-of-band index design): allocate channel
     // ids, bind the local-facing handles with a phon per-item codec, and replace
     // each channel arg with its wire-index `Bytes` before encoding the tuple.
@@ -907,41 +1026,57 @@ export class ConnectionHandle {
 
     let finalizeChannels = request.finalizeChannels;
     const initial = encodeWithChannels();
+    // r[impl rpc.flow-control.max-concurrent-requests.outbound]
+    // r[impl rpc.flow-control.max-concurrent-requests.counting]
+    let requestPermit;
+    try {
+      requestPermit = await this.outboundRequestLimit.acquire();
+    } catch (error) {
+      finalizeChannels?.();
+      throw error;
+    }
+
     const metadataCarrier = request.metadata ? request.metadata.clone() : new ClientMetadata();
     const metadata = metadataCarrier.toWire();
     const requestId = this.nextRequestId;
     this.nextRequestId += 2n;
-    const responsePayload = await new Promise<Uint8Array>((resolve, reject) => {
-      // The args schema closure is advertised once per (method, connection).
-      const computeSchemas: () => number[] = () =>
-        this.getSchemaSendTracker().prepareSchemas(
-          request.descriptor.id,
-          "args",
-          methodSchemas.argsSchemaClosure,
-        );
+    this.rememberCallerChannelContexts(requestId, request, initial.channels);
+    let responsePayload: Uint8Array;
+    try {
+      responsePayload = await new Promise<Uint8Array>((resolve, reject) => {
+        // The args schema closure is advertised once per (method, connection).
+        const computeSchemas: () => number[] = () =>
+          this.getSchemaSendTracker().prepareSchemas(
+            request.descriptor.id,
+            "args",
+            methodSchemas.argsSchemaClosure,
+          );
 
-      const state: PendingResponse = {
-        resolve,
-        reject,
-        timer: setTimeout(() => {
-          this.clearPendingState(state);
-          reject(new SessionError("timeout waiting for response"));
-        }, request.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-        methodId: request.descriptor.id,
-        payload: initial.payload.slice(),
-        metadata: cloneMetadata(metadata),
-        channels: [...initial.channels],
-        computeSchemas,
-        finalizeChannels,
-        requestIds: new Set(),
-        settled: false,
-      };
+        const state: PendingResponse = {
+          resolve,
+          reject,
+          timer: setTimeout(() => {
+            this.clearPendingState(state);
+            reject(new SessionError("timeout waiting for response"));
+          }, request.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+          methodId: request.descriptor.id,
+          payload: initial.payload.slice(),
+          metadata: cloneMetadata(metadata),
+          channels: [...initial.channels],
+          computeSchemas,
+          finalizeChannels,
+          requestIds: new Set(),
+          settled: false,
+        };
 
-      this.pendingResponses.set(requestId, state);
-      state.requestIds.add(requestId);
+        this.pendingResponses.set(requestId, state);
+        state.requestIds.add(requestId);
 
-      void this.sendPendingRequest(state, requestId, true);
-    });
+        void this.sendPendingRequest(state, requestId, true);
+      });
+    } finally {
+      requestPermit.release();
+    }
 
     // Decode the response against the server's advertised `Result<T, VoxError<E>>`
     // schema binding. The session receive path enforces that the binding arrived
@@ -949,7 +1084,7 @@ export class ConnectionHandle {
     // failure, not a same-schema shortcut.
     // r[impl schema.errors.call-level]
     // r[impl schema.errors.call-level.caller]
-    // r[impl schema.errors.non-retryable]
+    // r[impl schema.errors.same-peer-terminal]
     this.getSchemaTracker().requireReceived(request.descriptor.id, "response");
     const decoder = this.getSchemaTracker().buildWriterDecoder(
       request.descriptor.id,
@@ -994,7 +1129,11 @@ export class ConnectionHandle {
     _channels: bigint[] = [],
     schemas: number[] = [],
   ): Promise<void> {
-    await this.session.sendMessage(messageResponse(requestId, payload, metadata, this.id, schemas));
+    try {
+      await this.session.sendMessage(messageResponse(requestId, payload, metadata, this.id, schemas));
+    } finally {
+      this.finishIncomingRequest(requestId);
+    }
   }
 
   async sendCancel(requestId: bigint, metadata: Metadata = emptyMetadata()): Promise<void> {
@@ -1025,11 +1164,31 @@ export class ConnectionHandle {
     this.incomingCalls.push(call);
   }
 
+  beginIncomingRequest(requestId: bigint): void {
+    // r[impl rpc.flow-control.max-concurrent-requests]
+    // r[impl rpc.flow-control.max-concurrent-requests.inbound]
+    if (this.inboundLiveRequests.has(requestId)) {
+      throw SessionError.protocol(`duplicate live request ${requestId}`);
+    }
+    if (this.inboundLiveRequests.size >= this.localSettings.max_concurrent_requests) {
+      throw SessionError.protocol(
+        `max_concurrent_requests exceeded for connection ${this.id}`,
+      );
+    }
+    this.inboundLiveRequests.add(requestId);
+  }
+
+  finishIncomingRequest(requestId: bigint): void {
+    // r[impl rpc.flow-control.max-concurrent-requests.counting]
+    this.inboundLiveRequests.delete(requestId);
+  }
+
   nextIncomingCall(): Promise<IncomingCall | null> {
     return this.incomingCalls.shift();
   }
 
   enqueueIncomingCancel(requestId: bigint): void {
+    this.finishIncomingRequest(requestId);
     this.incomingCancels.push(requestId);
   }
 
@@ -1081,6 +1240,9 @@ export class ConnectionHandle {
     this.incomingCalls.close();
     this.incomingCancels.close();
     this.channelRegistry.closeAll();
+    this.inboundLiveRequests.clear();
+    // r[impl rpc.flow-control.max-concurrent-requests.session-failure]
+    this.outboundRequestLimit.close(error);
     const pendingStates = new Set(this.pendingResponses.values());
     this.pendingResponses.clear();
     for (const pending of pendingStates) {
@@ -1097,6 +1259,7 @@ export class ConnectionHandle {
 
   failPendingAttempts(error: Error): void {
     this.channelRegistry.closeAll();
+    this.outboundRequestLimit.close(error);
     const pendingStates = new Set(this.pendingResponses.values());
     this.pendingResponses.clear();
     for (const pending of pendingStates) {
@@ -1109,6 +1272,22 @@ export class ConnectionHandle {
       pending.finalizeChannels?.();
       pending.reject(error);
     }
+  }
+
+  private retainCaller(): () => void {
+    // r[impl rpc.caller.liveness.refcounted]
+    this.callerRefs += 1;
+    let released = false;
+    return () => {
+      if (released) {
+        return;
+      }
+      released = true;
+      this.callerRefs -= 1;
+      if (this.callerRefs === 0 && !this.closed) {
+        this.session.callerLivenessDropped(this.id);
+      }
+    };
   }
 
   private clearPendingState(
@@ -1170,9 +1349,33 @@ export class ConnectionHandle {
   }
 
   private allocateRequestId(): bigint {
+    // r[impl connection.parity]
     const requestId = this.nextRequestId;
     this.nextRequestId += 2n;
     return requestId;
+  }
+
+  private rememberCallerChannelContexts(
+    requestId: bigint,
+    request: CallerRequest,
+    channels: bigint[],
+  ): void {
+    if (channels.length === 0) {
+      return;
+    }
+    const { service, method } = splitQualifiedMethodName(request.method);
+    const metas = [...request.methodSchemas.channels].sort((a, b) => a.index - b.index);
+    for (let index = 0; index < channels.length; index += 1) {
+      const meta = metas[index];
+      this.channelRegistry.rememberContext(channels[index]!, {
+        connectionId: this.id,
+        requestId,
+        service,
+        method,
+        channelDirection: meta?.direction === "tx" ? "rx" : "tx",
+        side: "client",
+      });
+    }
   }
 
   async flushOutgoing(): Promise<void> {
@@ -1224,9 +1427,12 @@ export class ConnectionHandle {
 
 class ConnectionHandleCaller implements Caller {
   private readonly connection: ConnectionHandle;
+  private readonly releaseCaller: () => void;
+  private disposed = false;
 
-  constructor(connection: ConnectionHandle) {
+  constructor(connection: ConnectionHandle, releaseCaller: () => void) {
     this.connection = connection;
+    this.releaseCaller = releaseCaller;
   }
 
   call(request: CallerRequest): Promise<unknown> {
@@ -1243,6 +1449,14 @@ class ConnectionHandleCaller implements Caller {
 
   with(middleware: ClientMiddleware): Caller {
     return new MiddlewareCaller(this, [middleware]);
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.releaseCaller();
   }
 }
 
@@ -1412,7 +1626,9 @@ export const session = {
     }
 
     return {
+      // r[impl session.parity]
       parity: parityFromRole(role),
+      // r[impl rpc.flow-control.max-concurrent-requests.default]
       max_concurrent_requests: maxConcurrentRequests,
       initial_channel_credit: channelCapacity,
     };

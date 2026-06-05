@@ -153,6 +153,30 @@ struct ChannelFlowControlTests {
         #expect(await resetReceiver.recv() == nil)
     }
 
+    // r[verify rpc.channel.connection-closure]
+    @Test func registryCloseAllTerminatesReceiversAndBlockedSenders() async throws {
+        let registry = ChannelRegistry()
+        let receiver = await registry.register(31, initialCredit: 2)
+        let credit = await registry.registerOutgoing(33, initialCredit: 0)
+
+        let blockedSend = Task {
+            try await credit.consume()
+        }
+        for _ in 0..<10 {
+            await Task.yield()
+        }
+
+        await registry.closeAllChannels()
+
+        #expect(await receiver.recv() == nil)
+        do {
+            try await blockedSend.value
+            Issue.record("expected blocked sender to observe channel closure")
+        } catch {
+            #expect(error is VoxRuntime.ChannelError)
+        }
+    }
+
     // r[verify schema.interaction.channels]
     // r[verify rpc.channel]
     // r[verify rpc.channel.direction]

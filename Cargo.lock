@@ -1848,6 +1848,7 @@ name = "peer-server"
 version = "0.2.2"
 dependencies = [
  "spec-proto",
+ "subject-rust",
  "tokio",
  "vox",
  "vox-core",
@@ -2445,13 +2446,16 @@ name = "spec-proto"
 version = "0.2.2"
 dependencies = [
  "facet",
+ "facet-value",
  "vox",
+ "vox-schema",
 ]
 
 [[package]]
 name = "spec-tests"
 version = "0.2.2"
 dependencies = [
+ "facet-value",
  "libc",
  "moire",
  "spec-proto",
@@ -2531,6 +2535,7 @@ dependencies = [
 name = "subject-rust"
 version = "0.2.2"
 dependencies = [
+ "facet-value",
  "moire",
  "spec-proto",
  "tokio",
@@ -3142,9 +3147,12 @@ dependencies = [
  "facet",
  "facet-cbor",
  "facet-core",
+ "facet-value",
  "heck",
+ "phon",
  "phon-codegen",
  "phon-engine",
+ "phon-ir",
  "phon-schema",
  "spec-proto",
  "vox",

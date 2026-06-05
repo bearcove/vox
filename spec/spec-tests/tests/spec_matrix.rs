@@ -122,6 +122,154 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_echo_tree(SPEC);
         }
         #[test]
+        fn rpc_echo_ecosystem_bridge() {
+            testbed::run_rpc_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_template_call() {
+            testbed::run_rpc_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_html_process() {
+            testbed::run_rpc_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_execute_code_samples() {
+            testbed::run_rpc_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn rpc_echo_styx_value() {
+            testbed::run_rpc_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_initialize() {
+            testbed::run_rpc_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_completions() {
+            testbed::run_rpc_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_hover() {
+            testbed::run_rpc_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_inlay_hints() {
+            testbed::run_rpc_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_diagnostics() {
+            testbed::run_rpc_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_code_actions() {
+            testbed::run_rpc_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_definition() {
+            testbed::run_rpc_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_shutdown() {
+            testbed::run_rpc_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_subtree() {
+            testbed::run_rpc_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_document() {
+            testbed::run_rpc_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_source() {
+            testbed::run_rpc_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_schema() {
+            testbed::run_rpc_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_offset_to_position() {
+            testbed::run_rpc_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_position_to_offset() {
+            testbed::run_rpc_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn rpc_stax_flamegraph() {
+            testbed::run_rpc_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_flamegraph_update() {
+            testbed::run_rpc_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn rpc_stax_subscribe_flamegraph_updates() {
+            testbed::run_rpc_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_linux_broker_control() {
+            testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_live_reload_event() {
+            testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_apply_patches_result() {
+            testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_stream_metrics() {
+            testbed::run_rpc_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_verify_evidence() {
+            testbed::run_rpc_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn rpc_helix_subscribe_pulses() {
+            testbed::run_rpc_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn rpc_helix_pulse_bundle() {
+            testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_status() {
+            testbed::run_rpc_tracey_status(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_core_control() {
+            testbed::run_rpc_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_rule() {
+            testbed::run_rpc_tracey_rule(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_dashboard() {
+            testbed::run_rpc_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_validate() {
+            testbed::run_rpc_tracey_validate(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_surface() {
+            testbed::run_rpc_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_workspace_diagnostics() {
+            testbed::run_rpc_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_subscribe_updates() {
+            testbed::run_rpc_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -140,6 +288,46 @@ mod lang_rust_transport_tcp {
         #[test]
         fn rpc_channeling_sum_large() {
             testbed::run_rpc_channeling_sum_large(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_byte_tunnel() {
+            testbed::run_rpc_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_devtools_lsp() {
+            testbed::run_rpc_dodeca_devtools_lsp(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_list() {
+            testbed::run_rpc_dibs_list(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_schema() {
+            testbed::run_rpc_dibs_schema(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_get() {
+            testbed::run_rpc_dibs_get(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_create() {
+            testbed::run_rpc_dibs_create(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_update() {
+            testbed::run_rpc_dibs_update(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_delete() {
+            testbed::run_rpc_dibs_delete(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migration_status() {
+            testbed::run_rpc_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migrate() {
+            testbed::run_rpc_dibs_migrate(SPEC);
         }
         #[test]
         fn channeling_generate_server_to_client() {
@@ -269,6 +457,186 @@ mod lang_rust_transport_tcp {
             testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
+        fn subject_calls_echo_ecosystem_bridge() {
+            testbed::run_subject_calls_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_template_call() {
+            testbed::run_subject_calls_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_html_process() {
+            testbed::run_subject_calls_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_execute_code_samples() {
+            testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_styx_value() {
+            testbed::run_subject_calls_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_initialize() {
+            testbed::run_subject_calls_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_completions() {
+            testbed::run_subject_calls_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_hover() {
+            testbed::run_subject_calls_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_inlay_hints() {
+            testbed::run_subject_calls_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_diagnostics() {
+            testbed::run_subject_calls_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_code_actions() {
+            testbed::run_subject_calls_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_definition() {
+            testbed::run_subject_calls_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_shutdown() {
+            testbed::run_subject_calls_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_subtree() {
+            testbed::run_subject_calls_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_document() {
+            testbed::run_subject_calls_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_source() {
+            testbed::run_subject_calls_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_schema() {
+            testbed::run_subject_calls_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_offset_to_position() {
+            testbed::run_subject_calls_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_position_to_offset() {
+            testbed::run_subject_calls_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_flamegraph() {
+            testbed::run_subject_calls_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_flamegraph_update() {
+            testbed::run_subject_calls_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_subscribe_flamegraph_updates() {
+            testbed::run_subject_calls_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_linux_broker_control() {
+            testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_live_reload_event() {
+            testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_apply_patches_result() {
+            testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_stream_metrics() {
+            testbed::run_subject_calls_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_verify_evidence() {
+            testbed::run_subject_calls_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_subscribe_pulses() {
+            testbed::run_subject_calls_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_pulse_bundle() {
+            testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_status() {
+            testbed::run_subject_calls_tracey_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_core_control() {
+            testbed::run_subject_calls_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_rule() {
+            testbed::run_subject_calls_tracey_rule(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_dashboard() {
+            testbed::run_subject_calls_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_validate() {
+            testbed::run_subject_calls_tracey_validate(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_surface() {
+            testbed::run_subject_calls_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_workspace_diagnostics() {
+            testbed::run_subject_calls_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_subscribe_updates() {
+            testbed::run_subject_calls_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_list() {
+            testbed::run_subject_calls_dibs_list(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_schema() {
+            testbed::run_subject_calls_dibs_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_get() {
+            testbed::run_subject_calls_dibs_get(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_create() {
+            testbed::run_subject_calls_dibs_create(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_update() {
+            testbed::run_subject_calls_dibs_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_delete() {
+            testbed::run_subject_calls_dibs_delete(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migration_status() {
+            testbed::run_subject_calls_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migrate() {
+            testbed::run_subject_calls_dibs_migrate(SPEC);
+        }
+        #[test]
         fn subject_calls_pipelining() {
             testbed::run_subject_calls_pipelining(SPEC);
         }
@@ -287,6 +655,14 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_transform_bidi() {
             testbed::run_subject_calls_transform_bidi(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_byte_tunnel() {
+            testbed::run_subject_calls_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_devtools_lsp() {
+            testbed::run_subject_calls_dodeca_devtools_lsp(SPEC);
         }
         #[test]
         fn subject_calls_post_reply_generate() {
@@ -411,6 +787,154 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_echo_tree(SPEC);
         }
         #[test]
+        fn rpc_echo_ecosystem_bridge() {
+            testbed::run_rpc_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_template_call() {
+            testbed::run_rpc_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_html_process() {
+            testbed::run_rpc_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_execute_code_samples() {
+            testbed::run_rpc_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn rpc_echo_styx_value() {
+            testbed::run_rpc_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_initialize() {
+            testbed::run_rpc_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_completions() {
+            testbed::run_rpc_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_hover() {
+            testbed::run_rpc_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_inlay_hints() {
+            testbed::run_rpc_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_diagnostics() {
+            testbed::run_rpc_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_code_actions() {
+            testbed::run_rpc_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_definition() {
+            testbed::run_rpc_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_shutdown() {
+            testbed::run_rpc_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_subtree() {
+            testbed::run_rpc_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_document() {
+            testbed::run_rpc_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_source() {
+            testbed::run_rpc_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_schema() {
+            testbed::run_rpc_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_offset_to_position() {
+            testbed::run_rpc_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_position_to_offset() {
+            testbed::run_rpc_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn rpc_stax_flamegraph() {
+            testbed::run_rpc_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_flamegraph_update() {
+            testbed::run_rpc_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn rpc_stax_subscribe_flamegraph_updates() {
+            testbed::run_rpc_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_linux_broker_control() {
+            testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_live_reload_event() {
+            testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_apply_patches_result() {
+            testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_stream_metrics() {
+            testbed::run_rpc_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_verify_evidence() {
+            testbed::run_rpc_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn rpc_helix_subscribe_pulses() {
+            testbed::run_rpc_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn rpc_helix_pulse_bundle() {
+            testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_status() {
+            testbed::run_rpc_tracey_status(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_core_control() {
+            testbed::run_rpc_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_rule() {
+            testbed::run_rpc_tracey_rule(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_dashboard() {
+            testbed::run_rpc_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_validate() {
+            testbed::run_rpc_tracey_validate(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_surface() {
+            testbed::run_rpc_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_workspace_diagnostics() {
+            testbed::run_rpc_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_subscribe_updates() {
+            testbed::run_rpc_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -429,6 +953,46 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn rpc_channeling_sum_large() {
             testbed::run_rpc_channeling_sum_large(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_byte_tunnel() {
+            testbed::run_rpc_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_devtools_lsp() {
+            testbed::run_rpc_dodeca_devtools_lsp(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_list() {
+            testbed::run_rpc_dibs_list(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_schema() {
+            testbed::run_rpc_dibs_schema(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_get() {
+            testbed::run_rpc_dibs_get(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_create() {
+            testbed::run_rpc_dibs_create(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_update() {
+            testbed::run_rpc_dibs_update(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_delete() {
+            testbed::run_rpc_dibs_delete(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migration_status() {
+            testbed::run_rpc_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migrate() {
+            testbed::run_rpc_dibs_migrate(SPEC);
         }
         #[test]
         fn channeling_generate_server_to_client() {
@@ -558,6 +1122,186 @@ mod lang_typescript_transport_tcp {
             testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
+        fn subject_calls_echo_ecosystem_bridge() {
+            testbed::run_subject_calls_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_template_call() {
+            testbed::run_subject_calls_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_html_process() {
+            testbed::run_subject_calls_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_execute_code_samples() {
+            testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_styx_value() {
+            testbed::run_subject_calls_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_initialize() {
+            testbed::run_subject_calls_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_completions() {
+            testbed::run_subject_calls_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_hover() {
+            testbed::run_subject_calls_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_inlay_hints() {
+            testbed::run_subject_calls_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_diagnostics() {
+            testbed::run_subject_calls_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_code_actions() {
+            testbed::run_subject_calls_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_definition() {
+            testbed::run_subject_calls_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_shutdown() {
+            testbed::run_subject_calls_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_subtree() {
+            testbed::run_subject_calls_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_document() {
+            testbed::run_subject_calls_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_source() {
+            testbed::run_subject_calls_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_schema() {
+            testbed::run_subject_calls_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_offset_to_position() {
+            testbed::run_subject_calls_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_position_to_offset() {
+            testbed::run_subject_calls_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_flamegraph() {
+            testbed::run_subject_calls_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_flamegraph_update() {
+            testbed::run_subject_calls_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_subscribe_flamegraph_updates() {
+            testbed::run_subject_calls_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_linux_broker_control() {
+            testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_live_reload_event() {
+            testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_apply_patches_result() {
+            testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_stream_metrics() {
+            testbed::run_subject_calls_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_verify_evidence() {
+            testbed::run_subject_calls_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_subscribe_pulses() {
+            testbed::run_subject_calls_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_pulse_bundle() {
+            testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_status() {
+            testbed::run_subject_calls_tracey_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_core_control() {
+            testbed::run_subject_calls_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_rule() {
+            testbed::run_subject_calls_tracey_rule(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_dashboard() {
+            testbed::run_subject_calls_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_validate() {
+            testbed::run_subject_calls_tracey_validate(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_surface() {
+            testbed::run_subject_calls_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_workspace_diagnostics() {
+            testbed::run_subject_calls_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_subscribe_updates() {
+            testbed::run_subject_calls_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_list() {
+            testbed::run_subject_calls_dibs_list(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_schema() {
+            testbed::run_subject_calls_dibs_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_get() {
+            testbed::run_subject_calls_dibs_get(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_create() {
+            testbed::run_subject_calls_dibs_create(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_update() {
+            testbed::run_subject_calls_dibs_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_delete() {
+            testbed::run_subject_calls_dibs_delete(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migration_status() {
+            testbed::run_subject_calls_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migrate() {
+            testbed::run_subject_calls_dibs_migrate(SPEC);
+        }
+        #[test]
         fn subject_calls_pipelining() {
             testbed::run_subject_calls_pipelining(SPEC);
         }
@@ -576,6 +1320,14 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_transform_bidi() {
             testbed::run_subject_calls_transform_bidi(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_byte_tunnel() {
+            testbed::run_subject_calls_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_devtools_lsp() {
+            testbed::run_subject_calls_dodeca_devtools_lsp(SPEC);
         }
         #[test]
         fn subject_calls_post_reply_generate() {
@@ -700,6 +1452,154 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_echo_tree(SPEC);
         }
         #[test]
+        fn rpc_echo_ecosystem_bridge() {
+            testbed::run_rpc_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_template_call() {
+            testbed::run_rpc_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_html_process() {
+            testbed::run_rpc_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_execute_code_samples() {
+            testbed::run_rpc_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn rpc_echo_styx_value() {
+            testbed::run_rpc_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_initialize() {
+            testbed::run_rpc_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_completions() {
+            testbed::run_rpc_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_hover() {
+            testbed::run_rpc_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_inlay_hints() {
+            testbed::run_rpc_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_diagnostics() {
+            testbed::run_rpc_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_code_actions() {
+            testbed::run_rpc_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_definition() {
+            testbed::run_rpc_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_shutdown() {
+            testbed::run_rpc_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_subtree() {
+            testbed::run_rpc_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_document() {
+            testbed::run_rpc_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_source() {
+            testbed::run_rpc_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_schema() {
+            testbed::run_rpc_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_offset_to_position() {
+            testbed::run_rpc_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_position_to_offset() {
+            testbed::run_rpc_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn rpc_stax_flamegraph() {
+            testbed::run_rpc_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_flamegraph_update() {
+            testbed::run_rpc_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn rpc_stax_subscribe_flamegraph_updates() {
+            testbed::run_rpc_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_linux_broker_control() {
+            testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_live_reload_event() {
+            testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_apply_patches_result() {
+            testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_stream_metrics() {
+            testbed::run_rpc_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_verify_evidence() {
+            testbed::run_rpc_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn rpc_helix_subscribe_pulses() {
+            testbed::run_rpc_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn rpc_helix_pulse_bundle() {
+            testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_status() {
+            testbed::run_rpc_tracey_status(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_core_control() {
+            testbed::run_rpc_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_rule() {
+            testbed::run_rpc_tracey_rule(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_dashboard() {
+            testbed::run_rpc_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_validate() {
+            testbed::run_rpc_tracey_validate(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_surface() {
+            testbed::run_rpc_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_workspace_diagnostics() {
+            testbed::run_rpc_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_subscribe_updates() {
+            testbed::run_rpc_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -718,6 +1618,46 @@ mod lang_typescript_transport_ws {
         #[test]
         fn rpc_channeling_sum_large() {
             testbed::run_rpc_channeling_sum_large(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_byte_tunnel() {
+            testbed::run_rpc_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_devtools_lsp() {
+            testbed::run_rpc_dodeca_devtools_lsp(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_list() {
+            testbed::run_rpc_dibs_list(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_schema() {
+            testbed::run_rpc_dibs_schema(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_get() {
+            testbed::run_rpc_dibs_get(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_create() {
+            testbed::run_rpc_dibs_create(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_update() {
+            testbed::run_rpc_dibs_update(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_delete() {
+            testbed::run_rpc_dibs_delete(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migration_status() {
+            testbed::run_rpc_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migrate() {
+            testbed::run_rpc_dibs_migrate(SPEC);
         }
         #[test]
         fn channeling_generate_server_to_client() {
@@ -847,6 +1787,186 @@ mod lang_typescript_transport_ws {
             testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
+        fn subject_calls_echo_ecosystem_bridge() {
+            testbed::run_subject_calls_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_template_call() {
+            testbed::run_subject_calls_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_html_process() {
+            testbed::run_subject_calls_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_execute_code_samples() {
+            testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_styx_value() {
+            testbed::run_subject_calls_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_initialize() {
+            testbed::run_subject_calls_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_completions() {
+            testbed::run_subject_calls_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_hover() {
+            testbed::run_subject_calls_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_inlay_hints() {
+            testbed::run_subject_calls_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_diagnostics() {
+            testbed::run_subject_calls_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_code_actions() {
+            testbed::run_subject_calls_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_definition() {
+            testbed::run_subject_calls_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_shutdown() {
+            testbed::run_subject_calls_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_subtree() {
+            testbed::run_subject_calls_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_document() {
+            testbed::run_subject_calls_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_source() {
+            testbed::run_subject_calls_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_schema() {
+            testbed::run_subject_calls_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_offset_to_position() {
+            testbed::run_subject_calls_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_position_to_offset() {
+            testbed::run_subject_calls_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_flamegraph() {
+            testbed::run_subject_calls_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_flamegraph_update() {
+            testbed::run_subject_calls_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_subscribe_flamegraph_updates() {
+            testbed::run_subject_calls_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_linux_broker_control() {
+            testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_live_reload_event() {
+            testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_apply_patches_result() {
+            testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_stream_metrics() {
+            testbed::run_subject_calls_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_verify_evidence() {
+            testbed::run_subject_calls_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_subscribe_pulses() {
+            testbed::run_subject_calls_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_pulse_bundle() {
+            testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_status() {
+            testbed::run_subject_calls_tracey_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_core_control() {
+            testbed::run_subject_calls_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_rule() {
+            testbed::run_subject_calls_tracey_rule(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_dashboard() {
+            testbed::run_subject_calls_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_validate() {
+            testbed::run_subject_calls_tracey_validate(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_surface() {
+            testbed::run_subject_calls_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_workspace_diagnostics() {
+            testbed::run_subject_calls_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_subscribe_updates() {
+            testbed::run_subject_calls_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_list() {
+            testbed::run_subject_calls_dibs_list(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_schema() {
+            testbed::run_subject_calls_dibs_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_get() {
+            testbed::run_subject_calls_dibs_get(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_create() {
+            testbed::run_subject_calls_dibs_create(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_update() {
+            testbed::run_subject_calls_dibs_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_delete() {
+            testbed::run_subject_calls_dibs_delete(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migration_status() {
+            testbed::run_subject_calls_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migrate() {
+            testbed::run_subject_calls_dibs_migrate(SPEC);
+        }
+        #[test]
         fn subject_calls_pipelining() {
             testbed::run_subject_calls_pipelining(SPEC);
         }
@@ -865,6 +1985,14 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_transform_bidi() {
             testbed::run_subject_calls_transform_bidi(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_byte_tunnel() {
+            testbed::run_subject_calls_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_devtools_lsp() {
+            testbed::run_subject_calls_dodeca_devtools_lsp(SPEC);
         }
         #[test]
         fn subject_calls_post_reply_generate() {
@@ -989,6 +2117,154 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_echo_tree(SPEC);
         }
         #[test]
+        fn rpc_echo_ecosystem_bridge() {
+            testbed::run_rpc_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn rpc_echo_dodeca_template_call() {
+            testbed::run_rpc_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_html_process() {
+            testbed::run_rpc_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_execute_code_samples() {
+            testbed::run_rpc_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn rpc_echo_styx_value() {
+            testbed::run_rpc_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_initialize() {
+            testbed::run_rpc_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_completions() {
+            testbed::run_rpc_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_hover() {
+            testbed::run_rpc_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_inlay_hints() {
+            testbed::run_rpc_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_diagnostics() {
+            testbed::run_rpc_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_code_actions() {
+            testbed::run_rpc_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_definition() {
+            testbed::run_rpc_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn rpc_styx_lsp_shutdown() {
+            testbed::run_rpc_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_subtree() {
+            testbed::run_rpc_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_document() {
+            testbed::run_rpc_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_source() {
+            testbed::run_rpc_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_get_schema() {
+            testbed::run_rpc_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_offset_to_position() {
+            testbed::run_rpc_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn rpc_styx_host_position_to_offset() {
+            testbed::run_rpc_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn rpc_stax_flamegraph() {
+            testbed::run_rpc_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_flamegraph_update() {
+            testbed::run_rpc_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn rpc_stax_subscribe_flamegraph_updates() {
+            testbed::run_rpc_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn rpc_echo_stax_linux_broker_control() {
+            testbed::run_rpc_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_live_reload_event() {
+            testbed::run_rpc_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn rpc_echo_hotmeal_apply_patches_result() {
+            testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_stream_metrics() {
+            testbed::run_rpc_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn rpc_echo_helix_verify_evidence() {
+            testbed::run_rpc_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn rpc_helix_subscribe_pulses() {
+            testbed::run_rpc_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn rpc_helix_pulse_bundle() {
+            testbed::run_rpc_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_status() {
+            testbed::run_rpc_tracey_status(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_core_control() {
+            testbed::run_rpc_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_rule() {
+            testbed::run_rpc_tracey_rule(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_dashboard() {
+            testbed::run_rpc_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_validate() {
+            testbed::run_rpc_tracey_validate(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_surface() {
+            testbed::run_rpc_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_lsp_workspace_diagnostics() {
+            testbed::run_rpc_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn rpc_tracey_subscribe_updates() {
+            testbed::run_rpc_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
         fn rpc_echo_status() {
             testbed::run_rpc_echo_status(SPEC);
         }
@@ -1007,6 +2283,46 @@ mod lang_swift_transport_tcp {
         #[test]
         fn rpc_channeling_sum_large() {
             testbed::run_rpc_channeling_sum_large(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_byte_tunnel() {
+            testbed::run_rpc_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn rpc_dodeca_devtools_lsp() {
+            testbed::run_rpc_dodeca_devtools_lsp(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_list() {
+            testbed::run_rpc_dibs_list(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_schema() {
+            testbed::run_rpc_dibs_schema(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_get() {
+            testbed::run_rpc_dibs_get(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_create() {
+            testbed::run_rpc_dibs_create(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_update() {
+            testbed::run_rpc_dibs_update(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_delete() {
+            testbed::run_rpc_dibs_delete(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migration_status() {
+            testbed::run_rpc_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn rpc_dibs_migrate() {
+            testbed::run_rpc_dibs_migrate(SPEC);
         }
         #[test]
         fn channeling_generate_server_to_client() {
@@ -1136,6 +2452,186 @@ mod lang_swift_transport_tcp {
             testbed::run_subject_calls_echo_tree(SPEC);
         }
         #[test]
+        fn subject_calls_echo_ecosystem_bridge() {
+            testbed::run_subject_calls_echo_ecosystem_bridge(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_template_call() {
+            testbed::run_subject_calls_echo_dodeca_template_call(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_html_process() {
+            testbed::run_subject_calls_dodeca_html_process(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_execute_code_samples() {
+            testbed::run_subject_calls_dodeca_execute_code_samples(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_styx_value() {
+            testbed::run_subject_calls_echo_styx_value(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_initialize() {
+            testbed::run_subject_calls_styx_lsp_initialize(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_completions() {
+            testbed::run_subject_calls_styx_lsp_completions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_hover() {
+            testbed::run_subject_calls_styx_lsp_hover(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_inlay_hints() {
+            testbed::run_subject_calls_styx_lsp_inlay_hints(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_diagnostics() {
+            testbed::run_subject_calls_styx_lsp_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_code_actions() {
+            testbed::run_subject_calls_styx_lsp_code_actions(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_definition() {
+            testbed::run_subject_calls_styx_lsp_definition(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_lsp_shutdown() {
+            testbed::run_subject_calls_styx_lsp_shutdown(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_subtree() {
+            testbed::run_subject_calls_styx_host_get_subtree(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_document() {
+            testbed::run_subject_calls_styx_host_get_document(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_source() {
+            testbed::run_subject_calls_styx_host_get_source(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_get_schema() {
+            testbed::run_subject_calls_styx_host_get_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_offset_to_position() {
+            testbed::run_subject_calls_styx_host_offset_to_position(SPEC);
+        }
+        #[test]
+        fn subject_calls_styx_host_position_to_offset() {
+            testbed::run_subject_calls_styx_host_position_to_offset(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_flamegraph() {
+            testbed::run_subject_calls_stax_flamegraph(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_flamegraph_update() {
+            testbed::run_subject_calls_echo_stax_flamegraph_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_stax_subscribe_flamegraph_updates() {
+            testbed::run_subject_calls_stax_subscribe_flamegraph_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_stax_linux_broker_control() {
+            testbed::run_subject_calls_echo_stax_linux_broker_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_live_reload_event() {
+            testbed::run_subject_calls_echo_hotmeal_live_reload_event(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_hotmeal_apply_patches_result() {
+            testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_stream_metrics() {
+            testbed::run_subject_calls_echo_helix_stream_metrics(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_helix_verify_evidence() {
+            testbed::run_subject_calls_echo_helix_verify_evidence(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_subscribe_pulses() {
+            testbed::run_subject_calls_helix_subscribe_pulses(SPEC);
+        }
+        #[test]
+        fn subject_calls_helix_pulse_bundle() {
+            testbed::run_subject_calls_helix_pulse_bundle(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_status() {
+            testbed::run_subject_calls_tracey_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_core_control() {
+            testbed::run_subject_calls_tracey_core_control(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_rule() {
+            testbed::run_subject_calls_tracey_rule(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_dashboard() {
+            testbed::run_subject_calls_tracey_dashboard(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_validate() {
+            testbed::run_subject_calls_tracey_validate(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_surface() {
+            testbed::run_subject_calls_tracey_lsp_surface(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_lsp_workspace_diagnostics() {
+            testbed::run_subject_calls_tracey_lsp_workspace_diagnostics(SPEC);
+        }
+        #[test]
+        fn subject_calls_tracey_subscribe_updates() {
+            testbed::run_subject_calls_tracey_subscribe_updates(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_list() {
+            testbed::run_subject_calls_dibs_list(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_schema() {
+            testbed::run_subject_calls_dibs_schema(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_get() {
+            testbed::run_subject_calls_dibs_get(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_create() {
+            testbed::run_subject_calls_dibs_create(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_update() {
+            testbed::run_subject_calls_dibs_update(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_delete() {
+            testbed::run_subject_calls_dibs_delete(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migration_status() {
+            testbed::run_subject_calls_dibs_migration_status(SPEC);
+        }
+        #[test]
+        fn subject_calls_dibs_migrate() {
+            testbed::run_subject_calls_dibs_migrate(SPEC);
+        }
+        #[test]
         fn subject_calls_pipelining() {
             testbed::run_subject_calls_pipelining(SPEC);
         }
@@ -1154,6 +2650,14 @@ mod lang_swift_transport_tcp {
         #[test]
         fn subject_calls_transform_bidi() {
             testbed::run_subject_calls_transform_bidi(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_byte_tunnel() {
+            testbed::run_subject_calls_dodeca_byte_tunnel(SPEC);
+        }
+        #[test]
+        fn subject_calls_dodeca_devtools_lsp() {
+            testbed::run_subject_calls_dodeca_devtools_lsp(SPEC);
         }
         #[test]
         fn subject_calls_post_reply_generate() {

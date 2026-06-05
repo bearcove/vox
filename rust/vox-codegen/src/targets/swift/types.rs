@@ -25,6 +25,10 @@ pub fn collect_named_types(service: &ServiceDescriptor) -> Vec<(String, &'static
         seen: &mut HashSet<String>,
         types: &mut Vec<(String, &'static Shape)>,
     ) {
+        if is_dynamic_value(shape) {
+            return;
+        }
+
         match classify_shape(shape) {
             ShapeKind::Struct(StructInfo {
                 name: Some(name),
@@ -69,6 +73,11 @@ pub fn collect_named_types(service: &ServiceDescriptor) -> Vec<(String, &'static
                     visit(param.shape, seen, types);
                 }
             }
+            ShapeKind::TupleStruct { fields } => {
+                for field in fields {
+                    visit(field.shape(), seen, types);
+                }
+            }
             ShapeKind::Tx { inner } | ShapeKind::Rx { inner } => visit(inner, seen, types),
             ShapeKind::Pointer { pointee } => visit(pointee, seen, types),
             ShapeKind::Result { ok, err } => {
@@ -82,6 +91,9 @@ pub fn collect_named_types(service: &ServiceDescriptor) -> Vec<(String, &'static
     for method in service.methods {
         for arg in method.args {
             visit(arg.shape, &mut seen, &mut types);
+            if let Some(element) = arg.channel_element {
+                visit(element, &mut seen, &mut types);
+            }
         }
         visit(method.return_shape, &mut seen, &mut types);
     }

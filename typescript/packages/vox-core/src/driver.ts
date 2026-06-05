@@ -494,6 +494,14 @@ export class Driver {
       if (channelId === undefined) {
         throw new Error(`channel wire index ${wireIndex} out of range (${incoming.channels.length})`);
       }
+      channelRegistry.rememberContext(channelId, {
+        connectionId: this.connection.id,
+        requestId: incoming.requestId,
+        service: descriptor.service_name,
+        method: method.name,
+        channelDirection: ch.direction,
+        side: "server",
+      });
       if (ch.direction === "tx") {
         // The handler holds a `Tx` and SENDS to the caller.
         values[ch.index] = createServerTx(

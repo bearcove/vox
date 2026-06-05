@@ -213,7 +213,9 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
         | MemOp::Borrow(_)
         | MemOp::Default(_)
         | MemOp::SkipWire(_) => true,
+        MemOp::NativeInt { .. } => false,
         MemOp::Sequence(s) => decode_program_supported(&s.element),
+        MemOp::Set(s) => decode_program_supported(&s.element),
         MemOp::Option(o) => decode_program_supported(&o.some),
         MemOp::Enum(e) => e
             .variants
@@ -229,7 +231,9 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
 fn encode_program_supported(program: &[MemOp]) -> bool {
     program.iter().all(|op| match op {
         MemOp::Scalar { .. } | MemOp::Bytes(_) | MemOp::Borrow(_) => true,
+        MemOp::NativeInt { .. } => false,
         MemOp::Sequence(s) => encode_program_supported(&s.element),
+        MemOp::Set(s) => encode_program_supported(&s.element),
         MemOp::Option(o) => encode_program_supported(&o.some),
         MemOp::Enum(e) => e
             .variants

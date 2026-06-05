@@ -1,12 +1,70 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 
 use spec_proto::{
-    Canvas, Color, Config, GnarlyPayload, LookupError, MathError, Measurement, Message, Person,
-    Point, Profile, Record, Rectangle, Shape, Status, Tag, TaggedPoint, Testbed, TestbedClient,
-    TestbedDispatcher, Tree,
+    Canvas, Color, Config, DibsAppliedMigration, DibsColumnInfo, DibsCreateRequest,
+    DibsDeleteRequest, DibsError, DibsFilter, DibsFilterOp, DibsForeignKeyInfo, DibsGetRequest,
+    DibsIndexColumnInfo, DibsIndexInfo, DibsListRequest, DibsListResponse, DibsLogLevel,
+    DibsMigrateRequest, DibsMigrateResult, DibsMigrationInfo, DibsMigrationLog,
+    DibsMigrationStatusRequest, DibsRanMigration, DibsRow, DibsRowField, DibsSchemaInfo, DibsSort,
+    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaBuildMetadata,
+    DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata, DodecaCodeExecutionResult,
+    DodecaCodeSample, DodecaDependencySource, DodecaDependencySpec, DodecaExecuteSamplesInput,
+    DodecaExecuteSamplesOutput, DodecaExecutionResult, DodecaExecutionStatus,
+    DodecaHtmlProcessInput, DodecaHtmlProcessResult, DodecaInjection, DodecaMinifyOptions,
+    DodecaMountLocalization, DodecaResolvedDependency, DodecaResponsiveImageInfo, DodecaRustConfig,
+    DodecaTemplateCall, DodecaWikiLinkRef, EcosystemBridgePayload, GnarlyPayload,
+    HelixAdmissionSegmentId, HelixArDecodeEarlyExitReason, HelixAudioClip,
+    HelixAudioRepresentationSpan, HelixAudioRepresentationVersion,
+    HelixAudioTokenAdmissionProvenance, HelixAudioTokenId, HelixAudioTokenMergeProvenance,
+    HelixAudioTokenProvenance, HelixAudioTokenRange, HelixChromeTraceEvent, HelixConvStemChunkId,
+    HelixDecodeFact, HelixDecoderEvidenceFactCounts, HelixEncoderFactsSnapshot,
+    HelixEncoderFrontierLayer, HelixEncoderFrontierPoint, HelixEncoderFrontierSeries,
+    HelixEncoderProvenanceReport, HelixEncoderProvenanceViolation,
+    HelixEncoderProvenanceViolationKind, HelixLogicalPosition, HelixMelClip, HelixMelFrameRange,
+    HelixNativeEncoderWindowId, HelixPromptLayout, HelixPromptPrefillFact,
+    HelixPulseAttentionHeatmap, HelixPulseAvailable, HelixPulseBundle, HelixPulseBundleFields,
+    HelixPulseEvidenceSnapshot, HelixPulseRollup, HelixSchedulerPulseId, HelixStreamMetrics,
+    HelixStreamingTraceEvent, HelixTextTokenId, HelixTextTokenSnapshot, HelixTracePositionSpan,
+    HelixVerifyDraftRow, HelixVerifyDraftStatus, HelixVerifyEvidenceDigest, HelixVerifyOutcome,
+    HelixVerifyPredictionFact, HelixVerifySeedFact, HelixVerifySeedRow, HelixVerifySkippedReason,
+    HotmealApplyPatchesResult, HotmealLiveReloadEvent, LookupError, MathError, Measurement,
+    Message, Person, Point, Profile, Record, Rectangle, Shape, Status, StaxFlameNode,
+    StaxFlamegraphUpdate, StaxLinuxBrokerControlFixture, StaxLiveFilter, StaxOffCpuBreakdown,
+    StaxSymbolRef, StaxTimeRange, StaxViewParams, StyxEntry, StyxObject, StyxPayload, StyxScalar,
+    StyxScalarKind, StyxSequence, StyxSpan, StyxTag, StyxValue, Tag, TaggedPoint, Testbed,
+    TestbedClient, TestbedDispatcher, TraceyApiConfig, TraceyApiSpecInfo, TraceyCodeRef,
+    TraceyCoverageChange, TraceyDataUpdate, TraceyDeltaSummary, TraceyHealthResponse,
+    TraceyHoverInfo, TraceyImplStatus, TraceyLspCodeAction, TraceyLspCodeLens,
+    TraceyLspCompletionItem, TraceyLspDiagnostic, TraceyLspDocumentRequest,
+    TraceyLspFileDiagnostics, TraceyLspInlayHint, TraceyLspInlayHintsRequest, TraceyLspLocation,
+    TraceyLspPositionRequest, TraceyLspReferencesRequest, TraceyLspRenameRequest,
+    TraceyLspSemanticToken, TraceyLspSymbol, TraceyLspTextEdit, TraceyPrepareRenameResult,
+    TraceyReloadResponse, TraceyRuleCoverage, TraceyRuleId, TraceyRuleInfo, TraceyRuleRef,
+    TraceySectionRules, TraceyStaleEntry, TraceyStaleRequest, TraceyStaleResponse,
+    TraceyStatusResponse, TraceyUncoveredRequest, TraceyUncoveredResponse, TraceyUnmappedEntry,
+    TraceyUnmappedRequest, TraceyUnmappedResponse, TraceyUnmappedUnit, TraceyUntestedRequest,
+    TraceyUntestedResponse, TraceyValidateRequest, TraceyValidationError,
+    TraceyValidationErrorCode, TraceyValidationResult, Tree,
+};
+use spec_proto::{
+    StyxLspCapability, StyxLspCodeAction, StyxLspCodeActionKind, StyxLspCodeActionParams,
+    StyxLspCompletionItem, StyxLspCompletionKind, StyxLspCompletionParams, StyxLspCursor,
+    StyxLspDefinitionParams, StyxLspDiagnostic, StyxLspDiagnosticParams, StyxLspDiagnosticSeverity,
+    StyxLspDocumentEdit, StyxLspGetDocumentParams, StyxLspGetSchemaParams, StyxLspGetSourceParams,
+    StyxLspGetSubtreeParams, StyxLspHoverParams, StyxLspHoverResult, StyxLspInitializeParams,
+    StyxLspInitializeResult, StyxLspInlayHint, StyxLspInlayHintKind, StyxLspInlayHintParams,
+    StyxLspLocation, StyxLspOffsetToPositionParams, StyxLspPosition, StyxLspPositionToOffsetParams,
+    StyxLspRange, StyxLspSchemaInfo, StyxLspTextEdit, StyxLspWorkspaceEdit,
+};
+use spec_proto::{
+    TraceyApiCodeUnit, TraceyApiFileData, TraceyApiFileEntry, TraceyApiReverseData, TraceyApiRule,
+    TraceyApiSpecData, TraceyApiSpecForward, TraceyApiStaleRef, TraceyConfigPatternRequest,
+    TraceyFileRequest, TraceyOutlineCoverage, TraceyOutlineEntry, TraceySearchResult,
+    TraceySpecSection, TraceyUpdateError, TraceyUpdateFileRangeRequest,
 };
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
@@ -297,6 +355,2225 @@ async fn stream_values(count: u32, output: Tx<i32>) {
     output.close(Default::default()).await.ok();
 }
 
+fn stax_off_cpu(seed: u64) -> StaxOffCpuBreakdown {
+    StaxOffCpuBreakdown {
+        idle_ns: seed + 1,
+        lock_ns: seed + 2,
+        semaphore_ns: seed + 3,
+        ipc_ns: seed + 4,
+        io_read_ns: seed + 5,
+        io_write_ns: seed + 6,
+        readiness_ns: seed + 7,
+        sleep_ns: seed + 8,
+        connect_ns: seed + 9,
+        other_ns: seed + 10,
+    }
+}
+
+fn sample_stax_view_params() -> StaxViewParams {
+    StaxViewParams {
+        tid: Some(42),
+        filter: StaxLiveFilter {
+            time_range: Some(StaxTimeRange {
+                start_ns: 1_000,
+                end_ns: 8_500,
+            }),
+            exclude_symbols: vec![
+                StaxSymbolRef {
+                    function_name: Some("malloc_zone_malloc".to_string()),
+                    binary: Some("libsystem_malloc.dylib".to_string()),
+                },
+                StaxSymbolRef {
+                    function_name: None,
+                    binary: Some("libswift_Concurrency.dylib".to_string()),
+                },
+            ],
+        },
+    }
+}
+
+fn sample_stax_flamegraph_update(params: &StaxViewParams) -> StaxFlamegraphUpdate {
+    let tid = params.tid.unwrap_or(0);
+    let filter_count = params.filter.exclude_symbols.len() as u64;
+    let range_ns = params
+        .filter
+        .time_range
+        .map(|range| range.end_ns.saturating_sub(range.start_ns))
+        .unwrap_or(0);
+    let total_on_cpu_ns = 120_000 + tid as u64 + range_ns.min(1_000);
+
+    StaxFlamegraphUpdate {
+        total_on_cpu_ns,
+        total_off_cpu: stax_off_cpu(100 + filter_count),
+        strings: vec![
+            "root".to_string(),
+            "bee::decode".to_string(),
+            "libbee.dylib".to_string(),
+            "rust".to_string(),
+            "phon::jit".to_string(),
+            "libphon.dylib".to_string(),
+        ],
+        root: StaxFlameNode {
+            address: 0,
+            function_name: Some(0),
+            binary: None,
+            is_main: true,
+            language: 3,
+            on_cpu_ns: total_on_cpu_ns,
+            off_cpu: stax_off_cpu(200 + filter_count),
+            pet_samples: 64,
+            off_cpu_intervals: 3,
+            cycles: 900_000,
+            instructions: 600_000,
+            l1d_misses: 42,
+            branch_mispreds: 7,
+            children: vec![
+                StaxFlameNode {
+                    address: 0x1000 + tid as u64,
+                    function_name: Some(1),
+                    binary: Some(2),
+                    is_main: true,
+                    language: 3,
+                    on_cpu_ns: 80_000 + filter_count,
+                    off_cpu: stax_off_cpu(300 + filter_count),
+                    pet_samples: 48,
+                    off_cpu_intervals: 2,
+                    cycles: 500_000,
+                    instructions: 350_000,
+                    l1d_misses: 30,
+                    branch_mispreds: 5,
+                    children: vec![StaxFlameNode {
+                        address: 0x2000 + tid as u64,
+                        function_name: Some(4),
+                        binary: Some(5),
+                        is_main: false,
+                        language: 3,
+                        on_cpu_ns: 45_000,
+                        off_cpu: stax_off_cpu(400 + filter_count),
+                        pet_samples: 32,
+                        off_cpu_intervals: 1,
+                        cycles: 250_000,
+                        instructions: 180_000,
+                        l1d_misses: 18,
+                        branch_mispreds: 3,
+                        children: vec![],
+                    }],
+                },
+                StaxFlameNode {
+                    address: 0x3000 + tid as u64,
+                    function_name: None,
+                    binary: Some(2),
+                    is_main: false,
+                    language: 3,
+                    on_cpu_ns: 20_000,
+                    off_cpu: stax_off_cpu(500 + filter_count),
+                    pet_samples: 12,
+                    off_cpu_intervals: 0,
+                    cycles: 120_000,
+                    instructions: 70_000,
+                    l1d_misses: 4,
+                    branch_mispreds: 1,
+                    children: vec![],
+                },
+            ],
+        },
+    }
+}
+
+fn sample_stax_secondary_view_params() -> StaxViewParams {
+    StaxViewParams {
+        tid: None,
+        filter: StaxLiveFilter {
+            time_range: Some(StaxTimeRange {
+                start_ns: 9_000,
+                end_ns: 9_640,
+            }),
+            exclude_symbols: vec![StaxSymbolRef {
+                function_name: Some("mach_msg2_trap".to_string()),
+                binary: None,
+            }],
+        },
+    }
+}
+
+fn sample_stax_flamegraph_updates() -> Vec<StaxFlamegraphUpdate> {
+    vec![
+        sample_stax_flamegraph_update(&sample_stax_view_params()),
+        sample_stax_flamegraph_update(&sample_stax_secondary_view_params()),
+    ]
+}
+
+fn helix_audio_range(start: u32, end: u32) -> HelixAudioTokenRange {
+    HelixAudioTokenRange {
+        start: HelixAudioTokenId(start),
+        end: HelixAudioTokenId(end),
+    }
+}
+
+fn sample_helix_verify_evidence() -> HelixVerifyEvidenceDigest {
+    HelixVerifyEvidenceDigest {
+        pulse_id: HelixSchedulerPulseId(102),
+        rewind_k: 2,
+        accepted_prefix_len: Some(1),
+        divergence_row: Some(1),
+        drafts: vec![
+            HelixVerifyDraftRow {
+                draft_index: 0,
+                draft_token_id: 812,
+                verified_text_token_id: HelixTextTokenId(44),
+                text: "hel".to_string(),
+                status: HelixVerifyDraftStatus::Accepted,
+                expected_observed_audio: helix_audio_range(10, 18),
+                max_dominant_audio_mass: 0.73,
+                record_count: 8,
+                max_logit: 12.5,
+                draft_logit: 12.4,
+            },
+            HelixVerifyDraftRow {
+                draft_index: 1,
+                draft_token_id: 927,
+                verified_text_token_id: HelixTextTokenId(45),
+                text: "ix".to_string(),
+                status: HelixVerifyDraftStatus::Divergent,
+                expected_observed_audio: helix_audio_range(18, 26),
+                max_dominant_audio_mass: 0.61,
+                record_count: 8,
+                max_logit: 11.2,
+                draft_logit: 9.9,
+            },
+            HelixVerifyDraftRow {
+                draft_index: 2,
+                draft_token_id: 415,
+                verified_text_token_id: HelixTextTokenId(46),
+                text: "".to_string(),
+                status: HelixVerifyDraftStatus::DiscardedAfterDivergence,
+                expected_observed_audio: helix_audio_range(26, 32),
+                max_dominant_audio_mass: 0.0,
+                record_count: 0,
+                max_logit: 0.0,
+                draft_logit: 0.0,
+            },
+        ],
+        seed: Some(HelixVerifySeedRow {
+            query_row: 3,
+            next_token_seed: 1401,
+            expected_observed_audio: helix_audio_range(32, 40),
+            max_dominant_audio_mass: 0.58,
+            record_count: 8,
+            max_logit: 10.75,
+        }),
+    }
+}
+
+fn helix_audio_span(start: u32, end: u32, version: u32) -> HelixAudioRepresentationSpan {
+    HelixAudioRepresentationSpan {
+        audio: helix_audio_range(start, end),
+        audio_representation_version: HelixAudioRepresentationVersion(version),
+    }
+}
+
+fn sample_helix_audio_provenance() -> Vec<HelixAudioTokenProvenance> {
+    vec![
+        HelixAudioTokenProvenance {
+            audio_token_id: HelixAudioTokenId(16),
+            audio_representation_version: HelixAudioRepresentationVersion(7),
+            mel_frames: vec![HelixMelFrameRange {
+                start: 128,
+                end: 136,
+            }],
+            native_window: HelixNativeEncoderWindowId(2),
+            conv_stem_chunk: HelixConvStemChunkId(4),
+            post_merge_audio_token_id: HelixAudioTokenId(16),
+            merge: HelixAudioTokenMergeProvenance::NoMerge {
+                pre_merge_audio_token_id: HelixAudioTokenId(16),
+            },
+            admission: HelixAudioTokenAdmissionProvenance::AdmitAll {
+                admission_segment: HelixAdmissionSegmentId(12),
+            },
+            cosine_to_previous: Some(0.9825),
+        },
+        HelixAudioTokenProvenance {
+            audio_token_id: HelixAudioTokenId(17),
+            audio_representation_version: HelixAudioRepresentationVersion(7),
+            mel_frames: vec![
+                HelixMelFrameRange {
+                    start: 136,
+                    end: 144,
+                },
+                HelixMelFrameRange {
+                    start: 144,
+                    end: 152,
+                },
+            ],
+            native_window: HelixNativeEncoderWindowId(2),
+            conv_stem_chunk: HelixConvStemChunkId(4),
+            post_merge_audio_token_id: HelixAudioTokenId(17),
+            merge: HelixAudioTokenMergeProvenance::Merged {
+                pre_merge: helix_audio_range(17, 19),
+            },
+            admission: HelixAudioTokenAdmissionProvenance::AdmitAll {
+                admission_segment: HelixAdmissionSegmentId(13),
+            },
+            cosine_to_previous: None,
+        },
+    ]
+}
+
+fn sample_helix_prompt_layout() -> HelixPromptLayout {
+    HelixPromptLayout {
+        pulse_id: HelixSchedulerPulseId(102),
+        first_audio_token_id: HelixAudioTokenId(10),
+        resident_audio_frames: 32,
+        changed_audio_spans: vec![helix_audio_span(16, 20, 7), helix_audio_span(24, 28, 8)],
+        text_token_start: HelixTextTokenId(40),
+        text_token_end: HelixTextTokenId(44),
+        text_tokens: vec![
+            HelixTextTokenSnapshot {
+                text_token_id: HelixTextTokenId(40),
+                text: Some("hel".to_string()),
+                text_before: Some("he".to_string()),
+                in_verify_batch: true,
+                decoded_this_pulse: false,
+            },
+            HelixTextTokenSnapshot {
+                text_token_id: HelixTextTokenId(41),
+                text: Some("ix".to_string()),
+                text_before: None,
+                in_verify_batch: false,
+                decoded_this_pulse: true,
+            },
+        ],
+    }
+}
+
+fn sample_helix_attention_heatmap() -> HelixPulseAttentionHeatmap {
+    HelixPulseAttentionHeatmap {
+        pulse_id: HelixSchedulerPulseId(102),
+        first_audio_token_id: HelixAudioTokenId(10),
+        audio_token_count: 6,
+        text_token_start: HelixTextTokenId(40),
+        text_token_count: 2,
+        record_count: 16,
+        max_value: 0.42,
+        mean_audio_mass: vec![
+            0.02, 0.04, 0.08, 0.16, 0.28, 0.42, 0.03, 0.05, 0.09, 0.15, 0.24, 0.31,
+        ],
+        text_token_glyphs: vec!["hel".to_string(), "ix".to_string()],
+    }
+}
+
+fn sample_helix_encoder_frontier() -> HelixEncoderFrontierSeries {
+    HelixEncoderFrontierSeries {
+        pulse_id: HelixSchedulerPulseId(102),
+        layers: vec![
+            HelixEncoderFrontierLayer {
+                encoder_layer_index: 0,
+                points: vec![
+                    HelixEncoderFrontierPoint {
+                        audio_token_id: HelixAudioTokenId(16),
+                        mean_frontier_debt: 0.12,
+                        head_count: 4,
+                    },
+                    HelixEncoderFrontierPoint {
+                        audio_token_id: HelixAudioTokenId(17),
+                        mean_frontier_debt: 0.18,
+                        head_count: 4,
+                    },
+                ],
+            },
+            HelixEncoderFrontierLayer {
+                encoder_layer_index: 1,
+                points: vec![HelixEncoderFrontierPoint {
+                    audio_token_id: HelixAudioTokenId(16),
+                    mean_frontier_debt: 0.09,
+                    head_count: 4,
+                }],
+            },
+        ],
+        min_audio_token_id: HelixAudioTokenId(16),
+        max_audio_token_id: HelixAudioTokenId(17),
+        min_frontier_debt: 0.09,
+        max_frontier_debt: 0.18,
+    }
+}
+
+fn sample_helix_encoder_provenance_report() -> HelixEncoderProvenanceReport {
+    HelixEncoderProvenanceReport {
+        pulse_id: HelixSchedulerPulseId(102),
+        records_checked: 32,
+        violations: vec![HelixEncoderProvenanceViolation {
+            audio_token_id: HelixAudioTokenId(18),
+            encoder_layer_index: 2,
+            head_index: 3,
+            observed_audio_token_id: Some(HelixAudioTokenId(21)),
+            kind: HelixEncoderProvenanceViolationKind::VersionMismatch,
+            message: "observed audio provenance version lagged refresh".to_string(),
+        }],
+    }
+}
+
+fn sample_helix_pulse_rollup() -> HelixPulseRollup {
+    HelixPulseRollup {
+        pulse_id: HelixSchedulerPulseId(102),
+        pulse_start_us: Some(1_000_000),
+        pulse_duration_us: Some(8_250),
+        encoder_duration_us: Some(2_100),
+        refresh_duration_us: Some(1_400),
+        verify_duration_us: Some(900),
+        decode_duration_us: Some(2_300),
+        commit_duration_us: Some(250),
+        pulse_mel_frames: 16,
+        committed_tokens: 4,
+        retained_speculative_tokens: 2,
+        resident_committed_tokens: 38,
+        evicted_audio_tokens: 16,
+        evicted_committed_tokens: 0,
+        decoded_tokens: 5,
+        hit_eos: false,
+        verify: Some(HelixVerifyOutcome {
+            rewind_k: 2,
+            accepted_prefix_len: Some(1),
+            divergence_row: Some(1),
+            discarded_speculative_tokens: Some(1),
+        }),
+        has_attention_batch: true,
+        ar_token_count: 6,
+    }
+}
+
+fn sample_helix_timeline() -> Vec<HelixStreamingTraceEvent> {
+    vec![
+        HelixStreamingTraceEvent::Pulse {
+            start_us: 1_000_000,
+            duration_us: 8_250,
+            pulse_id: 102,
+            previous_consumed_mel_frames: 1_632,
+            consumed_mel_frames: 1_648,
+            pulse_mel_frames: 16,
+            committed_text_len_start: 36,
+            speculative_len_start: 3,
+            committed_tokens: 4,
+            retained_speculative_tokens: 2,
+            resident_committed_tokens: 38,
+            evicted_audio_tokens: 16,
+            evicted_committed_tokens: 0,
+        },
+        HelixStreamingTraceEvent::AudioEncoderUpdate {
+            start_us: 1_000_200,
+            duration_us: 2_100,
+            pulse_id: 102,
+            num_audio_frames: 64,
+            first_audio_token_id: 10,
+            resident_audio_frames: 32,
+            changed_span_count: 2,
+            changed_audio_tokens: 8,
+            latest_audio_representation_version: 7,
+        },
+        HelixStreamingTraceEvent::AudioEviction {
+            timestamp_us: 1_000_300,
+            pulse_id: 102,
+            evicted_audio_tokens: 16,
+            first_audio_token_id: 10,
+            resident_audio_frames: 32,
+            audio_ring_capacity: 96,
+        },
+        HelixStreamingTraceEvent::RefreshPrompt {
+            start_us: 1_002_500,
+            duration_us: 1_400,
+            pulse_id: 102,
+            first_audio_token_id: 10,
+            resident_audio_frames: 32,
+            committed_text_len: 36,
+            resident_committed_len: 32,
+            resident_text_len: 35,
+            logical_start: 80,
+            logical_end: 117,
+            text_token_start: 40,
+            text_token_end: 44,
+            spans: vec![HelixTracePositionSpan {
+                logical_start: 80,
+                rows: 16,
+                physical_start: 12,
+            }],
+        },
+        HelixStreamingTraceEvent::LayoutSnapshot {
+            timestamp_us: 1_003_950,
+            pulse_id: 102,
+            audio_len: 32,
+            audio_head: 4,
+            first_audio_token_id: 10,
+            text_len: 35,
+            first_text_token_id: 40,
+            prompt_len: 67,
+            resident_committed_len: 32,
+            resident_text_len: 35,
+        },
+        HelixStreamingTraceEvent::Verify {
+            start_us: 1_004_000,
+            duration_us: 900,
+            pulse_id: 102,
+            rewind_k: 2,
+            post_rewind_text_len: 37,
+            text_token_start: 44,
+            text_token_end: 47,
+            logical_start: 114,
+            logical_end: 117,
+            spans: vec![HelixTracePositionSpan {
+                logical_start: 114,
+                rows: 3,
+                physical_start: 46,
+            }],
+            accepted_prefix_len: Some(1),
+            divergence_row: Some(1),
+            next_token_seed: Some(1401),
+            discarded_speculative_tokens: Some(1),
+            invalidated_speculative_slots: Some(2),
+        },
+        HelixStreamingTraceEvent::ArDecode {
+            start_us: 1_005_000,
+            duration_us: 2_300,
+            pulse_id: 102,
+            decode_steps: 5,
+            decoded_tokens: 5,
+            speculative_len_entering: 1,
+            live_speculative_tokens: 6,
+            hit_eos: false,
+            seed_token_id: 1401,
+            seed_token_text: "hel".to_string(),
+            early_exit_reason: HelixArDecodeEarlyExitReason::BudgetExhausted,
+            next_after_tail: 1502,
+        },
+        HelixStreamingTraceEvent::ArToken {
+            start_us: 1_005_100,
+            duration_us: 300,
+            pulse_id: 102,
+            step_index: 0,
+            input_token_id: 1401,
+            input_text: "hel".to_string(),
+            text_token_id: 47,
+            query_position: 118,
+            physical_start: 49,
+            summary_records: 64,
+            next_token_id: 1502,
+            next_text: "ix".to_string(),
+        },
+        HelixStreamingTraceEvent::Commit {
+            start_us: 1_007_500,
+            duration_us: 250,
+            pulse_id: 102,
+            speculative_len_pre: 6,
+            revisable_tail_target: 2,
+            committed_tokens: 4,
+            retained_speculative_tokens: 2,
+            committed_text_len: 40,
+            next_after_committed: 1502,
+        },
+        HelixStreamingTraceEvent::VerifySkipped {
+            timestamp_us: 1_007_800,
+            pulse_id: 102,
+            reason: HelixVerifySkippedReason::PreCommitFullRewind,
+            rewind_k: 0,
+            resident_committed_len: 0,
+            speculative_len: 2,
+        },
+        HelixStreamingTraceEvent::TextEviction {
+            timestamp_us: 1_007_900,
+            pulse_id: 102,
+            evicted_committed_tokens: 0,
+            resident_committed_capacity: 128,
+            committed_text_len: 40,
+        },
+    ]
+}
+
+fn sample_helix_pulse_evidence() -> HelixPulseEvidenceSnapshot {
+    HelixPulseEvidenceSnapshot {
+        pulse_id: HelixSchedulerPulseId(102),
+        encoder: Some(HelixEncoderFactsSnapshot {
+            refreshed_audio: helix_audio_range(16, 18),
+            audio_representation_version: HelixAudioRepresentationVersion(7),
+            provenance: sample_helix_audio_provenance(),
+        }),
+        counts: HelixDecoderEvidenceFactCounts {
+            decode: 1,
+            verify_prediction: 1,
+            verify_seed: 1,
+            prompt_prefill: 1,
+        },
+        decode: vec![HelixDecodeFact {
+            text_token_id: HelixTextTokenId(47),
+            query_position: HelixLogicalPosition(118),
+            input_token_id: 1401,
+            observed_audio: helix_audio_range(10, 18),
+        }],
+        verify_prediction: vec![HelixVerifyPredictionFact {
+            verified_text_token_id: HelixTextTokenId(45),
+            verified_draft_index: 1,
+            draft_token_id: 927,
+            query_row: 2,
+            query_position: HelixLogicalPosition(116),
+            observed_audio: helix_audio_range(18, 26),
+        }],
+        verify_seed: vec![HelixVerifySeedFact {
+            query_row: 3,
+            query_position: HelixLogicalPosition(117),
+            next_token_seed: 1401,
+            observed_audio: helix_audio_range(32, 40),
+        }],
+        prompt_prefill: vec![HelixPromptPrefillFact {
+            query_position: HelixLogicalPosition(80),
+            observed_audio: helix_audio_range(10, 18),
+        }],
+    }
+}
+
+fn sample_helix_pulse_bundle() -> HelixPulseBundle {
+    HelixPulseBundle {
+        pulse_id: HelixSchedulerPulseId(102),
+        schema_version: 1,
+        prompt_layout: Some(sample_helix_prompt_layout()),
+        audio_provenance: Some(sample_helix_audio_provenance()),
+        attention_heatmap: Some(sample_helix_attention_heatmap()),
+        encoder_frontier: Some(sample_helix_encoder_frontier()),
+        encoder_provenance: Some(sample_helix_encoder_provenance_report()),
+        audio_clip: Some(HelixAudioClip {
+            sample_rate: 16_000,
+            first_sample: 262_144,
+            samples: vec![-0.25, -0.10, 0.0, 0.10, 0.25, 0.50, 0.25, 0.0],
+        }),
+        mel_clip: Some(HelixMelClip {
+            num_mel_bins: 4,
+            first_mel_frame: 128,
+            num_mel_frames: 3,
+            values: vec![
+                0.10, 0.20, 0.30, 0.40, 0.15, 0.25, 0.35, 0.45, 0.05, 0.12, 0.18, 0.22,
+            ],
+            min_value: 0.05,
+            max_value: 0.45,
+            corpus_min_value: -1.25,
+            corpus_max_value: 2.75,
+        }),
+        pulse_rollup: Some(sample_helix_pulse_rollup()),
+        timeline: Some(sample_helix_timeline()),
+        gpu_chrome_events: Some(vec![
+            HelixChromeTraceEvent {
+                name: "metal.dispatch".to_string(),
+                cat: "gpu".to_string(),
+                ph: "X".to_string(),
+                ts: 1_006_000.0,
+                dur: Some(420.0),
+                pid: 2,
+                tid: 7,
+                s: None,
+                args: BTreeMap::new(),
+            },
+            HelixChromeTraceEvent {
+                name: "pulse_marker".to_string(),
+                cat: "scheduler".to_string(),
+                ph: "i".to_string(),
+                ts: 1_007_950.0,
+                dur: None,
+                pid: 1,
+                tid: 0,
+                s: Some("p".to_string()),
+                args: BTreeMap::new(),
+            },
+        ]),
+        verify_evidence: Some(sample_helix_verify_evidence()),
+        scheduler_snapshot: Some(sample_helix_pulse_evidence()),
+    }
+}
+
+fn sample_helix_pulses() -> Vec<HelixPulseAvailable> {
+    vec![
+        HelixPulseAvailable {
+            pulse_id: HelixSchedulerPulseId(101),
+        },
+        HelixPulseAvailable {
+            pulse_id: HelixSchedulerPulseId(102),
+        },
+        HelixPulseAvailable {
+            pulse_id: HelixSchedulerPulseId(103),
+        },
+    ]
+}
+
+fn tracey_rule_id(base: &str, version: u32) -> TraceyRuleId {
+    TraceyRuleId {
+        base: base.to_string(),
+        version,
+    }
+}
+
+fn sample_tracey_status_response() -> TraceyStatusResponse {
+    TraceyStatusResponse {
+        impls: vec![
+            TraceyImplStatus {
+                spec: "vox".to_string(),
+                impl_name: "rust".to_string(),
+                total_rules: 59,
+                covered_rules: 59,
+                stale_rules: 0,
+                verified_rules: 59,
+            },
+            TraceyImplStatus {
+                spec: "vox".to_string(),
+                impl_name: "typescript".to_string(),
+                total_rules: 173,
+                covered_rules: 173,
+                stale_rules: 0,
+                verified_rules: 100,
+            },
+        ],
+    }
+}
+
+fn sample_tracey_query_request() -> TraceyUncoveredRequest {
+    TraceyUncoveredRequest {
+        spec: Some("vox".to_string()),
+        impl_name: Some("rust".to_string()),
+        prefix: Some("rpc.channel".to_string()),
+    }
+}
+
+fn sample_tracey_untested_request() -> TraceyUntestedRequest {
+    TraceyUntestedRequest {
+        spec: Some("vox".to_string()),
+        impl_name: Some("rust".to_string()),
+        prefix: Some("rpc.channel".to_string()),
+    }
+}
+
+fn sample_tracey_stale_request() -> TraceyStaleRequest {
+    TraceyStaleRequest {
+        spec: Some("vox".to_string()),
+        impl_name: Some("rust".to_string()),
+        prefix: Some("rpc.channel".to_string()),
+    }
+}
+
+fn sample_tracey_unmapped_request() -> TraceyUnmappedRequest {
+    TraceyUnmappedRequest {
+        spec: Some("vox".to_string()),
+        impl_name: Some("rust".to_string()),
+        path: Some("rust/vox-codegen/src".to_string()),
+    }
+}
+
+fn sample_tracey_section_rules() -> Vec<TraceySectionRules> {
+    vec![TraceySectionRules {
+        section: "Channel Binding".to_string(),
+        rules: vec![
+            TraceyRuleRef {
+                id: tracey_rule_id("rpc.channel.direct-args", 1),
+                text: Some("Channels are direct service arguments.".to_string()),
+            },
+            TraceyRuleRef {
+                id: tracey_rule_id("rpc.channel.no-collections", 1),
+                text: None,
+            },
+        ],
+    }]
+}
+
+fn sample_tracey_uncovered_response() -> TraceyUncoveredResponse {
+    TraceyUncoveredResponse {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        total_rules: 175,
+        uncovered_count: 2,
+        by_section: sample_tracey_section_rules(),
+    }
+}
+
+fn sample_tracey_untested_response() -> TraceyUntestedResponse {
+    TraceyUntestedResponse {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        total_rules: 175,
+        untested_count: 3,
+        by_section: sample_tracey_section_rules(),
+    }
+}
+
+fn sample_tracey_stale_response() -> TraceyStaleResponse {
+    TraceyStaleResponse {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        total_rules: 175,
+        stale_count: 1,
+        refs: vec![TraceyStaleEntry {
+            current_id: tracey_rule_id("rpc.channel.direct-args", 2),
+            file: "rust/vox-codegen/src/targets/swift/mod.rs".to_string(),
+            line: 67,
+            reference_id: tracey_rule_id("rpc.channel.direct-args", 1),
+        }],
+    }
+}
+
+fn sample_tracey_unmapped_response() -> TraceyUnmappedResponse {
+    TraceyUnmappedResponse {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        total_units: 9,
+        unmapped_count: 2,
+        entries: vec![
+            TraceyUnmappedEntry {
+                path: "rust/vox-codegen/src/targets".to_string(),
+                is_dir: true,
+                total_units: 5,
+                unmapped_units: 1,
+                units: vec![],
+            },
+            TraceyUnmappedEntry {
+                path: "rust/vox-codegen/src/targets/swift/mod.rs".to_string(),
+                is_dir: false,
+                total_units: 4,
+                unmapped_units: 1,
+                units: vec![TraceyUnmappedUnit {
+                    kind: "function".to_string(),
+                    name: Some("emit_tracey_bridge".to_string()),
+                    start_line: 41,
+                    end_line: 78,
+                }],
+            },
+        ],
+    }
+}
+
+fn sample_tracey_api_config() -> TraceyApiConfig {
+    TraceyApiConfig {
+        project_root: "/workspace/vox".to_string(),
+        specs: vec![TraceyApiSpecInfo {
+            name: "vox".to_string(),
+            prefix: "r".to_string(),
+            source: Some("docs/content/spec/*.md".to_string()),
+            source_url: Some("https://vixen.rs/vox/spec".to_string()),
+            implementations: vec![
+                "rust".to_string(),
+                "swift".to_string(),
+                "typescript".to_string(),
+            ],
+        }],
+    }
+}
+
+fn sample_tracey_reload_response() -> TraceyReloadResponse {
+    TraceyReloadResponse {
+        version: 13,
+        rebuild_time_ms: 42,
+    }
+}
+
+fn sample_tracey_health_response() -> TraceyHealthResponse {
+    TraceyHealthResponse {
+        version: 13,
+        watcher_active: true,
+        watcher_error: None,
+        config_error: Some("ignored include pattern failed to parse".to_string()),
+        watcher_last_event_ms: Some(1_717_000_000_123),
+        watcher_event_count: 7,
+        watched_directories: vec!["docs/content/spec".to_string(), "rust".to_string()],
+        uptime_secs: 3600,
+    }
+}
+
+fn sample_tracey_rule_info() -> TraceyRuleInfo {
+    TraceyRuleInfo {
+        id: tracey_rule_id("rpc.channel.direct-args", 1),
+        raw: "Channels are direct service arguments.".to_string(),
+        html: "<p>Channels are direct service arguments.</p>".to_string(),
+        source_file: Some("docs/content/spec/vox.md".to_string()),
+        source_line: Some(42),
+        coverage: vec![TraceyRuleCoverage {
+            spec: "vox".to_string(),
+            impl_name: "rust".to_string(),
+            impl_refs: vec![TraceyCodeRef {
+                file: "rust/vox-codegen/src/targets/swift/mod.rs".to_string(),
+                line: 67,
+            }],
+            verify_refs: vec![TraceyCodeRef {
+                file: "spec/spec-tests/tests/cases/testbed.rs".to_string(),
+                line: 1450,
+            }],
+        }],
+        version_diff: Some("Added direct argument wording.".to_string()),
+    }
+}
+
+fn sample_tracey_forward_response() -> TraceyApiSpecForward {
+    TraceyApiSpecForward {
+        name: "vox".to_string(),
+        rules: vec![TraceyApiRule {
+            id: tracey_rule_id("rpc.channel.direct-args", 2),
+            raw: "Channels are direct service arguments.".to_string(),
+            html: "<p>Channels are direct service arguments.</p>".to_string(),
+            status: Some("stable".to_string()),
+            level: Some("must".to_string()),
+            source_file: Some("docs/content/spec/rpc.md".to_string()),
+            source_line: Some(42),
+            source_column: Some(3),
+            section: Some("channel-binding".to_string()),
+            section_title: Some("Channel Binding".to_string()),
+            impl_refs: vec![TraceyCodeRef {
+                file: "rust/vox-codegen/src/targets/typescript/mod.rs".to_string(),
+                line: 128,
+            }],
+            verify_refs: vec![TraceyCodeRef {
+                file: "spec/spec-tests/tests/cases/testbed.rs".to_string(),
+                line: 3662,
+            }],
+            depends_refs: vec![TraceyCodeRef {
+                file: "docs/content/guides/typescript.md".to_string(),
+                line: 18,
+            }],
+            is_stale: true,
+            stale_refs: vec![TraceyApiStaleRef {
+                file: "swift/subject/Sources/subject-swift/Subject.swift".to_string(),
+                line: 549,
+                reference_id: tracey_rule_id("rpc.channel.direct-args", 1),
+            }],
+        }],
+    }
+}
+
+fn sample_tracey_reverse_response() -> TraceyApiReverseData {
+    TraceyApiReverseData {
+        total_units: 7,
+        covered_units: 5,
+        files: vec![
+            TraceyApiFileEntry {
+                path: "rust/vox-codegen/src/targets/typescript/mod.rs".to_string(),
+                total_units: 4,
+                covered_units: 3,
+            },
+            TraceyApiFileEntry {
+                path: "swift/subject/Sources/subject-swift/Subject.swift".to_string(),
+                total_units: 3,
+                covered_units: 2,
+            },
+        ],
+    }
+}
+
+fn sample_tracey_file_request() -> TraceyFileRequest {
+    TraceyFileRequest {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        path: "rust/vox-codegen/src/targets/typescript/mod.rs".to_string(),
+    }
+}
+
+fn sample_tracey_file_response() -> TraceyApiFileData {
+    TraceyApiFileData {
+        path: "rust/vox-codegen/src/targets/typescript/mod.rs".to_string(),
+        content: "fn emit_tracey_dashboard_bridge() {}\n".to_string(),
+        html: "<pre><span>fn emit_tracey_dashboard_bridge() {}</span></pre>".to_string(),
+        units: vec![TraceyApiCodeUnit {
+            kind: "function".to_string(),
+            name: Some("emit_tracey_dashboard_bridge".to_string()),
+            start_line: 1,
+            end_line: 1,
+            rule_refs: vec![
+                "rpc.channel.direct-args".to_string(),
+                "encoding.struct".to_string(),
+            ],
+        }],
+    }
+}
+
+fn sample_tracey_spec_content_response() -> TraceyApiSpecData {
+    let direct = TraceyOutlineCoverage {
+        impl_count: 1,
+        verify_count: 1,
+        total: 2,
+    };
+    let aggregate = TraceyOutlineCoverage {
+        impl_count: 3,
+        verify_count: 2,
+        total: 4,
+    };
+    TraceyApiSpecData {
+        name: "vox".to_string(),
+        sections: vec![TraceySpecSection {
+            source_file: "docs/content/spec/rpc.md".to_string(),
+            html: "<h2 id=\"channel-binding\">Channel Binding</h2>".to_string(),
+            weight: 20,
+        }],
+        outline: vec![TraceyOutlineEntry {
+            title: "Channel Binding".to_string(),
+            slug: "channel-binding".to_string(),
+            level: 2,
+            coverage: direct,
+            aggregated: aggregate,
+        }],
+        head_injections: vec![
+            "<script type=\"module\">mermaid.initialize({});</script>".to_string(),
+        ],
+    }
+}
+
+fn sample_tracey_search_results() -> Vec<TraceySearchResult> {
+    vec![
+        TraceySearchResult {
+            kind: "rule".to_string(),
+            id: "rpc.channel.direct-args".to_string(),
+            line: 0,
+            content: Some("Channels are direct service arguments.".to_string()),
+            highlighted: Some("<mark>channel</mark> direct args".to_string()),
+            score: 12.5,
+        },
+        TraceySearchResult {
+            kind: "source".to_string(),
+            id: "rust/vox-codegen/src/targets/typescript/mod.rs".to_string(),
+            line: 128,
+            content: Some("// r[impl rpc.channel.direct-args]".to_string()),
+            highlighted: None,
+            score: 7.25,
+        },
+    ]
+}
+
+fn sample_tracey_update_file_range_request() -> TraceyUpdateFileRangeRequest {
+    TraceyUpdateFileRangeRequest {
+        path: "docs/content/spec/rpc.md".to_string(),
+        start: 120,
+        end: 144,
+        content: "Channels are direct service arguments.".to_string(),
+        file_hash: "sha256:tracey-dashboard-ok".to_string(),
+    }
+}
+
+fn sample_tracey_update_file_range_conflict_request() -> TraceyUpdateFileRangeRequest {
+    TraceyUpdateFileRangeRequest {
+        file_hash: "stale".to_string(),
+        ..sample_tracey_update_file_range_request()
+    }
+}
+
+fn sample_tracey_update_error() -> TraceyUpdateError {
+    TraceyUpdateError {
+        message: "file changed on disk".to_string(),
+    }
+}
+
+fn sample_tracey_config_pattern_request() -> TraceyConfigPatternRequest {
+    TraceyConfigPatternRequest {
+        spec: Some("vox".to_string()),
+        impl_name: Some("typescript".to_string()),
+        pattern: "typescript/**/*.generated.ts".to_string(),
+    }
+}
+
+fn sample_tracey_bad_config_pattern_request() -> TraceyConfigPatternRequest {
+    TraceyConfigPatternRequest {
+        pattern: "bad[glob".to_string(),
+        ..sample_tracey_config_pattern_request()
+    }
+}
+
+fn sample_tracey_validation_result() -> TraceyValidationResult {
+    TraceyValidationResult {
+        spec: "vox".to_string(),
+        impl_name: "rust".to_string(),
+        errors: vec![
+            TraceyValidationError {
+                code: TraceyValidationErrorCode::StaleRequirement,
+                message: "reference points to an older rule version".to_string(),
+                file: Some("rust/subject-rust/src/lib.rs".to_string()),
+                line: Some(12),
+                column: Some(9),
+                related_rules: vec![tracey_rule_id("rpc.channel.direct-args", 2)],
+                reference_rule_id: Some(tracey_rule_id("rpc.channel.direct-args", 1)),
+                reference_text: Some("r[impl rpc.channel.direct-args]".to_string()),
+            },
+            TraceyValidationError {
+                code: TraceyValidationErrorCode::UnknownRequirement,
+                message: "unknown requirement".to_string(),
+                file: None,
+                line: None,
+                column: None,
+                related_rules: vec![],
+                reference_rule_id: None,
+                reference_text: Some("r[verify typo.rule]".to_string()),
+            },
+        ],
+        warning_count: 1,
+        error_count: 1,
+    }
+}
+
+fn sample_tracey_lsp_content() -> String {
+    "// r[impl rpc.channel.direct-args]\nfn main() {}\n".to_string()
+}
+
+fn sample_tracey_lsp_position_request() -> TraceyLspPositionRequest {
+    TraceyLspPositionRequest {
+        path: "src/lib.rs".to_string(),
+        content: sample_tracey_lsp_content(),
+        line: 0,
+        character: 8,
+    }
+}
+
+fn sample_tracey_lsp_references_request() -> TraceyLspReferencesRequest {
+    TraceyLspReferencesRequest {
+        path: "src/lib.rs".to_string(),
+        content: sample_tracey_lsp_content(),
+        line: 0,
+        character: 8,
+        include_declaration: true,
+    }
+}
+
+fn sample_tracey_lsp_document_request() -> TraceyLspDocumentRequest {
+    TraceyLspDocumentRequest {
+        path: "src/lib.rs".to_string(),
+        content: sample_tracey_lsp_content(),
+    }
+}
+
+fn sample_tracey_lsp_inlay_hints_request() -> TraceyLspInlayHintsRequest {
+    TraceyLspInlayHintsRequest {
+        path: "src/lib.rs".to_string(),
+        content: sample_tracey_lsp_content(),
+        start_line: 0,
+        end_line: 2,
+    }
+}
+
+fn sample_tracey_lsp_rename_request() -> TraceyLspRenameRequest {
+    TraceyLspRenameRequest {
+        path: "src/lib.rs".to_string(),
+        content: sample_tracey_lsp_content(),
+        line: 0,
+        character: 8,
+        new_name: "rpc.channel.direct-args-renamed".to_string(),
+    }
+}
+
+fn sample_tracey_lsp_locations() -> Vec<TraceyLspLocation> {
+    vec![
+        TraceyLspLocation {
+            path: "docs/content/spec/rpc.md".to_string(),
+            line: 211,
+            character: 3,
+        },
+        TraceyLspLocation {
+            path: "spec/spec-tests/tests/cases/testbed.rs".to_string(),
+            line: 1450,
+            character: 6,
+        },
+    ]
+}
+
+fn sample_tracey_hover_info() -> TraceyHoverInfo {
+    TraceyHoverInfo {
+        rule_id: tracey_rule_id("rpc.channel.direct-args", 1),
+        raw: "Channels are direct service arguments.".to_string(),
+        spec_name: "vox".to_string(),
+        spec_url: Some("https://vixen.rs/vox/spec/rpc".to_string()),
+        source_file: Some("docs/content/spec/rpc.md".to_string()),
+        impl_count: 1,
+        verify_count: 1,
+        impl_refs: vec![TraceyCodeRef {
+            file: "rust/vox-codegen/src/targets/swift/mod.rs".to_string(),
+            line: 67,
+        }],
+        verify_refs: vec![TraceyCodeRef {
+            file: "spec/spec-tests/tests/cases/testbed.rs".to_string(),
+            line: 1450,
+        }],
+        range_start_line: 0,
+        range_start_char: 3,
+        range_end_line: 0,
+        range_end_char: 36,
+        version_diff: Some("Added direct argument wording.".to_string()),
+    }
+}
+
+fn sample_tracey_lsp_completions() -> Vec<TraceyLspCompletionItem> {
+    vec![
+        TraceyLspCompletionItem {
+            label: "impl".to_string(),
+            kind: "verb".to_string(),
+            detail: Some("implementation reference".to_string()),
+            documentation: None,
+            insert_text: Some("impl ".to_string()),
+        },
+        TraceyLspCompletionItem {
+            label: "rpc.channel.direct-args".to_string(),
+            kind: "rule".to_string(),
+            detail: Some("vox".to_string()),
+            documentation: Some("Channels are direct service arguments.".to_string()),
+            insert_text: None,
+        },
+    ]
+}
+
+fn sample_tracey_lsp_workspace_diagnostics() -> Vec<TraceyLspFileDiagnostics> {
+    vec![TraceyLspFileDiagnostics {
+        path: "src/lib.rs".to_string(),
+        diagnostics: vec![TraceyLspDiagnostic {
+            severity: "warning".to_string(),
+            code: "stale_requirement".to_string(),
+            message: "reference points to an older rule version".to_string(),
+            start_line: 7,
+            start_char: 4,
+            end_line: 7,
+            end_char: 41,
+        }],
+    }]
+}
+
+fn sample_tracey_lsp_symbols() -> Vec<TraceyLspSymbol> {
+    vec![
+        TraceyLspSymbol {
+            name: "rpc.channel.direct-args".to_string(),
+            kind: "impl".to_string(),
+            path: Some("src/lib.rs".to_string()),
+            start_line: 0,
+            start_char: 3,
+            end_line: 0,
+            end_char: 36,
+        },
+        TraceyLspSymbol {
+            name: "rpc.channel.no-collections".to_string(),
+            kind: "verify".to_string(),
+            path: Some("spec/spec-tests/tests/cases/testbed.rs".to_string()),
+            start_line: 1450,
+            start_char: 6,
+            end_line: 1450,
+            end_char: 41,
+        },
+    ]
+}
+
+fn sample_tracey_lsp_semantic_tokens() -> Vec<TraceyLspSemanticToken> {
+    vec![
+        TraceyLspSemanticToken {
+            line: 0,
+            start_char: 3,
+            length: 4,
+            token_type: 0,
+            modifiers: 0,
+        },
+        TraceyLspSemanticToken {
+            line: 0,
+            start_char: 8,
+            length: 23,
+            token_type: 1,
+            modifiers: 2,
+        },
+    ]
+}
+
+fn sample_tracey_lsp_code_lens() -> Vec<TraceyLspCodeLens> {
+    vec![TraceyLspCodeLens {
+        line: 0,
+        start_char: 3,
+        end_char: 36,
+        title: "1 impl, 1 verify".to_string(),
+        command: "tracey.showRule".to_string(),
+        arguments: vec!["rpc.channel.direct-args".to_string()],
+    }]
+}
+
+fn sample_tracey_lsp_inlay_hints() -> Vec<TraceyLspInlayHint> {
+    vec![TraceyLspInlayHint {
+        line: 0,
+        character: 36,
+        label: "covered".to_string(),
+    }]
+}
+
+fn sample_tracey_prepare_rename_result() -> TraceyPrepareRenameResult {
+    TraceyPrepareRenameResult {
+        start_line: 0,
+        start_char: 8,
+        end_line: 0,
+        end_char: 31,
+        placeholder: "rpc.channel.direct-args".to_string(),
+    }
+}
+
+fn sample_tracey_lsp_text_edits() -> Vec<TraceyLspTextEdit> {
+    vec![
+        TraceyLspTextEdit {
+            path: "src/lib.rs".to_string(),
+            start_line: 0,
+            start_char: 8,
+            end_line: 0,
+            end_char: 31,
+            new_text: "rpc.channel.direct-args-renamed".to_string(),
+        },
+        TraceyLspTextEdit {
+            path: "docs/content/spec/rpc.md".to_string(),
+            start_line: 211,
+            start_char: 3,
+            end_line: 211,
+            end_char: 26,
+            new_text: "rpc.channel.direct-args-renamed".to_string(),
+        },
+    ]
+}
+
+fn sample_tracey_lsp_code_actions() -> Vec<TraceyLspCodeAction> {
+    vec![TraceyLspCodeAction {
+        title: "Open requirement".to_string(),
+        kind: "quickfix".to_string(),
+        command: "tracey.openRule".to_string(),
+        arguments: vec!["rpc.channel.direct-args".to_string()],
+        is_preferred: true,
+    }]
+}
+
+fn sample_tracey_updates() -> Vec<TraceyDataUpdate> {
+    vec![
+        TraceyDataUpdate {
+            version: 11,
+            delta: None,
+        },
+        TraceyDataUpdate {
+            version: 12,
+            delta: Some(TraceyDeltaSummary {
+                newly_covered: vec![TraceyCoverageChange {
+                    rule_id: tracey_rule_id("rpc.channel.direct-args", 1),
+                    file: "rust/vox-codegen/src/targets/swift/mod.rs".to_string(),
+                    line: 67,
+                }],
+                newly_uncovered: vec![tracey_rule_id("rpc.channel.no-collections", 1)],
+            }),
+        },
+    ]
+}
+
+fn sample_dodeca_resolved_dependency() -> DodecaResolvedDependency {
+    DodecaResolvedDependency {
+        name: "facet".to_string(),
+        version: "0.46.0".to_string(),
+        source: DodecaDependencySource::Git {
+            url: "https://github.com/facet-rs/facet".to_string(),
+            commit: "abc1234".to_string(),
+        },
+    }
+}
+
+fn sample_dodeca_code_metadata() -> DodecaCodeExecutionMetadata {
+    DodecaCodeExecutionMetadata {
+        rustc_version: "rustc 1.89.0".to_string(),
+        cargo_version: "cargo 1.89.0".to_string(),
+        target: "aarch64-apple-darwin".to_string(),
+        timestamp: "2026-06-05T00:00:00Z".to_string(),
+        cache_hit: true,
+        platform: "macos".to_string(),
+        arch: "aarch64".to_string(),
+        dependencies: vec![sample_dodeca_resolved_dependency()],
+    }
+}
+
+fn sample_dodeca_responsive_image_info() -> DodecaResponsiveImageInfo {
+    DodecaResponsiveImageInfo {
+        jxl_srcset: vec![
+            ("/assets/hero-640.jxl".to_string(), 640),
+            ("/assets/hero-1280.jxl".to_string(), 1280),
+        ],
+        webp_srcset: vec![("/assets/hero-640.webp".to_string(), 640)],
+        original_width: 1920,
+        original_height: 1080,
+        thumbhash_data_url: "data:image/png;base64,dGh1bWI=".to_string(),
+    }
+}
+
+fn sample_dodeca_html_process_input() -> DodecaHtmlProcessInput {
+    DodecaHtmlProcessInput {
+        html: "<main><a href=\"/missing\">missing</a><img src=\"/hero.png\"></main>".to_string(),
+        path_map: Some(BTreeMap::from([(
+            "/old/hero.png".to_string(),
+            "/assets/hero.png".to_string(),
+        )])),
+        known_routes: Some(BTreeSet::from(["/".to_string(), "/guide/".to_string()])),
+        code_metadata: Some(BTreeMap::from([(
+            "sample-1".to_string(),
+            sample_dodeca_code_metadata(),
+        )])),
+        injections: vec![
+            DodecaInjection::HeadStyle {
+                css: "body { color: oklch(0.2 0.03 240); }".to_string(),
+            },
+            DodecaInjection::HeadScript {
+                js: "console.log('dodeca')".to_string(),
+                module: true,
+            },
+            DodecaInjection::BodyScript {
+                js: "window.__dodeca = true".to_string(),
+                module: false,
+            },
+        ],
+        minify: Some(DodecaMinifyOptions {
+            minify_inline_css: true,
+            minify_inline_js: true,
+            minify_html: false,
+        }),
+        source_to_route: Some(BTreeMap::from([(
+            "content/guide.md".to_string(),
+            "/guide/".to_string(),
+        )])),
+        wiki_to_route: Some(BTreeMap::from([(
+            "getting-started".to_string(),
+            "/guide/".to_string(),
+        )])),
+        base_route: Some("/guide/intro/".to_string()),
+        image_variants: Some(BTreeMap::from([(
+            "/hero.png".to_string(),
+            sample_dodeca_responsive_image_info(),
+        )])),
+        vite_css_map: Some(BTreeMap::from([(
+            "/src/main.ts".to_string(),
+            vec![
+                "/assets/main.css".to_string(),
+                "/assets/theme.css".to_string(),
+            ],
+        )])),
+        mount: Some(DodecaMountLocalization {
+            segment: "wiki".to_string(),
+            routes: BTreeSet::from(["/exec/".to_string(), "/guide/".to_string()]),
+        }),
+    }
+}
+
+fn sample_dodeca_html_process_result() -> DodecaHtmlProcessResult {
+    DodecaHtmlProcessResult::Success {
+        html: "<main data-processed=\"true\"><a data-dead href=\"/missing\">missing</a></main>"
+            .to_string(),
+        had_dead_links: true,
+        had_code_buttons: true,
+        hrefs: vec!["/missing".to_string(), "/guide/".to_string()],
+        element_ids: vec!["intro".to_string(), "sample-1".to_string()],
+        unresolved_wiki_links: vec![DodecaWikiLinkRef {
+            key: "unknown".to_string(),
+            target: "Missing Page".to_string(),
+        }],
+    }
+}
+
+fn sample_dodeca_dependency_spec() -> DodecaDependencySpec {
+    DodecaDependencySpec {
+        name: "facet".to_string(),
+        version: "0.46".to_string(),
+        git: Some("https://github.com/facet-rs/facet".to_string()),
+        rev: None,
+        branch: Some("main".to_string()),
+        path: None,
+        features: Some(vec!["derive".to_string()]),
+    }
+}
+
+fn sample_dodeca_rust_config() -> DodecaRustConfig {
+    DodecaRustConfig {
+        command: Some("cargo".to_string()),
+        args: Some(vec!["run".to_string(), "--quiet".to_string()]),
+        extension: Some("rs".to_string()),
+        prepare_code: Some(true),
+        auto_imports: Some(vec![
+            "use std::collections::HashMap;".to_string(),
+            "use facet::Facet;".to_string(),
+        ]),
+        show_output: Some(true),
+    }
+}
+
+fn sample_dodeca_code_execution_config() -> DodecaCodeExecutionConfig {
+    DodecaCodeExecutionConfig {
+        enabled: true,
+        fail_on_error: true,
+        timeout_secs: 30,
+        cache_dir: ".cache/code-execution".to_string(),
+        project_root: Some("/workspace/docs".to_string()),
+        dependencies: vec![sample_dodeca_dependency_spec()],
+        rust: Some(sample_dodeca_rust_config()),
+    }
+}
+
+fn sample_dodeca_code_sample() -> DodecaCodeSample {
+    DodecaCodeSample {
+        source_path: "content/guide.md".to_string(),
+        line: 42,
+        language: "rust".to_string(),
+        code: "#[derive(Facet)]\nstruct Card { title: String }".to_string(),
+        executable: true,
+        expected_errors: vec![],
+    }
+}
+
+fn sample_dodeca_build_metadata() -> DodecaBuildMetadata {
+    DodecaBuildMetadata {
+        rustc_version: "rustc 1.89.0".to_string(),
+        cargo_version: "cargo 1.89.0".to_string(),
+        target: "aarch64-apple-darwin".to_string(),
+        timestamp: "2026-06-05T00:00:00Z".to_string(),
+        cache_hit: false,
+        platform: "macos".to_string(),
+        arch: "aarch64".to_string(),
+        dependencies: vec![sample_dodeca_resolved_dependency()],
+    }
+}
+
+fn sample_dodeca_execute_samples_input() -> DodecaExecuteSamplesInput {
+    DodecaExecuteSamplesInput {
+        samples: vec![sample_dodeca_code_sample()],
+        config: sample_dodeca_code_execution_config(),
+    }
+}
+
+fn sample_dodeca_code_execution_result() -> DodecaCodeExecutionResult {
+    let sample = sample_dodeca_code_sample();
+    DodecaCodeExecutionResult::ExecuteSuccess {
+        output: DodecaExecuteSamplesOutput {
+            results: vec![(
+                sample,
+                DodecaExecutionResult {
+                    status: DodecaExecutionStatus::Success,
+                    exit_code: Some(0),
+                    stdout: "Card { title: \"Phon\" }".to_string(),
+                    stderr: String::new(),
+                    duration_ms: 128,
+                    error: None,
+                    metadata: Some(sample_dodeca_build_metadata()),
+                },
+            )],
+        },
+    }
+}
+
+fn sample_dibs_list_request() -> DibsListRequest {
+    DibsListRequest {
+        table: "products".to_string(),
+        filters: vec![
+            DibsFilter {
+                field: "active".to_string(),
+                op: DibsFilterOp::Eq,
+                value: DibsValue::Bool(true),
+                values: vec![],
+            },
+            DibsFilter {
+                field: "id".to_string(),
+                op: DibsFilterOp::In,
+                value: DibsValue::Null,
+                values: vec![DibsValue::I64(1), DibsValue::I64(2)],
+            },
+            DibsFilter {
+                field: "metadata".to_string(),
+                op: DibsFilterOp::JsonGetText,
+                value: DibsValue::String("sku".to_string()),
+                values: vec![],
+            },
+        ],
+        sort: vec![DibsSort {
+            field: "created_at".to_string(),
+            dir: DibsSortDir::Desc,
+        }],
+        limit: Some(2),
+        offset: Some(0),
+        select: vec![
+            "id".to_string(),
+            "name".to_string(),
+            "active".to_string(),
+            "payload".to_string(),
+        ],
+    }
+}
+
+fn sample_dibs_list_response() -> DibsListResponse {
+    DibsListResponse {
+        rows: vec![sample_dibs_row_one(), sample_dibs_row_two()],
+        total: Some(2),
+    }
+}
+
+fn sample_dibs_row_one() -> DibsRow {
+    DibsRow {
+        fields: vec![
+            DibsRowField {
+                name: "id".to_string(),
+                value: DibsValue::I64(1),
+            },
+            DibsRowField {
+                name: "name".to_string(),
+                value: DibsValue::String("phon adapter".to_string()),
+            },
+            DibsRowField {
+                name: "active".to_string(),
+                value: DibsValue::Bool(true),
+            },
+            DibsRowField {
+                name: "score".to_string(),
+                value: DibsValue::F64(9.5),
+            },
+            DibsRowField {
+                name: "payload".to_string(),
+                value: DibsValue::Bytes(vec![0, 1, 2, 255]),
+            },
+        ],
+    }
+}
+
+fn sample_dibs_row_two() -> DibsRow {
+    DibsRow {
+        fields: vec![
+            DibsRowField {
+                name: "id".to_string(),
+                value: DibsValue::I64(2),
+            },
+            DibsRowField {
+                name: "name".to_string(),
+                value: DibsValue::String("vox bridge".to_string()),
+            },
+            DibsRowField {
+                name: "active".to_string(),
+                value: DibsValue::Bool(false),
+            },
+            DibsRowField {
+                name: "small".to_string(),
+                value: DibsValue::I16(7),
+            },
+            DibsRowField {
+                name: "count".to_string(),
+                value: DibsValue::I32(42),
+            },
+            DibsRowField {
+                name: "ratio".to_string(),
+                value: DibsValue::F32(0.5),
+            },
+            DibsRowField {
+                name: "deleted_at".to_string(),
+                value: DibsValue::Null,
+            },
+            DibsRowField {
+                name: "payload".to_string(),
+                value: DibsValue::Bytes(vec![]),
+            },
+        ],
+    }
+}
+
+fn sample_dibs_schema() -> DibsSchemaInfo {
+    DibsSchemaInfo {
+        tables: vec![DibsTableInfo {
+            name: "products".to_string(),
+            columns: vec![
+                DibsColumnInfo {
+                    name: "id".to_string(),
+                    sql_type: "BIGINT".to_string(),
+                    rust_type: Some("i64".to_string()),
+                    nullable: false,
+                    default: Some("generated by default as identity".to_string()),
+                    primary_key: true,
+                    unique: true,
+                    auto_generated: true,
+                    long: false,
+                    label: false,
+                    enum_variants: vec![],
+                    doc: Some("Product primary key".to_string()),
+                    lang: None,
+                    icon: Some("hash".to_string()),
+                    subtype: None,
+                },
+                DibsColumnInfo {
+                    name: "name".to_string(),
+                    sql_type: "TEXT".to_string(),
+                    rust_type: Some("String".to_string()),
+                    nullable: false,
+                    default: None,
+                    primary_key: false,
+                    unique: false,
+                    auto_generated: false,
+                    long: false,
+                    label: true,
+                    enum_variants: vec![],
+                    doc: Some("Display name".to_string()),
+                    lang: None,
+                    icon: Some("text".to_string()),
+                    subtype: None,
+                },
+                DibsColumnInfo {
+                    name: "status".to_string(),
+                    sql_type: "TEXT".to_string(),
+                    rust_type: Some("ProductStatus".to_string()),
+                    nullable: false,
+                    default: Some("'draft'".to_string()),
+                    primary_key: false,
+                    unique: false,
+                    auto_generated: false,
+                    long: false,
+                    label: false,
+                    enum_variants: vec!["draft".to_string(), "active".to_string()],
+                    doc: None,
+                    lang: None,
+                    icon: Some("badge".to_string()),
+                    subtype: None,
+                },
+                DibsColumnInfo {
+                    name: "metadata".to_string(),
+                    sql_type: "JSONB".to_string(),
+                    rust_type: Some("Jsonb<facet_value::Value>".to_string()),
+                    nullable: true,
+                    default: None,
+                    primary_key: false,
+                    unique: false,
+                    auto_generated: false,
+                    long: true,
+                    label: false,
+                    enum_variants: vec![],
+                    doc: Some("Structured product metadata".to_string()),
+                    lang: Some("json".to_string()),
+                    icon: Some("braces".to_string()),
+                    subtype: None,
+                },
+                DibsColumnInfo {
+                    name: "category_id".to_string(),
+                    sql_type: "BIGINT".to_string(),
+                    rust_type: Some("Option<i64>".to_string()),
+                    nullable: true,
+                    default: None,
+                    primary_key: false,
+                    unique: false,
+                    auto_generated: false,
+                    long: false,
+                    label: false,
+                    enum_variants: vec![],
+                    doc: None,
+                    lang: None,
+                    icon: Some("link".to_string()),
+                    subtype: None,
+                },
+            ],
+            foreign_keys: vec![DibsForeignKeyInfo {
+                columns: vec!["category_id".to_string()],
+                references_table: "categories".to_string(),
+                references_columns: vec!["id".to_string()],
+            }],
+            indices: vec![DibsIndexInfo {
+                name: "products_active_created_at_idx".to_string(),
+                columns: vec![
+                    DibsIndexColumnInfo {
+                        name: "active".to_string(),
+                        order: "asc".to_string(),
+                        nulls: "default".to_string(),
+                    },
+                    DibsIndexColumnInfo {
+                        name: "created_at".to_string(),
+                        order: "desc".to_string(),
+                        nulls: "last".to_string(),
+                    },
+                ],
+                unique: false,
+                where_clause: Some("deleted_at IS NULL".to_string()),
+            }],
+            source_file: Some("examples/my-app-workspace/my-app-db/src/lib.rs".to_string()),
+            source_line: Some(42),
+            doc: Some("Products shown in the dynamic Dibs admin UI".to_string()),
+            icon: Some("package".to_string()),
+        }],
+    }
+}
+
+fn sample_dibs_get_request() -> DibsGetRequest {
+    DibsGetRequest {
+        table: "products".to_string(),
+        pk: DibsValue::I64(1),
+    }
+}
+
+fn sample_dibs_create_request() -> DibsCreateRequest {
+    DibsCreateRequest {
+        table: "products".to_string(),
+        data: DibsRow {
+            fields: vec![
+                DibsRowField {
+                    name: "name".to_string(),
+                    value: DibsValue::String("new adapter".to_string()),
+                },
+                DibsRowField {
+                    name: "active".to_string(),
+                    value: DibsValue::Bool(true),
+                },
+            ],
+        },
+    }
+}
+
+fn sample_dibs_create_response() -> DibsRow {
+    DibsRow {
+        fields: vec![
+            DibsRowField {
+                name: "id".to_string(),
+                value: DibsValue::I64(3),
+            },
+            DibsRowField {
+                name: "name".to_string(),
+                value: DibsValue::String("new adapter".to_string()),
+            },
+            DibsRowField {
+                name: "active".to_string(),
+                value: DibsValue::Bool(true),
+            },
+        ],
+    }
+}
+
+fn sample_dibs_update_request() -> DibsUpdateRequest {
+    DibsUpdateRequest {
+        table: "products".to_string(),
+        pk: DibsValue::I64(1),
+        data: DibsRow {
+            fields: vec![
+                DibsRowField {
+                    name: "active".to_string(),
+                    value: DibsValue::Bool(false),
+                },
+                DibsRowField {
+                    name: "score".to_string(),
+                    value: DibsValue::F64(10.0),
+                },
+            ],
+        },
+    }
+}
+
+fn sample_dibs_update_response() -> DibsRow {
+    DibsRow {
+        fields: vec![
+            DibsRowField {
+                name: "id".to_string(),
+                value: DibsValue::I64(1),
+            },
+            DibsRowField {
+                name: "name".to_string(),
+                value: DibsValue::String("phon adapter".to_string()),
+            },
+            DibsRowField {
+                name: "active".to_string(),
+                value: DibsValue::Bool(false),
+            },
+            DibsRowField {
+                name: "score".to_string(),
+                value: DibsValue::F64(10.0),
+            },
+        ],
+    }
+}
+
+fn sample_dibs_delete_request() -> DibsDeleteRequest {
+    DibsDeleteRequest {
+        table: "products".to_string(),
+        pk: DibsValue::I64(2),
+    }
+}
+
+fn sample_dibs_migration_status_request() -> DibsMigrationStatusRequest {
+    DibsMigrationStatusRequest {
+        database_url: "postgres://localhost/dibs_fixture".to_string(),
+    }
+}
+
+fn sample_dibs_migration_status() -> Vec<DibsMigrationInfo> {
+    vec![
+        DibsMigrationInfo {
+            version: "20240501000000".to_string(),
+            name: "create_users".to_string(),
+            applied: true,
+            applied_at: Some("2024-05-01T00:00:00Z".to_string()),
+            source_file: Some("migrations/20240501000000_create_users.rs".to_string()),
+            source: Some("CREATE TABLE users (...)".to_string()),
+        },
+        DibsMigrationInfo {
+            version: "20240601000000".to_string(),
+            name: "create_products".to_string(),
+            applied: false,
+            applied_at: None,
+            source_file: Some("migrations/20240601000000_create_products.rs".to_string()),
+            source: Some("CREATE TABLE products (...)".to_string()),
+        },
+    ]
+}
+
+fn sample_dibs_migrate_request() -> DibsMigrateRequest {
+    DibsMigrateRequest {
+        database_url: "postgres://localhost/dibs_fixture".to_string(),
+        migration: Some("20240601000000_create_products".to_string()),
+    }
+}
+
+fn sample_dibs_logs() -> Vec<DibsMigrationLog> {
+    let migration = "20240601000000_create_products".to_string();
+    vec![
+        DibsMigrationLog {
+            level: DibsLogLevel::Info,
+            message: "checking migrations".to_string(),
+            migration: None,
+        },
+        DibsMigrationLog {
+            level: DibsLogLevel::Debug,
+            message: "running migration".to_string(),
+            migration: Some(migration.clone()),
+        },
+        DibsMigrationLog {
+            level: DibsLogLevel::Warn,
+            message: "sample warning".to_string(),
+            migration: Some(migration.clone()),
+        },
+        DibsMigrationLog {
+            level: DibsLogLevel::Info,
+            message: "migration complete".to_string(),
+            migration: Some(migration),
+        },
+    ]
+}
+
+fn sample_dibs_migrate_result() -> DibsMigrateResult {
+    DibsMigrateResult {
+        total_defined: 3,
+        already_applied: vec![DibsAppliedMigration {
+            version: "20240501000000_create_users".to_string(),
+            applied_at: "2024-05-01T00:00:00Z".to_string(),
+        }],
+        applied: vec![DibsRanMigration {
+            version: "20240601000000_create_products".to_string(),
+            duration_ms: 37,
+        }],
+        setup_ms: 5,
+        total_time_ms: 42,
+    }
+}
+
+fn styx_span(start: u32, end: u32) -> Option<StyxSpan> {
+    Some(StyxSpan { start, end })
+}
+
+fn styx_scalar(text: &str, kind: StyxScalarKind, start: u32, end: u32) -> StyxValue {
+    StyxValue {
+        tag: None,
+        payload: Some(StyxPayload::Scalar(StyxScalar {
+            text: text.to_string(),
+            kind,
+            span: styx_span(start, end),
+        })),
+        span: styx_span(start, end),
+    }
+}
+
+fn sample_styx_value() -> StyxValue {
+    StyxValue {
+        tag: Some(StyxTag {
+            name: "schema".to_string(),
+            span: styx_span(0, 7),
+        }),
+        payload: Some(StyxPayload::Object(StyxObject {
+            entries: vec![
+                StyxEntry {
+                    key: styx_scalar("title", StyxScalarKind::Bare, 9, 14),
+                    value: styx_scalar("Phon migration", StyxScalarKind::Quoted, 15, 31),
+                    doc_comment: Some("page title".to_string()),
+                },
+                StyxEntry {
+                    key: styx_scalar("features", StyxScalarKind::Bare, 33, 41),
+                    value: StyxValue {
+                        tag: Some(StyxTag {
+                            name: "seq".to_string(),
+                            span: styx_span(42, 46),
+                        }),
+                        payload: Some(StyxPayload::Sequence(StyxSequence {
+                            items: vec![
+                                styx_scalar("jit", StyxScalarKind::Bare, 47, 50),
+                                StyxValue {
+                                    tag: Some(StyxTag {
+                                        name: "object".to_string(),
+                                        span: styx_span(51, 58),
+                                    }),
+                                    payload: Some(StyxPayload::Object(StyxObject {
+                                        entries: vec![StyxEntry {
+                                            key: styx_scalar("lang", StyxScalarKind::Bare, 59, 63),
+                                            value: styx_scalar("rust", StyxScalarKind::Raw, 64, 70),
+                                            doc_comment: None,
+                                        }],
+                                        span: styx_span(58, 71),
+                                    })),
+                                    span: styx_span(51, 71),
+                                },
+                            ],
+                            span: styx_span(46, 72),
+                        })),
+                        span: styx_span(42, 72),
+                    },
+                    doc_comment: None,
+                },
+            ],
+            span: styx_span(8, 73),
+        })),
+        span: styx_span(0, 73),
+    }
+}
+
+fn sample_styx_lsp_uri() -> String {
+    "file:///workspace/queries.styx".to_string()
+}
+
+fn sample_styx_lsp_source() -> String {
+    "@query { from products select (id name) }".to_string()
+}
+
+fn sample_styx_lsp_cursor() -> StyxLspCursor {
+    StyxLspCursor {
+        line: 0,
+        character: 16,
+        offset: 16,
+    }
+}
+
+fn sample_styx_lsp_range() -> StyxLspRange {
+    StyxLspRange {
+        start: StyxLspPosition {
+            line: 0,
+            character: 0,
+        },
+        end: StyxLspPosition {
+            line: 0,
+            character: 38,
+        },
+    }
+}
+
+fn sample_styx_lsp_initialize_params() -> StyxLspInitializeParams {
+    StyxLspInitializeParams {
+        styx_version: "4.0".to_string(),
+        document_uri: sample_styx_lsp_uri(),
+        schema_id: "crate:dibs-queries@1".to_string(),
+    }
+}
+
+fn sample_styx_lsp_initialize_result() -> StyxLspInitializeResult {
+    StyxLspInitializeResult {
+        name: "dibs-styx-extension".to_string(),
+        version: "0.1.0".to_string(),
+        capabilities: vec![
+            StyxLspCapability::Completions,
+            StyxLspCapability::Hover,
+            StyxLspCapability::Diagnostics,
+            StyxLspCapability::CodeActions,
+            StyxLspCapability::Definition,
+        ],
+    }
+}
+
+fn sample_styx_lsp_completion_params() -> StyxLspCompletionParams {
+    StyxLspCompletionParams {
+        document_uri: sample_styx_lsp_uri(),
+        cursor: sample_styx_lsp_cursor(),
+        path: vec![
+            "AllProducts".to_string(),
+            "@query".to_string(),
+            "select".to_string(),
+        ],
+        prefix: "na".to_string(),
+        context: Some(sample_styx_value()),
+        tagged_context: Some(sample_styx_value()),
+    }
+}
+
+fn sample_styx_lsp_completions() -> Vec<StyxLspCompletionItem> {
+    vec![
+        StyxLspCompletionItem {
+            label: "name".to_string(),
+            detail: Some("TEXT".to_string()),
+            documentation: Some("Product display name".to_string()),
+            kind: Some(StyxLspCompletionKind::Field),
+            sort_text: Some("0001".to_string()),
+            insert_text: None,
+        },
+        StyxLspCompletionItem {
+            label: "metadata".to_string(),
+            detail: Some("JSONB".to_string()),
+            documentation: None,
+            kind: Some(StyxLspCompletionKind::Field),
+            sort_text: Some("0002".to_string()),
+            insert_text: Some("metadata".to_string()),
+        },
+    ]
+}
+
+fn sample_styx_lsp_hover_params() -> StyxLspHoverParams {
+    StyxLspHoverParams {
+        document_uri: sample_styx_lsp_uri(),
+        cursor: sample_styx_lsp_cursor(),
+        path: vec![
+            "AllProducts".to_string(),
+            "@query".to_string(),
+            "from".to_string(),
+        ],
+        context: Some(sample_styx_value()),
+        tagged_context: Some(sample_styx_value()),
+    }
+}
+
+fn sample_styx_lsp_hover_result() -> StyxLspHoverResult {
+    StyxLspHoverResult {
+        contents: "**products** table\n\nBacked by `Product`.".to_string(),
+        range: Some(StyxLspRange {
+            start: StyxLspPosition {
+                line: 0,
+                character: 14,
+            },
+            end: StyxLspPosition {
+                line: 0,
+                character: 22,
+            },
+        }),
+    }
+}
+
+fn sample_styx_lsp_inlay_hint_params() -> StyxLspInlayHintParams {
+    StyxLspInlayHintParams {
+        document_uri: sample_styx_lsp_uri(),
+        range: sample_styx_lsp_range(),
+        context: Some(sample_styx_value()),
+    }
+}
+
+fn sample_styx_lsp_inlay_hints() -> Vec<StyxLspInlayHint> {
+    vec![StyxLspInlayHint {
+        position: StyxLspPosition {
+            line: 0,
+            character: 9,
+        },
+        label: "Product".to_string(),
+        kind: Some(StyxLspInlayHintKind::Type),
+        padding_left: true,
+        padding_right: false,
+    }]
+}
+
+fn sample_styx_lsp_diagnostic() -> StyxLspDiagnostic {
+    StyxLspDiagnostic {
+        span: StyxSpan { start: 23, end: 29 },
+        severity: StyxLspDiagnosticSeverity::Warning,
+        message: "column `legacy` is deprecated".to_string(),
+        source: Some("dibs".to_string()),
+        code: Some("deprecated-column".to_string()),
+        data: Some(sample_styx_value()),
+    }
+}
+
+fn sample_styx_lsp_diagnostic_params() -> StyxLspDiagnosticParams {
+    StyxLspDiagnosticParams {
+        document_uri: sample_styx_lsp_uri(),
+        tree: sample_styx_value(),
+        content: sample_styx_lsp_source(),
+    }
+}
+
+fn sample_styx_lsp_diagnostics() -> Vec<StyxLspDiagnostic> {
+    vec![sample_styx_lsp_diagnostic()]
+}
+
+fn sample_styx_lsp_code_action_params() -> StyxLspCodeActionParams {
+    StyxLspCodeActionParams {
+        document_uri: sample_styx_lsp_uri(),
+        span: StyxSpan { start: 23, end: 29 },
+        diagnostics: sample_styx_lsp_diagnostics(),
+    }
+}
+
+fn sample_styx_lsp_code_actions() -> Vec<StyxLspCodeAction> {
+    vec![StyxLspCodeAction {
+        title: "Replace legacy column".to_string(),
+        kind: Some(StyxLspCodeActionKind::QuickFix),
+        edit: Some(StyxLspWorkspaceEdit {
+            changes: vec![StyxLspDocumentEdit {
+                uri: sample_styx_lsp_uri(),
+                edits: vec![StyxLspTextEdit {
+                    span: StyxSpan { start: 23, end: 29 },
+                    new_text: "name".to_string(),
+                }],
+            }],
+        }),
+        is_preferred: true,
+    }]
+}
+
+fn sample_styx_lsp_definition_params() -> StyxLspDefinitionParams {
+    StyxLspDefinitionParams {
+        document_uri: sample_styx_lsp_uri(),
+        cursor: sample_styx_lsp_cursor(),
+        path: vec![
+            "AllProducts".to_string(),
+            "@query".to_string(),
+            "from".to_string(),
+        ],
+        context: Some(sample_styx_value()),
+        tagged_context: Some(sample_styx_value()),
+    }
+}
+
+fn sample_styx_lsp_locations() -> Vec<StyxLspLocation> {
+    vec![StyxLspLocation {
+        uri: "file:///workspace/schema.styx".to_string(),
+        span: StyxSpan {
+            start: 120,
+            end: 128,
+        },
+    }]
+}
+
+fn sample_styx_lsp_get_subtree_params() -> StyxLspGetSubtreeParams {
+    StyxLspGetSubtreeParams {
+        document_uri: sample_styx_lsp_uri(),
+        path: vec!["AllProducts".to_string(), "@query".to_string()],
+    }
+}
+
+fn sample_styx_lsp_get_document_params() -> StyxLspGetDocumentParams {
+    StyxLspGetDocumentParams {
+        document_uri: sample_styx_lsp_uri(),
+    }
+}
+
+fn sample_styx_lsp_get_source_params() -> StyxLspGetSourceParams {
+    StyxLspGetSourceParams {
+        document_uri: sample_styx_lsp_uri(),
+    }
+}
+
+fn sample_styx_lsp_get_schema_params() -> StyxLspGetSchemaParams {
+    StyxLspGetSchemaParams {
+        document_uri: sample_styx_lsp_uri(),
+    }
+}
+
+fn sample_styx_lsp_schema_info() -> StyxLspSchemaInfo {
+    StyxLspSchemaInfo {
+        source: "@schema { @ @object{ name @string } }".to_string(),
+        uri: "styx-embedded://crate:dibs-queries@1".to_string(),
+    }
+}
+
+fn sample_styx_lsp_offset_to_position_params() -> StyxLspOffsetToPositionParams {
+    StyxLspOffsetToPositionParams {
+        document_uri: sample_styx_lsp_uri(),
+        offset: 16,
+    }
+}
+
+fn sample_styx_lsp_position_to_offset_params() -> StyxLspPositionToOffsetParams {
+    StyxLspPositionToOffsetParams {
+        document_uri: sample_styx_lsp_uri(),
+        position: StyxLspPosition {
+            line: 0,
+            character: 16,
+        },
+    }
+}
+
 impl Testbed for TestbedService {
     async fn echo(&self, message: String) -> String {
         message
@@ -355,6 +2632,99 @@ impl Testbed for TestbedService {
             let _ = output.send(s.clone()).await;
         }
         output.close(Default::default()).await.ok();
+    }
+
+    async fn dodeca_byte_tunnel(&self, mut inbound: Rx<Vec<u8>>, outbound: Tx<Vec<u8>>) {
+        while let Ok(Some(chunk)) = inbound.recv().await {
+            let chunk = chunk.get();
+            let _ = outbound.send(chunk.clone()).await;
+        }
+        outbound.close(Default::default()).await.ok();
+    }
+
+    async fn dodeca_devtools_lsp(
+        &self,
+        token: String,
+        mut client_to_server: Rx<String>,
+        server_to_client: Tx<String>,
+    ) {
+        if token != "editor-token" {
+            server_to_client.close(Default::default()).await.ok();
+            return;
+        }
+        while let Ok(Some(chunk)) = client_to_server.recv().await {
+            let chunk = chunk.get();
+            let _ = server_to_client.send(format!("lsp:{chunk}")).await;
+        }
+        server_to_client.close(Default::default()).await.ok();
+    }
+
+    async fn dibs_list(&self, request: DibsListRequest) -> Result<DibsListResponse, DibsError> {
+        if request != sample_dibs_list_request() {
+            return Err(DibsError::UnknownTable(request.table));
+        }
+
+        Ok(sample_dibs_list_response())
+    }
+
+    async fn dibs_schema(&self) -> DibsSchemaInfo {
+        sample_dibs_schema()
+    }
+
+    async fn dibs_get(&self, request: DibsGetRequest) -> Result<Option<DibsRow>, DibsError> {
+        if request != sample_dibs_get_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        Ok(Some(sample_dibs_row_one()))
+    }
+
+    async fn dibs_create(&self, request: DibsCreateRequest) -> Result<DibsRow, DibsError> {
+        if request != sample_dibs_create_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        Ok(sample_dibs_create_response())
+    }
+
+    async fn dibs_update(&self, request: DibsUpdateRequest) -> Result<DibsRow, DibsError> {
+        if request != sample_dibs_update_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        Ok(sample_dibs_update_response())
+    }
+
+    async fn dibs_delete(&self, request: DibsDeleteRequest) -> Result<u64, DibsError> {
+        if request != sample_dibs_delete_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        Ok(1)
+    }
+
+    async fn dibs_migration_status(
+        &self,
+        request: DibsMigrationStatusRequest,
+    ) -> Result<Vec<DibsMigrationInfo>, DibsError> {
+        if request != sample_dibs_migration_status_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        Ok(sample_dibs_migration_status())
+    }
+
+    async fn dibs_migrate(
+        &self,
+        request: DibsMigrateRequest,
+        logs: Tx<DibsMigrationLog>,
+    ) -> Result<DibsMigrateResult, DibsError> {
+        if request != sample_dibs_migrate_request() {
+            return Err(DibsError::InvalidRequest(format!("{request:?}")));
+        }
+        for log in sample_dibs_logs() {
+            if logs.send(log).await.is_err() {
+                break;
+            }
+        }
+        logs.close(Default::default()).await.ok();
+
+        Ok(sample_dibs_migrate_result())
     }
 
     async fn post_reply_generate(&self, output: Tx<i32>) {
@@ -523,6 +2893,462 @@ impl Testbed for TestbedService {
     async fn echo_tree(&self, tree: Tree) -> Tree {
         tree
     }
+
+    async fn echo_ecosystem_bridge(
+        &self,
+        payload: EcosystemBridgePayload,
+    ) -> EcosystemBridgePayload {
+        payload
+    }
+
+    async fn echo_dodeca_template_call(&self, call: DodecaTemplateCall) -> DodecaTemplateCall {
+        call
+    }
+
+    async fn dodeca_html_process(&self, input: DodecaHtmlProcessInput) -> DodecaHtmlProcessResult {
+        if input == sample_dodeca_html_process_input() {
+            sample_dodeca_html_process_result()
+        } else {
+            DodecaHtmlProcessResult::Error {
+                message: format!("unexpected input: {input:?}"),
+            }
+        }
+    }
+
+    async fn dodeca_execute_code_samples(
+        &self,
+        input: DodecaExecuteSamplesInput,
+    ) -> DodecaCodeExecutionResult {
+        if input == sample_dodeca_execute_samples_input() {
+            sample_dodeca_code_execution_result()
+        } else {
+            DodecaCodeExecutionResult::Error {
+                message: format!("unexpected input: {input:?}"),
+            }
+        }
+    }
+
+    async fn echo_styx_value(&self, value: StyxValue) -> StyxValue {
+        value
+    }
+
+    async fn styx_lsp_initialize(
+        &self,
+        params: StyxLspInitializeParams,
+    ) -> StyxLspInitializeResult {
+        assert_eq!(params, sample_styx_lsp_initialize_params());
+        sample_styx_lsp_initialize_result()
+    }
+
+    async fn styx_lsp_completions(
+        &self,
+        params: StyxLspCompletionParams,
+    ) -> Vec<StyxLspCompletionItem> {
+        assert_eq!(params, sample_styx_lsp_completion_params());
+        sample_styx_lsp_completions()
+    }
+
+    async fn styx_lsp_hover(&self, params: StyxLspHoverParams) -> Option<StyxLspHoverResult> {
+        assert_eq!(params, sample_styx_lsp_hover_params());
+        Some(sample_styx_lsp_hover_result())
+    }
+
+    async fn styx_lsp_inlay_hints(&self, params: StyxLspInlayHintParams) -> Vec<StyxLspInlayHint> {
+        assert_eq!(params, sample_styx_lsp_inlay_hint_params());
+        sample_styx_lsp_inlay_hints()
+    }
+
+    async fn styx_lsp_diagnostics(
+        &self,
+        params: StyxLspDiagnosticParams,
+    ) -> Vec<StyxLspDiagnostic> {
+        assert_eq!(params, sample_styx_lsp_diagnostic_params());
+        sample_styx_lsp_diagnostics()
+    }
+
+    async fn styx_lsp_code_actions(
+        &self,
+        params: StyxLspCodeActionParams,
+    ) -> Vec<StyxLspCodeAction> {
+        assert_eq!(params, sample_styx_lsp_code_action_params());
+        sample_styx_lsp_code_actions()
+    }
+
+    async fn styx_lsp_definition(&self, params: StyxLspDefinitionParams) -> Vec<StyxLspLocation> {
+        assert_eq!(params, sample_styx_lsp_definition_params());
+        sample_styx_lsp_locations()
+    }
+
+    async fn styx_lsp_shutdown(&self) {}
+
+    async fn styx_host_get_subtree(&self, params: StyxLspGetSubtreeParams) -> Option<StyxValue> {
+        assert_eq!(params, sample_styx_lsp_get_subtree_params());
+        Some(sample_styx_value())
+    }
+
+    async fn styx_host_get_document(&self, params: StyxLspGetDocumentParams) -> Option<StyxValue> {
+        assert_eq!(params, sample_styx_lsp_get_document_params());
+        Some(sample_styx_value())
+    }
+
+    async fn styx_host_get_source(&self, params: StyxLspGetSourceParams) -> Option<String> {
+        assert_eq!(params, sample_styx_lsp_get_source_params());
+        Some(sample_styx_lsp_source())
+    }
+
+    async fn styx_host_get_schema(
+        &self,
+        params: StyxLspGetSchemaParams,
+    ) -> Option<StyxLspSchemaInfo> {
+        assert_eq!(params, sample_styx_lsp_get_schema_params());
+        Some(sample_styx_lsp_schema_info())
+    }
+
+    async fn styx_host_offset_to_position(
+        &self,
+        params: StyxLspOffsetToPositionParams,
+    ) -> Option<StyxLspPosition> {
+        assert_eq!(params, sample_styx_lsp_offset_to_position_params());
+        Some(StyxLspPosition {
+            line: 0,
+            character: 16,
+        })
+    }
+
+    async fn styx_host_position_to_offset(
+        &self,
+        params: StyxLspPositionToOffsetParams,
+    ) -> Option<u32> {
+        assert_eq!(params, sample_styx_lsp_position_to_offset_params());
+        Some(16)
+    }
+
+    async fn stax_flamegraph(&self, params: StaxViewParams) -> StaxFlamegraphUpdate {
+        sample_stax_flamegraph_update(&params)
+    }
+
+    async fn echo_stax_flamegraph_update(
+        &self,
+        update: StaxFlamegraphUpdate,
+    ) -> StaxFlamegraphUpdate {
+        update
+    }
+
+    async fn stax_subscribe_flamegraph_updates(&self, output: Tx<StaxFlamegraphUpdate>) {
+        for update in sample_stax_flamegraph_updates() {
+            if output.send(update).await.is_err() {
+                break;
+            }
+        }
+        output.close(Default::default()).await.ok();
+    }
+
+    async fn echo_stax_linux_broker_control(
+        &self,
+        fixture: StaxLinuxBrokerControlFixture,
+    ) -> StaxLinuxBrokerControlFixture {
+        fixture
+    }
+
+    async fn echo_hotmeal_live_reload_event(
+        &self,
+        event: HotmealLiveReloadEvent,
+    ) -> HotmealLiveReloadEvent {
+        event
+    }
+
+    async fn echo_hotmeal_apply_patches_result(
+        &self,
+        result: HotmealApplyPatchesResult,
+    ) -> HotmealApplyPatchesResult {
+        result
+    }
+
+    async fn echo_helix_stream_metrics(&self, metrics: HelixStreamMetrics) -> HelixStreamMetrics {
+        metrics
+    }
+
+    async fn echo_helix_verify_evidence(
+        &self,
+        digest: HelixVerifyEvidenceDigest,
+    ) -> HelixVerifyEvidenceDigest {
+        digest
+    }
+
+    async fn helix_subscribe_pulses(&self, output: Tx<HelixPulseAvailable>) {
+        for pulse in sample_helix_pulses() {
+            if output.send(pulse).await.is_err() {
+                break;
+            }
+        }
+        output.close(Default::default()).await.ok();
+    }
+
+    async fn helix_pulse_bundle(
+        &self,
+        _pulse_id: HelixSchedulerPulseId,
+        _fields: HelixPulseBundleFields,
+    ) -> HelixPulseBundle {
+        sample_helix_pulse_bundle()
+    }
+
+    async fn tracey_status(&self) -> TraceyStatusResponse {
+        sample_tracey_status_response()
+    }
+
+    async fn tracey_uncovered(&self, req: TraceyUncoveredRequest) -> TraceyUncoveredResponse {
+        assert_eq!(req, sample_tracey_query_request());
+        sample_tracey_uncovered_response()
+    }
+
+    async fn tracey_untested(&self, req: TraceyUntestedRequest) -> TraceyUntestedResponse {
+        assert_eq!(req, sample_tracey_untested_request());
+        sample_tracey_untested_response()
+    }
+
+    async fn tracey_stale(&self, req: TraceyStaleRequest) -> TraceyStaleResponse {
+        assert_eq!(req, sample_tracey_stale_request());
+        sample_tracey_stale_response()
+    }
+
+    async fn tracey_unmapped(&self, req: TraceyUnmappedRequest) -> TraceyUnmappedResponse {
+        assert_eq!(req, sample_tracey_unmapped_request());
+        sample_tracey_unmapped_response()
+    }
+
+    async fn tracey_rule(&self, rule_id: TraceyRuleId) -> Option<TraceyRuleInfo> {
+        if rule_id == tracey_rule_id("rpc.channel.direct-args", 1) {
+            Some(sample_tracey_rule_info())
+        } else {
+            None
+        }
+    }
+
+    async fn tracey_forward(
+        &self,
+        spec: String,
+        impl_name: String,
+    ) -> Option<TraceyApiSpecForward> {
+        assert_eq!(spec, "vox");
+        assert_eq!(impl_name, "rust");
+        Some(sample_tracey_forward_response())
+    }
+
+    async fn tracey_reverse(
+        &self,
+        spec: String,
+        impl_name: String,
+    ) -> Option<TraceyApiReverseData> {
+        assert_eq!(spec, "vox");
+        assert_eq!(impl_name, "rust");
+        Some(sample_tracey_reverse_response())
+    }
+
+    async fn tracey_file(&self, req: TraceyFileRequest) -> Option<TraceyApiFileData> {
+        assert_eq!(req, sample_tracey_file_request());
+        Some(sample_tracey_file_response())
+    }
+
+    async fn tracey_spec_content(
+        &self,
+        spec: String,
+        impl_name: String,
+    ) -> Option<TraceyApiSpecData> {
+        assert_eq!(spec, "vox");
+        assert_eq!(impl_name, "rust");
+        Some(sample_tracey_spec_content_response())
+    }
+
+    async fn tracey_search(&self, query: String, limit: u32) -> Vec<TraceySearchResult> {
+        assert_eq!(query, "channel".to_string());
+        assert_eq!(limit, 10);
+        sample_tracey_search_results()
+    }
+
+    async fn tracey_update_file_range(
+        &self,
+        req: TraceyUpdateFileRangeRequest,
+    ) -> Result<(), TraceyUpdateError> {
+        if req == sample_tracey_update_file_range_request() {
+            Ok(())
+        } else {
+            assert_eq!(req, sample_tracey_update_file_range_conflict_request());
+            Err(sample_tracey_update_error())
+        }
+    }
+
+    async fn tracey_config_add_exclude(
+        &self,
+        req: TraceyConfigPatternRequest,
+    ) -> Result<(), String> {
+        if req == sample_tracey_config_pattern_request() {
+            Ok(())
+        } else {
+            assert_eq!(req, sample_tracey_bad_config_pattern_request());
+            Err("invalid pattern".to_string())
+        }
+    }
+
+    async fn tracey_config_add_include(
+        &self,
+        req: TraceyConfigPatternRequest,
+    ) -> Result<(), String> {
+        assert_eq!(req, sample_tracey_config_pattern_request());
+        Ok(())
+    }
+
+    async fn tracey_config(&self) -> TraceyApiConfig {
+        sample_tracey_api_config()
+    }
+
+    async fn tracey_vfs_open(&self, path: String, content: String) {
+        assert_eq!(path, "src/lib.rs");
+        assert_eq!(content, sample_tracey_lsp_content());
+    }
+
+    async fn tracey_vfs_change(&self, path: String, content: String) {
+        assert_eq!(path, "src/lib.rs");
+        assert_eq!(
+            content,
+            "// r[verify rpc.channel.direct-args]\n".to_string()
+        );
+    }
+
+    async fn tracey_vfs_close(&self, path: String) {
+        assert_eq!(path, "src/lib.rs");
+    }
+
+    async fn tracey_reload(&self) -> TraceyReloadResponse {
+        sample_tracey_reload_response()
+    }
+
+    async fn tracey_version(&self) -> u64 {
+        13
+    }
+
+    async fn tracey_health(&self) -> TraceyHealthResponse {
+        sample_tracey_health_response()
+    }
+
+    async fn tracey_shutdown(&self) {}
+
+    async fn tracey_validate(&self, _req: TraceyValidateRequest) -> TraceyValidationResult {
+        sample_tracey_validation_result()
+    }
+
+    async fn tracey_is_test_file(&self, path: String) -> bool {
+        path.ends_with("_test.rs") || path.contains("/tests/")
+    }
+
+    async fn tracey_lsp_hover(&self, req: TraceyLspPositionRequest) -> Option<TraceyHoverInfo> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        Some(sample_tracey_hover_info())
+    }
+
+    async fn tracey_lsp_definition(&self, req: TraceyLspPositionRequest) -> Vec<TraceyLspLocation> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        sample_tracey_lsp_locations()
+    }
+
+    async fn tracey_lsp_implementation(
+        &self,
+        req: TraceyLspPositionRequest,
+    ) -> Vec<TraceyLspLocation> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        sample_tracey_lsp_locations()
+    }
+
+    async fn tracey_lsp_references(
+        &self,
+        req: TraceyLspReferencesRequest,
+    ) -> Vec<TraceyLspLocation> {
+        assert_eq!(req, sample_tracey_lsp_references_request());
+        sample_tracey_lsp_locations()
+    }
+
+    async fn tracey_lsp_completions(
+        &self,
+        req: TraceyLspPositionRequest,
+    ) -> Vec<TraceyLspCompletionItem> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        sample_tracey_lsp_completions()
+    }
+
+    async fn tracey_lsp_workspace_diagnostics(&self) -> Vec<TraceyLspFileDiagnostics> {
+        sample_tracey_lsp_workspace_diagnostics()
+    }
+
+    async fn tracey_lsp_document_symbols(
+        &self,
+        req: TraceyLspDocumentRequest,
+    ) -> Vec<TraceyLspSymbol> {
+        assert_eq!(req, sample_tracey_lsp_document_request());
+        sample_tracey_lsp_symbols()
+    }
+
+    async fn tracey_lsp_workspace_symbols(&self, query: String) -> Vec<TraceyLspSymbol> {
+        assert_eq!(query, "rpc.channel".to_string());
+        sample_tracey_lsp_symbols()
+    }
+
+    async fn tracey_lsp_semantic_tokens(
+        &self,
+        req: TraceyLspDocumentRequest,
+    ) -> Vec<TraceyLspSemanticToken> {
+        assert_eq!(req, sample_tracey_lsp_document_request());
+        sample_tracey_lsp_semantic_tokens()
+    }
+
+    async fn tracey_lsp_code_lens(&self, req: TraceyLspDocumentRequest) -> Vec<TraceyLspCodeLens> {
+        assert_eq!(req, sample_tracey_lsp_document_request());
+        sample_tracey_lsp_code_lens()
+    }
+
+    async fn tracey_lsp_inlay_hints(
+        &self,
+        req: TraceyLspInlayHintsRequest,
+    ) -> Vec<TraceyLspInlayHint> {
+        assert_eq!(req, sample_tracey_lsp_inlay_hints_request());
+        sample_tracey_lsp_inlay_hints()
+    }
+
+    async fn tracey_lsp_prepare_rename(
+        &self,
+        req: TraceyLspPositionRequest,
+    ) -> Option<TraceyPrepareRenameResult> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        Some(sample_tracey_prepare_rename_result())
+    }
+
+    async fn tracey_lsp_rename(&self, req: TraceyLspRenameRequest) -> Vec<TraceyLspTextEdit> {
+        assert_eq!(req, sample_tracey_lsp_rename_request());
+        sample_tracey_lsp_text_edits()
+    }
+
+    async fn tracey_lsp_code_actions(
+        &self,
+        req: TraceyLspPositionRequest,
+    ) -> Vec<TraceyLspCodeAction> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        sample_tracey_lsp_code_actions()
+    }
+
+    async fn tracey_lsp_document_highlight(
+        &self,
+        req: TraceyLspPositionRequest,
+    ) -> Vec<TraceyLspLocation> {
+        assert_eq!(req, sample_tracey_lsp_position_request());
+        sample_tracey_lsp_locations()
+    }
+
+    async fn tracey_subscribe_updates(&self, updates: Tx<TraceyDataUpdate>) {
+        for update in sample_tracey_updates() {
+            if updates.send(update).await.is_err() {
+                break;
+            }
+        }
+        updates.close(Default::default()).await.ok();
+    }
 }
 
 /// Spawn the subject binary, telling it to connect to `peer_addr`.
@@ -630,6 +3456,7 @@ async fn spawn_subject_cmd_with_env(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    // r[impl hosted.subject.lifecycle]
     command.kill_on_drop(true);
     for (k, v) in extra_env {
         command.env(k, v);
@@ -840,6 +3667,7 @@ pub async fn spawn_server_subject(spec: SubjectSpec) -> Result<(String, Child), 
         .stdin(Stdio::null())
         .stdout(Stdio::piped()) // we read this ourselves
         .stderr(Stdio::piped()); // pumped after addr is read
+    // r[impl hosted.subject.lifecycle]
     command.kill_on_drop(true);
 
     let mut child = command

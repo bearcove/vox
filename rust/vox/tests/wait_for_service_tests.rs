@@ -68,7 +68,7 @@ async fn wait_for_service_times_out_when_service_never_starts() {
     };
     assert!(
         matches!(err, SessionError::Io(_) | SessionError::ConnectTimeout),
-        "error should be retryable kind (Io or ConnectTimeout), got: {err:?}"
+        "error should be a transient connect failure (Io or ConnectTimeout), got: {err:?}"
     );
 }
 
@@ -112,7 +112,7 @@ async fn wait_for_service_deadline_caps_individual_attempt() {
 async fn wait_for_service_fails_immediately_on_protocol_error() {
     // Server that immediately closes the connection without speaking vox.
     // This causes SessionError::Protocol (link closed during transport prologue),
-    // which is non-retryable and must not consume the full wait_for_service timeout.
+    // which is terminal for this peer and must not consume the full wait_for_service timeout.
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind");
@@ -140,7 +140,7 @@ async fn wait_for_service_fails_immediately_on_protocol_error() {
     };
     assert!(
         elapsed < Duration::from_secs(2),
-        "non-retryable error should fail fast, not wait the full timeout; elapsed: {elapsed:?}"
+        "terminal connection error should fail fast, not wait the full timeout; elapsed: {elapsed:?}"
     );
     assert!(
         matches!(err, SessionError::Protocol(_)),

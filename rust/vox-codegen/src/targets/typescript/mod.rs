@@ -108,6 +108,8 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     use crate::cw_writeln;
 
     validate_channel_rules(service);
+    // r[impl transport.fd.capability]
+    super::validate_no_fd_shapes(service, "TypeScript");
 
     let mut output = String::new();
     let mut w = CodeWriter::with_indent_spaces(&mut output, 2);
@@ -189,6 +191,13 @@ fn generate_imports(service: &ServiceDescriptor, w: &mut CodeWriter<&mut String>
         .iter()
         .any(|m| matches!(classify_shape(m.return_shape), ShapeKind::Result { .. }));
 
+    let has_dynamic = service.methods.iter().any(|m| {
+        m.args
+            .iter()
+            .any(|arg| shape_contains_dynamic_value(arg.shape))
+            || shape_contains_dynamic_value(m.return_shape)
+    });
+
     // Core runtime: descriptor types + Caller + session/conduit helpers
     cw_writeln!(
         w,
@@ -212,6 +221,71 @@ fn generate_imports(service: &ServiceDescriptor, w: &mut CodeWriter<&mut String>
     // Tx/Rx types for streaming handler args/returns.
     if has_streaming {
         cw_writeln!(w, "import {{ Tx, Rx }} from \"@bearcove/vox-core\";").unwrap();
+    }
+
+    if has_dynamic {
+        cw_writeln!(w, "import type {{ Value }} from \"@bearcove/phon-schema\";").unwrap();
+    }
+}
+
+fn shape_contains_dynamic_value(shape: &'static facet_core::Shape) -> bool {
+    let mut seen = std::collections::HashSet::new();
+    shape_contains_dynamic_value_inner(shape, &mut seen)
+}
+
+fn shape_contains_dynamic_value_inner(
+    shape: &'static facet_core::Shape,
+    seen: &mut std::collections::HashSet<&'static facet_core::Shape>,
+) -> bool {
+    if types::is_dynamic_value(shape) {
+        return true;
+    }
+
+    if !seen.insert(shape) {
+        return false;
+    }
+
+    match vox_types::classify_shape(shape) {
+        vox_types::ShapeKind::List { element }
+        | vox_types::ShapeKind::Slice { element }
+        | vox_types::ShapeKind::Option { inner: element }
+        | vox_types::ShapeKind::Array { element, .. }
+        | vox_types::ShapeKind::Set { element }
+        | vox_types::ShapeKind::Tx { inner: element }
+        | vox_types::ShapeKind::Rx { inner: element }
+        | vox_types::ShapeKind::Pointer { pointee: element } => {
+            shape_contains_dynamic_value_inner(element, seen)
+        }
+        vox_types::ShapeKind::Map { key, value } => {
+            shape_contains_dynamic_value_inner(key, seen)
+                || shape_contains_dynamic_value_inner(value, seen)
+        }
+        vox_types::ShapeKind::Tuple { elements } => elements
+            .iter()
+            .any(|param| shape_contains_dynamic_value_inner(param.shape, seen)),
+        vox_types::ShapeKind::TupleStruct { fields }
+        | vox_types::ShapeKind::Struct(vox_types::StructInfo { fields, .. }) => fields
+            .iter()
+            .any(|field| shape_contains_dynamic_value_inner(field.shape(), seen)),
+        vox_types::ShapeKind::Enum(vox_types::EnumInfo { variants, .. }) => {
+            variants
+                .iter()
+                .any(|variant| match vox_types::classify_variant(variant) {
+                    vox_types::VariantKind::Unit => false,
+                    vox_types::VariantKind::Newtype { inner } => {
+                        shape_contains_dynamic_value_inner(inner, seen)
+                    }
+                    vox_types::VariantKind::Tuple { fields }
+                    | vox_types::VariantKind::Struct { fields } => fields
+                        .iter()
+                        .any(|field| shape_contains_dynamic_value_inner(field.shape(), seen)),
+                })
+        }
+        vox_types::ShapeKind::Result { ok, err } => {
+            shape_contains_dynamic_value_inner(ok, seen)
+                || shape_contains_dynamic_value_inner(err, seen)
+        }
+        vox_types::ShapeKind::Scalar(_) | vox_types::ShapeKind::Opaque => false,
     }
 }
 
@@ -315,6 +389,12 @@ mod tests {
     }
 
     #[derive(Facet)]
+    struct DynamicTemplateCall {
+        args: Vec<facet_value::Value>,
+        kwargs: Vec<(String, facet_value::Value)>,
+    }
+
+    #[derive(Facet)]
     struct NestedInner {
         value: u32,
     }
@@ -332,6 +412,12 @@ mod tests {
     #[derive(Facet)]
     struct OuterChannels {
         inner: NestedChannels,
+    }
+
+    #[cfg(unix)]
+    #[derive(Facet)]
+    struct FdBundle {
+        descriptors: Vec<vox_types::Fd>,
     }
 
     #[derive(Facet)]
@@ -384,6 +470,13 @@ mod tests {
             kind: Option<ToolCallKind>,
             resolution: Option<PermissionResolution>,
         },
+    }
+
+    #[derive(Facet)]
+    #[repr(u8)]
+    enum DomNode {
+        Element { tag: String, children: Vec<String> },
+        Text(String),
     }
 
     #[derive(Facet)]
@@ -450,6 +543,26 @@ mod tests {
         }
     }
 
+    fn dynamic_value_service() -> ServiceDescriptor {
+        let method = method_descriptor::<(DynamicTemplateCall,), DynamicTemplateCall>(
+            "DynamicSvc",
+            "echoDynamic",
+            &["call"],
+            &[None],
+            MethodDescriptorOptions {
+                response_wire_shape:
+                    <Result<DynamicTemplateCall, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![method].into_boxed_slice());
+        ServiceDescriptor {
+            service_name: "DynamicSvc",
+            methods,
+            doc: None,
+        }
+    }
+
     fn panic_message(panic: Box<dyn std::any::Any + Send>) -> String {
         panic
             .downcast_ref::<String>()
@@ -495,6 +608,69 @@ mod tests {
         assert!(
             !generated.contains("pc."),
             "generated TypeScript must not call postcard primitives directly:\n{generated}"
+        );
+    }
+
+    #[test]
+    fn generated_typescript_phon_service_handles_dynamic_value_payloads() {
+        let service = dynamic_value_service();
+        let generated = super::phon::generate_phon_service(&service);
+        assert!(
+            generated.contains("argsSchemaClosure"),
+            "dynamic service must still emit args schema closure:\n{generated}"
+        );
+        assert!(
+            generated.contains("responseSchemaClosure"),
+            "dynamic service must still emit response schema closure:\n{generated}"
+        );
+    }
+
+    #[test]
+    fn generated_typescript_uses_value_type_for_dynamic_payloads() {
+        let service = dynamic_value_service();
+        let generated = generate_service(&service);
+        assert!(
+            generated.contains("import type { Value } from \"@bearcove/phon-schema\";"),
+            "dynamic payloads must import phon Value:\n{generated}"
+        );
+        assert!(
+            generated.contains("args: Value[];"),
+            "dynamic Vec<Value> fields must render as Value[]:\n{generated}"
+        );
+        assert!(
+            generated.contains("kwargs: [string, Value][];"),
+            "dynamic tuple-vector kwargs must render as [string, Value][]:\n{generated}"
+        );
+    }
+
+    #[test]
+    fn generated_typescript_testbed_service_handles_dodeca_dynamic_root() {
+        let service = spec_proto::all_services()
+            .into_iter()
+            .find(|service| service.service_name == "Testbed")
+            .expect("testbed service exists");
+        let generated = generate_service(service);
+        assert!(
+            generated.contains("export interface DodecaTemplateCall"),
+            "testbed generated service must include the dynamic Dodeca root:\n{generated}"
+        );
+        assert!(
+            generated.contains("import type { Value } from \"@bearcove/phon-schema\";"),
+            "testbed generated service must import phon Value:\n{generated}"
+        );
+    }
+
+    #[test]
+    fn generated_typescript_wire_and_handshake_modules_render() {
+        let wire = super::generate_phon_wire();
+        assert!(
+            wire.contains("messageSchemaClosure"),
+            "wire module must render message schema closure:\n{wire}"
+        );
+        let handshake = super::generate_phon_handshake();
+        assert!(
+            handshake.contains("handshakeSchemaClosure"),
+            "handshake module must render handshake schema closure:\n{handshake}"
         );
     }
 
@@ -679,13 +855,13 @@ mod tests {
     #[test]
     // r[verify schema.exchange.channels]
     fn generated_typescript_emits_channel_schemas() {
-        let subscribe = method_descriptor::<(Tx<u32>, Rx<u32>), ()>(
+        let subscribe = method_descriptor::<(Tx<NestedInner>, Rx<NestedInner>), ()>(
             "StreamSvc",
             "subscribe",
             &["output", "input"],
             &[
-                Some(<u32 as facet::Facet>::SHAPE),
-                Some(<u32 as facet::Facet>::SHAPE),
+                Some(<NestedInner as facet::Facet>::SHAPE),
+                Some(<NestedInner as facet::Facet>::SHAPE),
             ],
             MethodDescriptorOptions {
                 response_wire_shape: <Result<(), vox_types::VoxError> as Facet>::SHAPE,
@@ -719,6 +895,10 @@ mod tests {
         assert!(
             generated.contains("6368616e6e656c2e6172672e312e72782e656c656d656e74"),
             "Rx<T> element root must be carried as an auxiliary schema root:\n{generated}"
+        );
+        assert!(
+            generated.contains("export interface NestedInner"),
+            "named channel element types must be emitted as normal generated types:\n{generated}"
         );
     }
 
@@ -771,6 +951,26 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    // r[verify transport.fd.capability]
+    fn generated_typescript_rejects_fd_capability_surfaces() {
+        let service = service_with_shapes(<() as Facet>::SHAPE, <FdBundle as Facet>::SHAPE);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            generate_service(&service);
+        }));
+        let message =
+            panic_message(result.expect_err("generator should reject fd capability surfaces"));
+
+        assert!(
+            message.contains(
+                "TypeScript codegen does not support vox::Fd capabilities: BadSvc.bad return type"
+            ),
+            "unexpected panic message: {message}"
+        );
+    }
+
     #[test]
     fn generated_typescript_keeps_struct_variants_with_kind_fields_named() {
         let subscribe = method_descriptor::<(), SubscribeMessage>(
@@ -813,6 +1013,36 @@ mod tests {
                 "| { tag: 'ToolCallUpdate'; id: string; kind: ToolCallKind | null; status: ToolCallStatus }"
             ),
             "patch variants with a field named `kind` must also stay struct variants in the generated type:\n{generated}"
+        );
+    }
+
+    #[test]
+    fn generated_typescript_uses_alternate_discriminator_for_tag_payload_fields() {
+        let parse = method_descriptor::<(), DomNode>(
+            "DomSvc",
+            "parse",
+            &[],
+            &[],
+            MethodDescriptorOptions {
+                response_wire_shape: <Result<DomNode, vox_types::VoxError> as Facet>::SHAPE,
+                doc: None,
+            },
+        );
+        let methods = Box::leak(vec![parse].into_boxed_slice());
+        let service = ServiceDescriptor {
+            service_name: "DomSvc",
+            methods,
+            doc: None,
+        };
+
+        let generated = generate_service(&service);
+        assert!(
+            generated.contains("{ $tag: 'Element'; tag: string; children: string[] }"),
+            "struct variants with a field named `tag` must use `$tag` as the discriminant:\n{generated}"
+        );
+        assert!(
+            generated.contains("| { $tag: 'Text'; value: string }"),
+            "all variants in that enum must share the `$tag` discriminant:\n{generated}"
         );
     }
 

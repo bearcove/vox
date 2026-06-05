@@ -358,17 +358,35 @@ fn fmt_typescript(path: &std::path::Path, text: String) -> String {
     use dprint_plugin_typescript::configuration::ConfigurationBuilder;
     use dprint_plugin_typescript::{FormatTextOptions, format_text};
     let config = ConfigurationBuilder::new().build();
-    match format_text(FormatTextOptions {
-        path,
-        extension: None,
-        text: text.clone(),
-        config: &config,
-        external_formatter: None,
-    }) {
-        Ok(Some(formatted)) => formatted,
-        Ok(None) => text,
-        Err(e) => {
+    let panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let formatted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        format_text(FormatTextOptions {
+            path,
+            extension: None,
+            text: text.clone(),
+            config: &config,
+            external_formatter: None,
+        })
+    }));
+    std::panic::set_hook(panic_hook);
+    match formatted {
+        Ok(Ok(Some(formatted))) => formatted,
+        Ok(Ok(None)) => text,
+        Ok(Err(e)) => {
             eprintln!("warning: dprint failed to format {}: {e}", path.display());
+            text
+        }
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("non-string panic payload");
+            eprintln!(
+                "warning: dprint panicked while formatting {}: {message}",
+                path.display(),
+            );
             text
         }
     }
@@ -757,6 +775,154 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_tree",
         },
         TestCase {
+            name: "rpc_echo_ecosystem_bridge",
+            call: "testbed::run_rpc_echo_ecosystem_bridge",
+        },
+        TestCase {
+            name: "rpc_echo_dodeca_template_call",
+            call: "testbed::run_rpc_echo_dodeca_template_call",
+        },
+        TestCase {
+            name: "rpc_dodeca_html_process",
+            call: "testbed::run_rpc_dodeca_html_process",
+        },
+        TestCase {
+            name: "rpc_dodeca_execute_code_samples",
+            call: "testbed::run_rpc_dodeca_execute_code_samples",
+        },
+        TestCase {
+            name: "rpc_echo_styx_value",
+            call: "testbed::run_rpc_echo_styx_value",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_initialize",
+            call: "testbed::run_rpc_styx_lsp_initialize",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_completions",
+            call: "testbed::run_rpc_styx_lsp_completions",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_hover",
+            call: "testbed::run_rpc_styx_lsp_hover",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_inlay_hints",
+            call: "testbed::run_rpc_styx_lsp_inlay_hints",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_diagnostics",
+            call: "testbed::run_rpc_styx_lsp_diagnostics",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_code_actions",
+            call: "testbed::run_rpc_styx_lsp_code_actions",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_definition",
+            call: "testbed::run_rpc_styx_lsp_definition",
+        },
+        TestCase {
+            name: "rpc_styx_lsp_shutdown",
+            call: "testbed::run_rpc_styx_lsp_shutdown",
+        },
+        TestCase {
+            name: "rpc_styx_host_get_subtree",
+            call: "testbed::run_rpc_styx_host_get_subtree",
+        },
+        TestCase {
+            name: "rpc_styx_host_get_document",
+            call: "testbed::run_rpc_styx_host_get_document",
+        },
+        TestCase {
+            name: "rpc_styx_host_get_source",
+            call: "testbed::run_rpc_styx_host_get_source",
+        },
+        TestCase {
+            name: "rpc_styx_host_get_schema",
+            call: "testbed::run_rpc_styx_host_get_schema",
+        },
+        TestCase {
+            name: "rpc_styx_host_offset_to_position",
+            call: "testbed::run_rpc_styx_host_offset_to_position",
+        },
+        TestCase {
+            name: "rpc_styx_host_position_to_offset",
+            call: "testbed::run_rpc_styx_host_position_to_offset",
+        },
+        TestCase {
+            name: "rpc_stax_flamegraph",
+            call: "testbed::run_rpc_stax_flamegraph",
+        },
+        TestCase {
+            name: "rpc_echo_stax_flamegraph_update",
+            call: "testbed::run_rpc_echo_stax_flamegraph_update",
+        },
+        TestCase {
+            name: "rpc_stax_subscribe_flamegraph_updates",
+            call: "testbed::run_rpc_stax_subscribe_flamegraph_updates",
+        },
+        TestCase {
+            name: "rpc_echo_stax_linux_broker_control",
+            call: "testbed::run_rpc_echo_stax_linux_broker_control",
+        },
+        TestCase {
+            name: "rpc_echo_hotmeal_live_reload_event",
+            call: "testbed::run_rpc_echo_hotmeal_live_reload_event",
+        },
+        TestCase {
+            name: "rpc_echo_hotmeal_apply_patches_result",
+            call: "testbed::run_rpc_echo_hotmeal_apply_patches_result",
+        },
+        TestCase {
+            name: "rpc_echo_helix_stream_metrics",
+            call: "testbed::run_rpc_echo_helix_stream_metrics",
+        },
+        TestCase {
+            name: "rpc_echo_helix_verify_evidence",
+            call: "testbed::run_rpc_echo_helix_verify_evidence",
+        },
+        TestCase {
+            name: "rpc_helix_subscribe_pulses",
+            call: "testbed::run_rpc_helix_subscribe_pulses",
+        },
+        TestCase {
+            name: "rpc_helix_pulse_bundle",
+            call: "testbed::run_rpc_helix_pulse_bundle",
+        },
+        TestCase {
+            name: "rpc_tracey_status",
+            call: "testbed::run_rpc_tracey_status",
+        },
+        TestCase {
+            name: "rpc_tracey_core_control",
+            call: "testbed::run_rpc_tracey_core_control",
+        },
+        TestCase {
+            name: "rpc_tracey_rule",
+            call: "testbed::run_rpc_tracey_rule",
+        },
+        TestCase {
+            name: "rpc_tracey_dashboard",
+            call: "testbed::run_rpc_tracey_dashboard",
+        },
+        TestCase {
+            name: "rpc_tracey_validate",
+            call: "testbed::run_rpc_tracey_validate",
+        },
+        TestCase {
+            name: "rpc_tracey_lsp_surface",
+            call: "testbed::run_rpc_tracey_lsp_surface",
+        },
+        TestCase {
+            name: "rpc_tracey_lsp_workspace_diagnostics",
+            call: "testbed::run_rpc_tracey_lsp_workspace_diagnostics",
+        },
+        TestCase {
+            name: "rpc_tracey_subscribe_updates",
+            call: "testbed::run_rpc_tracey_subscribe_updates",
+        },
+        TestCase {
             name: "rpc_echo_status",
             call: "testbed::run_rpc_echo_status",
         },
@@ -775,6 +941,46 @@ fn generate_spec_matrix(
         TestCase {
             name: "rpc_channeling_sum_large",
             call: "testbed::run_rpc_channeling_sum_large",
+        },
+        TestCase {
+            name: "rpc_dodeca_byte_tunnel",
+            call: "testbed::run_rpc_dodeca_byte_tunnel",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_lsp",
+            call: "testbed::run_rpc_dodeca_devtools_lsp",
+        },
+        TestCase {
+            name: "rpc_dibs_list",
+            call: "testbed::run_rpc_dibs_list",
+        },
+        TestCase {
+            name: "rpc_dibs_schema",
+            call: "testbed::run_rpc_dibs_schema",
+        },
+        TestCase {
+            name: "rpc_dibs_get",
+            call: "testbed::run_rpc_dibs_get",
+        },
+        TestCase {
+            name: "rpc_dibs_create",
+            call: "testbed::run_rpc_dibs_create",
+        },
+        TestCase {
+            name: "rpc_dibs_update",
+            call: "testbed::run_rpc_dibs_update",
+        },
+        TestCase {
+            name: "rpc_dibs_delete",
+            call: "testbed::run_rpc_dibs_delete",
+        },
+        TestCase {
+            name: "rpc_dibs_migration_status",
+            call: "testbed::run_rpc_dibs_migration_status",
+        },
+        TestCase {
+            name: "rpc_dibs_migrate",
+            call: "testbed::run_rpc_dibs_migrate",
         },
         TestCase {
             name: "channeling_generate_server_to_client",
@@ -903,6 +1109,186 @@ fn generate_spec_matrix(
             call: "testbed::run_subject_calls_echo_tree",
         },
         TestCase {
+            name: "subject_calls_echo_ecosystem_bridge",
+            call: "testbed::run_subject_calls_echo_ecosystem_bridge",
+        },
+        TestCase {
+            name: "subject_calls_echo_dodeca_template_call",
+            call: "testbed::run_subject_calls_echo_dodeca_template_call",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_html_process",
+            call: "testbed::run_subject_calls_dodeca_html_process",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_execute_code_samples",
+            call: "testbed::run_subject_calls_dodeca_execute_code_samples",
+        },
+        TestCase {
+            name: "subject_calls_echo_styx_value",
+            call: "testbed::run_subject_calls_echo_styx_value",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_initialize",
+            call: "testbed::run_subject_calls_styx_lsp_initialize",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_completions",
+            call: "testbed::run_subject_calls_styx_lsp_completions",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_hover",
+            call: "testbed::run_subject_calls_styx_lsp_hover",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_inlay_hints",
+            call: "testbed::run_subject_calls_styx_lsp_inlay_hints",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_diagnostics",
+            call: "testbed::run_subject_calls_styx_lsp_diagnostics",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_code_actions",
+            call: "testbed::run_subject_calls_styx_lsp_code_actions",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_definition",
+            call: "testbed::run_subject_calls_styx_lsp_definition",
+        },
+        TestCase {
+            name: "subject_calls_styx_lsp_shutdown",
+            call: "testbed::run_subject_calls_styx_lsp_shutdown",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_get_subtree",
+            call: "testbed::run_subject_calls_styx_host_get_subtree",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_get_document",
+            call: "testbed::run_subject_calls_styx_host_get_document",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_get_source",
+            call: "testbed::run_subject_calls_styx_host_get_source",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_get_schema",
+            call: "testbed::run_subject_calls_styx_host_get_schema",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_offset_to_position",
+            call: "testbed::run_subject_calls_styx_host_offset_to_position",
+        },
+        TestCase {
+            name: "subject_calls_styx_host_position_to_offset",
+            call: "testbed::run_subject_calls_styx_host_position_to_offset",
+        },
+        TestCase {
+            name: "subject_calls_stax_flamegraph",
+            call: "testbed::run_subject_calls_stax_flamegraph",
+        },
+        TestCase {
+            name: "subject_calls_echo_stax_flamegraph_update",
+            call: "testbed::run_subject_calls_echo_stax_flamegraph_update",
+        },
+        TestCase {
+            name: "subject_calls_stax_subscribe_flamegraph_updates",
+            call: "testbed::run_subject_calls_stax_subscribe_flamegraph_updates",
+        },
+        TestCase {
+            name: "subject_calls_echo_stax_linux_broker_control",
+            call: "testbed::run_subject_calls_echo_stax_linux_broker_control",
+        },
+        TestCase {
+            name: "subject_calls_echo_hotmeal_live_reload_event",
+            call: "testbed::run_subject_calls_echo_hotmeal_live_reload_event",
+        },
+        TestCase {
+            name: "subject_calls_echo_hotmeal_apply_patches_result",
+            call: "testbed::run_subject_calls_echo_hotmeal_apply_patches_result",
+        },
+        TestCase {
+            name: "subject_calls_echo_helix_stream_metrics",
+            call: "testbed::run_subject_calls_echo_helix_stream_metrics",
+        },
+        TestCase {
+            name: "subject_calls_echo_helix_verify_evidence",
+            call: "testbed::run_subject_calls_echo_helix_verify_evidence",
+        },
+        TestCase {
+            name: "subject_calls_helix_subscribe_pulses",
+            call: "testbed::run_subject_calls_helix_subscribe_pulses",
+        },
+        TestCase {
+            name: "subject_calls_helix_pulse_bundle",
+            call: "testbed::run_subject_calls_helix_pulse_bundle",
+        },
+        TestCase {
+            name: "subject_calls_tracey_status",
+            call: "testbed::run_subject_calls_tracey_status",
+        },
+        TestCase {
+            name: "subject_calls_tracey_core_control",
+            call: "testbed::run_subject_calls_tracey_core_control",
+        },
+        TestCase {
+            name: "subject_calls_tracey_rule",
+            call: "testbed::run_subject_calls_tracey_rule",
+        },
+        TestCase {
+            name: "subject_calls_tracey_dashboard",
+            call: "testbed::run_subject_calls_tracey_dashboard",
+        },
+        TestCase {
+            name: "subject_calls_tracey_validate",
+            call: "testbed::run_subject_calls_tracey_validate",
+        },
+        TestCase {
+            name: "subject_calls_tracey_lsp_surface",
+            call: "testbed::run_subject_calls_tracey_lsp_surface",
+        },
+        TestCase {
+            name: "subject_calls_tracey_lsp_workspace_diagnostics",
+            call: "testbed::run_subject_calls_tracey_lsp_workspace_diagnostics",
+        },
+        TestCase {
+            name: "subject_calls_tracey_subscribe_updates",
+            call: "testbed::run_subject_calls_tracey_subscribe_updates",
+        },
+        TestCase {
+            name: "subject_calls_dibs_list",
+            call: "testbed::run_subject_calls_dibs_list",
+        },
+        TestCase {
+            name: "subject_calls_dibs_schema",
+            call: "testbed::run_subject_calls_dibs_schema",
+        },
+        TestCase {
+            name: "subject_calls_dibs_get",
+            call: "testbed::run_subject_calls_dibs_get",
+        },
+        TestCase {
+            name: "subject_calls_dibs_create",
+            call: "testbed::run_subject_calls_dibs_create",
+        },
+        TestCase {
+            name: "subject_calls_dibs_update",
+            call: "testbed::run_subject_calls_dibs_update",
+        },
+        TestCase {
+            name: "subject_calls_dibs_delete",
+            call: "testbed::run_subject_calls_dibs_delete",
+        },
+        TestCase {
+            name: "subject_calls_dibs_migration_status",
+            call: "testbed::run_subject_calls_dibs_migration_status",
+        },
+        TestCase {
+            name: "subject_calls_dibs_migrate",
+            call: "testbed::run_subject_calls_dibs_migrate",
+        },
+        TestCase {
             name: "subject_calls_pipelining",
             call: "testbed::run_subject_calls_pipelining",
         },
@@ -921,6 +1307,14 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_transform_bidi",
             call: "testbed::run_subject_calls_transform_bidi",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_byte_tunnel",
+            call: "testbed::run_subject_calls_dodeca_byte_tunnel",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_lsp",
+            call: "testbed::run_subject_calls_dodeca_devtools_lsp",
         },
         TestCase {
             name: "subject_calls_post_reply_generate",

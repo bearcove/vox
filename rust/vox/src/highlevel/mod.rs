@@ -178,11 +178,11 @@ impl<Client> ConnectBuilder<Client> {
         self
     }
 
-    /// Wait for the service to become reachable, retrying for up to `timeout`.
+    /// Wait for the service to become reachable until `timeout`.
     ///
-    /// Only transient failures (I/O errors, connect timeouts) are retried.
+    /// Only transient failures (I/O errors, connect timeouts) are attempted again.
     /// Protocol errors, schema incompatibilities, and explicit rejections fail
-    /// immediately without retrying.
+    /// immediately.
     pub fn wait_for_service(mut self, timeout: Duration) -> Self {
         self.wait_for_service = Some(timeout);
         self

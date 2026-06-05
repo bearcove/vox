@@ -114,6 +114,7 @@ async fn exceeding_scm_max_fd_is_an_error_not_a_crash() {
 }
 
 #[tokio::test]
+// r[verify transport.fd.capability]
 async fn non_fd_transport_refuses_to_carry_an_fd() {
     // TCP `StreamLink` advertises no fd support; returning an `Fd` over it
     // must fail at send rather than silently dropping the descriptor.

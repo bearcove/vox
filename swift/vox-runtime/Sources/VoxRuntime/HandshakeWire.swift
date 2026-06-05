@@ -533,6 +533,8 @@ nonisolated(unsafe) public let HandshakeMessageDescriptorBlocks: [SchemaId: Desc
 nonisolated(unsafe) private let HandshakeMessageEncodeProgram: Lowered = try! lowerTyped(
   HandshakeMessageDescriptor, HandshakeMessageRegistry, HandshakeMessageDescriptorBlocks)
 
+private let HandshakeMessageEncoder = VoxTypedEncoder(HandshakeMessageEncodeProgram)
+
 public func encodeHandshakeMessage(_ value: HandshakeMessage) -> [UInt8] {
-  encodeTyped(value, HandshakeMessageEncodeProgram)
+  encodeVoxTyped(value, HandshakeMessageEncoder)
 }

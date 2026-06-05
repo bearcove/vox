@@ -148,11 +148,11 @@ pub fn generate_client_impl(service: &ServiceDescriptor) -> String {
 
         if is_fallible {
             out.push_str("    try {\n");
-            out.push_str("      const value = await this.caller.call({\n");
+            out.push_str("      const __voxResult = await this.caller.call({\n");
             out.push_str(&call_fields);
             out.push_str("      });\n");
             out.push_str(&format!(
-                "      return {{ ok: true, value }} as {ret_ty};\n"
+                "      return {{ ok: true, value: __voxResult }} as {ret_ty};\n"
             ));
             out.push_str("    } catch (e: any) {\n");
             out.push_str("      if (e instanceof RpcError && e.isUserError()) {\n");
@@ -163,10 +163,10 @@ pub fn generate_client_impl(service: &ServiceDescriptor) -> String {
             out.push_str("      throw e;\n");
             out.push_str("    }\n");
         } else {
-            out.push_str("    const value = await this.caller.call({\n");
+            out.push_str("    const __voxResult = await this.caller.call({\n");
             out.push_str(&call_fields);
             out.push_str("    });\n");
-            out.push_str(&format!("    return value as {ret_ty};\n"));
+            out.push_str(&format!("    return __voxResult as {ret_ty};\n"));
         }
 
         out.push_str("  }\n\n");

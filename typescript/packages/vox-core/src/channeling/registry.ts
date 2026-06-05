@@ -17,6 +17,32 @@ export type OutgoingPoll =
   | { kind: "pending" }
   | { kind: "done" };
 
+export type OutgoingTrySendDetail =
+  | "sent"
+  | "credit_exhausted"
+  | "runtime_queue_full"
+  | "closed";
+
+export interface ChannelDebugContext {
+  connectionId?: bigint;
+  requestId?: bigint;
+  service?: string;
+  method?: string;
+  channelDirection?: "tx" | "rx";
+  side?: "client" | "server";
+}
+
+export interface ChannelDebugSnapshot {
+  channelId: ChannelId;
+  state: "incoming" | "outgoing" | "pending-incoming" | "closed";
+  context?: ChannelDebugContext;
+}
+
+export interface ChannelRegistryDebugSnapshot {
+  channels: ChannelDebugSnapshot[];
+  pendingCreditCount: number;
+}
+
 class AsyncQueue<T> {
   private items: T[] = [];
   private closed = false;
@@ -245,9 +271,18 @@ export class OutgoingSender {
   }
 
   trySendData(data: Uint8Array): "sent" | "full" | "closed" {
+    const outcome = this.trySendDataDetailed(data);
+    if (outcome === "sent") {
+      return "sent";
+    }
+    return outcome === "closed" ? "closed" : "full";
+  }
+
+  // r[impl rpc.observability.channel.try-send-detail]
+  trySendDataDetailed(data: Uint8Array): OutgoingTrySendDetail {
     const credit = this.state.credit.tryConsume();
     if (credit === "full") {
-      return "full";
+      return "credit_exhausted";
     }
     if (credit === "closed") {
       return "closed";
@@ -260,7 +295,7 @@ export class OutgoingSender {
     }
 
     this.state.credit.grant(1);
-    return enqueued === "closed" ? "closed" : "full";
+    return enqueued === "closed" ? "closed" : "runtime_queue_full";
   }
 
   /** Send close signal. */
@@ -304,6 +339,7 @@ export class ChannelRegistry {
 
   /** Channel IDs that have been closed. */
   private closed = new Set<ChannelId>();
+  private contexts = new Map<ChannelId, ChannelDebugContext>();
 
   /**
    * Register an incoming channel and return the receiver for Rx<T>.
@@ -390,6 +426,14 @@ export class ChannelRegistry {
     initialCredit: number = DEFAULT_INITIAL_CREDIT,
   ): OutgoingCreditController {
     return this.ensureOutgoing(channelId, initialCredit).credit;
+  }
+
+  // r[impl rpc.observability.channel.context]
+  rememberContext(channelId: ChannelId, context: ChannelDebugContext): void {
+    this.contexts.set(channelId, {
+      ...this.contexts.get(channelId),
+      ...context,
+    });
   }
 
   /**
@@ -511,6 +555,7 @@ export class ChannelRegistry {
   }
 
   closeAll(): void {
+    // r[impl rpc.channel.connection-closure]
     for (const channelId of this.incoming.keys()) {
       this.close(channelId);
     }
@@ -534,6 +579,36 @@ export class ChannelRegistry {
   /** Check if a channel has been closed. */
   isClosed(channelId: ChannelId): boolean {
     return this.closed.has(channelId);
+  }
+
+  // r[impl rpc.debug.snapshot]
+  // r[impl rpc.observability.channel.context]
+  debugSnapshot(): ChannelRegistryDebugSnapshot {
+    const channels: ChannelDebugSnapshot[] = [];
+    const push = (channelId: ChannelId, state: ChannelDebugSnapshot["state"]) => {
+      const context = this.contexts.get(channelId);
+      channels.push(context ? { channelId, state, context: { ...context } } : { channelId, state });
+    };
+
+    for (const channelId of this.incoming.keys()) {
+      push(channelId, "incoming");
+    }
+    for (const channelId of this.outgoing.keys()) {
+      push(channelId, "outgoing");
+    }
+    for (const channelId of this.pendingIncoming.keys()) {
+      push(channelId, "pending-incoming");
+    }
+    for (const channelId of this.closed) {
+      if (!this.incoming.has(channelId) && !this.outgoing.has(channelId) && !this.pendingIncoming.has(channelId)) {
+        push(channelId, "closed");
+      }
+    }
+
+    return {
+      channels,
+      pendingCreditCount: this.pendingCredits.length,
+    };
   }
 
   /** Get the number of active outgoing channels. */

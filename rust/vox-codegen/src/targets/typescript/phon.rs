@@ -79,14 +79,19 @@ fn channel_auxiliary_roots(method: &vox_types::MethodDescriptor) -> Vec<(String,
 pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     let name = lower_camel(service.service_name);
 
-    // One registry over every method's args tuple + response wire type
-    // (`Result<T, VoxError<E>>`), deduped and transitive. The response wire shape
-    // pulls in `Result`/`VoxError`/`T`/`E` so the server can encode and the client
-    // can decode without a separate exchange for composites.
+    // One registry over every method's args tuple, response wire type
+    // (`Result<T, VoxError<E>>`), and direct channel element type, deduped and
+    // transitive. Channel args are opaque in the args tuple, so their item DTOs
+    // must be added explicitly for local per-item encode/decode.
     let mut roots: Vec<&'static Shape> = Vec::new();
     for m in service.methods {
         roots.push(m.args_shape);
         roots.push(m.response_wire_shape);
+        for arg in m.args {
+            if let Some(element) = arg.channel_element {
+                roots.push(element);
+            }
+        }
     }
     let module = phon_codegen::Module::from_shapes(&roots).expect("derive service phon module");
 

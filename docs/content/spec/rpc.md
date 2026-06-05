@@ -237,21 +237,23 @@ registered on the session builder; otherwise they are rejected.
 >   * `Indeterminate` — the runtime could not safely determine whether the
 >     request attempt reached a terminal outcome
 
-> r[rpc.fallible.vox-error.retryable]
+> r[rpc.fallible.vox-error.outcome]
 >
-> `VoxError` variants differ in retryability:
+> `VoxError` variants distinguish terminal call outcomes from session
+> interruptions:
 >
->   * **Retryable** — the failure is transient; issuing a new call on a
->     fresh connection may succeed: `ConnectionClosed`, `SessionShutdown`,
->     `SendFailed`
->   * **Non-retryable** — the failure is permanent; issuing the same call
->     against the same peer will reproduce the same outcome: `User`,
->     `UnknownMethod`, `InvalidPayload`, `Cancelled`, `Indeterminate`
+>   * **Terminal call outcome** — the handler or protocol reached a definite
+>     outcome for this call: `User`, `UnknownMethod`, `InvalidPayload`,
+>     `Cancelled`
+>   * **Session interruption** — the session ended before this call received a
+>     terminal response: `ConnectionClosed`, `SessionShutdown`, `SendFailed`
+>   * **Indeterminate** — the runtime cannot safely determine whether the
+>     request attempt reached a terminal outcome
 >
-> Callers that loop on error MUST NOT retry non-retryable failures. In
-> particular, retrying a call that failed with `InvalidPayload` due to a schema
-> compatibility decode-plan error will always produce the same failure, because the remote
-> peer's schema does not change during the session.
+> Vox runtimes MUST NOT automatically replay or resume RPC calls after any
+> `VoxError`. Applications that recover after a session interruption or
+> indeterminate outcome must establish the recovery policy themselves and issue
+> any replacement call explicitly.
 
 > r[rpc.error.scope]
 >

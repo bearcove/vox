@@ -639,12 +639,12 @@ async fn callee_args_schema_error_is_call_level() {
     server_task.abort();
 }
 
-// r[verify schema.errors.non-retryable]
+// r[verify schema.errors.same-peer-terminal]
 // r[verify schema.errors.call-level]
 // r[verify schema.errors.call-level.caller]
-// r[verify rpc.fallible.vox-error.retryable]
+// r[verify rpc.fallible.vox-error.outcome]
 #[tokio::test]
-async fn missing_required_field_is_non_retryable() {
+async fn missing_required_field_is_same_peer_terminal() {
     let (client_conduit, server_conduit) = conduit_pair();
 
     let server_task = tokio::task::spawn(async move {
@@ -673,10 +673,10 @@ async fn missing_required_field_is_non_retryable() {
         "expected InvalidPayload with a schema-incompatibility failure, got: {err:?}"
     );
 
-    // And it must be non-retryable.
+    // And it must not be classified as a session interruption.
     assert!(
-        !err.is_retryable(),
-        "schema incompatibility must be non-retryable"
+        !err.is_session_interruption(),
+        "schema incompatibility must be terminal for the current peer schema"
     );
 
     let pong = client

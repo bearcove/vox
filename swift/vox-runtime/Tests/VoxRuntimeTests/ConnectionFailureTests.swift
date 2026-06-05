@@ -33,8 +33,7 @@ extension Message {
     }
 }
 
-/// Build a `Metadata` (phon `Value`) from key/value string pairs — the test analog of
-/// the old `[MetadataEntry]` arrays.
+/// Build a `Metadata` (phon `Value`) from key/value string pairs for scripted tests.
 private func meta(_ pairs: [(String, String)]) -> Metadata {
     var m: Metadata = .null
     for (k, v) in pairs { m.metaSet(k, .string(v)) }
@@ -975,6 +974,7 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify session.keepalive]
     @Test func keepalivePingPongHealthyPath() async throws {
         let transport = ScriptedTransport(autoRespondPing: true)
         let (handle, driver, _, _) = try await establishInitiator(
@@ -1008,6 +1008,7 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify session.keepalive]
     @Test func keepaliveMissingPongClosesDriver() async throws {
         let transport = ScriptedTransport()
         let (_, driver, _, _) = try await establishInitiator(
@@ -1034,6 +1035,7 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify session.keepalive]
     @Test func keepaliveFailureFailsPendingCall() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(

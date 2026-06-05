@@ -112,10 +112,8 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
                 // Method wants an `Rx` → caller SENDS via the paired `Tx`: inject the phon
                 // element ENCODE codec.
                 let elem_ty = swift_type_base(a.channel_element.expect("rx element"));
-                let ser = element_encode_closure(
-                    &elem_ty,
-                    &format!("{prefix}_{an}_ElementEncodeProgram"),
-                );
+                let ser =
+                    element_encode_closure(&elem_ty, &format!("{prefix}_{an}_ElementEncoder"));
                 out.push_str(&format!("        let {an}WireIndex = channelIds.count\n"));
                 out.push_str(&format!(
                     "        channelIds.append(await connection.bindClientRxArg({an}, serialize: {ser}))\n"
@@ -150,11 +148,11 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         match arg_exprs.len() {
             0 => out.push_str("        let payload: [UInt8] = []\n"),
             1 => out.push_str(&format!(
-                "        let payload = encodeTyped({}, {prefix}_ArgsEncodeProgram)\n",
+                "        let payload = encodeVoxTyped({}, {prefix}_ArgsEncoder)\n",
                 arg_exprs[0]
             )),
             _ => out.push_str(&format!(
-                "        let payload = encodeTyped(({}), {prefix}_ArgsEncodeProgram)\n",
+                "        let payload = encodeVoxTyped(({}), {prefix}_ArgsEncoder)\n",
                 arg_exprs.join(", ")
             )),
         }
@@ -182,16 +180,16 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         // the wire `User(E)` arm to the user `.failure(e)` and throws other VoxErrors; an
         // infallible method returns `T` (or `Void`) and throws on any error.
         // r[impl schema.errors.call-level.caller]
-        // r[impl schema.errors.non-retryable]
+        // r[impl schema.errors.same-peer-terminal]
         let is_fallible = matches!(
             classify_shape(method.return_shape),
             ShapeKind::Result { .. }
         );
         out.push_str(&format!(
-            "        guard let respProgram = connection.schemaReceiveTracker.buildDecodeProgram({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, readerBlocks: {prefix}_ResponseDescriptorBlocks, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
+            "        guard let respDecoder = connection.schemaReceiveTracker.buildDecodeFn({method_id}, .response, readerDescriptor: {prefix}_ResponseDescriptor, readerBlocks: {prefix}_ResponseDescriptorBlocks, local: {svc}Registry) else {{\n            throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")\n        }}\n"
         ));
         out.push_str(&format!(
-            "        let result: {resp_ty} = try decodeTyped(respProgram, response)\n        switch result {{\n"
+            "        let result: {resp_ty} = try decodeVoxTyped(respDecoder, response)\n        switch result {{\n"
         ));
         if is_fallible {
             out.push_str("        case .success(let value): return .success(value)\n");

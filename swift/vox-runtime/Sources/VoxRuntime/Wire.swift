@@ -1682,4 +1682,6 @@ nonisolated(unsafe) public let MessageDescriptorBlocks: [SchemaId: Descriptor] =
 nonisolated(unsafe) private let MessageEncodeProgram: Lowered = try! lowerTyped(
   MessageDescriptor, MessageRegistry, MessageDescriptorBlocks)
 
-public func encodeMessage(_ value: Message) -> [UInt8] { encodeTyped(value, MessageEncodeProgram) }
+private let MessageEncoder = VoxTypedEncoder(MessageEncodeProgram)
+
+public func encodeMessage(_ value: Message) -> [UInt8] { encodeVoxTyped(value, MessageEncoder) }

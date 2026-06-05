@@ -12,6 +12,7 @@ import type {
   Canvas,
   Color,
   Config,
+  EcosystemBridgePayload,
   GnarlyPayload,
   Tree,
   LookupError,
@@ -222,7 +223,7 @@ class TestbedService implements TestbedHandler {
   processMessage(msg: Message): Message {
     switch (msg.tag) {
       case "Text":
-        return { tag: "Text", value: `Processed: ${msg.value}` };
+        return { tag: "Text", value: `processed: ${msg.value}` };
       case "Number":
         return { tag: "Number", value: msg.value * 2n };
       case "Data":
@@ -272,6 +273,10 @@ class TestbedService implements TestbedHandler {
 
   echoTree(tree: Tree): Tree {
     return tree;
+  }
+
+  echoEcosystemBridge(payload: EcosystemBridgePayload): EcosystemBridgePayload {
+    return payload;
   }
 
   echoBytes(data: Uint8Array): Uint8Array {

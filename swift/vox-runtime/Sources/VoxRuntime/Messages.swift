@@ -180,7 +180,8 @@ public func buildMessageDecoder(peerMessageSchema: [UInt8]) -> MessageDecoder {
                 "no peer Message schema for compatibility decode (closure missing/unparseable)")
         }
     }
-    return { bytes -> Message in try decodeTyped(program, bytes) }
+    let decoder = VoxTypedCodec.compileDecode(program).fn
+    return { bytes -> Message in try decodeVoxTyped(decoder, bytes) }
 }
 
 // MARK: - Handshake self-describing framing
@@ -211,5 +212,6 @@ func decodeHandshakeFrame(_ bytes: [UInt8]) throws -> HandshakeMessage {
     let bundle = try parseSchemaClosure(closure)
     let reg = HandshakeMessageRegistry.with(bundle.schemas)
     let program = try lowerDecode(bundle.root, HandshakeMessageDescriptor, reg)
-    return try decodeTyped(program, value)
+    let decoder = VoxTypedCodec.compileDecode(program).fn
+    return try decodeVoxTyped(decoder, value)
 }

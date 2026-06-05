@@ -2,7 +2,7 @@
 // r[impl rpc.error.scope]
 // r[impl rpc.fallible]
 // r[impl rpc.fallible.vox-error]
-// r[impl rpc.fallible.vox-error.retryable]
+// r[impl rpc.fallible.vox-error.outcome]
 
 /** RPC error discriminants */
 export const RpcErrorCode = {
@@ -14,7 +14,7 @@ export const RpcErrorCode = {
   INVALID_PAYLOAD: 2,
   /** r[impl rpc.fallible.vox-error] Call was cancelled */
   CANCELLED: 3,
-  /** r[impl rpc.fallible.vox-error.retryable] Recovery completed, but the runtime refused to guess */
+  /** r[impl rpc.fallible.vox-error.outcome] Runtime could not determine the call outcome */
   INDETERMINATE: 4,
 } as const;
 

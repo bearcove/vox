@@ -90,7 +90,7 @@ await driver.run();
 
 Vox sessions are bound to one conduit attachment. If that attachment breaks,
 the session ends and in-flight request attempts fail. Vox does not resume the
-session, replay requests, or retry idempotent methods automatically.
+session, replay requests, or automatically issue replacement calls.
 
 Applications that want to recover after attachment loss should establish a new
 session and issue new calls explicitly.
@@ -237,7 +237,7 @@ try {
 
 `INDETERMINATE` means the connection dropped while the call was in flight and
 the session could not confirm whether the server executed it. The runtime does
-not retry the call automatically; callers must decide whether to issue a new
+not replay the call automatically; callers must decide whether to issue a new
 call.
 
 ## 8) Workspace/publishing layout

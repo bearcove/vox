@@ -125,6 +125,9 @@ importers:
       '@types/node':
         specifier: ^25.0.0
         version: 25.9.0
+      vitest:
+        specifier: ^4.0.0
+        version: 4.1.7(@types/node@25.9.0)(vite@6.4.2(@types/node@25.9.0))
 
   typescript/packages/vox-wire:
     dependencies:

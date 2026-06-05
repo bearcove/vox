@@ -44,6 +44,7 @@ export {
   SessionError,
   session,
   type IncomingCall,
+  type ConnectionDebugSnapshot,
   type SessionBuilderOptions,
   type SessionTransportOptions,
 } from "./session.ts";
@@ -64,6 +65,14 @@ export {
   serverLoggingMiddleware,
   type ServerLoggingOptions,
 } from "./server_logging.ts";
+
+export {
+  observerMetricLabels,
+  splitQualifiedMethodName,
+  type ObserverMetricLabelInput,
+  type ObserverMetricLabelKey,
+  type ObserverMetricLabels,
+} from "./observer.ts";
 
 export {
   Extensions,
