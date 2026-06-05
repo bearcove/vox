@@ -1047,6 +1047,10 @@ mod tests {
         );
     }
 
+    // r[verify rpc.fallible]
+    // r[verify rpc.fallible.caller-signature]
+    // r[verify rpc.fallible.vox-error]
+    // r[verify rpc.fallible.vox-error.outcome]
     #[test]
     fn generated_typescript_avoids_parameter_properties_and_types_catch_error() {
         let divide = method_descriptor::<(u64, u64), Result<u64, String>>(
@@ -1082,6 +1086,22 @@ mod tests {
         assert!(
             generated.contains("catch (e: any)"),
             "fallible client methods must type catch binding for strict TypeScript:\n{generated}"
+        );
+        assert!(
+            generated.contains("return { ok: true, value: __voxResult }"),
+            "fallible client methods must wrap successful responses:\n{generated}"
+        );
+        assert!(
+            generated.contains("if (e instanceof RpcError && e.isUserError())"),
+            "fallible client methods must distinguish user errors from protocol/runtime errors:\n{generated}"
+        );
+        assert!(
+            generated.contains("return { ok: false, error: e.userError }"),
+            "fallible client methods must return user errors in the public Result shape:\n{generated}"
+        );
+        assert!(
+            generated.contains("throw e;"),
+            "fallible client methods must rethrow non-user errors:\n{generated}"
         );
     }
 }

@@ -14,6 +14,8 @@ import {
   messageGoodbye,
   messageSchemaClosure,
   parseSchemaClosure,
+  RpcError,
+  RpcErrorCode,
 } from "@bearcove/vox-wire";
 import { Registry, hexToBytes, primitiveId, resolveIds } from "@bearcove/phon-schema";
 import { BareConduit } from "./conduit.ts";
@@ -1302,6 +1304,119 @@ describe("session", () => {
     await expect(call).rejects.toBeInstanceOf(SchemaCompatibilityError);
     expect(connection.isClosed()).toBe(false);
     expect(sent).toHaveLength(1);
+  });
+
+  // r[verify rpc.error.scope]
+  // r[verify rpc.fallible]
+  // r[verify rpc.fallible.vox-error]
+  // r[verify rpc.fallible.vox-error.outcome]
+  it("maps VoxError response variants to RpcError without closing the connection", async () => {
+    const cases = [
+      {
+        wireError: { tag: "User", value: {} },
+        code: RpcErrorCode.USER,
+        user: true,
+      },
+      {
+        wireError: { tag: "UnknownMethod" },
+        code: RpcErrorCode.UNKNOWN_METHOD,
+        user: false,
+      },
+      {
+        wireError: { tag: "InvalidPayload", value: "bad args" },
+        code: RpcErrorCode.INVALID_PAYLOAD,
+        user: false,
+      },
+      {
+        wireError: { tag: "Cancelled" },
+        code: RpcErrorCode.CANCELLED,
+        user: false,
+      },
+      {
+        wireError: { tag: "ConnectionClosed" },
+        code: RpcErrorCode.INDETERMINATE,
+        user: false,
+      },
+      {
+        wireError: { tag: "SessionShutdown" },
+        code: RpcErrorCode.INDETERMINATE,
+        user: false,
+      },
+      {
+        wireError: { tag: "SendFailed" },
+        code: RpcErrorCode.INDETERMINATE,
+        user: false,
+      },
+      {
+        wireError: { tag: "Indeterminate" },
+        code: RpcErrorCode.INDETERMINATE,
+        user: false,
+      },
+    ] satisfies {
+      wireError: { tag: string; value?: unknown };
+      code: RpcErrorCode;
+      user: boolean;
+    }[];
+
+    for (const { wireError, code, user } of cases) {
+      const settings: ConnectionSettings = {
+        parity: { tag: "Odd" },
+        max_concurrent_requests: 64,
+        initial_channel_credit: 16,
+      };
+      const sent: Message[] = [];
+      const fakeSession = {
+        sendMessage: async (message: Message) => {
+          sent.push(message);
+        },
+      };
+      const connection = new ConnectionHandle(
+        fakeSession as never,
+        0n,
+        settings,
+        settings,
+      );
+      connection.getSchemaTracker().recordReceived(
+        ECHO_METHOD.id,
+        "response",
+        hexToBytes(ECHO_METHOD_SCHEMAS.responseSchemaClosure),
+      );
+
+      const call = connection.caller().call({
+        method: "Test.echo",
+        args: { value: 55 },
+        descriptor: ECHO_METHOD,
+        methodSchemas: ECHO_METHOD_SCHEMAS,
+        registry: sessionEchoRegistry,
+        timeoutMs: 1_000,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(sent).toHaveLength(1);
+
+      const payload = encodeTyped(
+        { tag: "Err", value: wireError } as never,
+        ECHO_METHOD_SCHEMAS.responseRoot,
+        sessionEchoRegistry,
+      );
+      connection.resolveResponse(1n, payload);
+
+      let thrown: unknown = null;
+      try {
+        await call;
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(RpcError);
+      const rpcError = thrown as RpcError;
+      expect(rpcError.code).toBe(code);
+      expect(rpcError.isUserError()).toBe(user);
+      expect(rpcError.isProtocolError()).toBe(!user);
+      if (user) {
+        expect(rpcError.userError).toEqual({});
+      }
+      expect(connection.isClosed()).toBe(false);
+    }
   });
 
   it("restarts channel flushing when new work arrives during a pending exit", async () => {
