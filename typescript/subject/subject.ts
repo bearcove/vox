@@ -147,6 +147,8 @@ import type {
   TraceyLspSemanticToken,
   TraceyLspSymbol,
   TraceyLspTextEdit,
+  TraceyOutlineCoverage,
+  TraceyOutlineEntry,
   TraceyPrepareRenameResult,
   TraceyReloadResponse,
   TraceySearchResult,
@@ -2317,6 +2319,184 @@ function sampleTraceyRuleInfo(): TraceyRuleInfo {
   };
 }
 
+function sampleTraceyForwardResponse(): TraceyApiSpecForward {
+  const staleRef: TraceyApiStaleRef = {
+    file: "swift/subject/Sources/subject-swift/Subject.swift",
+    line: 549n,
+    reference_id: traceyRuleId("rpc.channel.direct-args", 1),
+  };
+  const rule: TraceyApiRule = {
+    id: traceyRuleId("rpc.channel.direct-args", 2),
+    raw: "Channels are direct service arguments.",
+    html: "<p>Channels are direct service arguments.</p>",
+    status: "stable",
+    level: "must",
+    source_file: "docs/content/spec/rpc.md",
+    source_line: 42n,
+    source_column: 3n,
+    section: "channel-binding",
+    section_title: "Channel Binding",
+    impl_refs: [
+      {
+        file: "rust/vox-codegen/src/targets/typescript/mod.rs",
+        line: 128n,
+      },
+    ],
+    verify_refs: [
+      {
+        file: "spec/spec-tests/tests/cases/testbed.rs",
+        line: 3662n,
+      },
+    ],
+    depends_refs: [
+      {
+        file: "docs/content/guides/typescript.md",
+        line: 18n,
+      },
+    ],
+    is_stale: true,
+    stale_refs: [staleRef],
+  };
+  return {
+    name: "vox",
+    rules: [rule],
+  };
+}
+
+function sampleTraceyReverseResponse(): TraceyApiReverseData {
+  const files: TraceyApiFileEntry[] = [
+    {
+      path: "rust/vox-codegen/src/targets/typescript/mod.rs",
+      total_units: 4n,
+      covered_units: 3n,
+    },
+    {
+      path: "swift/subject/Sources/subject-swift/Subject.swift",
+      total_units: 3n,
+      covered_units: 2n,
+    },
+  ];
+  return {
+    total_units: 7n,
+    covered_units: 5n,
+    files,
+  };
+}
+
+function sampleTraceyFileRequest(): TraceyFileRequest {
+  return {
+    spec: "vox",
+    impl_name: "rust",
+    path: "rust/vox-codegen/src/targets/typescript/mod.rs",
+  };
+}
+
+function sampleTraceyFileResponse(): TraceyApiFileData {
+  const unit: TraceyApiCodeUnit = {
+    kind: "function",
+    name: "emit_tracey_dashboard_bridge",
+    start_line: 1n,
+    end_line: 1n,
+    rule_refs: ["rpc.channel.direct-args", "encoding.struct"],
+  };
+  return {
+    path: "rust/vox-codegen/src/targets/typescript/mod.rs",
+    content: "fn emit_tracey_dashboard_bridge() {}\n",
+    html: "<pre><span>fn emit_tracey_dashboard_bridge() {}</span></pre>",
+    units: [unit],
+  };
+}
+
+function sampleTraceySpecContentResponse(): TraceyApiSpecData {
+  const direct: TraceyOutlineCoverage = {
+    impl_count: 1n,
+    verify_count: 1n,
+    total: 2n,
+  };
+  const aggregate: TraceyOutlineCoverage = {
+    impl_count: 3n,
+    verify_count: 2n,
+    total: 4n,
+  };
+  const outline: TraceyOutlineEntry = {
+    title: "Channel Binding",
+    slug: "channel-binding",
+    level: 2,
+    coverage: direct,
+    aggregated: aggregate,
+  };
+  const section: TraceySpecSection = {
+    source_file: "docs/content/spec/rpc.md",
+    html: "<h2 id=\"channel-binding\">Channel Binding</h2>",
+    weight: 20,
+  };
+  return {
+    name: "vox",
+    sections: [section],
+    outline: [outline],
+    head_injections: ["<script type=\"module\">mermaid.initialize({});</script>"],
+  };
+}
+
+function sampleTraceySearchResults(): TraceySearchResult[] {
+  return [
+    {
+      kind: "rule",
+      id: "rpc.channel.direct-args",
+      line: 0n,
+      content: "Channels are direct service arguments.",
+      highlighted: "<mark>channel</mark> direct args",
+      score: 12.5,
+    },
+    {
+      kind: "source",
+      id: "rust/vox-codegen/src/targets/typescript/mod.rs",
+      line: 128n,
+      content: "// r[impl rpc.channel.direct-args]",
+      highlighted: null,
+      score: 7.25,
+    },
+  ];
+}
+
+function sampleTraceyUpdateFileRangeRequest(): TraceyUpdateFileRangeRequest {
+  return {
+    path: "docs/content/spec/rpc.md",
+    start: 120n,
+    end: 144n,
+    content: "Channels are direct service arguments.",
+    file_hash: "sha256:tracey-dashboard-ok",
+  };
+}
+
+function sampleTraceyUpdateFileRangeConflictRequest(): TraceyUpdateFileRangeRequest {
+  return {
+    ...sampleTraceyUpdateFileRangeRequest(),
+    file_hash: "stale",
+  };
+}
+
+function sampleTraceyUpdateError(): TraceyUpdateError {
+  return {
+    message: "file changed on disk",
+  };
+}
+
+function sampleTraceyConfigPatternRequest(): TraceyConfigPatternRequest {
+  return {
+    spec: "vox",
+    impl_name: "typescript",
+    pattern: "typescript/**/*.generated.ts",
+  };
+}
+
+function sampleTraceyBadConfigPatternRequest(): TraceyConfigPatternRequest {
+  return {
+    ...sampleTraceyConfigPatternRequest(),
+    pattern: "bad[glob",
+  };
+}
+
 function sampleTraceyValidateRequest(): TraceyValidateRequest {
   return {
     spec: "vox",
@@ -2792,6 +2972,14 @@ function sameTraceyRuleInfo(lhs: TraceyRuleInfo | null, rhs: TraceyRuleInfo | nu
     && lhs.coverage.length === rhs.coverage.length
     && lhs.coverage.every((entry, idx) => sameTraceyRuleCoverage(entry, rhs.coverage[idx] as TraceyRuleCoverage))
     && lhs.version_diff === rhs.version_diff;
+}
+
+function traceyStableString(value: unknown): string {
+  return JSON.stringify(value, (_key, val) => typeof val === "bigint" ? `${val}n` : val) ?? "undefined";
+}
+
+function sameTraceyDashboardValue<T>(lhs: T, rhs: T): boolean {
+  return traceyStableString(lhs) === traceyStableString(rhs);
 }
 
 function sameTraceyValidationErrorCode(
@@ -3634,6 +3822,70 @@ class TestbedService implements TestbedHandler {
       : null;
   }
 
+  traceyForward(spec: string, implName: string): TraceyApiSpecForward | null {
+    if (implName !== "rust") {
+      throw new Error("tracey_forward: implementation mismatch");
+    }
+    return spec === "vox" ? sampleTraceyForwardResponse() : null;
+  }
+
+  traceyReverse(spec: string, implName: string): TraceyApiReverseData | null {
+    if (spec !== "vox" || implName !== "rust") {
+      throw new Error("tracey_reverse: request mismatch");
+    }
+    return sampleTraceyReverseResponse();
+  }
+
+  traceyFile(req: TraceyFileRequest): TraceyApiFileData | null {
+    if (!sameTraceyDashboardValue(req, sampleTraceyFileRequest())) {
+      throw new Error("tracey_file: request mismatch");
+    }
+    return sampleTraceyFileResponse();
+  }
+
+  traceySpecContent(spec: string, implName: string): TraceyApiSpecData | null {
+    if (spec !== "vox" || implName !== "rust") {
+      throw new Error("tracey_spec_content: request mismatch");
+    }
+    return sampleTraceySpecContentResponse();
+  }
+
+  traceySearch(query: string, limit: number): TraceySearchResult[] {
+    if (query !== "channel" || limit !== 10) {
+      throw new Error("tracey_search: request mismatch");
+    }
+    return sampleTraceySearchResults();
+  }
+
+  traceyUpdateFileRange(
+    req: TraceyUpdateFileRangeRequest,
+  ): { ok: true; value: void } | { ok: false; error: TraceyUpdateError } {
+    if (sameTraceyDashboardValue(req, sampleTraceyUpdateFileRangeRequest())) {
+      return { ok: true, value: undefined };
+    }
+    if (sameTraceyDashboardValue(req, sampleTraceyUpdateFileRangeConflictRequest())) {
+      return { ok: false, error: sampleTraceyUpdateError() };
+    }
+    throw new Error("tracey_update_file_range: request mismatch");
+  }
+
+  traceyConfigAddExclude(req: TraceyConfigPatternRequest): { ok: true; value: void } | { ok: false; error: string } {
+    if (sameTraceyDashboardValue(req, sampleTraceyConfigPatternRequest())) {
+      return { ok: true, value: undefined };
+    }
+    if (sameTraceyDashboardValue(req, sampleTraceyBadConfigPatternRequest())) {
+      return { ok: false, error: "invalid pattern" };
+    }
+    throw new Error("tracey_config_add_exclude: request mismatch");
+  }
+
+  traceyConfigAddInclude(req: TraceyConfigPatternRequest): { ok: true; value: void } | { ok: false; error: string } {
+    if (!sameTraceyDashboardValue(req, sampleTraceyConfigPatternRequest())) {
+      throw new Error("tracey_config_add_include: request mismatch");
+    }
+    return { ok: true, value: undefined };
+  }
+
   traceyConfig(): TraceyApiConfig {
     return sampleTraceyApiConfig();
   }
@@ -4452,6 +4704,61 @@ async function runClient() {
         throw new Error("tracey_rule missing: expected null");
       }
       console.error(`tracey_rule OK`);
+      break;
+    }
+    case "tracey_dashboard": {
+      const forward = await client.traceyForward("vox", "rust");
+      if (!sameTraceyDashboardValue(forward, sampleTraceyForwardResponse())) {
+        throw new Error("tracey_forward: payload mismatch");
+      }
+      const missingForward = await client.traceyForward("missing", "rust");
+      if (missingForward !== null) {
+        throw new Error("tracey_forward missing: expected null");
+      }
+
+      const reverse = await client.traceyReverse("vox", "rust");
+      if (!sameTraceyDashboardValue(reverse, sampleTraceyReverseResponse())) {
+        throw new Error("tracey_reverse: payload mismatch");
+      }
+
+      const file = await client.traceyFile(sampleTraceyFileRequest());
+      if (!sameTraceyDashboardValue(file, sampleTraceyFileResponse())) {
+        throw new Error("tracey_file: payload mismatch");
+      }
+
+      const specContent = await client.traceySpecContent("vox", "rust");
+      if (!sameTraceyDashboardValue(specContent, sampleTraceySpecContentResponse())) {
+        throw new Error("tracey_spec_content: payload mismatch");
+      }
+
+      const search = await client.traceySearch("channel", 10);
+      if (!sameTraceyDashboardValue(search, sampleTraceySearchResults())) {
+        throw new Error("tracey_search: payload mismatch");
+      }
+
+      const updateOk = await client.traceyUpdateFileRange(sampleTraceyUpdateFileRangeRequest());
+      if (!updateOk.ok) {
+        throw new Error("tracey_update_file_range ok: expected success");
+      }
+      const updateConflict = await client.traceyUpdateFileRange(sampleTraceyUpdateFileRangeConflictRequest());
+      if (updateConflict.ok || !sameTraceyDashboardValue(updateConflict.error, sampleTraceyUpdateError())) {
+        throw new Error("tracey_update_file_range conflict: expected user error");
+      }
+
+      const excludeOk = await client.traceyConfigAddExclude(sampleTraceyConfigPatternRequest());
+      if (!excludeOk.ok) {
+        throw new Error("tracey_config_add_exclude ok: expected success");
+      }
+      const excludeBad = await client.traceyConfigAddExclude(sampleTraceyBadConfigPatternRequest());
+      if (excludeBad.ok || excludeBad.error !== "invalid pattern") {
+        throw new Error("tracey_config_add_exclude bad pattern: expected user error");
+      }
+      const includeOk = await client.traceyConfigAddInclude(sampleTraceyConfigPatternRequest());
+      if (!includeOk.ok) {
+        throw new Error("tracey_config_add_include: expected success");
+      }
+
+      console.error(`tracey_dashboard OK`);
       break;
     }
     case "tracey_validate": {

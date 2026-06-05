@@ -7,6 +7,10 @@ import Foundation
 import PhonSchema
 import VoxRuntime
 
+extension String: @retroactive Error {}
+
+extension TraceyUpdateError: Error {}
+
 // MARK: - Testbed Service Implementation
 
 /// Implementation of the Testbed service.
@@ -581,6 +585,74 @@ struct TestbedService: TestbedHandler {
         sameTraceyRuleId(ruleId, traceyRuleId("rpc.channel.direct-args", 1))
             ? sampleTraceyRuleInfo()
             : nil
+    }
+
+    func traceyForward(spec: String, implName: String) async throws -> TraceyApiSpecForward? {
+        guard implName == "rust" else {
+            throw SubjectError.invalidResponse
+        }
+        return spec == "vox" ? sampleTraceyForwardResponse() : nil
+    }
+
+    func traceyReverse(spec: String, implName: String) async throws -> TraceyApiReverseData? {
+        guard spec == "vox" && implName == "rust" else {
+            throw SubjectError.invalidResponse
+        }
+        return sampleTraceyReverseResponse()
+    }
+
+    func traceyFile(req: TraceyFileRequest) async throws -> TraceyApiFileData? {
+        guard sameTraceyDashboardValue(req, sampleTraceyFileRequest()) else {
+            throw SubjectError.invalidResponse
+        }
+        return sampleTraceyFileResponse()
+    }
+
+    func traceySpecContent(spec: String, implName: String) async throws -> TraceyApiSpecData? {
+        guard spec == "vox" && implName == "rust" else {
+            throw SubjectError.invalidResponse
+        }
+        return sampleTraceySpecContentResponse()
+    }
+
+    func traceySearch(query: String, limit: UInt32) async throws -> [TraceySearchResult] {
+        guard query == "channel" && limit == 10 else {
+            throw SubjectError.invalidResponse
+        }
+        return sampleTraceySearchResults()
+    }
+
+    func traceyUpdateFileRange(req: TraceyUpdateFileRangeRequest) async throws -> Result<
+        Void, TraceyUpdateError
+    > {
+        if sameTraceyDashboardValue(req, sampleTraceyUpdateFileRangeRequest()) {
+            return .success(())
+        }
+        if sameTraceyDashboardValue(req, sampleTraceyUpdateFileRangeConflictRequest()) {
+            return .failure(sampleTraceyUpdateError())
+        }
+        throw SubjectError.invalidResponse
+    }
+
+    func traceyConfigAddExclude(req: TraceyConfigPatternRequest) async throws -> Result<
+        Void, String
+    > {
+        if sameTraceyDashboardValue(req, sampleTraceyConfigPatternRequest()) {
+            return .success(())
+        }
+        if sameTraceyDashboardValue(req, sampleTraceyBadConfigPatternRequest()) {
+            return .failure("invalid pattern")
+        }
+        throw SubjectError.invalidResponse
+    }
+
+    func traceyConfigAddInclude(req: TraceyConfigPatternRequest) async throws -> Result<
+        Void, String
+    > {
+        guard sameTraceyDashboardValue(req, sampleTraceyConfigPatternRequest()) else {
+            throw SubjectError.invalidResponse
+        }
+        return .success(())
     }
 
     func traceyConfig() async throws -> TraceyApiConfig {
@@ -2576,6 +2648,168 @@ func sampleTraceyRuleInfo() -> TraceyRuleInfo {
     )
 }
 
+func sampleTraceyForwardResponse() -> TraceyApiSpecForward {
+    let staleRef = TraceyApiStaleRef(
+        file: "swift/subject/Sources/subject-swift/Subject.swift",
+        line: 549,
+        referenceId: traceyRuleId("rpc.channel.direct-args", 1)
+    )
+    let rule = TraceyApiRule(
+        id: traceyRuleId("rpc.channel.direct-args", 2),
+        raw: "Channels are direct service arguments.",
+        html: "<p>Channels are direct service arguments.</p>",
+        status: "stable",
+        level: "must",
+        sourceFile: "docs/content/spec/rpc.md",
+        sourceLine: 42,
+        sourceColumn: 3,
+        section: "channel-binding",
+        sectionTitle: "Channel Binding",
+        implRefs: [
+            TraceyCodeRef(file: "rust/vox-codegen/src/targets/typescript/mod.rs", line: 128)
+        ],
+        verifyRefs: [
+            TraceyCodeRef(file: "spec/spec-tests/tests/cases/testbed.rs", line: 3662)
+        ],
+        dependsRefs: [
+            TraceyCodeRef(file: "docs/content/guides/typescript.md", line: 18)
+        ],
+        isStale: true,
+        staleRefs: [staleRef]
+    )
+    return TraceyApiSpecForward(name: "vox", rules: [rule])
+}
+
+func sampleTraceyReverseResponse() -> TraceyApiReverseData {
+    TraceyApiReverseData(
+        totalUnits: 7,
+        coveredUnits: 5,
+        files: [
+            TraceyApiFileEntry(
+                path: "rust/vox-codegen/src/targets/typescript/mod.rs",
+                totalUnits: 4,
+                coveredUnits: 3
+            ),
+            TraceyApiFileEntry(
+                path: "swift/subject/Sources/subject-swift/Subject.swift",
+                totalUnits: 3,
+                coveredUnits: 2
+            ),
+        ]
+    )
+}
+
+func sampleTraceyFileRequest() -> TraceyFileRequest {
+    TraceyFileRequest(
+        spec: "vox",
+        implName: "rust",
+        path: "rust/vox-codegen/src/targets/typescript/mod.rs"
+    )
+}
+
+func sampleTraceyFileResponse() -> TraceyApiFileData {
+    TraceyApiFileData(
+        path: "rust/vox-codegen/src/targets/typescript/mod.rs",
+        content: "fn emit_tracey_dashboard_bridge() {}\n",
+        html: "<pre><span>fn emit_tracey_dashboard_bridge() {}</span></pre>",
+        units: [
+            TraceyApiCodeUnit(
+                kind: "function",
+                name: "emit_tracey_dashboard_bridge",
+                startLine: 1,
+                endLine: 1,
+                ruleRefs: ["rpc.channel.direct-args", "encoding.struct"]
+            )
+        ]
+    )
+}
+
+func sampleTraceySpecContentResponse() -> TraceyApiSpecData {
+    let direct = TraceyOutlineCoverage(implCount: 1, verifyCount: 1, total: 2)
+    let aggregate = TraceyOutlineCoverage(implCount: 3, verifyCount: 2, total: 4)
+    return TraceyApiSpecData(
+        name: "vox",
+        sections: [
+            TraceySpecSection(
+                sourceFile: "docs/content/spec/rpc.md",
+                html: "<h2 id=\"channel-binding\">Channel Binding</h2>",
+                weight: 20
+            )
+        ],
+        outline: [
+            TraceyOutlineEntry(
+                title: "Channel Binding",
+                slug: "channel-binding",
+                level: 2,
+                coverage: direct,
+                aggregated: aggregate
+            )
+        ],
+        headInjections: ["<script type=\"module\">mermaid.initialize({});</script>"]
+    )
+}
+
+func sampleTraceySearchResults() -> [TraceySearchResult] {
+    [
+        TraceySearchResult(
+            kind: "rule",
+            id: "rpc.channel.direct-args",
+            line: 0,
+            content: "Channels are direct service arguments.",
+            highlighted: "<mark>channel</mark> direct args",
+            score: 12.5
+        ),
+        TraceySearchResult(
+            kind: "source",
+            id: "rust/vox-codegen/src/targets/typescript/mod.rs",
+            line: 128,
+            content: "// r[impl rpc.channel.direct-args]",
+            highlighted: nil,
+            score: 7.25
+        ),
+    ]
+}
+
+func sampleTraceyUpdateFileRangeRequest() -> TraceyUpdateFileRangeRequest {
+    TraceyUpdateFileRangeRequest(
+        path: "docs/content/spec/rpc.md",
+        start: 120,
+        end: 144,
+        content: "Channels are direct service arguments.",
+        fileHash: "sha256:tracey-dashboard-ok"
+    )
+}
+
+func sampleTraceyUpdateFileRangeConflictRequest() -> TraceyUpdateFileRangeRequest {
+    TraceyUpdateFileRangeRequest(
+        path: "docs/content/spec/rpc.md",
+        start: 120,
+        end: 144,
+        content: "Channels are direct service arguments.",
+        fileHash: "stale"
+    )
+}
+
+func sampleTraceyUpdateError() -> TraceyUpdateError {
+    TraceyUpdateError(message: "file changed on disk")
+}
+
+func sampleTraceyConfigPatternRequest() -> TraceyConfigPatternRequest {
+    TraceyConfigPatternRequest(
+        spec: "vox",
+        implName: "typescript",
+        pattern: "typescript/**/*.generated.ts"
+    )
+}
+
+func sampleTraceyBadConfigPatternRequest() -> TraceyConfigPatternRequest {
+    TraceyConfigPatternRequest(
+        spec: "vox",
+        implName: "typescript",
+        pattern: "bad[glob"
+    )
+}
+
 func sampleTraceyValidateRequest() -> TraceyValidateRequest {
     TraceyValidateRequest(spec: "vox", implName: "rust")
 }
@@ -3026,6 +3260,10 @@ func sameTraceyRuleInfo(_ lhs: TraceyRuleInfo?, _ rhs: TraceyRuleInfo?) -> Bool 
     default:
         return false
     }
+}
+
+func sameTraceyDashboardValue<T>(_ lhs: T, _ rhs: T) -> Bool {
+    sameReflecting(lhs, rhs)
 }
 
 func sameTraceyValidationErrorCode(
@@ -4314,6 +4552,80 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("tracey_rule OK")
+    case "tracey_dashboard":
+        let forward = try await client.traceyForward(spec: "vox", implName: "rust")
+        guard sameTraceyDashboardValue(forward, Optional(sampleTraceyForwardResponse())) else {
+            log("tracey_forward payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        let missingForward = try await client.traceyForward(spec: "missing", implName: "rust")
+        guard missingForward == nil else {
+            log("tracey_forward missing expected nil")
+            throw SubjectError.invalidResponse
+        }
+
+        let reverse = try await client.traceyReverse(spec: "vox", implName: "rust")
+        guard sameTraceyDashboardValue(reverse, Optional(sampleTraceyReverseResponse())) else {
+            log("tracey_reverse payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+
+        let file = try await client.traceyFile(req: sampleTraceyFileRequest())
+        guard sameTraceyDashboardValue(file, Optional(sampleTraceyFileResponse())) else {
+            log("tracey_file payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+
+        let specContent = try await client.traceySpecContent(spec: "vox", implName: "rust")
+        guard sameTraceyDashboardValue(specContent, Optional(sampleTraceySpecContentResponse())) else {
+            log("tracey_spec_content payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+
+        let search = try await client.traceySearch(query: "channel", limit: 10)
+        guard sameTraceyDashboardValue(search, sampleTraceySearchResults()) else {
+            log("tracey_search payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+
+        let updateOk = try await client.traceyUpdateFileRange(
+            req: sampleTraceyUpdateFileRangeRequest())
+        guard case .success = updateOk else {
+            log("tracey_update_file_range expected success")
+            throw SubjectError.invalidResponse
+        }
+        let updateConflict = try await client.traceyUpdateFileRange(
+            req: sampleTraceyUpdateFileRangeConflictRequest())
+        switch updateConflict {
+        case .failure(let error) where sameTraceyDashboardValue(error, sampleTraceyUpdateError()):
+            break
+        default:
+            log("tracey_update_file_range expected user error")
+            throw SubjectError.invalidResponse
+        }
+
+        let excludeOk = try await client.traceyConfigAddExclude(
+            req: sampleTraceyConfigPatternRequest())
+        guard case .success = excludeOk else {
+            log("tracey_config_add_exclude expected success")
+            throw SubjectError.invalidResponse
+        }
+        let excludeBad = try await client.traceyConfigAddExclude(
+            req: sampleTraceyBadConfigPatternRequest())
+        switch excludeBad {
+        case .failure(let error) where error == "invalid pattern":
+            break
+        default:
+            log("tracey_config_add_exclude expected user error")
+            throw SubjectError.invalidResponse
+        }
+        let includeOk = try await client.traceyConfigAddInclude(
+            req: sampleTraceyConfigPatternRequest())
+        guard case .success = includeOk else {
+            log("tracey_config_add_include expected success")
+            throw SubjectError.invalidResponse
+        }
+        log("tracey_dashboard OK")
     case "tracey_validate":
         let result = try await client.traceyValidate(req: sampleTraceyValidateRequest())
         guard sameTraceyValidationResult(result, sampleTraceyValidationResult()) else {

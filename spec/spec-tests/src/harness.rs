@@ -3129,9 +3129,12 @@ impl Testbed for TestbedService {
         spec: String,
         impl_name: String,
     ) -> Option<TraceyApiSpecForward> {
-        assert_eq!(spec, "vox");
         assert_eq!(impl_name, "rust");
-        Some(sample_tracey_forward_response())
+        if spec == "vox" {
+            Some(sample_tracey_forward_response())
+        } else {
+            None
+        }
     }
 
     async fn tracey_reverse(
