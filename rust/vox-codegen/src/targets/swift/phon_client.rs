@@ -179,6 +179,7 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
         // unwrap into the method's return type: a fallible method (`Result<T, E>`) maps
         // the wire `User(E)` arm to the user `.failure(e)` and throws other VoxErrors; an
         // infallible method returns `T` (or `Void`) and throws on any error.
+        // r[impl rpc.fallible.caller-signature]
         // r[impl schema.errors.call-level.caller]
         // r[impl schema.errors.same-peer-terminal]
         let is_fallible = matches!(

@@ -338,6 +338,11 @@ mod tests {
     // r[verify rpc.service]
     // r[verify rpc.service.methods]
     // r[verify rpc.handler]
+    // r[verify rpc.fallible]
+    // r[verify rpc.fallible.caller-signature]
+    // r[verify rpc.fallible.vox-error]
+    // r[verify rpc.fallible.vox-error.outcome]
+    // r[verify rpc.unknown-method]
     fn generated_swift_emits_rpc_caller_handler_and_dispatch_shapes() {
         let echo = method_descriptor::<(String,), String>(
             "TestSvc",
@@ -417,6 +422,12 @@ mod tests {
                 && generated.contains("case .failure(let e): voxResult = .failure(.user(e))"),
             "generated Swift dispatcher must route decoded args to the handler and reply through TaskMessage:\n{generated}"
         );
+        assert!(
+            generated.contains(
+                "default: taskTx(.response(requestId: requestId, payload: encodeVoxError(.unknownMethod), methodId: methodId))"
+            ),
+            "generated Swift dispatcher must return a call-level UnknownMethod response for unrecognized method ids:\n{generated}"
+        );
     }
 
     #[test]
@@ -476,6 +487,7 @@ mod tests {
 
     #[test]
     // r[verify schema.exchange.channels]
+    // r[verify rpc.channel.discovery]
     fn generated_swift_emits_channel_schemas() {
         let subscribe = method_descriptor::<(Tx<NestedInner>, Rx<NestedInner>), ()>(
             "StreamSvc",
@@ -525,6 +537,22 @@ mod tests {
         assert!(
             generated.contains("public struct NestedInner"),
             "named channel element types must be emitted as normal generated types:\n{generated}"
+        );
+        assert!(
+            generated.contains("var channelIds: [UInt64] = []")
+                && generated.contains("let outputWireIndex = channelIds.count")
+                && generated.contains("channelIds.append(await connection.bindClientTxArg(output")
+                && generated.contains("let inputWireIndex = channelIds.count")
+                && generated.contains("channelIds.append(await connection.bindClientRxArg(input")
+                && generated.contains("channels: channelIds,"),
+            "generated Swift caller must discover direct channel args left-to-right and send that channel id list:\n{generated}"
+        );
+        assert!(
+            generated.contains("let outputWireIndex = channelWireIndex(args.0)")
+                && generated.contains("channels[outputWireIndex]")
+                && generated.contains("let inputWireIndex = channelWireIndex(args.1)")
+                && generated.contains("channels[inputWireIndex]"),
+            "generated Swift dispatcher must resolve decoded channel wire indexes through Request.channels:\n{generated}"
         );
     }
 

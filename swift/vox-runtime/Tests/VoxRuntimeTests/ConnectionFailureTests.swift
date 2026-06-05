@@ -371,6 +371,33 @@ private struct ImmediateResponseDispatcher: ServiceDispatcher {
     }
 }
 
+private struct PipeliningDispatcher: ServiceDispatcher {
+    func preregister(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        channels _: [UInt64],
+        registry _: ChannelRegistry
+    ) async {}
+
+    func dispatch(
+        methodId: UInt64,
+        payload _: [UInt8],
+        requestId: UInt64,
+        channels _: [UInt64],
+        registry _: ChannelRegistry,
+        schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
+        taskTx: @escaping @Sendable (TaskMessage) -> Void
+    ) async {
+        if methodId == 1 {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            taskTx(.response(requestId: requestId, payload: [0x01]))
+        } else {
+            taskTx(.response(requestId: requestId, payload: [0x02]))
+        }
+    }
+}
+
 private func metadataString(_ metadata: Metadata, key: String) -> String? {
     metadata.metaStr(key)
 }
@@ -1022,6 +1049,7 @@ struct ConnectionFailureTests {
     }
 
     // r[verify rpc.cancel]
+    // r[verify rpc.error.scope]
     @Test func lateResponseAfterTimeoutIsIgnoredAndConnectionStaysUsable() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
@@ -1079,6 +1107,82 @@ struct ConnectionFailureTests {
 
         try? await transport.close()
         _ = try? await driverTask.value
+    }
+
+    // r[verify rpc.pipelining]
+    @Test func slowIncomingRequestDoesNotBlockLaterRequest() async throws {
+        let transport = ScriptedTransport(
+            initialHandshake: .hello(
+                Hello(
+                    parity: .odd,
+                    connectionSettings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 64,
+                        initialChannelCredit: 16
+                    ),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
+                    metadata: .null
+                ))
+        )
+        let (rootConnection, driver, sessionHandle, _) = try await establishAcceptor(
+            conduit: transport,
+            dispatcher: PipeliningDispatcher()
+        )
+        #expect(rootConnection.connectionId == 0)
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            defer {
+                _ = rootConnection
+                _ = sessionHandle
+            }
+            await transport.enqueueMessage(
+                .request(
+                    connId: 0,
+                    requestId: 77,
+                    methodId: 1,
+                    metadata: .null,
+                    payload: []
+                )
+            )
+
+            await transport.enqueueMessage(
+                .request(
+                    connId: 0,
+                    requestId: 79,
+                    methodId: 2,
+                    metadata: .null,
+                    payload: []
+                )
+            )
+
+            let second = await awaitResponsePayload(
+                transport,
+                connectionId: 0,
+                requestId: 79,
+                timeoutMs: 150
+            )
+            #expect(second == [0x02])
+            #expect(
+                await awaitResponsePayload(
+                    transport,
+                    connectionId: 0,
+                    requestId: 77,
+                    timeoutMs: 100
+                ) == nil
+            )
+
+            let first = await awaitResponsePayload(
+                transport,
+                connectionId: 0,
+                requestId: 77
+            )
+            #expect(first == [0x01])
+        }
     }
 
     @Test func duplicateResponseAfterSuccessIsIgnored() async throws {
@@ -1685,6 +1789,7 @@ struct ConnectionFailureTests {
 
     // r[verify rpc.virtual-connection.accept]
     // r[verify connection.virtual]
+    // r[verify session.symmetry]
     @Test func inboundOpenConnectionAcceptsAndDispatchesOnVirtualConnection() async throws {
         let transport = ScriptedTransport()
         let (rootConnection, driver, _, _) = try await establishInitiator(

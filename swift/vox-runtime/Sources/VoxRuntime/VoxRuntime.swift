@@ -148,6 +148,7 @@ extension VoxConnection {
 /// to `ServiceDispatcher.encodeVoxError` to be mapped onto the wire `Err` arm.
 ///
 /// r[impl rpc.fallible.vox-error] - call-level errors.
+/// r[impl rpc.fallible.vox-error.outcome]
 /// r[impl rpc.error.scope] - Call errors don't terminate connection.
 public enum VoxRuntimeError: Error {
     case unknownMethod
