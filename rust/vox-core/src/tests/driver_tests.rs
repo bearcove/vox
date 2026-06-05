@@ -505,6 +505,38 @@ impl vox_types::Handler<crate::DriverReplySink> for PipeliningHandler {
     }
 }
 
+#[derive(Clone, Copy)]
+struct ScopedErrorHandler;
+
+impl vox_types::Handler<crate::DriverReplySink> for ScopedErrorHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let method_id = call.get().method_id;
+        if method_id == MethodId(1) {
+            reply
+                .send_error::<std::convert::Infallible>(VoxError::InvalidPayload(
+                    "scoped failure".into(),
+                ))
+                .await;
+            return;
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let result = 2_u32;
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&result),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
 // r[verify rpc.pipelining]
 #[tokio::test]
 async fn slow_incoming_request_does_not_block_later_request() {
@@ -584,6 +616,114 @@ async fn slow_incoming_request_does_not_block_later_request() {
     };
     let first_value: u32 = vox_phon::from_slice(first_ret_bytes).expect("deserialize response");
     assert_eq!(first_value, 1);
+}
+
+// r[verify rpc.error.scope]
+#[tokio::test]
+async fn call_error_does_not_close_connection_or_cancel_other_requests() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(ScopedErrorHandler)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+
+    let _server_caller_guard = server_task.await.expect("server setup failed");
+
+    let error_caller = caller.caller.clone();
+    let error_call = tokio::spawn(async move {
+        error_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&1_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    let ok_caller = caller.caller.clone();
+    let ok_call = tokio::spawn(async move {
+        ok_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(2),
+                args: Payload::outgoing(&2_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    let error_response = tokio::time::timeout(Duration::from_millis(250), error_call)
+        .await
+        .expect("error response should arrive")
+        .expect("error call task join")
+        .expect("error call should receive a response");
+    let error_response = error_response.get();
+    let error_ret_bytes = match &error_response.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in error response"),
+    };
+    let error: Result<u32, VoxError<std::convert::Infallible>> =
+        vox_phon::from_slice(error_ret_bytes).expect("deserialize error response");
+    assert!(
+        matches!(error, Err(VoxError::InvalidPayload(ref message)) if message == "scoped failure"),
+        "expected scoped InvalidPayload response, got {error:?}"
+    );
+    assert!(
+        !ok_call.is_finished(),
+        "the concurrent successful call should remain in flight after the error response"
+    );
+    assert!(
+        caller.caller.is_connected(),
+        "call-scoped errors must not close the connection"
+    );
+
+    let ok_response = tokio::time::timeout(Duration::from_millis(500), ok_call)
+        .await
+        .expect("concurrent ok call should finish")
+        .expect("ok call task join")
+        .expect("ok call should succeed");
+    let ok_response = ok_response.get();
+    let ok_ret_bytes = match &ok_response.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in ok response"),
+    };
+    let ok_value: u32 = vox_phon::from_slice(ok_ret_bytes).expect("deserialize ok response");
+    assert_eq!(ok_value, 2);
+
+    let followup = caller
+        .caller
+        .call(RequestCall {
+            channels: Vec::new(),
+            method_id: MethodId(2),
+            args: Payload::outgoing(&3_u32),
+            schemas: Default::default(),
+            metadata: Default::default(),
+        })
+        .await
+        .expect("connection should remain usable after scoped call error");
+    let followup = followup.get();
+    let followup_ret_bytes = match &followup.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in followup response"),
+    };
+    let followup_value: u32 =
+        vox_phon::from_slice(followup_ret_bytes).expect("deserialize followup response");
+    assert_eq!(followup_value, 2);
 }
 
 #[tokio::test]
