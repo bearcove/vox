@@ -388,6 +388,25 @@ private func awaitConnectionOpenId(
     return nil
 }
 
+private func awaitConnectionAccept(
+    _ transport: ScriptedTransport,
+    connectionId: UInt64,
+    timeoutMs: UInt64 = 1_000
+) async -> ConnectionAccept? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent where message.connectionId == connectionId {
+            if case .connectionAccept(let accept) = message.payload {
+                return accept
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
 private func awaitRequest(
     _ transport: ScriptedTransport,
     connectionId: UInt64,
@@ -402,6 +421,29 @@ private func awaitRequest(
                 case .call = request.body
             {
                 return request
+            }
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return nil
+}
+
+private func awaitResponsePayload(
+    _ transport: ScriptedTransport,
+    connectionId: UInt64,
+    requestId: UInt64,
+    timeoutMs: UInt64 = 1_000
+) async -> [UInt8]? {
+    let start = ContinuousClock.now
+    let timeout = Duration.milliseconds(Int64(timeoutMs))
+    while ContinuousClock.now - start < timeout {
+        let sent = await transport.sent()
+        for message in sent where message.connectionId == connectionId {
+            if case .requestMessage(let request) = message.payload,
+                request.id == requestId,
+                case .response(let response) = request.body
+            {
+                return [UInt8](response.ret)
             }
         }
         try? await Task.sleep(nanoseconds: 5_000_000)
@@ -1133,6 +1175,61 @@ struct ConnectionFailureTests {
             )
             let response = try await awaitTaskResult(callTask)
             #expect(response == [0x42])
+        }
+    }
+
+    // r[verify rpc.virtual-connection.accept]
+    // r[verify connection.virtual]
+    @Test func inboundOpenConnectionAcceptsAndDispatchesOnVirtualConnection() async throws {
+        let transport = ScriptedTransport()
+        let (_, driver, _, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher(),
+            connectionAcceptor: DefaultConnectionAcceptor(dispatcher: ImmediateResponseDispatcher())
+        )
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let connId: UInt64 = 2
+            await transport.enqueueMessage(
+                messageConnect(
+                    connectionId: connId,
+                    settings: ConnectionSettings(
+                        parity: .odd,
+                        maxConcurrentRequests: 8,
+                        initialChannelCredit: 16
+                    ),
+                    metadata: meta([("vox-service", "Noop")])
+                )
+            )
+
+            guard let accept = await awaitConnectionAccept(transport, connectionId: connId) else {
+                Issue.record("expected ConnectionAccept")
+                return
+            }
+            #expect(accept.connectionSettings.parity == .even)
+            #expect(accept.connectionSettings.initialChannelCredit == 16)
+
+            await transport.enqueueMessage(
+                .request(
+                    connId: connId,
+                    requestId: 77,
+                    methodId: 42,
+                    metadata: .null,
+                    payload: [0x07]
+                )
+            )
+
+            let response = await awaitResponsePayload(
+                transport,
+                connectionId: connId,
+                requestId: 77
+            )
+            #expect(response == [0x01])
         }
     }
 
