@@ -49,6 +49,38 @@ async fn wait_for_outstanding_requests(caller: &crate::Caller, expected: usize) 
     panic!("timed out waiting for {expected} outstanding requests");
 }
 
+async fn send_raw_root_call(
+    sender: &crate::session::ConnectionSender,
+    request_id: RequestId,
+    value: u32,
+) {
+    sender
+        .send(ConnectionMessage::Request(RequestMessage {
+            id: request_id,
+            body: RequestBody::Call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            }),
+        }))
+        .await
+        .expect("send raw call");
+}
+
+async fn expect_protocol_close(caller: &crate::Caller, label: &str) {
+    tokio::time::timeout(Duration::from_millis(500), caller.closed())
+        .await
+        .unwrap_or_else(|_| panic!("{label} connection should close after protocol violation"));
+    let snapshot = caller.debug_snapshot();
+    assert_eq!(
+        snapshot.connections[0].close_reason,
+        Some(vox_types::ConnectionCloseReason::Protocol),
+        "{label} close reason"
+    );
+}
+
 // r[verify rpc.caller.liveness.refcounted]
 #[tokio::test]
 async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
@@ -375,6 +407,13 @@ fn message_plan_from_identical_schemas_round_trips() {
 }
 
 /// Minimal test: establish via real phon handshake, send one call, verify handler runs.
+// r[verify session]
+// r[verify session.role]
+// r[verify session.connection-settings]
+// r[verify session.message]
+// r[verify session.message.connection-id]
+// r[verify connection]
+// r[verify connection.root]
 #[tokio::test]
 async fn call_through_phon_handshake_reaches_handler() {
     let (client_link, server_link) = memory_link_pair(64);
@@ -395,6 +434,10 @@ async fn call_through_phon_handshake_reaches_handler() {
 
     let _server_caller = server_result.expect("server establish failed");
     let caller = client_result.expect("client establish failed");
+    assert_eq!(
+        caller.caller.debug_snapshot().connections[0].connection_id,
+        vox_types::ConnectionId::ROOT
+    );
 
     let response = tokio::time::timeout(
         Duration::from_secs(1),
@@ -671,6 +714,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
 // r[verify rpc.flow-control.max-concurrent-requests.outbound]
 // r[verify rpc.flow-control.max-concurrent-requests.counting]
 // r[verify rpc.flow-control.max-concurrent-requests.session-failure]
+// r[verify rpc.flow-control]
 #[tokio::test]
 async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
     let (client_conduit, server_conduit) = message_conduit_pair();
@@ -773,6 +817,7 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
 
 // r[verify rpc.flow-control.max-concurrent-requests]
 // r[verify rpc.flow-control.max-concurrent-requests.inbound]
+// r[verify rpc.flow-control]
 #[tokio::test]
 async fn inbound_max_concurrent_requests_violation_closes_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
@@ -846,6 +891,78 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
     );
 
     drop(server_guard);
+}
+
+// r[verify rpc.request.id-allocation]
+// r[verify session.protocol-error]
+#[tokio::test]
+async fn wrong_parity_request_id_closes_with_protocol_error() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(EchoHandler)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let client_guard = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let server_guard = server_task.await.expect("server setup failed");
+    let client_sender = client_guard.caller.driver().connection_sender().clone();
+
+    send_raw_root_call(&client_sender, RequestId(2), 1).await;
+
+    expect_protocol_close(&server_guard.caller, "server").await;
+    expect_protocol_close(&client_guard.caller, "client").await;
+
+    drop(server_guard);
+    drop(client_guard);
+}
+
+// r[verify rpc.request.id-allocation]
+// r[verify session.protocol-error]
+#[tokio::test]
+async fn duplicate_inflight_request_id_closes_with_protocol_error() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let was_cancelled = Arc::new(AtomicBool::new(false));
+    let server_task = moire::task::spawn(
+        {
+            let was_cancelled = Arc::clone(&was_cancelled);
+            async move {
+                acceptor_conduit(server_conduit, test_acceptor_handshake())
+                    .on_connection(BlockingHandler { was_cancelled })
+                    .establish::<NoopClient>()
+                    .await
+                    .expect("server handshake failed")
+            }
+        }
+        .named("server_setup"),
+    );
+
+    let client_guard = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let server_guard = server_task.await.expect("server setup failed");
+    let client_sender = client_guard.caller.driver().connection_sender().clone();
+
+    send_raw_root_call(&client_sender, RequestId(1), 1).await;
+    wait_for_outstanding_requests(&server_guard.caller, 1).await;
+    send_raw_root_call(&client_sender, RequestId(1), 2).await;
+
+    expect_protocol_close(&server_guard.caller, "server").await;
+    expect_protocol_close(&client_guard.caller, "client").await;
+
+    drop(server_guard);
+    drop(client_guard);
 }
 
 // r[verify session.keepalive]
@@ -1129,6 +1246,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
     );
 }
 
+// r[verify session.symmetry]
 #[tokio::test]
 async fn acceptor_builder_customization_supports_opening_connections() {
     let (client_conduit, server_conduit) = message_conduit_pair();
@@ -1207,7 +1325,101 @@ async fn acceptor_builder_customization_supports_opening_connections() {
     );
 }
 
+// r[verify connection.parity]
+// r[verify session.parity]
+// r[verify session.connection-settings.open]
+#[tokio::test]
+async fn virtual_connection_request_ids_use_connection_parity() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    let was_cancelled = Arc::new(AtomicBool::new(false));
+    let server_task = moire::task::spawn(
+        {
+            let was_cancelled = Arc::clone(&was_cancelled);
+            async move {
+                acceptor_conduit(server_conduit, test_acceptor_handshake())
+                    .on_connection(crate::session::acceptor_fn(
+                        move |_request: &ConnectionRequest, connection: PendingConnection| {
+                            connection.handle_with(BlockingHandler {
+                                was_cancelled: Arc::clone(&was_cancelled),
+                            });
+                            Ok(())
+                        },
+                    ))
+                    .establish::<NoopClient>()
+                    .await
+                    .expect("server handshake failed")
+            }
+        }
+        .named("server_setup"),
+    );
+
+    let root_caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let session_handle = root_caller.session.clone().unwrap();
+
+    let _server_caller_guard = server_task.await.expect("server setup failed");
+
+    let vconn_handle = session_handle
+        .open_connection(
+            ConnectionSettings {
+                parity: Parity::Even,
+                max_concurrent_requests: 64,
+                initial_channel_credit: 16,
+            },
+            vox_types::metadata().str("vox-service", "Echo").build(),
+        )
+        .await
+        .expect("open virtual connection");
+    let vconn_id = vconn_handle.connection_id();
+    assert!(
+        vconn_id.has_parity(Parity::Odd),
+        "session parity should allocate the virtual connection id"
+    );
+
+    let mut vconn_driver = Driver::new(vconn_handle, ());
+    let vconn_caller = crate::Caller::new(vconn_driver.caller());
+    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+
+    let call_caller = vconn_caller.clone();
+    let call_task = tokio::spawn(async move {
+        call_caller
+            .call(RequestCall {
+                channels: Vec::new(),
+                method_id: MethodId(1),
+                args: Payload::outgoing(&7_u32),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await
+    });
+
+    wait_for_outstanding_requests(&vconn_caller, 1).await;
+    let snapshot = vconn_caller.debug_snapshot();
+    assert_eq!(snapshot.connections[0].connection_id, vconn_id);
+    assert_eq!(snapshot.connections[0].requests[0].request_id, RequestId(2));
+
+    session_handle
+        .close_connection(vconn_id, Default::default())
+        .await
+        .expect("close virtual connection");
+    let result = tokio::time::timeout(Duration::from_millis(500), call_task)
+        .await
+        .expect("call should finish after virtual connection closes")
+        .expect("call task should join");
+    assert!(
+        matches!(
+            result,
+            Err(VoxError::ConnectionClosed) | Err(VoxError::SessionShutdown)
+        ),
+        "expected virtual call to fail after close, got {result:?}"
+    );
+}
+
 // r[verify connection.close]
+// r[verify connection.root]
 #[tokio::test]
 async fn close_root_connection_is_rejected() {
     let (client_conduit, server_conduit) = message_conduit_pair();

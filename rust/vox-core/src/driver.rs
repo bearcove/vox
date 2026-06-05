@@ -18,7 +18,7 @@ use vox_types::{
     ChannelCreditReplenisherHandle, ChannelEventContext, ChannelId, ChannelItem,
     ChannelLivenessHandle, ChannelMailboxReceiver, ChannelMailboxSender, ChannelMessage,
     ChannelSink, ConnectionId, CreditSink, Handler, IdAllocator, IncomingChannelMessage, MaybeSend,
-    MaybeSendFuture, MaybeSync, Payload, ReplySink, RequestBody, RequestCall, RequestId,
+    MaybeSendFuture, MaybeSync, Parity, Payload, ReplySink, RequestBody, RequestCall, RequestId,
     RequestMessage, RequestResponse, SelfRef, TrySendError, TxError, VoxError, channel_mailbox,
 };
 use vox_types::{
@@ -374,6 +374,7 @@ struct DriverShared {
     outbound_request_limit: Semaphore,
     // r[impl rpc.flow-control.max-concurrent-requests.inbound]
     local_max_concurrent_requests: u32,
+    peer_request_parity: Parity,
     observer: Option<VoxObserverHandle>,
 }
 
@@ -778,7 +779,7 @@ struct CallerDropGuard {
 
 impl Drop for CallerDropGuard {
     fn drop(&mut self) {
-        let _ = self.control_tx.send(self.request);
+        let _ = self.control_tx.send(self.request.clone());
     }
 }
 
@@ -2109,6 +2110,20 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         }
     }
 
+    fn protocol_violation(&self, description: String) {
+        tracing::warn!(
+            conn_id = ?self.sender.connection_id(),
+            %description,
+            "closing connection after protocol violation"
+        );
+        if let Some(control_tx) = &self.drop_control_seed {
+            let _ = control_tx.send(DropControlRequest::ProtocolClose {
+                conn_id: self.sender.connection_id(),
+                description,
+            });
+        }
+    }
+
     pub fn new(handle: ConnectionHandle, handler: H) -> Self {
         let conn_id = handle.connection_id();
         let ConnectionHandle {
@@ -2154,6 +2169,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     peer_settings.max_concurrent_requests as usize,
                 ),
                 local_max_concurrent_requests: local_settings.max_concurrent_requests,
+                peer_request_parity: peer_settings.parity,
                 observer,
             }),
             in_flight_handlers: BTreeMap::new(),
@@ -2184,7 +2200,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             } else {
                 let arc = Arc::new(CallerDropGuard {
                     control_tx: seed.clone(),
-                    request: self.drop_control_request,
+                    request: self.drop_control_request.clone(),
                 });
                 *guard = Some(Arc::downgrade(&arc));
                 Some(arc)
@@ -2542,20 +2558,27 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         let is_cancel = matches!(&msg_ref.body, RequestBody::Cancel(_));
 
         if is_call {
+            if !req_id.has_parity(self.shared.peer_request_parity) {
+                // r[impl rpc.request.id-allocation]
+                self.protocol_violation(format!(
+                    "request id {:?} does not match peer parity {:?}",
+                    req_id, self.shared.peer_request_parity
+                ));
+                return;
+            }
+            if self.in_flight_handlers.contains_key(&req_id) {
+                // r[impl rpc.request.id-allocation]
+                self.protocol_violation(format!("duplicate live request id {:?}", req_id));
+                return;
+            }
             if self.in_flight_handlers.len() >= self.shared.local_max_concurrent_requests as usize {
                 // r[impl rpc.flow-control.max-concurrent-requests.inbound]
-                tracing::warn!(
-                    conn_id = ?self.sender.connection_id(),
-                    ?req_id,
-                    limit = self.shared.local_max_concurrent_requests,
-                    in_flight = self.in_flight_handlers.len(),
-                    "closing connection after max_concurrent_requests protocol violation"
-                );
-                if let Some(control_tx) = &self.drop_control_seed {
-                    let _ = control_tx.send(DropControlRequest::ProtocolClose(
-                        self.sender.connection_id(),
-                    ));
-                }
+                self.protocol_violation(format!(
+                    "max_concurrent_requests exceeded for request id {:?} (limit {}, in-flight {})",
+                    req_id,
+                    self.shared.local_max_concurrent_requests,
+                    self.in_flight_handlers.len()
+                ));
                 return;
             }
 

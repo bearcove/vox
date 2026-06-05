@@ -282,11 +282,14 @@ struct CloseRequest {
     result_tx: moire::sync::oneshot::Sender<Result<(), SessionError>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) enum DropControlRequest {
     Shutdown,
     Close(ConnectionId),
-    ProtocolClose(ConnectionId),
+    ProtocolClose {
+        conn_id: ConnectionId,
+        description: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1467,7 +1470,11 @@ impl Session {
                     self.maybe_request_shutdown_after_root_closed();
                 }
             }
-            // ProtocolError: not valid post-handshake, drop.
+            MessagePayload::ProtocolError(_) => {
+                warn!(%conn_id, "received protocol error from peer");
+                self.close_all_connections(ConnectionCloseReason::Protocol);
+                let _ = send_drop_control(&self.control_tx, DropControlRequest::Shutdown);
+            }
         })
     }
 
@@ -1898,33 +1905,26 @@ impl Session {
 
                 !self.root_closed_internal || self.has_virtual_connections()
             }
-            DropControlRequest::ProtocolClose(conn_id) => {
-                trace!(%conn_id, "protocol close requested");
-                if conn_id.is_root() {
-                    self.close_all_connections(ConnectionCloseReason::Protocol);
-                    return false;
-                }
-
-                if self
-                    .remove_connection_with_reason(&conn_id, ConnectionCloseReason::Protocol)
-                    .is_some()
-                {
-                    let _ = self
-                        .sess_core
-                        .send(
-                            Message {
-                                connection_id: conn_id,
-                                payload: MessagePayload::ConnectionClose(ConnectionClose {
-                                    metadata: vox_types::Metadata::default(),
-                                }),
-                            },
-                            None,
-                            None,
-                        )
-                        .await;
-                }
-
-                !self.root_closed_internal || self.has_virtual_connections()
+            DropControlRequest::ProtocolClose {
+                conn_id,
+                description,
+            } => {
+                trace!(%conn_id, %description, "protocol close requested");
+                let _ = self
+                    .sess_core
+                    .send(
+                        Message {
+                            connection_id: ConnectionId::ROOT,
+                            payload: MessagePayload::ProtocolError(vox_types::ProtocolError {
+                                description: &description,
+                            }),
+                        },
+                        None,
+                        None,
+                    )
+                    .await;
+                self.close_all_connections(ConnectionCloseReason::Protocol);
+                false
             }
         }
     }

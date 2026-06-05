@@ -14,6 +14,10 @@ use crate::{Driver, NoopClient};
 // r[verify rpc.virtual-connection.open]
 // r[verify rpc.virtual-connection.accept]
 // r[verify connection.open]
+// r[verify connection.virtual]
+// r[verify session.connection-settings.open]
+// r[verify session.message]
+// r[verify session.message.connection-id]
 #[tokio::test]
 async fn open_virtual_connection_and_call() {
     let _ = tracing_subscriber::fmt::try_init();
@@ -50,6 +54,10 @@ async fn open_virtual_connection_and_call() {
         )
         .await
         .expect("open virtual connection");
+    assert!(
+        !vconn_handle.connection_id().is_root(),
+        "virtual connection id should not be root"
+    );
 
     // Set up a driver on the client side for the virtual connection.
     let mut vconn_driver = Driver::new(vconn_handle, ());
