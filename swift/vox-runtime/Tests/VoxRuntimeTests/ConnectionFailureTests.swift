@@ -264,8 +264,11 @@ private struct NoopDispatcher: ServiceDispatcher {
 }
 
 @Test
+// r[verify session]
 // r[verify connection.root]
 // r[verify rpc.session-setup]
+// r[verify session.peer]
+// r[verify session.role]
 // r[verify schema.interaction.metadata]
 func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
@@ -625,6 +628,10 @@ struct ConnectionFailureTests {
     // r[verify session.handshake.protocol-schema]
     // r[verify session.handshake.protocol-schema.session-scoped]
     // r[verify session.handshake.unversioned]
+    // r[verify session.connection-settings]
+    // r[verify session.connection-settings.hello]
+    // r[verify session.parity]
+    // r[verify rpc.flow-control.max-concurrent-requests.default]
     @Test func initiatorHelloCarriesMessagePayloadSchema() async throws {
         let transport = ScriptedTransport()
         _ = try await establishInitiator(
@@ -641,6 +648,10 @@ struct ConnectionFailureTests {
             Issue.record("expected first sent message to be hello")
             return
         }
+        #expect(hello.parity == .odd)
+        #expect(hello.connectionSettings.parity == .odd)
+        #expect(hello.connectionSettings.maxConcurrentRequests == 64)
+        #expect(hello.connectionSettings.initialChannelCredit == 16)
         #expect(Array(hello.messagePayloadSchema) == MessageSchemaClosure)
     }
 
@@ -745,6 +756,82 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify rpc.flow-control]
+    // r[verify rpc.flow-control.max-concurrent-requests]
+    // r[verify rpc.flow-control.max-concurrent-requests.outbound]
+    // r[verify rpc.flow-control.max-concurrent-requests.counting]
+    // r[verify session.parity]
+    // r[verify rpc.request.id-allocation]
+    @Test func outboundMaxConcurrentRequestsWaitsForPeerLimit() async throws {
+        let transport = ScriptedTransport(
+            initialHandshake: .helloYourself(
+                HelloYourself(
+                    connectionSettings: ConnectionSettings(
+                        parity: .even,
+                        maxConcurrentRequests: 1,
+                        initialChannelCredit: 16
+                    ),
+                    messagePayloadSchema: Data(MessageSchemaClosure),
+                    metadata: .null
+                ))
+        )
+        let (handle, driver, _, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        let driverTask = Task {
+            try await driver.run()
+        }
+
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            let firstCall = Task {
+                try await handle.callRaw(methodId: 1, payload: [1], timeout: 1.0)
+            }
+            guard let firstRequestId = await awaitRequestId(transport, index: 0) else {
+                Issue.record("expected first request to be sent")
+                return
+            }
+            #expect(firstRequestId == 1)
+
+            let secondCall = Task {
+                try await handle.callRaw(methodId: 2, payload: [2], timeout: 1.0)
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            #expect(await transport.sentRequestIds() == [1])
+
+            await transport.enqueueMessage(
+                .response(
+                    connId: 0,
+                    requestId: firstRequestId,
+                    metadata: .null,
+                    payload: [0x11]
+                )
+            )
+            let firstResponse = try await awaitTaskResult(firstCall)
+            #expect(firstResponse == [0x11])
+
+            guard let secondRequestId = await awaitRequestId(transport, index: 1) else {
+                Issue.record("expected second request after first response releases capacity")
+                return
+            }
+            #expect(secondRequestId == 3)
+
+            await transport.enqueueMessage(
+                .response(
+                    connId: 0,
+                    requestId: secondRequestId,
+                    metadata: .null,
+                    payload: [0x22]
+                )
+            )
+            let secondResponse = try await awaitTaskResult(secondCall)
+            #expect(secondResponse == [0x22])
+        }
+    }
+
     @Test func callFailsFastAfterDriverExit() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
@@ -840,6 +927,8 @@ struct ConnectionFailureTests {
         _ = try? await driverTask.value
     }
 
+    // r[verify session.protocol-error]
+    // r[verify rpc.observability.session-errors]
     @Test func unknownResponseRequestIdClosesConnectionAndFailsPendingCalls() async throws {
         let transport = ScriptedTransport()
         let (handle, driver, _, _) = try await establishInitiator(
@@ -1194,6 +1283,7 @@ struct ConnectionFailureTests {
     // r[verify connection.open]
     // r[verify connection.parity]
     // r[verify rpc.virtual-connection.open]
+    // r[verify session.connection-settings.open]
     // r[verify session.message.connection-id]
     // r[verify rpc.request]
     // r[verify rpc.request.id-allocation]
@@ -1229,6 +1319,13 @@ struct ConnectionFailureTests {
                 return
             }
             #expect(connId == 1)
+            let opens = await transport.sent().compactMap { message -> ConnectionOpen? in
+                if case .connectionOpen(let open) = message.payload {
+                    return open
+                }
+                return nil
+            }
+            #expect(opens.first?.connectionSettings == localSettings)
 
             await transport.enqueueMessage(
                 messageAccept(
