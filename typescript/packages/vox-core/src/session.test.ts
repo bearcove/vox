@@ -857,6 +857,52 @@ describe("session", () => {
     await Promise.allSettled([initiatorSession.closed()]);
   });
 
+  // r[verify rpc.caller.liveness.refcounted]
+  it("keeps a virtual connection live until all callers are disposed", async () => {
+    const settings: ConnectionSettings = {
+      parity: { tag: "Odd" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const peerSettings: ConnectionSettings = {
+      parity: { tag: "Even" },
+      max_concurrent_requests: 64,
+      initial_channel_credit: 16,
+    };
+    const [initiatorLink, rawServerLink] = memoryLinkPair();
+    const initiatorSession = await withTimeout(
+      establishRawInitiator(initiatorLink, rawServerLink),
+      "raw initiator establishment",
+    );
+
+    const opened = initiatorSession.handle().openConnection(settings);
+    const open = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection open"))!,
+    );
+    await rawServerLink.send(encodeMessage(messageAccept(open.connection_id, peerSettings)));
+    const connection = await withTimeout(opened, "virtual connection accept");
+
+    const firstCaller = connection.caller();
+    const secondCaller = connection.caller();
+
+    firstCaller.dispose();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(connection.isClosed()).toBe(false);
+
+    secondCaller.dispose();
+    const close = decodeMessage(
+      (await withTimeout(rawServerLink.recv(), "virtual connection close after last caller"))!,
+    );
+    expect(close.connection_id).toBe(open.connection_id);
+    expect(close.payload.tag).toBe("ConnectionClose");
+    expect(connection.isClosed()).toBe(true);
+
+    initiatorLink.close();
+    rawServerLink.close();
+    initiatorSession.handle().shutdown();
+    await Promise.allSettled([initiatorSession.closed()]);
+  });
+
   // r[verify connection.close.semantics]
   it("tears down a virtual connection after receiving close", async () => {
     const settings: ConnectionSettings = {
