@@ -756,7 +756,12 @@ mod tests {
         }
     }
 
+    // r[verify link]
+    // r[verify link.split]
+    // r[verify link.message]
+    // r[verify link.rx.recv]
     // r[verify link.tx.send]
+    // r[verify transport.stream.kinds]
     #[tokio::test]
     async fn round_trip_single() {
         let (a, b) = duplex_pair();
@@ -769,6 +774,7 @@ mod tests {
         assert_eq!(payload(&msg), b"hello");
     }
 
+    // r[verify link.order]
     #[tokio::test]
     async fn multiple_messages_in_order() {
         let (a, b) = duplex_pair();
@@ -836,6 +842,7 @@ mod tests {
         link_tx.close().await.unwrap();
     }
 
+    // r[verify link.tx.close]
     // r[verify link.rx.eof]
     #[tokio::test]
     async fn eof_on_peer_close() {
@@ -848,6 +855,26 @@ mod tests {
         assert!(rx_b.recv().await.unwrap().is_none());
         // Subsequent calls also return None
         assert!(rx_b.recv().await.unwrap().is_none());
+    }
+
+    // r[verify link.rx.error]
+    #[tokio::test]
+    async fn recv_error_is_terminal() {
+        let (a, mut b) = tokio::io::duplex(4096);
+        let (a_r, a_w) = split(a);
+        let receiver_link = StreamLink::new(a_r, a_w);
+        let (_tx, mut rx) = receiver_link.split();
+
+        b.write_all(&4_u32.to_le_bytes()).await.unwrap();
+        b.write_all(&[0xAA]).await.unwrap();
+        drop(b);
+
+        let err = match rx.recv().await {
+            Ok(_) => panic!("partial frame should error"),
+            Err(error) => error,
+        };
+        assert_eq!(err.kind(), io::ErrorKind::UnexpectedEof);
+        assert!(rx.recv().await.unwrap().is_none());
     }
 
     // r[verify rpc.transport.stream.cancel-safe-recv]

@@ -148,3 +148,37 @@ impl LinkRx for MemoryLinkRx {
         std::mem::take(&mut self.last_fds)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use vox_types::{Backing, Link, LinkRx, LinkTx};
+
+    use super::memory_link_pair;
+
+    fn payload(backing: &Backing) -> &[u8] {
+        match backing {
+            Backing::Boxed(bytes) => bytes,
+            Backing::Shared(bytes) => bytes.as_bytes(),
+        }
+    }
+
+    // r[verify transport.memory]
+    #[tokio::test]
+    async fn memory_link_preserves_boundaries_order_and_close() {
+        let (a, b) = memory_link_pair(4);
+        let (tx_a, _rx_a) = a.split();
+        let (_tx_b, mut rx_b) = b.split();
+
+        let payloads: &[&[u8]] = &[b"one", b"", b"three"];
+        for bytes in payloads {
+            tx_a.send(bytes.to_vec()).await.unwrap();
+        }
+        tx_a.close().await.unwrap();
+
+        for expected in payloads {
+            let received = rx_b.recv().await.unwrap().unwrap();
+            assert_eq!(payload(&received), *expected);
+        }
+        assert!(rx_b.recv().await.unwrap().is_none());
+    }
+}
