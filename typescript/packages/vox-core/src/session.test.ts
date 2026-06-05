@@ -204,6 +204,7 @@ const ECHO_METHOD: MethodDescriptor = {
 
 describe("session", () => {
   // r[verify session.parity]
+  // r[verify connection.virtual]
   // r[verify connection.open]
   // r[verify rpc.virtual-connection.open]
   it("allocates virtual connection ids from local session parity", async () => {
@@ -275,6 +276,7 @@ describe("session", () => {
     await Promise.allSettled([acceptorSession.closed()]);
   });
 
+  // r[verify connection.virtual]
   // r[verify rpc.virtual-connection.accept]
   it("accepts inbound virtual connections and routes calls on them", async () => {
     const peerSettings: ConnectionSettings = {
@@ -373,6 +375,7 @@ describe("session", () => {
   // r[verify rpc.flow-control.credit.initial]
   // r[verify rpc.flow-control.credit.initial.zero]
   // r[verify rpc.flow-control.max-concurrent-requests.default]
+  // r[verify connection.root]
   it("applies and rejects root channel capacity settings", () => {
     expect(session.rootSettings(Role.Acceptor)).toMatchObject({
       parity: { tag: "Even" },
@@ -392,6 +395,8 @@ describe("session", () => {
   // r[verify conduit]
   // r[verify conduit.bare]
   // r[verify conduit.typeplan]
+  // r[verify connection]
+  // r[verify connection.root]
   it("establishes over transport prologue before BareConduit traffic", async () => {
     const [clientLink, serverLink] = memoryLinkPair();
     const [clientSession, serverSession] = await withTimeout(
@@ -402,6 +407,9 @@ describe("session", () => {
       "transport session establishment",
     );
     const serverRoot = serverSession.rootConnection();
+    await expect(serverSession.handle().closeConnection(0n)).rejects.toThrow(
+      /cannot close root connection/,
+    );
 
     await clientLink.send(
       encodeMessage(

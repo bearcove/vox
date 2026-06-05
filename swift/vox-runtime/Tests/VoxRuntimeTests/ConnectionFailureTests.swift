@@ -264,6 +264,7 @@ private struct NoopDispatcher: ServiceDispatcher {
 }
 
 @Test
+// r[verify connection.root]
 // r[verify schema.interaction.metadata]
 func acceptorSessionExposesPeerHandshakeMetadata() async throws {
     let metadata = meta([("vox-service", "Noop"), ("vixenfs-sid", "abc123")])
@@ -279,6 +280,7 @@ func acceptorSessionExposesPeerHandshakeMetadata() async throws {
 
     let session = try await Session.acceptFreshLink(link, dispatcher: NoopDispatcher())
 
+    #expect(session.rootConnection.connectionId == 0)
     #expect(session.peerMetadata == metadata)
 }
 
@@ -649,6 +651,8 @@ struct ConnectionFailureTests {
         }
     }
 
+    // r[verify connection]
+    // r[verify connection.root]
     @Test func immediateResponseAfterSendStillCompletesCall() async throws {
         let transport = ScriptedTransport(autoRespondRequestCount: 1)
         let (handle, driver, _, _) = try await establishInitiator(
@@ -662,6 +666,7 @@ struct ConnectionFailureTests {
             try? await transport.close()
             await cancelAndDrain(driverTask)
         }) {
+            #expect(handle.connectionId == 0)
             let payload = try await handle.callRaw(methodId: 1, payload: [1, 2, 3], timeout: 2.0)
             #expect(payload == [0])
         }
