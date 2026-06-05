@@ -17,30 +17,37 @@ export class InProcessLink implements Link {
   private waitingResolve: ((payload: Uint8Array | null) => void) | null = null;
   private closed = false;
   private readonly deliverToPeer: (payload: Uint8Array) => void;
+  private readonly closePeer?: () => void;
 
-  constructor(deliverToPeer: (payload: Uint8Array) => void) {
+  constructor(deliverToPeer: (payload: Uint8Array) => void, closePeer?: () => void) {
     this.deliverToPeer = deliverToPeer;
+    this.closePeer = closePeer;
   }
 
   pushMessage(payload: Uint8Array): void {
     if (this.closed) {
       return;
     }
-    this.lastReceived = payload;
+    const owned = payload.slice();
+    this.lastReceived = owned;
     if (this.waitingResolve) {
       const resolve = this.waitingResolve;
       this.waitingResolve = null;
-      resolve(payload);
+      resolve(owned);
     } else {
-      this.pendingMessages.push(payload);
+      this.pendingMessages.push(owned);
     }
+  }
+
+  pushClose(): void {
+    this.closeLocal();
   }
 
   async send(payload: Uint8Array): Promise<void> {
     if (this.closed) {
       throw new Error("InProcessLink closed");
     }
-    this.deliverToPeer(payload);
+    this.deliverToPeer(payload.slice());
   }
 
   recv(): Promise<Uint8Array | null> {
@@ -56,6 +63,14 @@ export class InProcessLink implements Link {
   }
 
   close(): void {
+    const wasClosed = this.closed;
+    this.closeLocal();
+    if (!wasClosed) {
+      this.closePeer?.();
+    }
+  }
+
+  private closeLocal(): void {
     this.closed = true;
     const resolve = this.waitingResolve;
     this.waitingResolve = null;

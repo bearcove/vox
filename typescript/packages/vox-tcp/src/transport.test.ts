@@ -29,6 +29,8 @@ async function makeLocalEndpoint(): Promise<{ addr: string; cleanup: () => Promi
 }
 
 describe("LocalLink", () => {
+  // r[verify transport.stream]
+  // r[verify transport.stream.kinds]
   // r[verify transport.stream.local]
   it("round-trips length-prefixed frames over a local endpoint", async () => {
     const endpoint = await makeLocalEndpoint();

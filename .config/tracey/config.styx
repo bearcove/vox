@@ -44,6 +44,7 @@ specs (
                     typescript/packages/vox-core/src/session.test.ts
                     typescript/packages/vox-core/src/conduit.ts
                     typescript/packages/vox-core/src/link.ts
+                    typescript/packages/vox-core/src/link.test.ts
                     typescript/packages/vox-core/src/transport.ts
                     typescript/packages/vox-core/src/transport_prologue.ts
                     typescript/packages/vox-core/src/transport_prologue.test.ts
@@ -73,11 +74,13 @@ specs (
                     typescript/packages/vox-wire/src/codec.test.ts
                     typescript/packages/vox-wire/src/rpc_error.ts
                     typescript/packages/vox-inprocess/src/transport.ts
+                    typescript/packages/vox-inprocess/src/transport.test.ts
                     typescript/packages/vox-tcp/src/framing.ts
                     typescript/packages/vox-tcp/src/framing.test.ts
                     typescript/packages/vox-tcp/src/transport.ts
                     typescript/packages/vox-tcp/src/transport.test.ts
                     typescript/packages/vox-ws/src/transport.ts
+                    typescript/packages/vox-ws/src/transport.test.ts
                 )
             }
         )
