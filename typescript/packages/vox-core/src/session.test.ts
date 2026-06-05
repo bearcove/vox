@@ -791,6 +791,7 @@ describe("session", () => {
   // r[verify rpc.flow-control.max-concurrent-requests]
   // r[verify rpc.flow-control.max-concurrent-requests.outbound]
   // r[verify rpc.flow-control.max-concurrent-requests.counting]
+  // r[verify rpc.flow-control]
   // r[verify rpc.debug.snapshot]
   it("waits for peer request capacity before sending another call", async () => {
     const localSettings: ConnectionSettings = {

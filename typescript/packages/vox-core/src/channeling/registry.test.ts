@@ -39,6 +39,7 @@ describe("ChannelRegistry", () => {
 
   // r[verify rpc.flow-control.credit]
   // r[verify rpc.flow-control.credit.exhaustion]
+  // r[verify rpc.flow-control]
   it("blocks outgoing data when credit is exhausted until credit is granted", async () => {
     const registry = new ChannelRegistry();
     const channelId = 13n;
