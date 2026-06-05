@@ -2980,6 +2980,7 @@ mod tests {
     // + provided list. Verifies the channel ID allocated at encode is the one the
     // decoded handle re-associates by index.
     // r[verify rpc.channel.binding]
+    // r[verify rpc.channel.payload-encoding]
     #[test]
     fn channel_id_round_trips_through_ser_deser() {
         use facet::Facet;
@@ -3014,6 +3015,7 @@ mod tests {
     }
 
     // r[verify rpc.channel.discovery]
+    // r[verify rpc.channel.payload-encoding]
     #[test]
     fn direct_tuple_arg_channels_are_collected_in_argument_order() {
         let (first, _r) = channel::<u32>();
