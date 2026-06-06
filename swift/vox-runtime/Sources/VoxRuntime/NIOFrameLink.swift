@@ -4,6 +4,107 @@
 
 private let defaultMaxFrameBytes = 1024 * 1024
 
+private enum QueuedFrame {
+    case frame([UInt8])
+    case failure(Error)
+    case eof
+
+    func value() throws -> [UInt8]? {
+        switch self {
+        case .frame(let bytes):
+            return bytes
+        case .failure(let error):
+            throw error
+        case .eof:
+            return nil
+        }
+    }
+
+    func resume(_ continuation: CheckedContinuation<[UInt8]?, Error>) {
+        switch self {
+        case .frame(let bytes):
+            continuation.resume(returning: bytes)
+        case .failure(let error):
+            continuation.resume(throwing: error)
+        case .eof:
+            continuation.resume(returning: nil)
+        }
+    }
+}
+
+private actor CancelSafeFrameQueue {
+    private var pending: [QueuedFrame] = []
+    private var waiters: [(UInt64, CheckedContinuation<[UInt8]?, Error>)] = []
+    private var cancelledWaiters = Set<UInt64>()
+    private var nextWaiterId: UInt64 = 0
+    private var finished = false
+
+    func push(_ result: Result<[UInt8], Error>) {
+        switch result {
+        case .success(let bytes):
+            deliver(.frame(bytes))
+        case .failure(let error):
+            deliver(.failure(error))
+        }
+    }
+
+    func finish() {
+        finished = true
+        while !waiters.isEmpty {
+            let (_, continuation) = waiters.removeFirst()
+            continuation.resume(returning: nil)
+        }
+    }
+
+    func recv() async throws -> [UInt8]? {
+        if !pending.isEmpty {
+            return try pending.removeFirst().value()
+        }
+        if finished {
+            return nil
+        }
+
+        let id = nextWaiterId
+        nextWaiterId += 1
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                if cancelledWaiters.remove(id) != nil || Task.isCancelled {
+                    continuation.resume(throwing: CancellationError())
+                } else if !pending.isEmpty {
+                    pending.removeFirst().resume(continuation)
+                } else if finished {
+                    continuation.resume(returning: nil)
+                } else {
+                    waiters.append((id, continuation))
+                }
+            }
+        } onCancel: {
+            Task {
+                await self.cancelWaiter(id)
+            }
+        }
+    }
+
+    private func deliver(_ item: QueuedFrame) {
+        if waiters.isEmpty {
+            pending.append(item)
+        } else {
+            let (_, continuation) = waiters.removeFirst()
+            item.resume(continuation)
+        }
+    }
+
+    private func cancelWaiter(_ id: UInt64) {
+        if let index = waiters.firstIndex(where: { $0.0 == id }) {
+            let (_, continuation) = waiters.remove(at: index)
+            continuation.resume(throwing: CancellationError())
+        } else {
+            cancelledWaiters.insert(id)
+        }
+    }
+}
+
 // r[impl transport.stream]
 // r[impl transport.stream.kinds]
 // r[impl link]
@@ -12,8 +113,8 @@ private let defaultMaxFrameBytes = 1024 * 1024
 public final class NIOFrameLink: Link, @unchecked Sendable {
     private let channel: Channel
     private let frameLimit: FrameLimit
-    private let inboundStream: AsyncStream<Result<[UInt8], Error>>
-    private var inboundIterator: AsyncStream<Result<[UInt8], Error>>.Iterator
+    private let frameQueue: CancelSafeFrameQueue
+    private let inboundPump: Task<Void, Never>
     private var owningGroup: MultiThreadedEventLoopGroup?
 
     init(
@@ -24,11 +125,19 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
     ) {
         self.channel = channel
         self.frameLimit = frameLimit
-        self.inboundStream = inboundStream
-        self.inboundIterator = inboundStream.makeAsyncIterator()
+        let frameQueue = CancelSafeFrameQueue()
+        self.frameQueue = frameQueue
+        self.inboundPump = Task {
+            var iterator = inboundStream.makeAsyncIterator()
+            while let result = await iterator.next() {
+                await frameQueue.push(result)
+            }
+            await frameQueue.finish()
+        }
         self.owningGroup = owningGroup
     }
 
+    // r[impl link.tx.cancel-safe]
     public func sendFrame(_ bytes: [UInt8]) async throws {
         let frameLimit = self.frameLimit
         let maxFrameBytes = try await channel.eventLoop.submit {
@@ -43,11 +152,9 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
     // r[impl link.rx.recv]
     // r[impl link.rx.eof]
     // r[impl link.rx.error]
+    // r[impl rpc.transport.stream.cancel-safe-recv]
     public func recvFrame() async throws -> [UInt8]? {
-        guard let result = await inboundIterator.next() else {
-            return nil
-        }
-        return try result.get()
+        try await frameQueue.recv()
     }
 
     // r[impl link.tx.alloc.limits]
@@ -63,6 +170,8 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
         if channel.isActive {
             try? await channel.close()
         }
+        inboundPump.cancel()
+        await frameQueue.finish()
         if let group = owningGroup {
             owningGroup = nil
             try await group.shutdownGracefully()
@@ -76,6 +185,7 @@ public final class NIOFrameLink: Link, @unchecked Sendable {
 }
 
 // r[impl transport.stream]
+// r[impl rpc.transport.stream.cancel-safe-recv]
 // r[impl link.message.empty]
 final class LengthPrefixDecoder: ByteToMessageDecoder, @unchecked Sendable {
     typealias InboundOut = [UInt8]
@@ -156,6 +266,7 @@ final class RawFrameStreamHandler: ChannelInboundHandler, RemovableChannelHandle
 // r[impl transport.stream]
 // r[impl link.message.empty]
 // r[impl link.tx.send]
+// r[impl link.tx.cancel-safe]
 func writeRawFrame(channel: Channel, bytes: [UInt8]) async throws {
     guard let len = UInt32(exactly: bytes.count) else {
         throw TransportError.frameEncoding("frame too large for u32 length prefix")

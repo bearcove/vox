@@ -63,6 +63,15 @@ private func writeLengthPrefixedFrame(_ bytes: [UInt8], to channel: Channel) {
     channel.write(buffer, promise: nil)
 }
 
+private func lengthPrefixedFrameBytes(_ bytes: [UInt8]) -> [UInt8] {
+    var out = [UInt8]()
+    out.reserveCapacity(4 + bytes.count)
+    let len = UInt32(bytes.count).littleEndian
+    withUnsafeBytes(of: len) { out.append(contentsOf: $0) }
+    out.append(contentsOf: bytes)
+    return out
+}
+
 private final class WriteOnActiveHandler: ChannelInboundHandler, Sendable {
     typealias InboundIn = Never
 
@@ -78,6 +87,49 @@ private final class WriteOnActiveHandler: ChannelInboundHandler, Sendable {
         buffer.writeBytes(bytes)
         context.writeAndFlush(NIOAny(buffer), promise: nil)
         context.fireChannelActive()
+    }
+}
+
+private final class WriteRawChunksThenCloseHandler: ChannelInboundHandler, @unchecked Sendable {
+    typealias InboundIn = Never
+
+    private let first: [UInt8]
+    private let second: [UInt8]
+    private let delayMs: Int64
+
+    init(first: [UInt8], second: [UInt8], delayMs: Int64 = 50) {
+        self.first = first
+        self.second = second
+        self.delayMs = delayMs
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        var firstBuffer = context.channel.allocator.buffer(capacity: first.count)
+        firstBuffer.writeBytes(first)
+        context.writeAndFlush(NIOAny(firstBuffer), promise: nil)
+
+        let delayedWrite = DelayedRawWrite(context: context, bytes: second)
+        context.eventLoop.scheduleTask(in: .milliseconds(delayMs)) {
+            delayedWrite.runAndClose()
+        }
+        context.fireChannelActive()
+    }
+}
+
+private final class DelayedRawWrite: @unchecked Sendable {
+    private let context: ChannelHandlerContext
+    private let bytes: [UInt8]
+
+    init(context: ChannelHandlerContext, bytes: [UInt8]) {
+        self.context = context
+        self.bytes = bytes
+    }
+
+    func runAndClose() {
+        var buffer = context.channel.allocator.buffer(capacity: bytes.count)
+        buffer.writeBytes(bytes)
+        context.writeAndFlush(NIOAny(buffer), promise: nil)
+        context.close(promise: nil)
     }
 }
 
@@ -115,6 +167,42 @@ private final class WriteRawThenCloseHandler: ChannelInboundHandler, Sendable {
         context.writeAndFlush(NIOAny(buffer), promise: nil)
         context.close(promise: nil)
         context.fireChannelActive()
+    }
+}
+
+private final class FirstWriteSuspensionHandler: ChannelOutboundHandler, @unchecked Sendable {
+    typealias OutboundIn = ByteBuffer
+
+    private var didHoldFirstWrite = false
+    private var heldFirstWritePromise: EventLoopPromise<Void>?
+    private var context: ChannelHandlerContext?
+
+    func handlerAdded(context: ChannelHandlerContext) {
+        self.context = context
+    }
+
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        if !didHoldFirstWrite {
+            didHoldFirstWrite = true
+            heldFirstWritePromise = promise
+            context.write(data, promise: nil)
+        } else {
+            context.write(data, promise: promise)
+        }
+    }
+
+    func flush(context: ChannelHandlerContext) {
+        context.flush()
+    }
+
+    func failHeldFirstWriteWithCancellation() {
+        guard let context else {
+            return
+        }
+        context.eventLoop.execute {
+            self.heldFirstWritePromise?.fail(CancellationError())
+            self.heldFirstWritePromise = nil
+        }
     }
 }
 
@@ -172,6 +260,51 @@ private func startLocalServer(
         throw TransportError.connectionClosed
     }
     return LocalServer(group: group, channel: channel, port: port)
+}
+
+private func connectLinkWithSuspendedFirstWrite(host: String, port: Int) async throws
+    -> (NIOFrameLink, FirstWriteSuspensionHandler)
+{
+    let frameLimit = FrameLimit(1024 * 1024)
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let firstWriteHandler = FirstWriteSuspensionHandler()
+
+    var rawContinuation: AsyncStream<Result<[UInt8], Error>>.Continuation!
+    let rawStream = AsyncStream<Result<[UInt8], Error>> { continuation in
+        rawContinuation = continuation
+    }
+    let rawHandler = RawFrameStreamHandler(continuation: rawContinuation!)
+
+    let bootstrap = ClientBootstrap(group: group)
+        .channelOption(ChannelOptions.socketOption(.so_keepalive), value: 1)
+        .channelInitializer { channel in
+            do {
+                try channel.pipeline.syncOperations.addHandler(firstWriteHandler)
+                try channel.pipeline.syncOperations.addHandler(
+                    ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit))
+                )
+                try channel.pipeline.syncOperations.addHandler(rawHandler)
+                return channel.eventLoop.makeSucceededVoidFuture()
+            } catch {
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+    do {
+        let channel = try await bootstrap.connect(host: host, port: port).get()
+        return (
+            NIOFrameLink(
+                channel: channel,
+                frameLimit: frameLimit,
+                inboundStream: rawStream,
+                owningGroup: group
+            ),
+            firstWriteHandler
+        )
+    } catch {
+        try? await group.shutdownGracefully()
+        throw error
+    }
 }
 
 private func startLocalUnixServer(
@@ -313,6 +446,106 @@ struct TransportTests {
             #expect(frames == [[4, 5], []])
             try await link.close()
             #expect(await capture.waitForInactive())
+        } catch {
+            await stopLocalServer(server)
+            throw error
+        }
+        await stopLocalServer(server)
+    }
+
+    // r[verify link.tx.cancel-safe]
+    @Test func tcpStreamLinkSendCancellationDoesNotPublishPartialFrameOrPoisonLaterSend()
+        async throws
+    {
+        let capture = FrameCapture()
+        let server = try await startLocalServer { channel in
+            let frameLimit = FrameLimit(1024 * 1024)
+            do {
+                try channel.pipeline.syncOperations.addHandler(
+                    ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit))
+                )
+                try channel.pipeline.syncOperations.addHandler(CaptureFramesHandler(capture: capture))
+                return channel.eventLoop.makeSucceededVoidFuture()
+            } catch {
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+        do {
+            let (link, firstWriteHandler) = try await connectLinkWithSuspendedFirstWrite(
+                host: "127.0.0.1", port: server.port)
+            let firstFrame = Array(UInt8(0)..<UInt8(64))
+            let sendTask = Task {
+                try await link.sendFrame(firstFrame)
+            }
+
+            guard let framesAfterFirstWrite = await capture.waitForFrameCount(1) else {
+                Issue.record("server did not observe the first committed frame")
+                sendTask.cancel()
+                firstWriteHandler.failHeldFirstWriteWithCancellation()
+                try? await link.close()
+                await stopLocalServer(server)
+                return
+            }
+            #expect(framesAfterFirstWrite == [firstFrame])
+
+            sendTask.cancel()
+            firstWriteHandler.failHeldFirstWriteWithCancellation()
+            do {
+                try await sendTask.value
+                Issue.record("cancelled send task unexpectedly completed successfully")
+            } catch is CancellationError {
+            } catch {
+                Issue.record("cancelled send task failed with unexpected error: \(error)")
+            }
+
+            let secondFrame: [UInt8] = [9, 8, 7]
+            try await link.sendFrame(secondFrame)
+            guard let frames = await capture.waitForFrameCount(2) else {
+                Issue.record("server did not observe a later frame after send cancellation")
+                try? await link.close()
+                await stopLocalServer(server)
+                return
+            }
+            #expect(frames == [firstFrame, secondFrame])
+            try? await link.close()
+        } catch {
+            await stopLocalServer(server)
+            throw error
+        }
+        await stopLocalServer(server)
+    }
+
+    // r[verify rpc.transport.stream.cancel-safe-recv]
+    @Test func tcpStreamLinkReceiveCancellationDoesNotCorruptPartialFrame() async throws {
+        let payload: [UInt8] = [9, 8, 7, 6, 5]
+        let rawFrame = lengthPrefixedFrameBytes(payload)
+        let server = try await startLocalServer { channel in
+            channel.pipeline.addHandler(
+                WriteRawChunksThenCloseHandler(
+                    first: Array(rawFrame.prefix(5)),
+                    second: Array(rawFrame.dropFirst(5))
+                ))
+        }
+        do {
+            let link = try await connectLink(host: "127.0.0.1", port: server.port)
+            let cancelledRecv = Task {
+                try await link.recvFrame()
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+            cancelledRecv.cancel()
+            do {
+                let cancelledValue = try await cancelledRecv.value
+                if cancelledValue != nil {
+                    Issue.record("cancelled recv consumed a complete frame")
+                }
+            } catch is CancellationError {
+            } catch {
+                Issue.record("cancelled recv failed with unexpected error: \(error)")
+            }
+
+            #expect(try await link.recvFrame() == payload)
+            #expect(try await link.recvFrame() == nil)
+            try? await link.close()
         } catch {
             await stopLocalServer(server)
             throw error
