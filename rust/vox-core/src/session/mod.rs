@@ -2927,8 +2927,8 @@ mod tests {
 
     use moire::sync::mpsc;
     use vox_types::{
-        Backing, BindingDirection, Conduit, ConnectionAccept, ConnectionReject, HandshakeResult,
-        Payload, RequestCall, SelfRef,
+        Backing, BindingDirection, Conduit, ConnectionAccept, ConnectionReject, DriverEvent,
+        HandshakeResult, Payload, RequestCall, SelfRef, TransportEvent, VoxObserverHandle,
     };
 
     use super::*;
@@ -3019,6 +3019,27 @@ mod tests {
         }
     }
 
+    struct RecordingObserver {
+        driver_events: Arc<Mutex<Vec<DriverEvent>>>,
+        transport_events: Arc<Mutex<Vec<TransportEvent>>>,
+    }
+
+    impl vox_types::VoxObserver for RecordingObserver {
+        fn driver_event(&self, event: DriverEvent) {
+            self.driver_events
+                .lock()
+                .expect("driver events mutex poisoned")
+                .push(event);
+        }
+
+        fn transport_event(&self, event: TransportEvent) {
+            self.transport_events
+                .lock()
+                .expect("transport events mutex poisoned")
+                .push(event);
+        }
+    }
+
     fn make_session() -> Session {
         let (a, b) = crate::memory_link_pair(32);
         // Keep the peer link alive so sess_core sends don't fail with broken pipe.
@@ -3030,6 +3051,27 @@ mod tests {
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control.test");
         Session::pre_handshake(
             tx, rx, None, open_rx, close_rx, control_tx, control_rx, None, None,
+        )
+    }
+
+    fn make_session_with_observer(observer: VoxObserverHandle) -> Session {
+        let (a, b) = crate::memory_link_pair(32);
+        std::mem::forget(b);
+        let conduit = crate::BareConduit::new(a);
+        let (tx, rx) = conduit.split();
+        let (_open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open.observed.test", 4);
+        let (_close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close.observed.test", 4);
+        let (control_tx, control_rx) = mpsc::unbounded_channel("session.control.observed.test");
+        Session::pre_handshake(
+            tx,
+            rx,
+            None,
+            open_rx,
+            close_rx,
+            control_tx,
+            control_rx,
+            None,
+            Some(observer),
         )
     }
 
@@ -3116,6 +3158,97 @@ mod tests {
                 metadata: vox_types::Metadata::default(),
             },
         )
+    }
+
+    // r[verify rpc.observability.session-errors]
+    #[test]
+    fn session_receive_errors_emit_diagnostics_and_non_graceful_close_reasons() {
+        fn run_case(
+            error: std::io::Error,
+            expected_reason: ConnectionCloseReason,
+            expect_decode_error: bool,
+        ) {
+            let driver_events = Arc::new(Mutex::new(Vec::new()));
+            let transport_events = Arc::new(Mutex::new(Vec::new()));
+            let observer: VoxObserverHandle = Arc::new(RecordingObserver {
+                driver_events: driver_events.clone(),
+                transport_events: transport_events.clone(),
+            });
+
+            let mut session = make_session_with_observer(observer);
+            let handle = session
+                .establish_from_handshake(test_handshake(
+                    ConnectionSettings {
+                        parity: Parity::Odd,
+                        max_concurrent_requests: 64,
+                        initial_channel_credit: 16,
+                    },
+                    ConnectionSettings {
+                        parity: Parity::Even,
+                        max_concurrent_requests: 64,
+                        initial_channel_credit: 16,
+                    },
+                ))
+                .expect("establish observed session");
+
+            driver_events
+                .lock()
+                .expect("driver events mutex poisoned")
+                .clear();
+            transport_events
+                .lock()
+                .expect("transport events mutex poisoned")
+                .clear();
+
+            session.observe_session_recv_error(&error);
+            session.close_all_connections(classify_session_recv_error(&error));
+
+            assert_eq!(handle.close_reason(), Some(expected_reason));
+
+            let driver_events = driver_events.lock().expect("driver events mutex poisoned");
+            assert!(driver_events.iter().any(|event| matches!(
+                event,
+                DriverEvent::ConnectionClosed {
+                    connection_id: ConnectionId::ROOT,
+                    reason
+                } if *reason == expected_reason
+            )));
+            assert_eq!(
+                driver_events.iter().any(|event| matches!(
+                    event,
+                    DriverEvent::DecodeError {
+                        connection_id: ConnectionId::ROOT,
+                        kind: DecodeErrorKind::Payload,
+                    }
+                )),
+                expect_decode_error
+            );
+
+            let transport_events = transport_events
+                .lock()
+                .expect("transport events mutex poisoned");
+            assert_eq!(
+                transport_events.iter().any(|event| matches!(
+                    event,
+                    TransportEvent::Closed {
+                        connection_id: None,
+                        reason
+                    } if *reason == expected_reason
+                )),
+                !expect_decode_error
+            );
+        }
+
+        run_case(
+            std::io::Error::other("decode error: invalid Message payload"),
+            ConnectionCloseReason::Protocol,
+            true,
+        );
+        run_case(
+            std::io::Error::other("connection reset by peer"),
+            ConnectionCloseReason::Transport,
+            false,
+        );
     }
 
     // r[verify schema.exchange.caller]

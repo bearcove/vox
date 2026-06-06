@@ -154,6 +154,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
         .expect("server session task failed");
 }
 
+// r[verify rpc]
 // r[verify rpc.channel]
 // r[verify rpc.channel.allocation]
 // r[verify rpc.channel.direction]
@@ -407,6 +408,7 @@ fn message_plan_from_identical_schemas_round_trips() {
 }
 
 /// Minimal test: establish via real phon handshake, send one call, verify handler runs.
+// r[verify rpc]
 // r[verify session]
 // r[verify session.role]
 // r[verify session.connection-settings]

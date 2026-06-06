@@ -636,7 +636,287 @@ const fn protocol_error_kind_label(kind: ProtocolErrorKind) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
     use super::*;
+
+    #[derive(Default)]
+    struct RecordingObserver {
+        events: Mutex<Vec<&'static str>>,
+    }
+
+    impl VoxObserver for RecordingObserver {
+        fn rpc_event(&self, _event: RpcEvent) {
+            self.events
+                .lock()
+                .expect("observer events mutex poisoned")
+                .push("rpc");
+        }
+
+        fn channel_event(&self, _event: ChannelEvent) {
+            self.events
+                .lock()
+                .expect("observer events mutex poisoned")
+                .push("channel");
+        }
+
+        fn transport_event(&self, _event: TransportEvent) {
+            self.events
+                .lock()
+                .expect("observer events mutex poisoned")
+                .push("transport");
+        }
+
+        fn driver_event(&self, _event: DriverEvent) {
+            self.events
+                .lock()
+                .expect("observer events mutex poisoned")
+                .push("driver");
+        }
+    }
+
+    fn sample_channel() -> ChannelEventContext {
+        ChannelEventContext {
+            connection_id: Some(ConnectionId(42)),
+            channel_id: ChannelId(99),
+            debug: Some(ChannelDebugContext {
+                label: Some("per-request debug label"),
+                type_name: Some("alloc::string::String"),
+                source_location: Some(SourceLocation {
+                    file: "src/lib.rs",
+                    line: 10,
+                    column: 20,
+                }),
+                service: Some("Catalog"),
+                method: Some("stream"),
+            }),
+        }
+    }
+
+    fn assert_metric_labels_hide_ids(labels: ObserverMetricLabels) {
+        let rendered = format!("{labels:?}");
+        assert!(!rendered.contains("ConnectionId"));
+        assert!(!rendered.contains("RequestId"));
+        assert!(!rendered.contains("ChannelId"));
+        assert!(!rendered.contains("MethodId"));
+        assert!(!rendered.contains("per-request debug label"));
+        assert!(!rendered.contains("alloc::string::String"));
+        assert!(!rendered.contains("src/lib.rs"));
+    }
+
+    // r[verify rpc.observability.runtime]
+    #[test]
+    fn observer_interface_receives_local_event_categories_without_backend() {
+        let observer = RecordingObserver::default();
+
+        observer.rpc_event(RpcEvent::Started {
+            side: RpcSide::Client,
+            service: Some("Catalog"),
+            method: Some("get"),
+            method_id: MethodId(1),
+        });
+        observer.channel_event(ChannelEvent::Opened {
+            channel: sample_channel(),
+            direction: ChannelDirection::Tx,
+            initial_credit: 16,
+        });
+        observer.transport_event(TransportEvent::FrameRead {
+            connection_id: Some(ConnectionId(1)),
+            bytes: 64,
+        });
+        observer.driver_event(DriverEvent::ConnectionOpened {
+            connection_id: ConnectionId(1),
+        });
+
+        assert_eq!(
+            *observer
+                .events
+                .lock()
+                .expect("observer events mutex poisoned"),
+            ["rpc", "channel", "transport", "driver"]
+        );
+    }
+
+    // r[verify rpc.observability.channel]
+    #[test]
+    fn channel_observer_events_cover_lifecycle_and_low_cardinality_labels() {
+        let cases = [
+            (
+                ChannelEvent::Opened {
+                    channel: sample_channel(),
+                    direction: ChannelDirection::Rx,
+                    initial_credit: 16,
+                },
+                ObserverMetricKind::ChannelOpened,
+            ),
+            (
+                ChannelEvent::SendStarted {
+                    channel: sample_channel(),
+                },
+                ObserverMetricKind::ChannelSendStarted,
+            ),
+            (
+                ChannelEvent::SendWaitingForCredit {
+                    channel: sample_channel(),
+                },
+                ObserverMetricKind::ChannelSendWaitingForCredit,
+            ),
+            (
+                ChannelEvent::SendFinished {
+                    channel: sample_channel(),
+                    outcome: ChannelSendOutcome::TransportError,
+                    elapsed: Duration::from_millis(1),
+                },
+                ObserverMetricKind::ChannelSendFinished,
+            ),
+            (
+                ChannelEvent::TrySend {
+                    channel: sample_channel(),
+                    outcome: ChannelTrySendOutcome::FullRuntimeQueue,
+                },
+                ObserverMetricKind::ChannelTrySend,
+            ),
+            (
+                ChannelEvent::CreditGranted {
+                    channel: sample_channel(),
+                    amount: 4,
+                },
+                ObserverMetricKind::ChannelCreditGranted,
+            ),
+            (
+                ChannelEvent::ItemReceived {
+                    channel: sample_channel(),
+                },
+                ObserverMetricKind::ChannelItemReceived,
+            ),
+            (
+                ChannelEvent::ItemConsumed {
+                    channel: sample_channel(),
+                },
+                ObserverMetricKind::ChannelItemConsumed,
+            ),
+            (
+                ChannelEvent::Closed {
+                    channel: sample_channel(),
+                    reason: ChannelCloseReason::ConnectionClosed,
+                },
+                ObserverMetricKind::ChannelClosed,
+            ),
+            (
+                ChannelEvent::Reset {
+                    channel: sample_channel(),
+                    reason: ChannelResetReason::Protocol,
+                },
+                ObserverMetricKind::ChannelReset,
+            ),
+        ];
+
+        for (event, kind) in cases {
+            assert!(
+                format!("{event:?}").contains("ChannelId(99)"),
+                "channel events should retain local channel IDs for logs/debug"
+            );
+            let labels = event.metric_labels();
+            assert_eq!(labels.kind, kind);
+            assert_eq!(labels.service, Some("Catalog"));
+            assert_eq!(labels.method, Some("stream"));
+            assert_metric_labels_hide_ids(labels);
+        }
+    }
+
+    // r[verify rpc.observability.driver]
+    #[test]
+    fn driver_observer_events_cover_runtime_diagnostics_and_low_cardinality_labels() {
+        let cases = [
+            (
+                DriverEvent::ConnectionOpened {
+                    connection_id: ConnectionId(7),
+                },
+                ObserverMetricKind::DriverConnectionOpened,
+            ),
+            (
+                DriverEvent::ConnectionClosed {
+                    connection_id: ConnectionId(7),
+                    reason: ConnectionCloseReason::Protocol,
+                },
+                ObserverMetricKind::DriverConnectionClosed,
+            ),
+            (
+                DriverEvent::RequestStarted {
+                    connection_id: ConnectionId(7),
+                    request_id: RequestId(11),
+                    method_id: MethodId(13),
+                },
+                ObserverMetricKind::DriverRequestStarted,
+            ),
+            (
+                DriverEvent::RequestFinished {
+                    connection_id: ConnectionId(7),
+                    request_id: RequestId(11),
+                    outcome: RpcOutcome::Indeterminate,
+                    elapsed: Duration::from_millis(2),
+                },
+                ObserverMetricKind::DriverRequestFinished,
+            ),
+            (
+                DriverEvent::OutboundQueueFull {
+                    connection_id: ConnectionId(7),
+                },
+                ObserverMetricKind::DriverOutboundQueueFull,
+            ),
+            (
+                DriverEvent::OutboundQueueClosed {
+                    connection_id: ConnectionId(7),
+                },
+                ObserverMetricKind::DriverOutboundQueueClosed,
+            ),
+            (
+                DriverEvent::FrameRead {
+                    connection_id: ConnectionId(7),
+                    bytes: 128,
+                },
+                ObserverMetricKind::DriverFrameRead,
+            ),
+            (
+                DriverEvent::FrameWritten {
+                    connection_id: ConnectionId(7),
+                    bytes: 256,
+                },
+                ObserverMetricKind::DriverFrameWritten,
+            ),
+            (
+                DriverEvent::DecodeError {
+                    connection_id: ConnectionId(7),
+                    kind: DecodeErrorKind::Payload,
+                },
+                ObserverMetricKind::DriverDecodeError,
+            ),
+            (
+                DriverEvent::EncodeError {
+                    connection_id: ConnectionId(7),
+                    kind: EncodeErrorKind::Transport,
+                },
+                ObserverMetricKind::DriverEncodeError,
+            ),
+            (
+                DriverEvent::ProtocolError {
+                    connection_id: ConnectionId(7),
+                    kind: ProtocolErrorKind::FlowControl,
+                },
+                ObserverMetricKind::DriverProtocolError,
+            ),
+        ];
+
+        for (event, kind) in cases {
+            assert!(
+                format!("{event:?}").contains("ConnectionId(7)"),
+                "driver events should retain connection IDs for logs/debug"
+            );
+            let labels = event.metric_labels();
+            assert_eq!(labels.kind, kind);
+            assert_metric_labels_hide_ids(labels);
+        }
+    }
 
     // r[verify rpc.observability.low-cardinality]
     #[test]
