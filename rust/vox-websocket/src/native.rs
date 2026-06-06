@@ -289,6 +289,8 @@ mod tests {
         }
     }
 
+    // r[verify transport.websocket]
+    // r[verify transport.websocket.platforms]
     #[tokio::test]
     async fn round_trip_single() {
         let (a, b) = ws_pair().await;

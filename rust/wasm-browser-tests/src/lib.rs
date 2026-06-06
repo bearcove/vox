@@ -67,6 +67,8 @@ impl TestResults {
 }
 
 /// Run all tests against a WebSocket server at the given URL.
+// r[verify transport.websocket]
+// r[verify transport.websocket.platforms]
 #[wasm_bindgen]
 pub async fn run_tests(ws_url: &str) -> TestResults {
     let mut results = Vec::new();
@@ -418,7 +420,7 @@ async fn run_complex_tests(client: &TestbedClient, results: &mut Vec<TestResult>
     // Test: process_message (Text)
     console_log!("Testing process_message (Text)...");
     match client.process_message(Message::Text("hello".into())).await {
-        Ok(result) if matches!(&result, Message::Text(s) if s == "Processed: hello") => {
+        Ok(result) if matches!(&result, Message::Text(s) if s == "processed: hello") => {
             results.push(TestResult {
                 name: "process_message_text".into(),
                 passed: true,
@@ -430,7 +432,7 @@ async fn run_complex_tests(client: &TestbedClient, results: &mut Vec<TestResult>
                 name: "process_message_text".into(),
                 passed: false,
                 error: Some(format!(
-                    "expected Text(\"Processed: hello\"), got {:?}",
+                    "expected Text(\"processed: hello\"), got {:?}",
                     result
                 )),
             });
