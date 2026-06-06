@@ -268,6 +268,23 @@ private struct NoopDispatcher: ServiceDispatcher {
     ) async {}
 }
 
+private final class RecordingRuntimeObserver: VoxRuntimeObserver, @unchecked Sendable {
+    private let lock = NSLock()
+    private var events: [VoxDriverObserverEvent] = []
+
+    func driverEvent(_ event: VoxDriverObserverEvent) {
+        lock.lock()
+        events.append(event)
+        lock.unlock()
+    }
+
+    func snapshot() -> [VoxDriverObserverEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+        return events
+    }
+}
+
 @Test
 // r[verify session]
 // r[verify connection.root]
@@ -747,6 +764,40 @@ private func awaitTaskResult<T: Sendable>(
 
 @Suite(.serialized)
 struct ConnectionFailureTests {
+    // r[verify rpc]
+    // r[verify rpc.observability.runtime]
+    // r[verify rpc.observability.driver]
+    @Test func runtimeObserverReceivesDriverLifecycleEventsWithoutTelemetryBackend() async throws {
+        let observer = RecordingRuntimeObserver()
+        setVoxRuntimeObserver(observer)
+        defer {
+            setVoxRuntimeObserver(nil)
+        }
+
+        let transport = ScriptedTransport()
+        let (_, driver, _, _) = try await establishInitiator(
+            conduit: transport,
+            dispatcher: NoopDispatcher()
+        )
+        #expect(voxRuntimeObserver() != nil)
+
+        let driverTask: Task<Void, Error> = Task {
+            try await driver.run()
+        }
+        try await withAsyncCleanup({
+            try? await transport.close()
+            await cancelAndDrain(driverTask)
+        }) {
+            try? await transport.close()
+            try await awaitTaskResult(driverTask)
+
+            let events = observer.snapshot()
+            #expect(events.contains(.runStarted))
+            #expect(events.contains(.readerClosed))
+            #expect(events.contains(.runExited))
+        }
+    }
+
     // r[verify session.handshake]
     // r[verify session.handshake.phon]
     // r[verify session.handshake.protocol-schema]

@@ -25,9 +25,11 @@ extension Driver {
                 while !Task.isCancelled {
                     if let msg = try await conduit.recv() {
                         traceLog(.driver, "reader received message")
+                        observeDriver(.readerReceivedMessage)
                         continuation.yield(.incomingMessage(msg))
                     } else {
                         traceLog(.driver, "reader observed conduit close")
+                        observeDriver(.readerClosed)
                         continuation.yield(.conduitClosed)
                         break
                     }
@@ -35,6 +37,7 @@ extension Driver {
             } catch {
                 if !Task.isCancelled {
                     traceLog(.driver, "reader failed: \(String(describing: error))")
+                    observeDriver(.readerFailed(String(describing: error)))
                     continuation.yield(.conduitFailed(String(describing: error)))
                 }
             }
@@ -52,6 +55,7 @@ extension Driver {
     public func run() async throws {
         var keepaliveRuntime = makeKeepaliveRuntime()
         traceLog(.driver, "run start")
+        observeDriver(.runStarted)
 
         let cont = eventContinuation
         let readerTask = spawnReaderTask(for: conduit, continuation: cont)
@@ -89,18 +93,21 @@ extension Driver {
 
                 case .conduitClosed, .conduitFailed:
                     traceLog(.driver, "conduit broke")
+                    observeDriver(.conduitBroke)
                     await failAllPending()
                     eventContinuation.finish()
                 }
             }
         } catch {
             traceLog(.driver, "run threw: \(String(describing: error))")
+            observeDriver(.runFailed(String(describing: error)))
             eventContinuation.finish()
             await failAllPending()
             try? await conduit.close()
             throw error
         }
         traceLog(.driver, "run exiting")
+        observeDriver(.runExited)
         await failAllPending()
         try? await conduit.close()
     }
