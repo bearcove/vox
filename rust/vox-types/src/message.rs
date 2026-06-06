@@ -405,3 +405,58 @@ impl_reborrow_owned!(
     ChannelReset,
     SchemaMessage,
 );
+
+#[cfg(test)]
+mod tests {
+    use super::{ChannelBody, MessagePayload, RequestBody};
+    use facet::Facet;
+    use facet_core::{Type, UserType};
+
+    fn enum_variant_names<T: Facet<'static>>() -> Vec<&'static str> {
+        match T::SHAPE.ty {
+            Type::User(UserType::Enum(enum_type)) => enum_type
+                .variants
+                .iter()
+                .map(|variant| variant.name)
+                .collect(),
+            other => panic!("expected enum shape, got {other:?}"),
+        }
+    }
+
+    // r[verify session.message.payloads]
+    #[test]
+    fn message_payload_shape_lists_compact_session_payloads() {
+        let payloads = enum_variant_names::<MessagePayload<'static>>();
+        assert_eq!(
+            payloads,
+            [
+                "ProtocolError",
+                "ConnectionOpen",
+                "ConnectionAccept",
+                "ConnectionReject",
+                "ConnectionClose",
+                "RequestMessage",
+                "SchemaMessage",
+                "ChannelMessage",
+                "Ping",
+                "Pong",
+            ]
+        );
+
+        for handshake_variant in ["Hello", "HelloYourself", "LetsGo", "Sorry"] {
+            assert!(
+                !payloads.contains(&handshake_variant),
+                "{handshake_variant} is a phon handshake message, not a compact MessagePayload"
+            );
+        }
+
+        assert_eq!(
+            enum_variant_names::<RequestBody<'static>>(),
+            ["Call", "Response", "Cancel"]
+        );
+        assert_eq!(
+            enum_variant_names::<ChannelBody<'static>>(),
+            ["Item", "Close", "Reset", "GrantCredit"]
+        );
+    }
+}
