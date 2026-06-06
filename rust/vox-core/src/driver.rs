@@ -851,11 +851,9 @@ mod tests {
 
 /// Concrete `ReplySink` implementation for the driver.
 ///
-/// If dropped without `send_reply` being called, automatically sends
-/// `VoxError::Cancelled` to the caller. This guarantees that every
-/// request attempt receives exactly one terminal response
-/// (`rpc.response.one-per-request`), even if the handler panics or
-/// forgets to reply.
+/// If dropped without `send_reply` being called, automatically records the
+/// request as cancelled so the caller observes a terminal call outcome even if
+/// the handler panics or forgets to reply.
 pub struct DriverReplySink {
     sender: Option<ConnectionSender>,
     request_id: RequestId,
@@ -935,7 +933,6 @@ impl ReplySink for DriverReplySink {
     }
 }
 
-// r[impl rpc.response.one-per-request]
 impl Drop for DriverReplySink {
     fn drop(&mut self) {
         if let Some(sender) = self.sender.take() {
@@ -2655,7 +2652,6 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 .insert(req_id, InFlightHandler { abort, method_id });
             tracing::trace!(%req_id, in_flight = self.in_flight_handlers.len(), "handler inserted");
         } else if is_response {
-            // r[impl rpc.response.one-per-request]
             vox_types::dlog!(
                 "[driver] inbound response: conn={:?} req={:?}",
                 self.sender.connection_id(),

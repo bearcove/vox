@@ -466,7 +466,6 @@ describe("session", () => {
   // r[verify session.message.payloads]
   // r[verify rpc.request]
   // r[verify rpc.response]
-  // r[verify rpc.response.one-per-request]
   it("accepts inbound virtual connections and routes calls on them", async () => {
     const peerSettings: ConnectionSettings = {
       parity: { tag: "Odd" },

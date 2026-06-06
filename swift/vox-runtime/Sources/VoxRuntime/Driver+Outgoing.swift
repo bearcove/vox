@@ -23,7 +23,6 @@ extension Driver {
         schemas: [UInt8] = []
     ) async -> Message? {
         // r[impl rpc.response]
-        // r[impl rpc.response.one-per-request]
         let responseContext = await state.removeInFlight(requestId)
         guard responseContext.removed else {
             return nil

@@ -187,11 +187,6 @@ registered on the session builder; otherwise they are rejected.
 > Sending a `Request` with an ID that does not match the caller's parity,
 > or reusing an ID that is still in flight, is a protocol error.
 
-> r[rpc.response.one-per-request]
->
-> Every request MUST receive exactly one response. Sending a second response
-> for the same request ID is a protocol error.
-
 > r[rpc.unknown-method]
 >
 > If a handler receives a request with a method ID it does not recognize,

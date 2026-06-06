@@ -860,7 +860,6 @@ struct ConnectionFailureTests {
     // r[verify connection.root]
     // r[verify rpc.request]
     // r[verify rpc.response]
-    // r[verify rpc.response.one-per-request]
     @Test func immediateResponseAfterSendStillCompletesCall() async throws {
         let transport = ScriptedTransport(autoRespondRequestCount: 1)
         let (handle, driver, _, _) = try await establishInitiator(

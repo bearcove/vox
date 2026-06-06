@@ -192,7 +192,6 @@ extension Driver {
                 )
             case .response(let response):
                 // r[impl rpc.response]
-                // r[impl rpc.response.one-per-request]
                 let payload = [UInt8](response.ret)
                 guard let pending = await state.claimPendingResponse(request.id, reason: "response")
                 else {

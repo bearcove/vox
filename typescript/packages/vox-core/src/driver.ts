@@ -86,7 +86,6 @@ class VoxCallImpl implements VoxCall {
     return this.replied;
   }
 
-  // r[impl rpc.response.one-per-request]
   reply(value: unknown): void {
     if (this.replied) {
       return;
@@ -100,7 +99,6 @@ class VoxCallImpl implements VoxCall {
 
   // r[impl rpc.fallible]
   // r[impl rpc.fallible.vox-error]
-  // r[impl rpc.response.one-per-request]
   replyErr(error: unknown): void {
     if (this.replied) {
       return;
@@ -113,7 +111,6 @@ class VoxCallImpl implements VoxCall {
   // r[impl rpc.error.scope]
   // r[impl rpc.fallible]
   // r[impl rpc.fallible.vox-error]
-  // r[impl rpc.response.one-per-request]
   replyInternalError(message = "Invalid payload"): void {
     if (this.replied) {
       return;
@@ -308,7 +305,6 @@ export class Driver {
     // r[impl rpc.service.methods]
     // r[impl rpc.handler]
     // r[impl rpc.unknown-method]
-    // r[impl rpc.response.one-per-request]
     const descriptor = this.dispatcher.getDescriptor();
     const method = descriptor.methods.get(incoming.methodId);
     voxLogger()?.debug(`[vox:driver] handleCall: methodId=${incoming.methodId} method=${method?.name ?? "UNKNOWN"}`);
