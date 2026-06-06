@@ -275,6 +275,7 @@ mod tests {
     // r[verify session.handshake.phon]
     // r[verify session.handshake.protocol-schema]
     // r[verify session.connection-settings.hello]
+    // r[verify session.peer]
     #[tokio::test]
     async fn hello_and_hello_yourself_carry_root_connection_settings() {
         let (client_link, server_link) = crate::memory_link_pair(4);
@@ -285,6 +286,10 @@ mod tests {
         let initiator_expected = initiator_settings.clone();
         let acceptor_settings = settings_with_request_limit(Parity::Even, 41, 29);
         let acceptor_expected = acceptor_settings.clone();
+        let acceptor_metadata = vox_types::metadata()
+            .str("vox-service", "AcceptorService")
+            .build();
+        let acceptor_schema = message_schema();
 
         let initiator = tokio::spawn(async move {
             handshake_as_initiator(
@@ -306,8 +311,8 @@ mod tests {
             &server_tx,
             &HandshakeMessage::HelloYourself(vox_types::HelloYourself {
                 connection_settings: acceptor_settings,
-                message_payload_schema: message_schema(),
-                metadata: vox_types::Metadata::default(),
+                message_payload_schema: acceptor_schema.clone(),
+                metadata: acceptor_metadata.clone(),
             }),
         )
         .await
@@ -322,6 +327,8 @@ mod tests {
             .expect("initiator handshake");
         assert_eq!(result.our_settings, initiator_expected);
         assert_eq!(result.peer_settings, acceptor_expected);
+        assert_eq!(result.peer_schema, acceptor_schema);
+        assert_eq!(result.peer_metadata, acceptor_metadata);
     }
 
     // r[verify session.handshake.sorry]
