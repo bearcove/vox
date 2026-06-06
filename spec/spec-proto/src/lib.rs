@@ -431,6 +431,14 @@ pub trait Testbed {
         result: HotmealApplyPatchesResult,
     ) -> HotmealApplyPatchesResult;
 
+    /// Hotmeal live-reload browser subscription method. This mirrors
+    /// `hotmeal_server::LiveReloadService::subscribe(route)`.
+    async fn hotmeal_live_reload_subscribe(&self, route: String);
+
+    /// Hotmeal live-reload browser callback method. This mirrors
+    /// `hotmeal_server::LiveReloadBrowser::on_event(event)`.
+    async fn hotmeal_live_reload_on_event(&self, event: HotmealLiveReloadEvent);
+
     /// Echo Helix trace metrics. This mirrors the large vector-heavy
     /// `helix_trace_server::StreamMetrics` payload.
     async fn echo_helix_stream_metrics(&self, metrics: HelixStreamMetrics) -> HelixStreamMetrics;

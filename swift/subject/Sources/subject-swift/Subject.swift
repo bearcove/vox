@@ -666,6 +666,18 @@ struct TestbedService: TestbedHandler {
         result
     }
 
+    func hotmealLiveReloadSubscribe(route: String) async throws {
+        guard route == sampleHotmealRoute() else {
+            throw SubjectError.invalidResponse
+        }
+    }
+
+    func hotmealLiveReloadOnEvent(event: HotmealLiveReloadEvent) async throws {
+        guard sampleHotmealLiveReloadEvents().contains(where: { sameHotmealLiveReloadEvent($0, event) }) else {
+            throw SubjectError.invalidResponse
+        }
+    }
+
     func echoHelixStreamMetrics(metrics: HelixStreamMetrics) async throws -> HelixStreamMetrics {
         metrics
     }
@@ -2334,6 +2346,10 @@ func sampleHotmealLiveReloadEvents() -> [HotmealLiveReloadEvent] {
         .patches(route: "/guide/", patchesBlob: Data([0, 1, 2, 3, 255])),
         .headChanged(route: "/guide/"),
     ]
+}
+
+func sampleHotmealRoute() -> String {
+    "/guide/"
 }
 
 func sampleHotmealDomNode() -> HotmealDomNode {
@@ -5457,6 +5473,14 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("echo_hotmeal_apply_patches_result OK")
+    case "hotmeal_live_reload_subscribe":
+        try await client.hotmealLiveReloadSubscribe(route: sampleHotmealRoute())
+        log("hotmeal_live_reload_subscribe OK")
+    case "hotmeal_live_reload_on_event":
+        for event in sampleHotmealLiveReloadEvents() {
+            try await client.hotmealLiveReloadOnEvent(event: event)
+        }
+        log("hotmeal_live_reload_on_event OK")
     case "echo_helix_stream_metrics":
         let metrics = sampleHelixStreamMetrics()
         let result = try await client.echoHelixStreamMetrics(metrics: metrics)

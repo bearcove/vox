@@ -286,6 +286,14 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
         }
         #[test]
+        fn rpc_hotmeal_live_reload_subscribe() {
+            testbed::run_rpc_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn rpc_hotmeal_live_reload_on_event() {
+            testbed::run_rpc_hotmeal_live_reload_on_event(SPEC);
+        }
+        #[test]
         fn rpc_echo_helix_stream_metrics() {
             testbed::run_rpc_echo_helix_stream_metrics(SPEC);
         }
@@ -687,6 +695,14 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_echo_hotmeal_apply_patches_result() {
             testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_subscribe() {
+            testbed::run_subject_calls_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_on_event() {
+            testbed::run_subject_calls_hotmeal_live_reload_on_event(SPEC);
         }
         #[test]
         fn subject_calls_echo_helix_stream_metrics() {
@@ -1087,6 +1103,14 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
         }
         #[test]
+        fn rpc_hotmeal_live_reload_subscribe() {
+            testbed::run_rpc_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn rpc_hotmeal_live_reload_on_event() {
+            testbed::run_rpc_hotmeal_live_reload_on_event(SPEC);
+        }
+        #[test]
         fn rpc_echo_helix_stream_metrics() {
             testbed::run_rpc_echo_helix_stream_metrics(SPEC);
         }
@@ -1488,6 +1512,14 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_echo_hotmeal_apply_patches_result() {
             testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_subscribe() {
+            testbed::run_subject_calls_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_on_event() {
+            testbed::run_subject_calls_hotmeal_live_reload_on_event(SPEC);
         }
         #[test]
         fn subject_calls_echo_helix_stream_metrics() {
@@ -1888,6 +1920,14 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
         }
         #[test]
+        fn rpc_hotmeal_live_reload_subscribe() {
+            testbed::run_rpc_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn rpc_hotmeal_live_reload_on_event() {
+            testbed::run_rpc_hotmeal_live_reload_on_event(SPEC);
+        }
+        #[test]
         fn rpc_echo_helix_stream_metrics() {
             testbed::run_rpc_echo_helix_stream_metrics(SPEC);
         }
@@ -2289,6 +2329,14 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_echo_hotmeal_apply_patches_result() {
             testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_subscribe() {
+            testbed::run_subject_calls_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_on_event() {
+            testbed::run_subject_calls_hotmeal_live_reload_on_event(SPEC);
         }
         #[test]
         fn subject_calls_echo_helix_stream_metrics() {
@@ -2689,6 +2737,14 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_echo_hotmeal_apply_patches_result(SPEC);
         }
         #[test]
+        fn rpc_hotmeal_live_reload_subscribe() {
+            testbed::run_rpc_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn rpc_hotmeal_live_reload_on_event() {
+            testbed::run_rpc_hotmeal_live_reload_on_event(SPEC);
+        }
+        #[test]
         fn rpc_echo_helix_stream_metrics() {
             testbed::run_rpc_echo_helix_stream_metrics(SPEC);
         }
@@ -3090,6 +3146,14 @@ mod lang_swift_transport_tcp {
         #[test]
         fn subject_calls_echo_hotmeal_apply_patches_result() {
             testbed::run_subject_calls_echo_hotmeal_apply_patches_result(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_subscribe() {
+            testbed::run_subject_calls_hotmeal_live_reload_subscribe(SPEC);
+        }
+        #[test]
+        fn subject_calls_hotmeal_live_reload_on_event() {
+            testbed::run_subject_calls_hotmeal_live_reload_on_event(SPEC);
         }
         #[test]
         fn subject_calls_echo_helix_stream_metrics() {

@@ -1701,6 +1701,10 @@ pub fn sample_hotmeal_live_reload_events() -> Vec<HotmealLiveReloadEvent> {
     ]
 }
 
+pub fn sample_hotmeal_route() -> String {
+    "/guide/".to_string()
+}
+
 fn sample_hotmeal_dom_node() -> HotmealDomNode {
     HotmealDomNode::Element {
         tag: "main".to_string(),
@@ -3907,6 +3911,14 @@ impl Testbed for TestbedService {
         result: HotmealApplyPatchesResult,
     ) -> HotmealApplyPatchesResult {
         result
+    }
+
+    async fn hotmeal_live_reload_subscribe(&self, route: String) {
+        assert_eq!(route, sample_hotmeal_route());
+    }
+
+    async fn hotmeal_live_reload_on_event(&self, event: HotmealLiveReloadEvent) {
+        assert!(sample_hotmeal_live_reload_events().contains(&event));
     }
 
     async fn echo_helix_stream_metrics(&self, metrics: HelixStreamMetrics) -> HelixStreamMetrics {

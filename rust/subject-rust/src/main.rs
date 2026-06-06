@@ -28,7 +28,7 @@ use subject_rust::{
     sample_dodeca_search_indexer_fixture, sample_helix_pulse_bundle,
     sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
     sample_helix_trace_service_surface, sample_helix_verify_evidence,
-    sample_hotmeal_apply_patches_result, sample_hotmeal_live_reload_events,
+    sample_hotmeal_apply_patches_result, sample_hotmeal_live_reload_events, sample_hotmeal_route,
     sample_stax_flamegraph_update, sample_stax_flamegraph_updates,
     sample_stax_linux_broker_control_fixture, sample_stax_macos_batches, sample_stax_macos_config,
     sample_stax_macos_record_summary, sample_stax_view_params, sample_styx_lsp_code_action_params,
@@ -1486,6 +1486,22 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("echo_hotmeal_apply_patches_result OK");
+        }
+        "hotmeal_live_reload_subscribe" => {
+            client
+                .hotmeal_live_reload_subscribe(sample_hotmeal_route())
+                .await
+                .map_err(|e| format!("hotmeal_live_reload_subscribe failed: {e:?}"))?;
+            info!("hotmeal_live_reload_subscribe OK");
+        }
+        "hotmeal_live_reload_on_event" => {
+            for event in sample_hotmeal_live_reload_events() {
+                client
+                    .hotmeal_live_reload_on_event(event.clone())
+                    .await
+                    .map_err(|e| format!("hotmeal_live_reload_on_event failed: {e:?}"))?;
+            }
+            info!("hotmeal_live_reload_on_event OK");
         }
         "echo_helix_stream_metrics" => {
             let metrics = sample_helix_stream_metrics();

@@ -616,6 +616,23 @@ fn sample_stax_macos_record_summary() -> StaxMacRecordSummary {
     }
 }
 
+fn sample_hotmeal_route() -> String {
+    "/guide/".to_string()
+}
+
+fn sample_hotmeal_live_reload_events() -> Vec<HotmealLiveReloadEvent> {
+    vec![
+        HotmealLiveReloadEvent::Reload,
+        HotmealLiveReloadEvent::Patches {
+            route: sample_hotmeal_route(),
+            patches_blob: vec![0, 1, 2, 3, 255],
+        },
+        HotmealLiveReloadEvent::HeadChanged {
+            route: sample_hotmeal_route(),
+        },
+    ]
+}
+
 fn helix_audio_range(start: u32, end: u32) -> HelixAudioTokenRange {
     HelixAudioTokenRange {
         start: HelixAudioTokenId(start),
@@ -3890,6 +3907,14 @@ impl Testbed for TestbedService {
         result: HotmealApplyPatchesResult,
     ) -> HotmealApplyPatchesResult {
         result
+    }
+
+    async fn hotmeal_live_reload_subscribe(&self, route: String) {
+        assert_eq!(route, sample_hotmeal_route());
+    }
+
+    async fn hotmeal_live_reload_on_event(&self, event: HotmealLiveReloadEvent) {
+        assert!(sample_hotmeal_live_reload_events().contains(&event));
     }
 
     async fn echo_helix_stream_metrics(&self, metrics: HelixStreamMetrics) -> HelixStreamMetrics {

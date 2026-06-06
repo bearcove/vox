@@ -1840,6 +1840,10 @@ function sampleHotmealLiveReloadEvents(): HotmealLiveReloadEvent[] {
   ];
 }
 
+function sampleHotmealRoute(): string {
+  return "/guide/";
+}
+
 function sampleHotmealDomNode(): HotmealDomNode {
   return {
     $tag: "Element",
@@ -4584,6 +4588,18 @@ class TestbedService implements TestbedHandler {
     return result;
   }
 
+  hotmealLiveReloadSubscribe(route: string): void {
+    if (route !== sampleHotmealRoute()) {
+      throw new Error(`unexpected Hotmeal route: ${route}`);
+    }
+  }
+
+  hotmealLiveReloadOnEvent(event: HotmealLiveReloadEvent): void {
+    if (!sampleHotmealLiveReloadEvents().some((expected) => sameHotmealLiveReloadEvent(event, expected))) {
+      throw new Error("unexpected Hotmeal live-reload event");
+    }
+  }
+
   echoHelixStreamMetrics(metrics: HelixStreamMetrics): HelixStreamMetrics {
     return metrics;
   }
@@ -5577,6 +5593,18 @@ async function runClient() {
         throw new Error("echo_hotmeal_apply_patches_result: payload mismatch");
       }
       console.error(`echo_hotmeal_apply_patches_result OK`);
+      break;
+    }
+    case "hotmeal_live_reload_subscribe": {
+      await client.hotmealLiveReloadSubscribe(sampleHotmealRoute());
+      console.error(`hotmeal_live_reload_subscribe OK`);
+      break;
+    }
+    case "hotmeal_live_reload_on_event": {
+      for (const event of sampleHotmealLiveReloadEvents()) {
+        await client.hotmealLiveReloadOnEvent(event);
+      }
+      console.error(`hotmeal_live_reload_on_event OK`);
       break;
     }
     case "echo_helix_stream_metrics": {

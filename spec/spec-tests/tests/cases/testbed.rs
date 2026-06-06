@@ -1931,6 +1931,10 @@ fn sample_hotmeal_live_reload_events() -> Vec<HotmealLiveReloadEvent> {
     ]
 }
 
+fn sample_hotmeal_route() -> String {
+    "/guide/".to_string()
+}
+
 fn sample_hotmeal_dom_node() -> HotmealDomNode {
     HotmealDomNode::Element {
         tag: "main".to_string(),
@@ -4838,6 +4842,38 @@ pub fn run_rpc_echo_hotmeal_apply_patches_result(spec: SubjectSpec) {
     .unwrap();
 }
 
+// r[verify encoding.string]
+pub fn run_rpc_hotmeal_live_reload_subscribe(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        client
+            .hotmeal_live_reload_subscribe(sample_hotmeal_route())
+            .await
+            .map_err(|e| format!("hotmeal_live_reload_subscribe: {e:?}"))?;
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.enum.struct-variants]
+// r[verify encoding.bytes]
+// r[verify encoding.vec]
+pub fn run_rpc_hotmeal_live_reload_on_event(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        for event in sample_hotmeal_live_reload_events() {
+            client
+                .hotmeal_live_reload_on_event(event.clone())
+                .await
+                .map_err(|e| format!("hotmeal_live_reload_on_event: {e:?}"))?;
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
 // r[verify encoding.struct]
 // r[verify encoding.vec]
 // r[verify encoding.u64]
@@ -6262,6 +6298,18 @@ pub fn run_subject_calls_echo_hotmeal_live_reload_event(spec: SubjectSpec) {
 // r[verify encoding.vec]
 pub fn run_subject_calls_echo_hotmeal_apply_patches_result(spec: SubjectSpec) {
     run_subject_client_scenario(spec, "echo_hotmeal_apply_patches_result");
+}
+
+// r[verify encoding.string]
+pub fn run_subject_calls_hotmeal_live_reload_subscribe(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "hotmeal_live_reload_subscribe");
+}
+
+// r[verify encoding.enum.struct-variants]
+// r[verify encoding.bytes]
+// r[verify encoding.vec]
+pub fn run_subject_calls_hotmeal_live_reload_on_event(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "hotmeal_live_reload_on_event");
 }
 
 // r[verify encoding.struct]

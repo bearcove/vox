@@ -48690,6 +48690,433 @@ nonisolated(unsafe) let testbed_echoHotmealApplyPatchesResult_ResponseDescriptor
               ], payloadLayout: MemoryLayout<String>.phonLayout),
           ]))),
   ]
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x3125_3570_ab7d_4573)),
+  layout: Layout(size: MemoryLayout<(String)>.size, align: MemoryLayout<(String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ResponseDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
+    layout: Layout(
+      size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+      align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
+    access: .enumeration(
+      EnumAccess(
+        tag: { ptr in
+          switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
+          case .success: return 0
+          case .failure: return 1
+          }
+        },
+        projectPayload: { value, _, scratch in
+          switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
+          case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
+          case .failure(let f0):
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+          }
+        },
+        destroyPayload: { scratch, localIndex in
+          if localIndex == 0 {
+            scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
+          } else {
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+          }
+        },
+        inject: { slot, localIndex, scratch in
+          let v: Result<Void, VoxError<Infallible>> =
+            localIndex == 0
+            ? .success(scratch.assumingMemoryBound(to: Void.self).move())
+            : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+          slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
+        },
+        variants: [
+          VariantAccess(
+            wireIndex: 0,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
+                  layout: Layout(
+                    size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
+                  access: .scalar))
+            ], payloadLayout: MemoryLayout<Void>.phonLayout),
+          VariantAccess(
+            wireIndex: 1,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                  layout: Layout(
+                    size: MemoryLayout<VoxError<Infallible>>.size,
+                    align: MemoryLayout<VoxError<Infallible>>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: return 0
+                        case .unknownMethod: return 1
+                        case .invalidPayload: return 2
+                        case .cancelled: return 3
+                        case .connectionClosed: return 4
+                        case .sessionShutdown: return 5
+                        case .sendFailed: return 6
+                        case .indeterminate: return 7
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: fatalError("uninhabited variant payload")
+                        case .unknownMethod: break
+                        case .invalidPayload(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        case .cancelled: break
+                        case .connectionClosed: break
+                        case .sessionShutdown: break
+                        case .sendFailed: break
+                        case .indeterminate: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0: break
+                        case 2:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: VoxError<Infallible>
+                        switch localIndex {
+                        case 0: fatalError("uninhabited variant payload")
+                        case 1: v = .unknownMethod
+                        case 2:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .invalidPayload(f0)
+                        case 3: v = .cancelled
+                        case 4: v = .connectionClosed
+                        case 5: v = .sessionShutdown
+                        case 6: v = .sendFailed
+                        case 7: v = .indeterminate
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                                layout: Layout(
+                                  size: MemoryLayout<Infallible>.size,
+                                  align: MemoryLayout<Infallible>.alignment),
+                                access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                          ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+        ])))
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x03d9_184b_fe98_0c08)),
+  layout: Layout(
+    size: MemoryLayout<(HotmealLiveReloadEvent)>.size,
+    align: MemoryLayout<(HotmealLiveReloadEvent)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x1637_eff0_bf8f_73c1)),
+            layout: Layout(
+              size: MemoryLayout<HotmealLiveReloadEvent>.size,
+              align: MemoryLayout<HotmealLiveReloadEvent>.alignment),
+            access: .enumeration(
+              EnumAccess(
+                tag: { ptr in
+                  switch ptr.assumingMemoryBound(to: HotmealLiveReloadEvent.self).pointee {
+                  case .reload: return 0
+                  case .patches: return 1
+                  case .headChanged: return 2
+                  }
+                },
+                projectPayload: { value, _, scratch in
+                  switch value.assumingMemoryBound(to: HotmealLiveReloadEvent.self).pointee {
+                  case .reload: break
+                  case .patches(let f0, let f1):
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f0)
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).initialize(to: f1)
+                  case .headChanged(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(to: f0)
+                  }
+                },
+                destroyPayload: { scratch, localIndex in
+                  switch localIndex {
+                  case 1:
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).deinitialize(count: 1)
+                  case 2:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                      count: 1)
+                  default: break
+                  }
+                },
+                inject: { slot, localIndex, scratch in
+                  let v: HotmealLiveReloadEvent
+                  switch localIndex {
+                  case 0: v = .reload
+                  case 1:
+                    let f0 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    let f1 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).move()
+                    v = .patches(route: f0, patchesBlob: f1)
+                  case 2:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                    v = .headChanged(route: f0)
+                  default: fatalError("bad variant index")
+                  }
+                  slot.assumingMemoryBound(to: HotmealLiveReloadEvent.self).initialize(to: v)
+                },
+                variants: [
+                  VariantAccess(
+                    wireIndex: 0, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                  VariantAccess(
+                    wireIndex: 1,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: MemoryLayout<(String, Data)>.offset(of: \.0)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                      FieldAccess(
+                        offset: MemoryLayout<(String, Data)>.offset(of: \.1)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0xaa06_67df_4299_d151)),
+                          layout: Layout(
+                            size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                    ], payloadLayout: MemoryLayout<(String, Data)>.phonLayout),
+                  VariantAccess(
+                    wireIndex: 2,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: 0,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                    ], payloadLayout: MemoryLayout<String>.phonLayout),
+                ]))))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ResponseDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0x4adc_dcb2_9201_e448)),
+    layout: Layout(
+      size: MemoryLayout<Result<Void, VoxError<Infallible>>>.size,
+      align: MemoryLayout<Result<Void, VoxError<Infallible>>>.alignment),
+    access: .enumeration(
+      EnumAccess(
+        tag: { ptr in
+          switch ptr.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
+          case .success: return 0
+          case .failure: return 1
+          }
+        },
+        projectPayload: { value, _, scratch in
+          switch value.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).pointee {
+          case .success(let f0): scratch.assumingMemoryBound(to: Void.self).initialize(to: f0)
+          case .failure(let f0):
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+          }
+        },
+        destroyPayload: { scratch, localIndex in
+          if localIndex == 0 {
+            scratch.assumingMemoryBound(to: Void.self).deinitialize(count: 1)
+          } else {
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+          }
+        },
+        inject: { slot, localIndex, scratch in
+          let v: Result<Void, VoxError<Infallible>> =
+            localIndex == 0
+            ? .success(scratch.assumingMemoryBound(to: Void.self).move())
+            : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+          slot.assumingMemoryBound(to: Result<Void, VoxError<Infallible>>.self).initialize(to: v)
+        },
+        variants: [
+          VariantAccess(
+            wireIndex: 0,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
+                  layout: Layout(
+                    size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
+                  access: .scalar))
+            ], payloadLayout: MemoryLayout<Void>.phonLayout),
+          VariantAccess(
+            wireIndex: 1,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                  layout: Layout(
+                    size: MemoryLayout<VoxError<Infallible>>.size,
+                    align: MemoryLayout<VoxError<Infallible>>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: return 0
+                        case .unknownMethod: return 1
+                        case .invalidPayload: return 2
+                        case .cancelled: return 3
+                        case .connectionClosed: return 4
+                        case .sessionShutdown: return 5
+                        case .sendFailed: return 6
+                        case .indeterminate: return 7
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: fatalError("uninhabited variant payload")
+                        case .unknownMethod: break
+                        case .invalidPayload(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        case .cancelled: break
+                        case .connectionClosed: break
+                        case .sessionShutdown: break
+                        case .sendFailed: break
+                        case .indeterminate: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0: break
+                        case 2:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: VoxError<Infallible>
+                        switch localIndex {
+                        case 0: fatalError("uninhabited variant payload")
+                        case 1: v = .unknownMethod
+                        case 2:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .invalidPayload(f0)
+                        case 3: v = .cancelled
+                        case 4: v = .connectionClosed
+                        case 5: v = .sessionShutdown
+                        case 6: v = .sendFailed
+                        case 7: v = .indeterminate
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                                layout: Layout(
+                                  size: MemoryLayout<Infallible>.size,
+                                  align: MemoryLayout<Infallible>.alignment),
+                                access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                          ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+        ])))
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoHelixStreamMetrics_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0x0616_c4fb_f86d_8e02)),
   layout: Layout(
@@ -113546,6 +113973,200 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
     responseDescriptor: testbed_echoHotmealApplyPatchesResult_ResponseDescriptor,
     responseDescriptorBlocks: testbed_echoHotmealApplyPatchesResult_ResponseDescriptorBlocks,
     channels: []),
+  0xa358_c39c_12de_08b7: PhonMethodSchemas(
+    argsRoot: SchemaId(0x3125_3570_ab7d_4573),
+    argsSchemaClosure: [
+      115, 69, 125, 171, 112, 53, 37, 49, 1, 0, 0, 0, 157, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 115, 69, 125, 171, 112, 53, 37, 49, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 1, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_hotmealLiveReloadSubscribe_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_hotmealLiveReloadSubscribe_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
+    responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
+    responseSchemaClosure: [
+      72, 228, 1, 146, 178, 220, 220, 74, 3, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 72, 228, 1, 146, 178, 220, 220, 74, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32,
+      199, 45, 154, 36, 51, 92, 188, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
+      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0,
+      0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115,
+      17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
+      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254,
+      139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119,
+      110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73,
+      110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119,
+      116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99,
+      101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110,
+      110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108,
+      101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101,
+      114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6,
+      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
+      86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0,
+      0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73,
+      110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0,
+      0, 0,
+    ],
+    responseDescriptor: testbed_hotmealLiveReloadSubscribe_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_hotmealLiveReloadSubscribe_ResponseDescriptorBlocks,
+    channels: []),
+  0x09f4_e76f_491d_0472: PhonMethodSchemas(
+    argsRoot: SchemaId(0x03d9_184b_fe98_0c08),
+    argsSchemaClosure: [
+      8, 12, 152, 254, 75, 24, 217, 3, 3, 0, 0, 0, 157, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 8, 12, 152, 254, 75, 24, 217, 3, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101, 1, 0, 0,
+      0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 1, 0, 0, 0, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 193, 115, 143, 191, 240, 239, 55, 22, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 197, 2, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 193, 115, 143, 191, 240, 239, 55, 22, 11, 0, 0, 0, 116, 121, 112, 101,
+      95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0,
+      0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 22, 0, 0, 0, 72, 111, 116, 109, 101, 97, 108, 76, 105, 118, 101, 82, 101, 108, 111,
+      97, 100, 69, 118, 101, 110, 116, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 3, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 6, 0, 0, 0, 82, 101, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7,
+      0, 0, 0, 80, 97, 116, 99, 104, 101, 115, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0,
+      7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17,
+      2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 12, 0, 0,
+      0, 112, 97, 116, 99, 104, 101, 115, 95, 98, 108, 111, 98, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 11, 0, 0, 0, 72, 101, 97, 100, 67, 104, 97, 110, 103, 101, 100, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 11, 0, 0, 0, 116, 121, 112,
+      101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0,
+      0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108,
+      101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32, 15, 77, 49,
+      242, 84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_hotmealLiveReloadOnEvent_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_hotmealLiveReloadOnEvent_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xbc5c_3324_9a2d_c720),
+    responseRoot: SchemaId(0x4adc_dcb2_9201_e448),
+    responseSchemaClosure: [
+      72, 228, 1, 146, 178, 220, 220, 74, 3, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 72, 228, 1, 146, 178, 220, 220, 74, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32,
+      199, 45, 154, 36, 51, 92, 188, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
+      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0,
+      0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115,
+      17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
+      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254,
+      139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119,
+      110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73,
+      110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119,
+      116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99,
+      101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110,
+      110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108,
+      101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101,
+      114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6,
+      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
+      86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0,
+      0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73,
+      110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0,
+      0, 0,
+    ],
+    responseDescriptor: testbed_hotmealLiveReloadOnEvent_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_hotmealLiveReloadOnEvent_ResponseDescriptorBlocks,
+    channels: []),
   0xbd9e_d77f_3e8e_e5b1: PhonMethodSchemas(
     argsRoot: SchemaId(0x0616_c4fb_f86d_8e02),
     argsSchemaClosure: [
@@ -126645,6 +127266,30 @@ let testbed_echoHotmealApplyPatchesResult_ArgsEncoder = VoxTypedEncoder(
   testbed_echoHotmealApplyPatchesResult_ArgsEncodeProgram)
 let testbed_echoHotmealApplyPatchesResult_ResponseEncoder = VoxTypedEncoder(
   testbed_echoHotmealApplyPatchesResult_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_hotmealLiveReloadSubscribe_ArgsDescriptor, testbedRegistry,
+    testbed_hotmealLiveReloadSubscribe_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_hotmealLiveReloadSubscribe_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_hotmealLiveReloadSubscribe_ResponseDescriptor, testbedRegistry,
+    testbed_hotmealLiveReloadSubscribe_ResponseDescriptorBlocks)
+let testbed_hotmealLiveReloadSubscribe_ArgsEncoder = VoxTypedEncoder(
+  testbed_hotmealLiveReloadSubscribe_ArgsEncodeProgram)
+let testbed_hotmealLiveReloadSubscribe_ResponseEncoder = VoxTypedEncoder(
+  testbed_hotmealLiveReloadSubscribe_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_hotmealLiveReloadOnEvent_ArgsDescriptor, testbedRegistry,
+    testbed_hotmealLiveReloadOnEvent_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_hotmealLiveReloadOnEvent_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_hotmealLiveReloadOnEvent_ResponseDescriptor, testbedRegistry,
+    testbed_hotmealLiveReloadOnEvent_ResponseDescriptorBlocks)
+let testbed_hotmealLiveReloadOnEvent_ArgsEncoder = VoxTypedEncoder(
+  testbed_hotmealLiveReloadOnEvent_ArgsEncodeProgram)
+let testbed_hotmealLiveReloadOnEvent_ResponseEncoder = VoxTypedEncoder(
+  testbed_hotmealLiveReloadOnEvent_ResponseEncodeProgram)
 nonisolated(unsafe) let testbed_echoHelixStreamMetrics_ArgsEncodeProgram: Lowered = try! lowerTyped(
   testbed_echoHelixStreamMetrics_ArgsDescriptor, testbedRegistry,
   testbed_echoHelixStreamMetrics_ArgsDescriptorBlocks)
@@ -128242,6 +128887,12 @@ public protocol TestbedCaller: Sendable {
   ///  browser-proto result shape with a recursive DOM tree and patch trace.
   func echoHotmealApplyPatchesResult(result: HotmealApplyPatchesResult) async throws
     -> HotmealApplyPatchesResult
+  ///  Hotmeal live-reload browser subscription method. This mirrors
+  ///  `hotmeal_server::LiveReloadService::subscribe(route)`.
+  func hotmealLiveReloadSubscribe(route: String) async throws
+  ///  Hotmeal live-reload browser callback method. This mirrors
+  ///  `hotmeal_server::LiveReloadBrowser::on_event(event)`.
+  func hotmealLiveReloadOnEvent(event: HotmealLiveReloadEvent) async throws
   ///  Echo Helix trace metrics. This mirrors the large vector-heavy
   ///  `helix_trace_server::StreamMetrics` payload.
   func echoHelixStreamMetrics(metrics: HelixStreamMetrics) async throws -> HelixStreamMetrics
@@ -130650,6 +131301,52 @@ public final class TestbedClient: TestbedCaller, Sendable {
     }
   }
 
+  public func hotmealLiveReloadSubscribe(route: String) async throws {
+    let payload = encodeVoxTyped(route, testbed_hotmealLiveReloadSubscribe_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0xa358_c39c_12de_08b7, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xa358_c39c_12de_08b7]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0xa358_c39c_12de_08b7, .response,
+        readerDescriptor: testbed_hotmealLiveReloadSubscribe_ResponseDescriptor,
+        readerBlocks: testbed_hotmealLiveReloadSubscribe_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
+  }
+
+  public func hotmealLiveReloadOnEvent(event: HotmealLiveReloadEvent) async throws {
+    let payload = encodeVoxTyped(event, testbed_hotmealLiveReloadOnEvent_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x09f4_e76f_491d_0472, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x09f4_e76f_491d_0472]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x09f4_e76f_491d_0472, .response,
+        readerDescriptor: testbed_hotmealLiveReloadOnEvent_ResponseDescriptor,
+        readerBlocks: testbed_hotmealLiveReloadOnEvent_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<Void, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)
+    switch result {
+    case .success: return
+    case .failure(let error): throw error
+    }
+  }
+
   public func echoHelixStreamMetrics(metrics: HelixStreamMetrics) async throws -> HelixStreamMetrics
   {
     let payload = encodeVoxTyped(metrics, testbed_echoHelixStreamMetrics_ArgsEncoder)
@@ -131996,6 +132693,12 @@ public protocol TestbedHandler: Sendable {
   ///  browser-proto result shape with a recursive DOM tree and patch trace.
   func echoHotmealApplyPatchesResult(result: HotmealApplyPatchesResult) async throws
     -> HotmealApplyPatchesResult
+  ///  Hotmeal live-reload browser subscription method. This mirrors
+  ///  `hotmeal_server::LiveReloadService::subscribe(route)`.
+  func hotmealLiveReloadSubscribe(route: String) async throws
+  ///  Hotmeal live-reload browser callback method. This mirrors
+  ///  `hotmeal_server::LiveReloadBrowser::on_event(event)`.
+  func hotmealLiveReloadOnEvent(event: HotmealLiveReloadEvent) async throws
   ///  Echo Helix trace metrics. This mirrors the large vector-heavy
   ///  `helix_trace_server::StreamMetrics` payload.
   func echoHelixStreamMetrics(metrics: HelixStreamMetrics) async throws -> HelixStreamMetrics
@@ -132495,6 +133198,14 @@ public final class TestbedDispatcher: ServiceDispatcher {
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0xb1df_e7ab_8b5e_78e5:
       await dispatch_echoHotmealApplyPatchesResult(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0xa358_c39c_12de_08b7:
+      await dispatch_hotmealLiveReloadSubscribe(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x09f4_e76f_491d_0472:
+      await dispatch_hotmealLiveReloadOnEvent(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0xbd9e_d77f_3e8e_e5b1:
@@ -136552,6 +137263,89 @@ public final class TestbedDispatcher: ServiceDispatcher {
       .response(
         requestId: requestId, payload: respPayload, methodId: 0xb1df_e7ab_8b5e_78e5,
         responseSchemaClosure: testbedMethods[0xb1df_e7ab_8b5e_78e5]!.responseSchemaClosure))
+  }
+
+  private func dispatch_hotmealLiveReloadSubscribe(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0xa358_c39c_12de_08b7, .args,
+        readerDescriptor: testbed_hotmealLiveReloadSubscribe_ArgsDescriptor,
+        readerBlocks: testbed_hotmealLiveReloadSubscribe_ArgsDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xa358_c39c_12de_08b7,
+          responseSchemaClosure: testbedMethods[0xa358_c39c_12de_08b7]!.responseSchemaClosure))
+      return
+    }
+    let args: (String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xa358_c39c_12de_08b7,
+          responseSchemaClosure: testbedMethods[0xa358_c39c_12de_08b7]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.hotmealLiveReloadSubscribe(route: args)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_hotmealLiveReloadSubscribe_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0xa358_c39c_12de_08b7,
+        responseSchemaClosure: testbedMethods[0xa358_c39c_12de_08b7]!.responseSchemaClosure))
+  }
+
+  private func dispatch_hotmealLiveReloadOnEvent(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x09f4_e76f_491d_0472, .args,
+        readerDescriptor: testbed_hotmealLiveReloadOnEvent_ArgsDescriptor,
+        readerBlocks: testbed_hotmealLiveReloadOnEvent_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x09f4_e76f_491d_0472,
+          responseSchemaClosure: testbedMethods[0x09f4_e76f_491d_0472]!.responseSchemaClosure))
+      return
+    }
+    let args: (HotmealLiveReloadEvent)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x09f4_e76f_491d_0472,
+          responseSchemaClosure: testbedMethods[0x09f4_e76f_491d_0472]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<Void, VoxError<Infallible>>
+    do {
+      try await handler.hotmealLiveReloadOnEvent(event: args)
+      voxResult = .success(())
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_hotmealLiveReloadOnEvent_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x09f4_e76f_491d_0472,
+        responseSchemaClosure: testbedMethods[0x09f4_e76f_491d_0472]!.responseSchemaClosure))
   }
 
   private func dispatch_echoHelixStreamMetrics(

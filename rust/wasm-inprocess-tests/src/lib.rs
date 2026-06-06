@@ -560,6 +560,14 @@ impl Testbed for TestbedService {
         result
     }
 
+    async fn hotmeal_live_reload_subscribe(&self, _route: String) {
+        unsupported_smoke_method!("hotmeal_live_reload_subscribe")
+    }
+
+    async fn hotmeal_live_reload_on_event(&self, _event: HotmealLiveReloadEvent) {
+        unsupported_smoke_method!("hotmeal_live_reload_on_event")
+    }
+
     async fn echo_helix_stream_metrics(&self, metrics: HelixStreamMetrics) -> HelixStreamMetrics {
         metrics
     }

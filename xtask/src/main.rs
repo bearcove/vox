@@ -939,6 +939,14 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_hotmeal_apply_patches_result",
         },
         TestCase {
+            name: "rpc_hotmeal_live_reload_subscribe",
+            call: "testbed::run_rpc_hotmeal_live_reload_subscribe",
+        },
+        TestCase {
+            name: "rpc_hotmeal_live_reload_on_event",
+            call: "testbed::run_rpc_hotmeal_live_reload_on_event",
+        },
+        TestCase {
             name: "rpc_echo_helix_stream_metrics",
             call: "testbed::run_rpc_echo_helix_stream_metrics",
         },
@@ -1339,6 +1347,14 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_echo_hotmeal_apply_patches_result",
             call: "testbed::run_subject_calls_echo_hotmeal_apply_patches_result",
+        },
+        TestCase {
+            name: "subject_calls_hotmeal_live_reload_subscribe",
+            call: "testbed::run_subject_calls_hotmeal_live_reload_subscribe",
+        },
+        TestCase {
+            name: "subject_calls_hotmeal_live_reload_on_event",
+            call: "testbed::run_subject_calls_hotmeal_live_reload_on_event",
         },
         TestCase {
             name: "subject_calls_echo_helix_stream_metrics",
