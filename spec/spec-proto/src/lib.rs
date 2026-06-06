@@ -263,6 +263,12 @@ pub trait Testbed {
         fixture: DodecaSearchIndexerFixture,
     ) -> DodecaSearchIndexerFixture;
 
+    /// Echo Dodeca CSS/SASS/SVGO asset-processing roots from the asset proto crates.
+    async fn echo_dodeca_asset_processing_fixture(
+        &self,
+        fixture: DodecaAssetProcessingFixture,
+    ) -> DodecaAssetProcessingFixture;
+
     /// Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
     /// structs/enums with tags, spans, sequences, objects, and entry key/value
     /// recursion.
@@ -802,6 +808,44 @@ pub struct DodecaSearchIndexerFixture {
     pub pages: Vec<DodecaSearchPage>,
     pub result: DodecaSearchIndexResult,
     pub error_result: DodecaSearchIndexResult,
+}
+
+/// CSS rewrite/minification result from `cell-css-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaCssResult {
+    Success { css: String },
+    Error { message: String },
+}
+
+/// SASS compilation result from `cell-sass-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaSassResult {
+    Success { css: String },
+    Error { message: String },
+}
+
+/// SVGO optimization result from `cell-svgo-proto`.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaSvgoResult {
+    Success { svg: String },
+    Error { message: String },
+}
+
+/// Aggregate Dodeca CSS/SASS/SVGO asset-processing fixture root.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaAssetProcessingFixture {
+    pub css_source: String,
+    pub css_path_map: BTreeMap<String, String>,
+    pub css_result: DodecaCssResult,
+    pub sass_entrypoint: String,
+    pub sass_files: BTreeMap<String, String>,
+    pub sass_load_paths: Vec<String>,
+    pub sass_result: DodecaSassResult,
+    pub svg_source: String,
+    pub svgo_result: DodecaSvgoResult,
 }
 
 /// Dodeca HTML minification options from `cell-html-proto`.

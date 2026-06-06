@@ -807,6 +807,10 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_dodeca_search_indexer_fixture",
         },
         TestCase {
+            name: "rpc_echo_dodeca_asset_processing_fixture",
+            call: "testbed::run_rpc_echo_dodeca_asset_processing_fixture",
+        },
+        TestCase {
             name: "rpc_echo_styx_value",
             call: "testbed::run_rpc_echo_styx_value",
         },
@@ -1163,6 +1167,10 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_echo_dodeca_search_indexer_fixture",
             call: "testbed::run_subject_calls_echo_dodeca_search_indexer_fixture",
+        },
+        TestCase {
+            name: "subject_calls_echo_dodeca_asset_processing_fixture",
+            call: "testbed::run_subject_calls_echo_dodeca_asset_processing_fixture",
         },
         TestCase {
             name: "subject_calls_echo_styx_value",

@@ -369,6 +369,13 @@ impl Testbed for TestbedService {
         fixture
     }
 
+    async fn echo_dodeca_asset_processing_fixture(
+        &self,
+        fixture: DodecaAssetProcessingFixture,
+    ) -> DodecaAssetProcessingFixture {
+        fixture
+    }
+
     async fn echo_styx_value(&self, value: StyxValue) -> StyxValue {
         value
     }

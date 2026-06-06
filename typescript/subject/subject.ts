@@ -24,6 +24,7 @@ import type {
   GnarlyPayload,
   Tree,
   EcosystemBridgePayload,
+  DodecaAssetProcessingFixture,
   DodecaBuildMetadata,
   DodecaCodeExecutionConfig,
   DodecaCodeExecutionMetadata,
@@ -432,6 +433,29 @@ function sampleDodecaSearchIndexerFixture(): DodecaSearchIndexerFixture {
       })),
     },
     error_result: { tag: "Error", message: "search index could not write public/search/index.json" },
+  };
+}
+
+function sampleDodecaAssetProcessingFixture(): DodecaAssetProcessingFixture {
+  return {
+    css_source: "body { background: url('/old/bg.png'); color: red; }",
+    css_path_map: new Map([
+      ["/old/bg.png", "/assets/bg.abcd.png"],
+      ["/old/font.woff2", "/assets/font.woff2"],
+    ]),
+    css_result: { tag: "Success", css: "body{background:url('/assets/bg.abcd.png');color:red}" },
+    sass_entrypoint: "styles/app.scss",
+    sass_files: new Map([
+      ["styles/app.scss", "$brand: #c0ffee; @import 'partials/buttons'; body { color: $brand; }"],
+      ["styles/partials/_buttons.scss", ".button { padding: 4px; }"],
+    ]),
+    sass_load_paths: ["styles", "vendor"],
+    sass_result: { tag: "Success", css: "body{color:#c0ffee}.button{padding:4px}" },
+    svg_source: "<svg viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>",
+    svgo_result: {
+      tag: "Success",
+      svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>",
+    },
   };
 }
 
@@ -4191,6 +4215,10 @@ class TestbedService implements TestbedHandler {
     return fixture;
   }
 
+  echoDodecaAssetProcessingFixture(fixture: DodecaAssetProcessingFixture): DodecaAssetProcessingFixture {
+    return fixture;
+  }
+
   echoStyxValue(value: StyxValue): StyxValue {
     return value;
   }
@@ -5006,6 +5034,15 @@ async function runClient() {
         throw new Error("echo_dodeca_search_indexer_fixture: payload mismatch");
       }
       console.error(`echo_dodeca_search_indexer_fixture OK`);
+      break;
+    }
+    case "echo_dodeca_asset_processing_fixture": {
+      const payload = sampleDodecaAssetProcessingFixture();
+      const result = await client.echoDodecaAssetProcessingFixture(payload);
+      if (!sameHelixDeep(result, payload)) {
+        throw new Error("echo_dodeca_asset_processing_fixture: payload mismatch");
+      }
+      console.error(`echo_dodeca_asset_processing_fixture OK`);
       break;
     }
     case "echo_styx_value": {

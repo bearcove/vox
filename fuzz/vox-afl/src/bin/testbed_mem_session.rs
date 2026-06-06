@@ -3,9 +3,9 @@ use std::time::Duration;
 
 use afl::fuzz;
 use spec_proto::{
-    Canvas, Color, Config, EcosystemBridgePayload, LookupError, MathError, Measurement, Message,
-    Person, Point, Profile, Record, Rectangle, Shape, Status, Tag, Testbed, TestbedClient,
-    TestbedDispatcher,
+    Canvas, Color, Config, DodecaAssetProcessingFixture, EcosystemBridgePayload, LookupError,
+    MathError, Measurement, Message, Person, Point, Profile, Record, Rectangle, Shape, Status, Tag,
+    Testbed, TestbedClient, TestbedDispatcher,
 };
 use vox::Call;
 use vox_core::{BareConduit, DriverReplySink, acceptor, initiator, memory_link_pair};
@@ -229,6 +229,13 @@ impl Testbed for FuzzService {
         payload: EcosystemBridgePayload,
     ) -> EcosystemBridgePayload {
         payload
+    }
+
+    async fn echo_dodeca_asset_processing_fixture(
+        &self,
+        fixture: DodecaAssetProcessingFixture,
+    ) -> DodecaAssetProcessingFixture {
+        fixture
     }
 }
 

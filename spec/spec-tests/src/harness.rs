@@ -11,17 +11,18 @@ use spec_proto::{
     DibsIndexColumnInfo, DibsIndexInfo, DibsListRequest, DibsListResponse, DibsLogLevel,
     DibsMigrateRequest, DibsMigrateResult, DibsMigrationInfo, DibsMigrationLog,
     DibsMigrationStatusRequest, DibsRanMigration, DibsRow, DibsRowField, DibsSchemaInfo, DibsSort,
-    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaBuildMetadata,
-    DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata, DodecaCodeExecutionResult,
-    DodecaCodeSample, DodecaDependencySource, DodecaDependencySpec, DodecaExecuteSamplesInput,
-    DodecaExecuteSamplesOutput, DodecaExecutionResult, DodecaExecutionStatus,
-    DodecaHtmlProcessInput, DodecaHtmlProcessResult, DodecaImageProcessorFixture, DodecaInjection,
-    DodecaMinifyOptions, DodecaMountLocalization, DodecaResolvedDependency,
-    DodecaResponsiveImageInfo, DodecaRustConfig, DodecaSearchIndexerFixture, DodecaTemplateCall,
-    DodecaWikiLinkRef, EcosystemBridgePayload, GnarlyPayload, HelixAdmissionSegmentId,
-    HelixArDecodeEarlyExitReason, HelixAttentionSummaryBatch, HelixAttentionSupportSummary,
-    HelixAudioAttendanceRow, HelixAudioClip, HelixAudioEncoderSupportRecord,
-    HelixAudioRepresentationSpan, HelixAudioRepresentationVersion, HelixAudioSelfAttentionRow,
+    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaAssetProcessingFixture,
+    DodecaBuildMetadata, DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata,
+    DodecaCodeExecutionResult, DodecaCodeSample, DodecaDependencySource, DodecaDependencySpec,
+    DodecaExecuteSamplesInput, DodecaExecuteSamplesOutput, DodecaExecutionResult,
+    DodecaExecutionStatus, DodecaHtmlProcessInput, DodecaHtmlProcessResult,
+    DodecaImageProcessorFixture, DodecaInjection, DodecaMinifyOptions, DodecaMountLocalization,
+    DodecaResolvedDependency, DodecaResponsiveImageInfo, DodecaRustConfig,
+    DodecaSearchIndexerFixture, DodecaTemplateCall, DodecaWikiLinkRef, EcosystemBridgePayload,
+    GnarlyPayload, HelixAdmissionSegmentId, HelixArDecodeEarlyExitReason,
+    HelixAttentionSummaryBatch, HelixAttentionSupportSummary, HelixAudioAttendanceRow,
+    HelixAudioClip, HelixAudioEncoderSupportRecord, HelixAudioRepresentationSpan,
+    HelixAudioRepresentationVersion, HelixAudioSelfAttentionRow,
     HelixAudioTokenAdmissionProvenance, HelixAudioTokenId, HelixAudioTokenMergeProvenance,
     HelixAudioTokenProvenance, HelixAudioTokenRange, HelixChromeTraceEvent, HelixConvStemChunkId,
     HelixDecodeFact, HelixDecoderEvidenceFactCounts, HelixDecoderEvidenceKind,
@@ -3482,6 +3483,13 @@ impl Testbed for TestbedService {
         &self,
         fixture: DodecaSearchIndexerFixture,
     ) -> DodecaSearchIndexerFixture {
+        fixture
+    }
+
+    async fn echo_dodeca_asset_processing_fixture(
+        &self,
+        fixture: DodecaAssetProcessingFixture,
+    ) -> DodecaAssetProcessingFixture {
         fixture
     }
 

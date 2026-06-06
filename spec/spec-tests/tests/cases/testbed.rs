@@ -7,15 +7,16 @@ use spec_proto::{
     DibsIndexColumnInfo, DibsIndexInfo, DibsListRequest, DibsListResponse, DibsLogLevel,
     DibsMigrateRequest, DibsMigrateResult, DibsMigrationInfo, DibsMigrationLog,
     DibsMigrationStatusRequest, DibsRanMigration, DibsRow, DibsRowField, DibsSchemaInfo, DibsSort,
-    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaBuildMetadata,
-    DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata, DodecaCodeExecutionResult,
-    DodecaCodeSample, DodecaDecodedImage, DodecaDependencySource, DodecaDependencySpec,
-    DodecaExecuteSamplesInput, DodecaExecuteSamplesOutput, DodecaExecutionResult,
-    DodecaExecutionStatus, DodecaHtmlProcessInput, DodecaHtmlProcessResult,
-    DodecaImageProcessorFixture, DodecaImageResult, DodecaInjection, DodecaMinifyOptions,
-    DodecaMountLocalization, DodecaResizeInput, DodecaResolvedDependency,
-    DodecaResponsiveImageInfo, DodecaRustConfig, DodecaSearchFile, DodecaSearchIndexResult,
-    DodecaSearchIndexerFixture, DodecaSearchPage, DodecaTemplateCall, DodecaThumbhashInput,
+    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaAssetProcessingFixture,
+    DodecaBuildMetadata, DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata,
+    DodecaCodeExecutionResult, DodecaCodeSample, DodecaCssResult, DodecaDecodedImage,
+    DodecaDependencySource, DodecaDependencySpec, DodecaExecuteSamplesInput,
+    DodecaExecuteSamplesOutput, DodecaExecutionResult, DodecaExecutionStatus,
+    DodecaHtmlProcessInput, DodecaHtmlProcessResult, DodecaImageProcessorFixture,
+    DodecaImageResult, DodecaInjection, DodecaMinifyOptions, DodecaMountLocalization,
+    DodecaResizeInput, DodecaResolvedDependency, DodecaResponsiveImageInfo, DodecaRustConfig,
+    DodecaSassResult, DodecaSearchFile, DodecaSearchIndexResult, DodecaSearchIndexerFixture,
+    DodecaSearchPage, DodecaSvgoResult, DodecaTemplateCall, DodecaThumbhashInput,
     DodecaWikiLinkRef, EcosystemBridgePayload, HelixAdmissionSegmentId,
     HelixArDecodeEarlyExitReason, HelixAttentionSummaryBatch, HelixAttentionSupportSummary,
     HelixAudioAttendanceRow, HelixAudioClip, HelixAudioEncoderSupportRecord,
@@ -907,6 +908,44 @@ fn sample_dodeca_search_indexer_fixture() -> DodecaSearchIndexerFixture {
         result: DodecaSearchIndexResult::Success { files },
         error_result: DodecaSearchIndexResult::Error {
             message: "search index could not write public/search/index.json".to_string(),
+        },
+    }
+}
+
+fn sample_dodeca_asset_processing_fixture() -> DodecaAssetProcessingFixture {
+    DodecaAssetProcessingFixture {
+        css_source: "body { background: url('/old/bg.png'); color: red; }".to_string(),
+        css_path_map: BTreeMap::from([
+            ("/old/bg.png".to_string(), "/assets/bg.abcd.png".to_string()),
+            (
+                "/old/font.woff2".to_string(),
+                "/assets/font.woff2".to_string(),
+            ),
+        ]),
+        css_result: DodecaCssResult::Success {
+            css: "body{background:url('/assets/bg.abcd.png');color:red}".to_string(),
+        },
+        sass_entrypoint: "styles/app.scss".to_string(),
+        sass_files: BTreeMap::from([
+            (
+                "styles/app.scss".to_string(),
+                "$brand: #c0ffee; @import 'partials/buttons'; body { color: $brand; }".to_string(),
+            ),
+            (
+                "styles/partials/_buttons.scss".to_string(),
+                ".button { padding: 4px; }".to_string(),
+            ),
+        ]),
+        sass_load_paths: vec!["styles".to_string(), "vendor".to_string()],
+        sass_result: DodecaSassResult::Success {
+            css: "body{color:#c0ffee}.button{padding:4px}".to_string(),
+        },
+        svg_source:
+            "<svg viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>"
+                .to_string(),
+        svgo_result: DodecaSvgoResult::Success {
+            svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
+                .to_string(),
         },
     }
 }
@@ -3858,6 +3897,28 @@ pub fn run_rpc_echo_dodeca_search_indexer_fixture(spec: SubjectSpec) {
     .unwrap();
 }
 
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_echo_dodeca_asset_processing_fixture(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let payload = sample_dodeca_asset_processing_fixture();
+        let result = client
+            .echo_dodeca_asset_processing_fixture(payload.clone())
+            .await
+            .map_err(|e| format!("echo_dodeca_asset_processing_fixture: {e:?}"))?;
+        if result != payload {
+            return Err(format!(
+                "echo_dodeca_asset_processing_fixture: expected {payload:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
 // r[verify encoding.struct.recursive]
 // r[verify encoding.enum.newtype-variants]
 // r[verify encoding.option]
@@ -5562,6 +5623,13 @@ pub fn run_subject_calls_echo_dodeca_image_processor_fixture(spec: SubjectSpec) 
 // r[verify encoding.enum.payload]
 pub fn run_subject_calls_echo_dodeca_search_indexer_fixture(spec: SubjectSpec) {
     run_subject_client_scenario(spec, "echo_dodeca_search_indexer_fixture");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_echo_dodeca_asset_processing_fixture(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "echo_dodeca_asset_processing_fixture");
 }
 
 // r[verify encoding.struct.recursive]

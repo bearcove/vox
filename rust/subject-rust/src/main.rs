@@ -15,11 +15,12 @@ use subject_rust::{
     sample_dibs_list_response, sample_dibs_logs, sample_dibs_migrate_request,
     sample_dibs_migrate_result, sample_dibs_migration_status, sample_dibs_migration_status_request,
     sample_dibs_row_one, sample_dibs_schema, sample_dibs_update_request,
-    sample_dibs_update_response, sample_dodeca_code_execution_result, sample_dodeca_data_content,
-    sample_dodeca_data_format, sample_dodeca_execute_samples_input,
-    sample_dodeca_html_process_input, sample_dodeca_html_process_result,
-    sample_dodeca_image_processor_fixture, sample_dodeca_load_data_result,
-    sample_dodeca_markdown_content, sample_dodeca_markdown_source_path, sample_dodeca_parse_result,
+    sample_dibs_update_response, sample_dodeca_asset_processing_fixture,
+    sample_dodeca_code_execution_result, sample_dodeca_data_content, sample_dodeca_data_format,
+    sample_dodeca_execute_samples_input, sample_dodeca_html_process_input,
+    sample_dodeca_html_process_result, sample_dodeca_image_processor_fixture,
+    sample_dodeca_load_data_result, sample_dodeca_markdown_content,
+    sample_dodeca_markdown_source_path, sample_dodeca_parse_result,
     sample_dodeca_search_indexer_fixture, sample_helix_pulse_bundle,
     sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
     sample_helix_trace_service_surface, sample_helix_verify_evidence,
@@ -1014,6 +1015,19 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("echo_dodeca_search_indexer_fixture OK");
+        }
+        "echo_dodeca_asset_processing_fixture" => {
+            let payload = sample_dodeca_asset_processing_fixture();
+            let result = client
+                .echo_dodeca_asset_processing_fixture(payload.clone())
+                .await
+                .map_err(|e| format!("echo_dodeca_asset_processing_fixture failed: {e:?}"))?;
+            if result != payload {
+                return Err(format!(
+                    "echo_dodeca_asset_processing_fixture: expected {payload:?}, got {result:?}"
+                ));
+            }
+            info!("echo_dodeca_asset_processing_fixture OK");
         }
         "echo_styx_value" => {
             let value = sample_styx_value();

@@ -10,15 +10,16 @@ use spec_proto::{
     DibsIndexColumnInfo, DibsIndexInfo, DibsListRequest, DibsListResponse, DibsLogLevel,
     DibsMigrateRequest, DibsMigrateResult, DibsMigrationInfo, DibsMigrationLog,
     DibsMigrationStatusRequest, DibsRanMigration, DibsRow, DibsRowField, DibsSchemaInfo, DibsSort,
-    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaBuildMetadata,
-    DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata, DodecaCodeExecutionResult,
-    DodecaCodeSample, DodecaDecodedImage, DodecaDependencySource, DodecaDependencySpec,
-    DodecaExecuteSamplesInput, DodecaExecuteSamplesOutput, DodecaExecutionResult,
-    DodecaExecutionStatus, DodecaHtmlProcessInput, DodecaHtmlProcessResult,
-    DodecaImageProcessorFixture, DodecaImageResult, DodecaInjection, DodecaMinifyOptions,
-    DodecaMountLocalization, DodecaResizeInput, DodecaResolvedDependency,
-    DodecaResponsiveImageInfo, DodecaRustConfig, DodecaSearchFile, DodecaSearchIndexResult,
-    DodecaSearchIndexerFixture, DodecaSearchPage, DodecaTemplateCall, DodecaThumbhashInput,
+    DibsSortDir, DibsTableInfo, DibsUpdateRequest, DibsValue, DodecaAssetProcessingFixture,
+    DodecaBuildMetadata, DodecaCodeExecutionConfig, DodecaCodeExecutionMetadata,
+    DodecaCodeExecutionResult, DodecaCodeSample, DodecaCssResult, DodecaDecodedImage,
+    DodecaDependencySource, DodecaDependencySpec, DodecaExecuteSamplesInput,
+    DodecaExecuteSamplesOutput, DodecaExecutionResult, DodecaExecutionStatus,
+    DodecaHtmlProcessInput, DodecaHtmlProcessResult, DodecaImageProcessorFixture,
+    DodecaImageResult, DodecaInjection, DodecaMinifyOptions, DodecaMountLocalization,
+    DodecaResizeInput, DodecaResolvedDependency, DodecaResponsiveImageInfo, DodecaRustConfig,
+    DodecaSassResult, DodecaSearchFile, DodecaSearchIndexResult, DodecaSearchIndexerFixture,
+    DodecaSearchPage, DodecaSvgoResult, DodecaTemplateCall, DodecaThumbhashInput,
     DodecaWikiLinkRef, EcosystemBridgePayload, GnarlyPayload, HelixAdmissionSegmentId,
     HelixArDecodeEarlyExitReason, HelixAttentionSummaryBatch, HelixAttentionSupportSummary,
     HelixAudioAttendanceRow, HelixAudioClip, HelixAudioEncoderSupportRecord,
@@ -276,6 +277,44 @@ pub fn sample_dodeca_search_indexer_fixture() -> DodecaSearchIndexerFixture {
         result: DodecaSearchIndexResult::Success { files },
         error_result: DodecaSearchIndexResult::Error {
             message: "search index could not write public/search/index.json".to_string(),
+        },
+    }
+}
+
+pub fn sample_dodeca_asset_processing_fixture() -> DodecaAssetProcessingFixture {
+    DodecaAssetProcessingFixture {
+        css_source: "body { background: url('/old/bg.png'); color: red; }".to_string(),
+        css_path_map: BTreeMap::from([
+            ("/old/bg.png".to_string(), "/assets/bg.abcd.png".to_string()),
+            (
+                "/old/font.woff2".to_string(),
+                "/assets/font.woff2".to_string(),
+            ),
+        ]),
+        css_result: DodecaCssResult::Success {
+            css: "body{background:url('/assets/bg.abcd.png');color:red}".to_string(),
+        },
+        sass_entrypoint: "styles/app.scss".to_string(),
+        sass_files: BTreeMap::from([
+            (
+                "styles/app.scss".to_string(),
+                "$brand: #c0ffee; @import 'partials/buttons'; body { color: $brand; }".to_string(),
+            ),
+            (
+                "styles/partials/_buttons.scss".to_string(),
+                ".button { padding: 4px; }".to_string(),
+            ),
+        ]),
+        sass_load_paths: vec!["styles".to_string(), "vendor".to_string()],
+        sass_result: DodecaSassResult::Success {
+            css: "body{color:#c0ffee}.button{padding:4px}".to_string(),
+        },
+        svg_source:
+            "<svg viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>"
+                .to_string(),
+        svgo_result: DodecaSvgoResult::Success {
+            svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
+                .to_string(),
         },
     }
 }
@@ -3428,6 +3467,13 @@ impl Testbed for TestbedService {
         &self,
         fixture: DodecaSearchIndexerFixture,
     ) -> DodecaSearchIndexerFixture {
+        fixture
+    }
+
+    async fn echo_dodeca_asset_processing_fixture(
+        &self,
+        fixture: DodecaAssetProcessingFixture,
+    ) -> DodecaAssetProcessingFixture {
         fixture
     }
 

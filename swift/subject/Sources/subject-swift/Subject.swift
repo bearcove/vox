@@ -405,6 +405,12 @@ struct TestbedService: TestbedHandler {
         fixture
     }
 
+    func echoDodecaAssetProcessingFixture(fixture: DodecaAssetProcessingFixture) async throws
+        -> DodecaAssetProcessingFixture
+    {
+        fixture
+    }
+
     func echoStyxValue(value: StyxValue) async throws -> StyxValue {
         value
     }
@@ -1152,6 +1158,28 @@ func sampleDodecaSearchIndexerFixture() -> DodecaSearchIndexerFixture {
     )
 }
 
+func sampleDodecaAssetProcessingFixture() -> DodecaAssetProcessingFixture {
+    DodecaAssetProcessingFixture(
+        cssSource: "body { background: url('/old/bg.png'); color: red; }",
+        cssPathMap: [
+            "/old/bg.png": "/assets/bg.abcd.png",
+            "/old/font.woff2": "/assets/font.woff2",
+        ],
+        cssResult: .success(css: "body{background:url('/assets/bg.abcd.png');color:red}"),
+        sassEntrypoint: "styles/app.scss",
+        sassFiles: [
+            "styles/app.scss": "$brand: #c0ffee; @import 'partials/buttons'; body { color: $brand; }",
+            "styles/partials/_buttons.scss": ".button { padding: 4px; }",
+        ],
+        sassLoadPaths: ["styles", "vendor"],
+        sassResult: .success(css: "body{color:#c0ffee}.button{padding:4px}"),
+        svgSource: "<svg viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>",
+        svgoResult: .success(
+            svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
+        )
+    )
+}
+
 func sampleDodecaResolvedDependency() -> DodecaResolvedDependency {
     DodecaResolvedDependency(
         name: "facet",
@@ -1342,6 +1370,21 @@ func sameReflectingMap<T>(_ lhs: [String: T]?, _ rhs: [String: T]?) -> Bool {
     default:
         return false
     }
+}
+
+func sameDodecaAssetProcessingFixture(
+    _ lhs: DodecaAssetProcessingFixture,
+    _ rhs: DodecaAssetProcessingFixture
+) -> Bool {
+    lhs.cssSource == rhs.cssSource
+        && lhs.cssPathMap == rhs.cssPathMap
+        && sameReflecting(lhs.cssResult, rhs.cssResult)
+        && lhs.sassEntrypoint == rhs.sassEntrypoint
+        && lhs.sassFiles == rhs.sassFiles
+        && lhs.sassLoadPaths == rhs.sassLoadPaths
+        && sameReflecting(lhs.sassResult, rhs.sassResult)
+        && lhs.svgSource == rhs.svgSource
+        && sameReflecting(lhs.svgoResult, rhs.svgoResult)
 }
 
 func sameDodecaMountLocalization(
@@ -4888,6 +4931,14 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("echo_dodeca_search_indexer_fixture OK")
+    case "echo_dodeca_asset_processing_fixture":
+        let payload = sampleDodecaAssetProcessingFixture()
+        let result = try await client.echoDodecaAssetProcessingFixture(fixture: payload)
+        guard sameDodecaAssetProcessingFixture(result, payload) else {
+            log("echo_dodeca_asset_processing_fixture payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_dodeca_asset_processing_fixture OK")
     case "echo_styx_value":
         let value = sampleStyxValue()
         let result = try await client.echoStyxValue(value: value)
