@@ -811,6 +811,10 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_dodeca_asset_processing_fixture",
         },
         TestCase {
+            name: "rpc_echo_dodeca_small_cell_services_fixture",
+            call: "testbed::run_rpc_echo_dodeca_small_cell_services_fixture",
+        },
+        TestCase {
             name: "rpc_echo_dodeca_devtools_event",
             call: "testbed::run_rpc_echo_dodeca_devtools_event",
         },
@@ -1219,6 +1223,10 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_echo_dodeca_asset_processing_fixture",
             call: "testbed::run_subject_calls_echo_dodeca_asset_processing_fixture",
+        },
+        TestCase {
+            name: "subject_calls_echo_dodeca_small_cell_services_fixture",
+            call: "testbed::run_subject_calls_echo_dodeca_small_cell_services_fixture",
         },
         TestCase {
             name: "subject_calls_echo_dodeca_devtools_event",

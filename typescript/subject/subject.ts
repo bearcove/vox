@@ -60,6 +60,7 @@ import type {
   DodecaScopeValue,
   DodecaSidLine,
   DodecaSearchIndexerFixture,
+  DodecaSmallCellServicesFixture,
   DodecaSourceLine,
   DodecaSourceSnippet,
   DodecaTemplateCall,
@@ -475,6 +476,133 @@ function sampleDodecaAssetProcessingFixture(): DodecaAssetProcessingFixture {
       tag: "Success",
       svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>",
     },
+  };
+}
+
+
+function sampleDodecaTaskProgress(
+  name: string,
+  total: number,
+  completed: number,
+  status: "Pending" | "Running" | "Done" | "Error",
+) {
+  return {
+    name,
+    total,
+    completed,
+    status: { tag: status },
+    message: status === "Error" ? `${name} failed` : null,
+  };
+}
+
+function sampleDodecaSmallCellServicesFixture(): DodecaSmallCellServicesFixture {
+  return {
+    ready_msg: {
+      peer_id: 42,
+      cell_name: "ddc-cell-fonts",
+      pid: 12_345,
+      version: "1.0.0-dev",
+      features: ["woff2", "subset"],
+    },
+    ready_ack: { ok: true, host_time_unix_ms: 1_778_000_000_000n },
+    minify_result: { tag: "Success", content: "<main><h1>Hi</h1></main>" },
+    js_input: {
+      js: "import '/assets/theme.css'; console.log('/assets/app.js')",
+      path_map: new Map([
+        ["/assets/app.js", "/assets/app.1234.js"],
+        ["/assets/theme.css", "/assets/theme.abcd.css"],
+      ]),
+    },
+    js_result: { ok: true, value: "import '/assets/theme.abcd.css'; console.log('/assets/app.1234.js')" },
+    html_diff_input: {
+      old_html: "<main><h1>Old</h1></main>",
+      new_html: "<main><h1>New</h1><p>body</p></main>",
+    },
+    html_diff_result: { ok: true, value: { patches_blob: new Uint8Array([0x91, 0xa4, 0x70, 0x61, 0x74, 0x68]) } },
+    subset_font_input: {
+      data: new Uint8Array([0x77, 0x4f, 0x46, 0x32]),
+      chars: ["A", String.fromCodePoint(0x00e9), String.fromCodePoint(0x1f41d)],
+    },
+    font_results: [
+      { tag: "DecompressSuccess", data: new Uint8Array([0x00, 0x01, 0x00, 0x00]) },
+      { tag: "SubsetSuccess", data: new Uint8Array([0xde, 0xad, 0xbe, 0xef]) },
+      { tag: "CompressSuccess", data: new Uint8Array([0x77, 0x4f, 0x46, 0x32, 0x01]) },
+    ],
+    webp_encode_input: {
+      pixels: new Uint8Array([0, 32, 64, 255, 255, 128, 0, 255]),
+      width: 2,
+      height: 1,
+      quality: 82,
+    },
+    webp_results: [
+      { tag: "DecodeSuccess", pixels: new Uint8Array([0, 32, 64, 255]), width: 1, height: 1, channels: 4 },
+      { tag: "EncodeSuccess", data: new Uint8Array([0x52, 0x49, 0x46, 0x46]) },
+    ],
+    jxl_encode_input: {
+      pixels: new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255]),
+      width: 2,
+      height: 1,
+      quality: 90,
+    },
+    jxl_results: [
+      { tag: "DecodeSuccess", pixels: new Uint8Array([255, 0, 255, 255]), width: 1, height: 1, channels: 4 },
+      { tag: "Error", message: "unsupported color profile" },
+    ],
+    select_result: { tag: "Selected", index: 2n },
+    confirm_result: { tag: "Yes" },
+    record_config: { shell: "/bin/zsh" },
+    term_result: { tag: "Success", html: "<t-b>cargo nextest</t-b>" },
+    start_dev_server_result: { tag: "Success", port: 5173 },
+    run_build_result: { tag: "Error", message: "vite config missing" },
+    link_check_input: {
+      urls: ["https://example.com/ok", "https://example.com/missing"],
+      delay_ms: 250n,
+      timeout_secs: 15n,
+    },
+    link_check_result: {
+      tag: "Success",
+      output: {
+        results: new Map([
+          ["https://example.com/ok", { tag: "Ok" }],
+          [
+            "https://example.com/missing",
+            {
+              tag: "HttpError",
+              code: 404,
+              diagnostics: {
+                request_headers: [["accept", "text/html"]],
+                response_headers: [["content-type", "text/html"]],
+                response_body: "<h1>not found</h1>",
+              },
+            },
+          ],
+          ["https://slow.example.com", { tag: "Skipped" }],
+        ]),
+      },
+    },
+    build_progress: {
+      parse: sampleDodecaTaskProgress("parse", 12, 12, "Done"),
+      render: sampleDodecaTaskProgress("render", 48, 40, "Running"),
+      sass: sampleDodecaTaskProgress("sass", 3, 3, "Done"),
+      links: sampleDodecaTaskProgress("links", 10, 7, "Running"),
+      search: sampleDodecaTaskProgress("search", 1, 0, "Pending"),
+    },
+    log_event: {
+      level: { tag: "Warn" },
+      kind: { tag: "Http", status: 404 },
+      message: "dead link",
+      fields: [["route", "/guide/"], ["href", "/missing/"]],
+    },
+    server_status: {
+      urls: ["http://127.0.0.1:5173", "http://192.168.1.42:5173"],
+      is_running: true,
+      bind_mode: { tag: "Lan" },
+      picante_cache_size: 4_096n,
+      cas_cache_size: 8_192n,
+      code_exec_cache_size: 1_024n,
+    },
+    server_command: { tag: "SetLogFilter", filter: "dodeca=debug,cell=trace" },
+    command_result: { tag: "Ok" },
   };
 }
 
@@ -4381,6 +4509,11 @@ class TestbedService implements TestbedHandler {
     return fixture;
   }
 
+
+  echoDodecaSmallCellServicesFixture(fixture: DodecaSmallCellServicesFixture): DodecaSmallCellServicesFixture {
+    return fixture;
+  }
+
   echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent): DodecaDevtoolsEvent {
     return event;
   }
@@ -5284,6 +5417,16 @@ async function runClient() {
         throw new Error("echo_dodeca_asset_processing_fixture: payload mismatch");
       }
       console.error(`echo_dodeca_asset_processing_fixture OK`);
+      break;
+    }
+
+    case "echo_dodeca_small_cell_services_fixture": {
+      const payload = sampleDodecaSmallCellServicesFixture();
+      const result = await client.echoDodecaSmallCellServicesFixture(payload);
+      if (!sameHelixDeep(result, payload)) {
+        throw new Error("echo_dodeca_small_cell_services_fixture: payload mismatch");
+      }
+      console.error(`echo_dodeca_small_cell_services_fixture OK`);
       break;
     }
     case "echo_dodeca_devtools_event": {

@@ -158,6 +158,10 @@ mod lang_rust_transport_tcp {
             testbed::run_rpc_echo_dodeca_asset_processing_fixture(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_rpc_echo_dodeca_small_cell_services_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_dodeca_devtools_event() {
             testbed::run_rpc_echo_dodeca_devtools_event(SPEC);
         }
@@ -567,6 +571,10 @@ mod lang_rust_transport_tcp {
         #[test]
         fn subject_calls_echo_dodeca_asset_processing_fixture() {
             testbed::run_subject_calls_echo_dodeca_asset_processing_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_subject_calls_echo_dodeca_small_cell_services_fixture(SPEC);
         }
         #[test]
         fn subject_calls_echo_dodeca_devtools_event() {
@@ -975,6 +983,10 @@ mod lang_typescript_transport_tcp {
             testbed::run_rpc_echo_dodeca_asset_processing_fixture(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_rpc_echo_dodeca_small_cell_services_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_dodeca_devtools_event() {
             testbed::run_rpc_echo_dodeca_devtools_event(SPEC);
         }
@@ -1384,6 +1396,10 @@ mod lang_typescript_transport_tcp {
         #[test]
         fn subject_calls_echo_dodeca_asset_processing_fixture() {
             testbed::run_subject_calls_echo_dodeca_asset_processing_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_subject_calls_echo_dodeca_small_cell_services_fixture(SPEC);
         }
         #[test]
         fn subject_calls_echo_dodeca_devtools_event() {
@@ -1792,6 +1808,10 @@ mod lang_typescript_transport_ws {
             testbed::run_rpc_echo_dodeca_asset_processing_fixture(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_rpc_echo_dodeca_small_cell_services_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_dodeca_devtools_event() {
             testbed::run_rpc_echo_dodeca_devtools_event(SPEC);
         }
@@ -2201,6 +2221,10 @@ mod lang_typescript_transport_ws {
         #[test]
         fn subject_calls_echo_dodeca_asset_processing_fixture() {
             testbed::run_subject_calls_echo_dodeca_asset_processing_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_subject_calls_echo_dodeca_small_cell_services_fixture(SPEC);
         }
         #[test]
         fn subject_calls_echo_dodeca_devtools_event() {
@@ -2609,6 +2633,10 @@ mod lang_swift_transport_tcp {
             testbed::run_rpc_echo_dodeca_asset_processing_fixture(SPEC);
         }
         #[test]
+        fn rpc_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_rpc_echo_dodeca_small_cell_services_fixture(SPEC);
+        }
+        #[test]
         fn rpc_echo_dodeca_devtools_event() {
             testbed::run_rpc_echo_dodeca_devtools_event(SPEC);
         }
@@ -3018,6 +3046,10 @@ mod lang_swift_transport_tcp {
         #[test]
         fn subject_calls_echo_dodeca_asset_processing_fixture() {
             testbed::run_subject_calls_echo_dodeca_asset_processing_fixture(SPEC);
+        }
+        #[test]
+        fn subject_calls_echo_dodeca_small_cell_services_fixture() {
+            testbed::run_subject_calls_echo_dodeca_small_cell_services_fixture(SPEC);
         }
         #[test]
         fn subject_calls_echo_dodeca_devtools_event() {

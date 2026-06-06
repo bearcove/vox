@@ -272,6 +272,12 @@ pub trait Testbed {
         fixture: DodecaAssetProcessingFixture,
     ) -> DodecaAssetProcessingFixture;
 
+    /// Echo Dodeca small-cell lifecycle/minify/image/dialog/tui service roots.
+    async fn echo_dodeca_small_cell_services_fixture(
+        &self,
+        fixture: DodecaSmallCellServicesFixture,
+    ) -> DodecaSmallCellServicesFixture;
+
     /// Dodeca devtools scope query from the browser overlay.
     async fn dodeca_devtools_get_scope(&self, path: Option<Vec<String>>) -> Vec<DodecaScopeEntry>;
 
@@ -905,6 +911,354 @@ pub struct DodecaAssetProcessingFixture {
     pub sass_result: DodecaSassResult,
     pub svg_source: String,
     pub svgo_result: DodecaSvgoResult,
+}
+
+/// Lifecycle ready message from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaReadyMsg {
+    pub peer_id: u16,
+    pub cell_name: String,
+    pub pid: Option<u32>,
+    pub version: Option<String>,
+    pub features: Vec<String>,
+}
+
+/// Lifecycle ready acknowledgement from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaReadyAck {
+    pub ok: bool,
+    pub host_time_unix_ms: Option<u64>,
+}
+
+/// HTML/CSS/JS minification result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaMinifyResult {
+    Success { content: String },
+    Error { message: String },
+}
+
+/// JavaScript path-rewrite input from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaJsRewriteInput {
+    pub js: String,
+    pub path_map: BTreeMap<String, String>,
+}
+
+/// HTML diff input from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaHtmlDiffInput {
+    pub old_html: String,
+    pub new_html: String,
+}
+
+/// HTML diff success payload from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaHtmlDiffOutcome {
+    pub patches_blob: Vec<u8>,
+}
+
+/// HTML diff error payload from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaHtmlDiffError {
+    Generic(String),
+}
+
+/// Font subsetting input from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSubsetFontInput {
+    pub data: Vec<u8>,
+    pub chars: Vec<char>,
+}
+
+/// Font processing result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaFontResult {
+    DecompressSuccess { data: Vec<u8> },
+    SubsetSuccess { data: Vec<u8> },
+    CompressSuccess { data: Vec<u8> },
+    Error { message: String },
+}
+
+/// WebP encoding input from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaWebpEncodeInput {
+    pub pixels: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub quality: u8,
+}
+
+/// WebP result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaWebpResult {
+    DecodeSuccess {
+        pixels: Vec<u8>,
+        width: u32,
+        height: u32,
+        channels: u8,
+    },
+    EncodeSuccess {
+        data: Vec<u8>,
+    },
+    Error {
+        message: String,
+    },
+}
+
+/// JPEG XL encoding input from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaJxlEncodeInput {
+    pub pixels: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub quality: u8,
+}
+
+/// JPEG XL result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaJxlResult {
+    DecodeSuccess {
+        pixels: Vec<u8>,
+        width: u32,
+        height: u32,
+        channels: u8,
+    },
+    EncodeSuccess {
+        data: Vec<u8>,
+    },
+    Error {
+        message: String,
+    },
+}
+
+/// Terminal menu selection result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaSelectResult {
+    Selected { index: usize },
+    Cancelled,
+}
+
+/// Terminal confirmation result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaConfirmResult {
+    Yes,
+    No,
+    Cancelled,
+}
+
+/// Terminal recording configuration from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaRecordConfig {
+    pub shell: Option<String>,
+}
+
+/// Terminal render result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaTermResult {
+    Success { html: String },
+    Error { message: String },
+}
+
+/// Dev server startup result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaStartDevServerResult {
+    Success { port: u16 },
+    Error { message: String },
+}
+
+/// Build run result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaRunBuildResult {
+    Success,
+    Error { message: String },
+}
+
+/// Link check diagnostics from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaLinkDiagnostics {
+    pub request_headers: Vec<(String, String)>,
+    pub response_headers: Vec<(String, String)>,
+    pub response_body: String,
+}
+
+/// Link status from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaLinkStatus {
+    Ok,
+    HttpError {
+        code: u16,
+        diagnostics: DodecaLinkDiagnostics,
+    },
+    Failed {
+        message: String,
+    },
+    Skipped,
+}
+
+/// Link check request from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaLinkCheckInput {
+    pub urls: Vec<String>,
+    pub delay_ms: u64,
+    pub timeout_secs: u64,
+}
+
+/// Link check output from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaLinkCheckOutput {
+    pub results: BTreeMap<String, DodecaLinkStatus>,
+}
+
+/// Link check result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaLinkCheckResult {
+    Success { output: DodecaLinkCheckOutput },
+    Error { message: String },
+}
+
+/// Build task status from Dodeca small-cell services.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaTaskStatus {
+    Pending,
+    Running,
+    Done,
+    Error,
+}
+
+/// Build task progress from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaTaskProgress {
+    pub name: String,
+    pub total: u32,
+    pub completed: u32,
+    pub status: DodecaTaskStatus,
+    pub message: Option<String>,
+}
+
+/// Full build progress from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaBuildProgress {
+    pub parse: DodecaTaskProgress,
+    pub render: DodecaTaskProgress,
+    pub sass: DodecaTaskProgress,
+    pub links: DodecaTaskProgress,
+    pub search: DodecaTaskProgress,
+}
+
+/// Log level from Dodeca small-cell services.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaLogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+/// Log event kind from Dodeca small-cell services.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaEventKind {
+    Http { status: u16 },
+    FileChange,
+    Reload,
+    Patch,
+    Search,
+    Server,
+    Build,
+    Generic,
+}
+
+/// Log event from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaLogEvent {
+    pub level: DodecaLogLevel,
+    pub kind: DodecaEventKind,
+    pub message: String,
+    pub fields: Vec<(String, String)>,
+}
+
+/// Bind mode from Dodeca small-cell services.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaBindMode {
+    Local,
+    Lan,
+}
+
+/// Server status from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaServerStatus {
+    pub urls: Vec<String>,
+    pub is_running: bool,
+    pub bind_mode: DodecaBindMode,
+    pub picante_cache_size: u64,
+    pub cas_cache_size: u64,
+    pub code_exec_cache_size: u64,
+}
+
+/// Server command from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaServerCommand {
+    GoPublic,
+    GoLocal,
+    TogglePicanteDebug,
+    CycleLogLevel,
+    SetLogFilter { filter: String },
+}
+
+/// Command result from Dodeca small-cell services.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+#[repr(u8)]
+pub enum DodecaCommandResult {
+    Ok,
+    Error { message: String },
+}
+
+/// Aggregate Dodeca small-cell services fixture root.
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSmallCellServicesFixture {
+    pub ready_msg: DodecaReadyMsg,
+    pub ready_ack: DodecaReadyAck,
+    pub minify_result: DodecaMinifyResult,
+    pub js_input: DodecaJsRewriteInput,
+    pub js_result: Result<String, String>,
+    pub html_diff_input: DodecaHtmlDiffInput,
+    pub html_diff_result: Result<DodecaHtmlDiffOutcome, DodecaHtmlDiffError>,
+    pub subset_font_input: DodecaSubsetFontInput,
+    pub font_results: Vec<DodecaFontResult>,
+    pub webp_encode_input: DodecaWebpEncodeInput,
+    pub webp_results: Vec<DodecaWebpResult>,
+    pub jxl_encode_input: DodecaJxlEncodeInput,
+    pub jxl_results: Vec<DodecaJxlResult>,
+    pub select_result: DodecaSelectResult,
+    pub confirm_result: DodecaConfirmResult,
+    pub record_config: DodecaRecordConfig,
+    pub term_result: DodecaTermResult,
+    pub start_dev_server_result: DodecaStartDevServerResult,
+    pub run_build_result: DodecaRunBuildResult,
+    pub link_check_input: DodecaLinkCheckInput,
+    pub link_check_result: DodecaLinkCheckResult,
+    pub build_progress: DodecaBuildProgress,
+    pub log_event: DodecaLogEvent,
+    pub server_status: DodecaServerStatus,
+    pub server_command: DodecaServerCommand,
+    pub command_result: DodecaCommandResult,
 }
 
 /// Browser devtools event from `dodeca_protocol::BrowserService::on_event`.

@@ -1096,13 +1096,18 @@ export class ConnectionHandle {
         `missing response schema binding for method ${request.descriptor.id}`,
       );
     }
-    const decoded = decoder(responsePayload) as unknown as { tag: string; value?: unknown };
+    const decoded = decoder(responsePayload) as unknown as {
+      tag?: string;
+      ok?: boolean;
+      value?: unknown;
+      error?: unknown;
+    };
 
-    if (decoded.tag === "Ok") {
+    if (decoded.tag === "Ok" || decoded.ok === true) {
       return decoded.value;
     }
 
-    const err = decoded.value as { tag: string; value?: unknown };
+    const err = (decoded.tag === "Err" ? decoded.value : decoded.error) as { tag: string; value?: unknown };
     switch (err.tag) {
       case "User":
         throw new RpcError(RpcErrorCode.USER, null, err.value);

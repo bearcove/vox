@@ -25,9 +25,9 @@ use subject_rust::{
     sample_dodeca_image_processor_fixture, sample_dodeca_load_data_result,
     sample_dodeca_markdown_content, sample_dodeca_markdown_source_path,
     sample_dodeca_open_source_result, sample_dodeca_parse_result, sample_dodeca_scope_entries,
-    sample_dodeca_search_indexer_fixture, sample_helix_pulse_bundle,
-    sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
-    sample_helix_trace_service_surface, sample_helix_verify_evidence,
+    sample_dodeca_search_indexer_fixture, sample_dodeca_small_cell_services_fixture,
+    sample_helix_pulse_bundle, sample_helix_pulse_bundle_fields, sample_helix_pulses,
+    sample_helix_stream_metrics, sample_helix_trace_service_surface, sample_helix_verify_evidence,
     sample_hotmeal_apply_patches_result, sample_hotmeal_live_reload_events, sample_hotmeal_route,
     sample_stax_flamegraph_update, sample_stax_flamegraph_updates,
     sample_stax_linux_broker_control_fixture, sample_stax_macos_batches, sample_stax_macos_config,
@@ -1045,6 +1045,19 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("echo_dodeca_devtools_event OK");
+        }
+        "echo_dodeca_small_cell_services_fixture" => {
+            let payload = sample_dodeca_small_cell_services_fixture();
+            let result = client
+                .echo_dodeca_small_cell_services_fixture(payload.clone())
+                .await
+                .map_err(|e| format!("echo_dodeca_small_cell_services_fixture failed: {e:?}"))?;
+            if result != payload {
+                return Err(format!(
+                    "echo_dodeca_small_cell_services_fixture: expected {payload:?}, got {result:?}"
+                ));
+            }
+            info!("echo_dodeca_small_cell_services_fixture OK");
         }
         "dodeca_devtools_get_scope" => {
             let expected = sample_dodeca_scope_entries();

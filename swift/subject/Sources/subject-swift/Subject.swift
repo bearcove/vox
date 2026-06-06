@@ -411,6 +411,13 @@ struct TestbedService: TestbedHandler {
         fixture
     }
 
+
+    func echoDodecaSmallCellServicesFixture(fixture: DodecaSmallCellServicesFixture) async throws
+        -> DodecaSmallCellServicesFixture
+    {
+        fixture
+    }
+
     func echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent) async throws
         -> DodecaDevtoolsEvent
     {
@@ -1277,6 +1284,136 @@ func sampleDodecaAssetProcessingFixture() -> DodecaAssetProcessingFixture {
     )
 }
 
+
+func sampleDodecaTaskProgress(
+    _ name: String,
+    total: UInt32,
+    completed: UInt32,
+    status: DodecaTaskStatus
+) -> DodecaTaskProgress {
+    let message: String?
+    switch status {
+    case .error:
+        message = "\(name) failed"
+    default:
+        message = nil
+    }
+
+    return DodecaTaskProgress(
+        name: name,
+        total: total,
+        completed: completed,
+        status: status,
+        message: message
+    )
+}
+
+func sampleDodecaSmallCellServicesFixture() -> DodecaSmallCellServicesFixture {
+    DodecaSmallCellServicesFixture(
+        readyMsg: DodecaReadyMsg(
+            peerId: 42,
+            cellName: "ddc-cell-fonts",
+            pid: 12_345,
+            version: "1.0.0-dev",
+            features: ["woff2", "subset"]
+        ),
+        readyAck: DodecaReadyAck(ok: true, hostTimeUnixMs: 1_778_000_000_000),
+        minifyResult: .success(content: "<main><h1>Hi</h1></main>"),
+        jsInput: DodecaJsRewriteInput(
+            js: "import '/assets/theme.css'; console.log('/assets/app.js')",
+            pathMap: [
+                "/assets/app.js": "/assets/app.1234.js",
+                "/assets/theme.css": "/assets/theme.abcd.css",
+            ]
+        ),
+        jsResult: .success("import '/assets/theme.abcd.css'; console.log('/assets/app.1234.js')"),
+        htmlDiffInput: DodecaHtmlDiffInput(
+            oldHtml: "<main><h1>Old</h1></main>",
+            newHtml: "<main><h1>New</h1><p>body</p></main>"
+        ),
+        htmlDiffResult: .success(
+            DodecaHtmlDiffOutcome(patchesBlob: Data([0x91, 0xa4, 0x70, 0x61, 0x74, 0x68]))
+        ),
+        subsetFontInput: DodecaSubsetFontInput(
+            data: Data([0x77, 0x4f, 0x46, 0x32]),
+            chars: ["A", String(UnicodeScalar(0x00e9)!), String(UnicodeScalar(0x1f41d)!)]
+        ),
+        fontResults: [
+            .decompressSuccess(data: Data([0x00, 0x01, 0x00, 0x00])),
+            .subsetSuccess(data: Data([0xde, 0xad, 0xbe, 0xef])),
+            .compressSuccess(data: Data([0x77, 0x4f, 0x46, 0x32, 0x01])),
+        ],
+        webpEncodeInput: DodecaWebpEncodeInput(
+            pixels: Data([0, 32, 64, 255, 255, 128, 0, 255]),
+            width: 2,
+            height: 1,
+            quality: 82
+        ),
+        webpResults: [
+            .decodeSuccess(pixels: Data([0, 32, 64, 255]), width: 1, height: 1, channels: 4),
+            .encodeSuccess(data: Data([0x52, 0x49, 0x46, 0x46])),
+        ],
+        jxlEncodeInput: DodecaJxlEncodeInput(
+            pixels: Data([0, 0, 0, 255, 255, 255, 255, 255]),
+            width: 2,
+            height: 1,
+            quality: 90
+        ),
+        jxlResults: [
+            .decodeSuccess(pixels: Data([255, 0, 255, 255]), width: 1, height: 1, channels: 4),
+            .error(message: "unsupported color profile"),
+        ],
+        selectResult: .selected(index: 2),
+        confirmResult: .yes,
+        recordConfig: DodecaRecordConfig(shell: "/bin/zsh"),
+        termResult: .success(html: "<t-b>cargo nextest</t-b>"),
+        startDevServerResult: .success(port: 5173),
+        runBuildResult: .error(message: "vite config missing"),
+        linkCheckInput: DodecaLinkCheckInput(
+            urls: ["https://example.com/ok", "https://example.com/missing"],
+            delayMs: 250,
+            timeoutSecs: 15
+        ),
+        linkCheckResult: .success(
+            output: DodecaLinkCheckOutput(results: [
+                "https://example.com/ok": .ok,
+                "https://example.com/missing": .httpError(
+                    code: 404,
+                    diagnostics: DodecaLinkDiagnostics(
+                        requestHeaders: [("accept", "text/html")],
+                        responseHeaders: [("content-type", "text/html")],
+                        responseBody: "<h1>not found</h1>"
+                    )
+                ),
+                "https://slow.example.com": .skipped,
+            ])
+        ),
+        buildProgress: DodecaBuildProgress(
+            parse: sampleDodecaTaskProgress("parse", total: 12, completed: 12, status: .done),
+            render: sampleDodecaTaskProgress("render", total: 48, completed: 40, status: .running),
+            sass: sampleDodecaTaskProgress("sass", total: 3, completed: 3, status: .done),
+            links: sampleDodecaTaskProgress("links", total: 10, completed: 7, status: .running),
+            search: sampleDodecaTaskProgress("search", total: 1, completed: 0, status: .pending)
+        ),
+        logEvent: DodecaLogEvent(
+            level: .warn,
+            kind: .http(status: 404),
+            message: "dead link",
+            fields: [("route", "/guide/"), ("href", "/missing/")]
+        ),
+        serverStatus: DodecaServerStatus(
+            urls: ["http://127.0.0.1:5173", "http://192.168.1.42:5173"],
+            isRunning: true,
+            bindMode: .lan,
+            picanteCacheSize: 4_096,
+            casCacheSize: 8_192,
+            codeExecCacheSize: 1_024
+        ),
+        serverCommand: .setLogFilter(filter: "dodeca=debug,cell=trace"),
+        commandResult: .ok
+    )
+}
+
 func sampleDodecaSourceLines() -> [DodecaSourceLine] {
     [
         DodecaSourceLine(number: 12, content: "{% for item in data.items %}"),
@@ -1609,6 +1746,14 @@ func sameDodecaAssetProcessingFixture(
         && sameReflecting(lhs.sassResult, rhs.sassResult)
         && lhs.svgSource == rhs.svgSource
         && sameReflecting(lhs.svgoResult, rhs.svgoResult)
+}
+
+func sameDodecaSmallCellServicesFixture(
+    _ lhs: DodecaSmallCellServicesFixture,
+    _ rhs: DodecaSmallCellServicesFixture
+) -> Bool {
+    encodeVoxTyped(lhs, testbed_echoDodecaSmallCellServicesFixture_ArgsEncoder)
+        == encodeVoxTyped(rhs, testbed_echoDodecaSmallCellServicesFixture_ArgsEncoder)
 }
 
 func sameDodecaMountLocalization(
@@ -5167,6 +5312,15 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("echo_dodeca_asset_processing_fixture OK")
+
+    case "echo_dodeca_small_cell_services_fixture":
+        let payload = sampleDodecaSmallCellServicesFixture()
+        let result = try await client.echoDodecaSmallCellServicesFixture(fixture: payload)
+        guard sameDodecaSmallCellServicesFixture(result, payload) else {
+            log("echo_dodeca_small_cell_services_fixture payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_dodeca_small_cell_services_fixture OK")
     case "echo_dodeca_devtools_event":
         let payload = sampleDodecaDevtoolsEvent()
         let result = try await client.echoDodecaDevtoolsEvent(event: payload)

@@ -5,6 +5,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use facet_value::{VObject, VString, Value};
+use spec_proto::DodecaSmallCellServicesFixture;
 use spec_proto::{
     Canvas, Color, Config, DibsAppliedMigration, DibsColumnInfo, DibsCreateRequest,
     DibsDeleteRequest, DibsError, DibsFilter, DibsFilterOp, DibsForeignKeyInfo, DibsGetRequest,
@@ -3653,6 +3654,13 @@ impl Testbed for TestbedService {
         &self,
         fixture: DodecaAssetProcessingFixture,
     ) -> DodecaAssetProcessingFixture {
+        fixture
+    }
+
+    async fn echo_dodeca_small_cell_services_fixture(
+        &self,
+        fixture: DodecaSmallCellServicesFixture,
+    ) -> DodecaSmallCellServicesFixture {
         fixture
     }
 
