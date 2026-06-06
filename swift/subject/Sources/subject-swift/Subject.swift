@@ -411,6 +411,91 @@ struct TestbedService: TestbedHandler {
         fixture
     }
 
+    func echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent) async throws
+        -> DodecaDevtoolsEvent
+    {
+        event
+    }
+
+    func dodecaDevtoolsGetScope(path: [String]?) async throws -> [DodecaScopeEntry] {
+        if path == ["page"] {
+            return sampleDodecaScopeEntries()
+        }
+        return []
+    }
+
+    func dodecaDevtoolsEval(snapshotId: String, expression: String) async throws
+        -> DodecaEvalResult
+    {
+        if snapshotId == "snap-devtools-42" && expression == "page.title" {
+            return sampleDodecaEvalResult()
+        }
+        return .err("unknown expression")
+    }
+
+    func dodecaDevtoolsOpenDeadLink(
+        route: String,
+        target: DodecaDeadLinkTarget
+    ) async throws -> DodecaOpenSourceResult {
+        if route == "/guide/" && sameReflecting(target, sampleDodecaDeadLinkTarget()) {
+            return sampleDodecaOpenSourceResult()
+        }
+        return .err("unexpected dead link target")
+    }
+
+    func dodecaDevtoolsEditLoad(token: String, route: String) async throws -> DodecaEditLoad {
+        if token == "editor-token" && route == "/guide/" {
+            return sampleDodecaEditLoad()
+        }
+        return .denied
+    }
+
+    func dodecaDevtoolsEditPreview(
+        token: String,
+        sourceKey: String,
+        buffer: String
+    ) async throws -> DodecaEditPreview {
+        if token == "editor-token"
+            && sourceKey == "content/guide.md"
+            && buffer == "# Guide\n\nUpdated from browser."
+        {
+            return sampleDodecaEditPreview()
+        }
+        return .denied
+    }
+
+    func dodecaDevtoolsEditSave(token: String, req: DodecaEditSaveReq) async throws
+        -> DodecaEditSave
+    {
+        if token == "editor-token" && sameReflecting(req, sampleDodecaEditSaveReq()) {
+            return sampleDodecaEditSave()
+        }
+        return .denied
+    }
+
+    func dodecaDevtoolsEditUpload(token: String, req: DodecaEditUploadReq) async throws
+        -> DodecaEditUpload
+    {
+        if token == "editor-token" && sameReflecting(req, sampleDodecaEditUploadReq()) {
+            return sampleDodecaEditUpload()
+        }
+        return .denied
+    }
+
+    func dodecaDevtoolsEditRead(token: String, uri: String) async throws -> DodecaEditRead {
+        if token == "editor-token" && uri == "file:///workspace/content/guide.md" {
+            return sampleDodecaEditRead()
+        }
+        return .denied
+    }
+
+    func dodecaDevtoolsEditList(token: String) async throws -> DodecaEditList {
+        if token == "editor-token" {
+            return sampleDodecaEditList()
+        }
+        return .denied
+    }
+
     func echoStyxValue(value: StyxValue) async throws -> StyxValue {
         value
     }
@@ -1178,6 +1263,133 @@ func sampleDodecaAssetProcessingFixture() -> DodecaAssetProcessingFixture {
             svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
         )
     )
+}
+
+func sampleDodecaSourceLines() -> [DodecaSourceLine] {
+    [
+        DodecaSourceLine(number: 12, content: "{% for item in data.items %}"),
+        DodecaSourceLine(number: 13, content: "{{ item.title }}"),
+    ]
+}
+
+func sampleDodecaSourceSnippet() -> DodecaSourceSnippet {
+    DodecaSourceSnippet(lines: sampleDodecaSourceLines(), errorLine: 13)
+}
+
+func sampleDodecaErrorInfo() -> DodecaErrorInfo {
+    DodecaErrorInfo(
+        route: "/guide/",
+        message: "unknown filter `slugify`",
+        template: "templates/page.html",
+        line: 13,
+        column: 8,
+        sourceSnippet: sampleDodecaSourceSnippet(),
+        snapshotId: "snap-devtools-42",
+        availableVariables: ["page", "root", "data"]
+    )
+}
+
+func sampleDodecaDevtoolsEvent() -> DodecaDevtoolsEvent {
+    .error(sampleDodecaErrorInfo())
+}
+
+func sampleDodecaScopeEntries() -> [DodecaScopeEntry] {
+    [
+        DodecaScopeEntry(name: "title", value: .string("Phon migration"), expandable: false),
+        DodecaScopeEntry(
+            name: "items",
+            value: .array(length: 3, preview: "[intro, install, api]"),
+            expandable: true
+        ),
+        DodecaScopeEntry(
+            name: "metrics",
+            value: .object(fields: 2, preview: "{views, updated_at}"),
+            expandable: true
+        ),
+        DodecaScopeEntry(name: "score", value: .number(42.5), expandable: false),
+    ]
+}
+
+func sampleDodecaEvalResult() -> DodecaEvalResult {
+    .ok(.object(fields: 2, preview: "{title, route}"))
+}
+
+func sampleDodecaDeadLinkTarget() -> DodecaDeadLinkTarget {
+    .wiki(key: "missing-page", title: "Missing Page")
+}
+
+func sampleDodecaOpenSourceResult() -> DodecaOpenSourceResult {
+    .ok
+}
+
+func sampleDodecaSidLines() -> [DodecaSidLine] {
+    [
+        DodecaSidLine(sid: "p-1", line: 5),
+        DodecaSidLine(sid: "code-1", line: 17),
+    ]
+}
+
+func sampleDodecaEditLoad() -> DodecaEditLoad {
+    .ok(
+        sourceKey: "content/guide.md",
+        route: "/guide/",
+        uri: "file:///workspace/content/guide.md",
+        content: "# Guide\n\nWelcome to Phon.",
+        base: "a1b2c3d4"
+    )
+}
+
+func sampleDodecaEditPreview() -> DodecaEditPreview {
+    .ok(
+        html: "<article><h1>Guide</h1><p>Welcome to Phon.</p></article>",
+        sourceMap: sampleDodecaSidLines()
+    )
+}
+
+func sampleDodecaEditSaveReq() -> DodecaEditSaveReq {
+    DodecaEditSaveReq(
+        sourceKey: "content/guide.md",
+        buffer: "# Guide\n\nUpdated from browser.",
+        base: "a1b2c3d4",
+        message: "Update guide"
+    )
+}
+
+func sampleDodecaEditSave() -> DodecaEditSave {
+    .ok(commit: "deadbeef1234", base: "b4c3d2a1")
+}
+
+func sampleDodecaEditUploadReq() -> DodecaEditUploadReq {
+    DodecaEditUploadReq(
+        sourceKey: "content/guide.md",
+        filename: "diagram.png",
+        bytes: byteRamp(128, seed: 31)
+    )
+}
+
+func sampleDodecaEditUpload() -> DodecaEditUpload {
+    .ok(markdown: "![diagram](./diagram.png)", path: "diagram.png")
+}
+
+func sampleDodecaEditRead() -> DodecaEditRead {
+    .ok(content: "# Guide\n\nWelcome to Phon.", base: "a1b2c3d4")
+}
+
+func sampleDodecaEditList() -> DodecaEditList {
+    .ok(entries: [
+        DodecaEditEntry(
+            sourceKey: "content/guide.md",
+            route: "/guide/",
+            uri: "file:///workspace/content/guide.md",
+            title: "Guide"
+        ),
+        DodecaEditEntry(
+            sourceKey: "content/reference.md",
+            route: "/reference/",
+            uri: "file:///workspace/content/reference.md",
+            title: "Reference"
+        ),
+    ])
 }
 
 func sampleDodecaResolvedDependency() -> DodecaResolvedDependency {
@@ -4939,6 +5151,108 @@ func runClientScenario(client: TestbedClient, scenario: String) async throws {
             throw SubjectError.invalidResponse
         }
         log("echo_dodeca_asset_processing_fixture OK")
+    case "echo_dodeca_devtools_event":
+        let payload = sampleDodecaDevtoolsEvent()
+        let result = try await client.echoDodecaDevtoolsEvent(event: payload)
+        guard sameReflecting(result, payload) else {
+            log("echo_dodeca_devtools_event payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("echo_dodeca_devtools_event OK")
+    case "dodeca_devtools_get_scope":
+        let expected = sampleDodecaScopeEntries()
+        let result = try await client.dodecaDevtoolsGetScope(path: ["page"])
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_get_scope payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_get_scope OK")
+    case "dodeca_devtools_eval":
+        let expected = sampleDodecaEvalResult()
+        let result = try await client.dodecaDevtoolsEval(
+            snapshotId: "snap-devtools-42",
+            expression: "page.title"
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_eval payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_eval OK")
+    case "dodeca_devtools_open_dead_link":
+        let expected = sampleDodecaOpenSourceResult()
+        let result = try await client.dodecaDevtoolsOpenDeadLink(
+            route: "/guide/",
+            target: sampleDodecaDeadLinkTarget()
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_open_dead_link payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_open_dead_link OK")
+    case "dodeca_devtools_edit_load":
+        let expected = sampleDodecaEditLoad()
+        let result = try await client.dodecaDevtoolsEditLoad(
+            token: "editor-token",
+            route: "/guide/"
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_load payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_load OK")
+    case "dodeca_devtools_edit_preview":
+        let expected = sampleDodecaEditPreview()
+        let result = try await client.dodecaDevtoolsEditPreview(
+            token: "editor-token",
+            sourceKey: "content/guide.md",
+            buffer: "# Guide\n\nUpdated from browser."
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_preview payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_preview OK")
+    case "dodeca_devtools_edit_save":
+        let expected = sampleDodecaEditSave()
+        let result = try await client.dodecaDevtoolsEditSave(
+            token: "editor-token",
+            req: sampleDodecaEditSaveReq()
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_save payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_save OK")
+    case "dodeca_devtools_edit_upload":
+        let expected = sampleDodecaEditUpload()
+        let result = try await client.dodecaDevtoolsEditUpload(
+            token: "editor-token",
+            req: sampleDodecaEditUploadReq()
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_upload payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_upload OK")
+    case "dodeca_devtools_edit_read":
+        let expected = sampleDodecaEditRead()
+        let result = try await client.dodecaDevtoolsEditRead(
+            token: "editor-token",
+            uri: "file:///workspace/content/guide.md"
+        )
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_read payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_read OK")
+    case "dodeca_devtools_edit_list":
+        let expected = sampleDodecaEditList()
+        let result = try await client.dodecaDevtoolsEditList(token: "editor-token")
+        guard sameReflecting(result, expected) else {
+            log("dodeca_devtools_edit_list payload mismatch")
+            throw SubjectError.invalidResponse
+        }
+        log("dodeca_devtools_edit_list OK")
     case "echo_styx_value":
         let value = sampleStyxValue()
         let result = try await client.echoStyxValue(value: value)

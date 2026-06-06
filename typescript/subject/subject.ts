@@ -31,18 +31,37 @@ import type {
   DodecaCodeExecutionResult,
   DodecaCodeSample,
   DodecaDataFormat,
+  DodecaDeadLinkTarget,
   DodecaDecodedImage,
   DodecaDependencySpec,
+  DodecaDevtoolsEvent,
+  DodecaEditEntry,
+  DodecaEditList,
+  DodecaEditLoad,
+  DodecaEditPreview,
+  DodecaEditRead,
+  DodecaEditSave,
+  DodecaEditSaveReq,
+  DodecaEditUpload,
+  DodecaEditUploadReq,
+  DodecaErrorInfo,
+  DodecaEvalResult,
   DodecaExecuteSamplesInput,
   DodecaExecutionResult,
   DodecaImageProcessorFixture,
   DodecaLoadDataResult,
+  DodecaOpenSourceResult,
   DodecaParseResult,
   DodecaHtmlProcessInput,
   DodecaHtmlProcessResult,
   DodecaResponsiveImageInfo,
   DodecaRustConfig,
+  DodecaScopeEntry,
+  DodecaScopeValue,
+  DodecaSidLine,
   DodecaSearchIndexerFixture,
+  DodecaSourceLine,
+  DodecaSourceSnippet,
   DodecaTemplateCall,
   DibsCreateRequest,
   DibsDeleteRequest,
@@ -456,6 +475,145 @@ function sampleDodecaAssetProcessingFixture(): DodecaAssetProcessingFixture {
       tag: "Success",
       svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>",
     },
+  };
+}
+
+function sampleDodecaSourceLines(): DodecaSourceLine[] {
+  return [
+    { number: 12, content: "{% for item in data.items %}" },
+    { number: 13, content: "{{ item.title }}" },
+  ];
+}
+
+function sampleDodecaSourceSnippet(): DodecaSourceSnippet {
+  return {
+    lines: sampleDodecaSourceLines(),
+    error_line: 13,
+  };
+}
+
+function sampleDodecaErrorInfo(): DodecaErrorInfo {
+  return {
+    route: "/guide/",
+    message: "unknown filter `slugify`",
+    template: "templates/page.html",
+    line: 13,
+    column: 8,
+    source_snippet: sampleDodecaSourceSnippet(),
+    snapshot_id: "snap-devtools-42",
+    available_variables: ["page", "root", "data"],
+  };
+}
+
+function sampleDodecaDevtoolsEvent(): DodecaDevtoolsEvent {
+  return { tag: "Error", value: sampleDodecaErrorInfo() };
+}
+
+function sampleDodecaScopeEntries(): DodecaScopeEntry[] {
+  return [
+    { name: "title", value: { tag: "String", value: "Phon migration" }, expandable: false },
+    {
+      name: "items",
+      value: { tag: "Array", length: 3n, preview: "[intro, install, api]" },
+      expandable: true,
+    },
+    {
+      name: "metrics",
+      value: { tag: "Object", fields: 2n, preview: "{views, updated_at}" },
+      expandable: true,
+    },
+    { name: "score", value: { tag: "Number", value: 42.5 }, expandable: false },
+  ];
+}
+
+function sampleDodecaEvalResult(): DodecaEvalResult {
+  return { tag: "Ok", value: { tag: "Object", fields: 2n, preview: "{title, route}" } };
+}
+
+function sampleDodecaDeadLinkTarget(): DodecaDeadLinkTarget {
+  return { tag: "Wiki", key: "missing-page", title: "Missing Page" };
+}
+
+function sampleDodecaOpenSourceResult(): DodecaOpenSourceResult {
+  return { tag: "Ok" };
+}
+
+function sampleDodecaSidLines(): DodecaSidLine[] {
+  return [
+    { sid: "p-1", line: 5 },
+    { sid: "code-1", line: 17 },
+  ];
+}
+
+function sampleDodecaEditLoad(): DodecaEditLoad {
+  return {
+    tag: "Ok",
+    source_key: "content/guide.md",
+    route: "/guide/",
+    uri: "file:///workspace/content/guide.md",
+    content: "# Guide\n\nWelcome to Phon.",
+    base: "a1b2c3d4",
+  };
+}
+
+function sampleDodecaEditPreview(): DodecaEditPreview {
+  return {
+    tag: "Ok",
+    html: "<article><h1>Guide</h1><p>Welcome to Phon.</p></article>",
+    source_map: sampleDodecaSidLines(),
+  };
+}
+
+function sampleDodecaEditSaveReq(): DodecaEditSaveReq {
+  return {
+    source_key: "content/guide.md",
+    buffer: "# Guide\n\nUpdated from browser.",
+    base: "a1b2c3d4",
+    message: "Update guide",
+  };
+}
+
+function sampleDodecaEditSave(): DodecaEditSave {
+  return { tag: "Ok", commit: "deadbeef1234", base: "b4c3d2a1" };
+}
+
+function sampleDodecaEditUploadReq(): DodecaEditUploadReq {
+  return {
+    source_key: "content/guide.md",
+    filename: "diagram.png",
+    bytes: byteRamp(128, 31),
+  };
+}
+
+function sampleDodecaEditUpload(): DodecaEditUpload {
+  return { tag: "Ok", markdown: "![diagram](./diagram.png)", path: "diagram.png" };
+}
+
+function sampleDodecaEditRead(): DodecaEditRead {
+  return {
+    tag: "Ok",
+    content: "# Guide\n\nWelcome to Phon.",
+    base: "a1b2c3d4",
+  };
+}
+
+function sampleDodecaEditList(): DodecaEditList {
+  return {
+    tag: "Ok",
+    entries: [
+      {
+        source_key: "content/guide.md",
+        route: "/guide/",
+        uri: "file:///workspace/content/guide.md",
+        title: "Guide",
+      },
+      {
+        source_key: "content/reference.md",
+        route: "/reference/",
+        uri: "file:///workspace/content/reference.md",
+        title: "Reference",
+      },
+    ] satisfies DodecaEditEntry[],
   };
 }
 
@@ -4219,6 +4377,73 @@ class TestbedService implements TestbedHandler {
     return fixture;
   }
 
+  echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent): DodecaDevtoolsEvent {
+    return event;
+  }
+
+  dodecaDevtoolsGetScope(path: string[] | null): DodecaScopeEntry[] {
+    if (path !== null && sameHelixDeep(path, ["page"])) {
+      return sampleDodecaScopeEntries();
+    }
+    return [];
+  }
+
+  dodecaDevtoolsEval(snapshotId: string, expression: string): DodecaEvalResult {
+    if (snapshotId === "snap-devtools-42" && expression === "page.title") {
+      return sampleDodecaEvalResult();
+    }
+    return { tag: "Err", value: `unexpected eval input: ${snapshotId} ${expression}` };
+  }
+
+  dodecaDevtoolsOpenDeadLink(route: string, target: DodecaDeadLinkTarget): DodecaOpenSourceResult {
+    if (route === "/guide/" && sameHelixDeep(target, sampleDodecaDeadLinkTarget())) {
+      return sampleDodecaOpenSourceResult();
+    }
+    return { tag: "Err", value: `unexpected dead-link input: ${route}` };
+  }
+
+  dodecaDevtoolsEditLoad(token: string, route: string): DodecaEditLoad {
+    if (token === "editor-token" && route === "/guide/") {
+      return sampleDodecaEditLoad();
+    }
+    return { tag: "Denied" };
+  }
+
+  dodecaDevtoolsEditPreview(token: string, sourceKey: string, buffer: string): DodecaEditPreview {
+    if (token === "editor-token" && sourceKey === "content/guide.md" && buffer === "# Guide\n\nUpdated from browser.") {
+      return sampleDodecaEditPreview();
+    }
+    return { tag: "Denied" };
+  }
+
+  dodecaDevtoolsEditSave(token: string, req: DodecaEditSaveReq): DodecaEditSave {
+    if (token === "editor-token" && sameHelixDeep(req, sampleDodecaEditSaveReq())) {
+      return sampleDodecaEditSave();
+    }
+    return { tag: "Denied" };
+  }
+
+  dodecaDevtoolsEditUpload(token: string, req: DodecaEditUploadReq): DodecaEditUpload {
+    if (token === "editor-token" && sameHelixDeep(req, sampleDodecaEditUploadReq())) {
+      return sampleDodecaEditUpload();
+    }
+    return { tag: "Denied" };
+  }
+
+  dodecaDevtoolsEditRead(token: string, uri: string): DodecaEditRead {
+    if (token === "editor-token" && uri === "file:///workspace/content/guide.md") {
+      return sampleDodecaEditRead();
+    }
+    return { tag: "Denied" };
+  }
+
+  dodecaDevtoolsEditList(token: string): DodecaEditList {
+    if (token === "editor-token") {
+      return sampleDodecaEditList();
+    }
+    return { tag: "Denied" };
+  }
+
   echoStyxValue(value: StyxValue): StyxValue {
     return value;
   }
@@ -5043,6 +5268,100 @@ async function runClient() {
         throw new Error("echo_dodeca_asset_processing_fixture: payload mismatch");
       }
       console.error(`echo_dodeca_asset_processing_fixture OK`);
+      break;
+    }
+    case "echo_dodeca_devtools_event": {
+      const payload = sampleDodecaDevtoolsEvent();
+      const result = await client.echoDodecaDevtoolsEvent(payload);
+      if (!sameHelixDeep(result, payload)) {
+        throw new Error("echo_dodeca_devtools_event: payload mismatch");
+      }
+      console.error(`echo_dodeca_devtools_event OK`);
+      break;
+    }
+    case "dodeca_devtools_get_scope": {
+      const expected = sampleDodecaScopeEntries();
+      const result = await client.dodecaDevtoolsGetScope(["page"]);
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_get_scope: payload mismatch");
+      }
+      console.error(`dodeca_devtools_get_scope OK`);
+      break;
+    }
+    case "dodeca_devtools_eval": {
+      const expected = sampleDodecaEvalResult();
+      const result = await client.dodecaDevtoolsEval("snap-devtools-42", "page.title");
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_eval: payload mismatch");
+      }
+      console.error(`dodeca_devtools_eval OK`);
+      break;
+    }
+    case "dodeca_devtools_open_dead_link": {
+      const expected = sampleDodecaOpenSourceResult();
+      const result = await client.dodecaDevtoolsOpenDeadLink("/guide/", sampleDodecaDeadLinkTarget());
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_open_dead_link: payload mismatch");
+      }
+      console.error(`dodeca_devtools_open_dead_link OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_load": {
+      const expected = sampleDodecaEditLoad();
+      const result = await client.dodecaDevtoolsEditLoad("editor-token", "/guide/");
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_load: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_load OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_preview": {
+      const expected = sampleDodecaEditPreview();
+      const result = await client.dodecaDevtoolsEditPreview(
+        "editor-token",
+        "content/guide.md",
+        "# Guide\n\nUpdated from browser.",
+      );
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_preview: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_preview OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_save": {
+      const expected = sampleDodecaEditSave();
+      const result = await client.dodecaDevtoolsEditSave("editor-token", sampleDodecaEditSaveReq());
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_save: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_save OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_upload": {
+      const expected = sampleDodecaEditUpload();
+      const result = await client.dodecaDevtoolsEditUpload("editor-token", sampleDodecaEditUploadReq());
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_upload: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_upload OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_read": {
+      const expected = sampleDodecaEditRead();
+      const result = await client.dodecaDevtoolsEditRead("editor-token", "file:///workspace/content/guide.md");
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_read: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_read OK`);
+      break;
+    }
+    case "dodeca_devtools_edit_list": {
+      const expected = sampleDodecaEditList();
+      const result = await client.dodecaDevtoolsEditList("editor-token");
+      if (!sameHelixDeep(result, expected)) {
+        throw new Error("dodeca_devtools_edit_list: payload mismatch");
+      }
+      console.error(`dodeca_devtools_edit_list OK`);
       break;
     }
     case "echo_styx_value": {

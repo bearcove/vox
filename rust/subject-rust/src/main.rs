@@ -17,10 +17,14 @@ use subject_rust::{
     sample_dibs_row_one, sample_dibs_schema, sample_dibs_update_request,
     sample_dibs_update_response, sample_dodeca_asset_processing_fixture,
     sample_dodeca_code_execution_result, sample_dodeca_data_content, sample_dodeca_data_format,
-    sample_dodeca_execute_samples_input, sample_dodeca_html_process_input,
-    sample_dodeca_html_process_result, sample_dodeca_image_processor_fixture,
-    sample_dodeca_load_data_result, sample_dodeca_markdown_content,
-    sample_dodeca_markdown_source_path, sample_dodeca_parse_result,
+    sample_dodeca_dead_link_target, sample_dodeca_devtools_event, sample_dodeca_edit_list,
+    sample_dodeca_edit_load, sample_dodeca_edit_preview, sample_dodeca_edit_read,
+    sample_dodeca_edit_save, sample_dodeca_edit_save_req, sample_dodeca_edit_upload,
+    sample_dodeca_edit_upload_req, sample_dodeca_eval_result, sample_dodeca_execute_samples_input,
+    sample_dodeca_html_process_input, sample_dodeca_html_process_result,
+    sample_dodeca_image_processor_fixture, sample_dodeca_load_data_result,
+    sample_dodeca_markdown_content, sample_dodeca_markdown_source_path,
+    sample_dodeca_open_source_result, sample_dodeca_parse_result, sample_dodeca_scope_entries,
     sample_dodeca_search_indexer_fixture, sample_helix_pulse_bundle,
     sample_helix_pulse_bundle_fields, sample_helix_pulses, sample_helix_stream_metrics,
     sample_helix_trace_service_surface, sample_helix_verify_evidence,
@@ -1028,6 +1032,152 @@ async fn run_client() -> Result<(), String> {
                 ));
             }
             info!("echo_dodeca_asset_processing_fixture OK");
+        }
+        "echo_dodeca_devtools_event" => {
+            let payload = sample_dodeca_devtools_event();
+            let result = client
+                .echo_dodeca_devtools_event(payload.clone())
+                .await
+                .map_err(|e| format!("echo_dodeca_devtools_event failed: {e:?}"))?;
+            if result != payload {
+                return Err(format!(
+                    "echo_dodeca_devtools_event: expected {payload:?}, got {result:?}"
+                ));
+            }
+            info!("echo_dodeca_devtools_event OK");
+        }
+        "dodeca_devtools_get_scope" => {
+            let expected = sample_dodeca_scope_entries();
+            let result = client
+                .dodeca_devtools_get_scope(Some(vec!["page".to_string()]))
+                .await
+                .map_err(|e| format!("dodeca_devtools_get_scope failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_get_scope: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_get_scope OK");
+        }
+        "dodeca_devtools_eval" => {
+            let expected = sample_dodeca_eval_result();
+            let result = client
+                .dodeca_devtools_eval("snap-devtools-42".to_string(), "page.title".to_string())
+                .await
+                .map_err(|e| format!("dodeca_devtools_eval failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_eval: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_eval OK");
+        }
+        "dodeca_devtools_open_dead_link" => {
+            let expected = sample_dodeca_open_source_result();
+            let result = client
+                .dodeca_devtools_open_dead_link(
+                    "/guide/".to_string(),
+                    sample_dodeca_dead_link_target(),
+                )
+                .await
+                .map_err(|e| format!("dodeca_devtools_open_dead_link failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_open_dead_link: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_open_dead_link OK");
+        }
+        "dodeca_devtools_edit_load" => {
+            let expected = sample_dodeca_edit_load();
+            let result = client
+                .dodeca_devtools_edit_load("editor-token".to_string(), "/guide/".to_string())
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_load failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_load: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_load OK");
+        }
+        "dodeca_devtools_edit_preview" => {
+            let expected = sample_dodeca_edit_preview();
+            let result = client
+                .dodeca_devtools_edit_preview(
+                    "editor-token".to_string(),
+                    "content/guide.md".to_string(),
+                    "# Guide\n\nUpdated from browser.".to_string(),
+                )
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_preview failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_preview: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_preview OK");
+        }
+        "dodeca_devtools_edit_save" => {
+            let expected = sample_dodeca_edit_save();
+            let result = client
+                .dodeca_devtools_edit_save(
+                    "editor-token".to_string(),
+                    sample_dodeca_edit_save_req(),
+                )
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_save failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_save: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_save OK");
+        }
+        "dodeca_devtools_edit_upload" => {
+            let expected = sample_dodeca_edit_upload();
+            let result = client
+                .dodeca_devtools_edit_upload(
+                    "editor-token".to_string(),
+                    sample_dodeca_edit_upload_req(),
+                )
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_upload failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_upload: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_upload OK");
+        }
+        "dodeca_devtools_edit_read" => {
+            let expected = sample_dodeca_edit_read();
+            let result = client
+                .dodeca_devtools_edit_read(
+                    "editor-token".to_string(),
+                    "file:///workspace/content/guide.md".to_string(),
+                )
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_read failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_read: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_read OK");
+        }
+        "dodeca_devtools_edit_list" => {
+            let expected = sample_dodeca_edit_list();
+            let result = client
+                .dodeca_devtools_edit_list("editor-token".to_string())
+                .await
+                .map_err(|e| format!("dodeca_devtools_edit_list failed: {e:?}"))?;
+            if result != expected {
+                return Err(format!(
+                    "dodeca_devtools_edit_list: expected {expected:?}, got {result:?}"
+                ));
+            }
+            info!("dodeca_devtools_edit_list OK");
         }
         "echo_styx_value" => {
             let value = sample_styx_value();

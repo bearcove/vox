@@ -72,6 +72,9 @@ pub trait Testbed {
         server_to_client: Tx<String>,
     );
 
+    /// Echo Dodeca browser devtools push events from `BrowserService::on_event`.
+    async fn echo_dodeca_devtools_event(&self, event: DodecaDevtoolsEvent) -> DodecaDevtoolsEvent;
+
     /// Dibs schema metadata as returned by `DibsService::schema` / `SquelService::schema`.
     async fn dibs_schema(&self) -> DibsSchemaInfo;
 
@@ -268,6 +271,54 @@ pub trait Testbed {
         &self,
         fixture: DodecaAssetProcessingFixture,
     ) -> DodecaAssetProcessingFixture;
+
+    /// Dodeca devtools scope query from the browser overlay.
+    async fn dodeca_devtools_get_scope(&self, path: Option<Vec<String>>) -> Vec<DodecaScopeEntry>;
+
+    /// Dodeca devtools expression evaluation root.
+    async fn dodeca_devtools_eval(
+        &self,
+        snapshot_id: String,
+        expression: String,
+    ) -> DodecaEvalResult;
+
+    /// Dodeca devtools dead-link source-opening root.
+    async fn dodeca_devtools_open_dead_link(
+        &self,
+        route: String,
+        target: DodecaDeadLinkTarget,
+    ) -> DodecaOpenSourceResult;
+
+    /// Dodeca browser editor load root.
+    async fn dodeca_devtools_edit_load(&self, token: String, route: String) -> DodecaEditLoad;
+
+    /// Dodeca browser editor preview root.
+    async fn dodeca_devtools_edit_preview(
+        &self,
+        token: String,
+        source_key: String,
+        buffer: String,
+    ) -> DodecaEditPreview;
+
+    /// Dodeca browser editor save root.
+    async fn dodeca_devtools_edit_save(
+        &self,
+        token: String,
+        req: DodecaEditSaveReq,
+    ) -> DodecaEditSave;
+
+    /// Dodeca browser editor image-upload root.
+    async fn dodeca_devtools_edit_upload(
+        &self,
+        token: String,
+        req: DodecaEditUploadReq,
+    ) -> DodecaEditUpload;
+
+    /// Dodeca browser editor file-provider read root.
+    async fn dodeca_devtools_edit_read(&self, token: String, uri: String) -> DodecaEditRead;
+
+    /// Dodeca browser editor file tree root.
+    async fn dodeca_devtools_edit_list(&self, token: String) -> DodecaEditList;
 
     /// Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
     /// structs/enums with tags, spans, sequences, objects, and entry key/value
@@ -846,6 +897,168 @@ pub struct DodecaAssetProcessingFixture {
     pub sass_result: DodecaSassResult,
     pub svg_source: String,
     pub svgo_result: DodecaSvgoResult,
+}
+
+/// Browser devtools event from `dodeca_protocol::BrowserService::on_event`.
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaDevtoolsEvent {
+    Reload,
+    CssChanged { path: String },
+    Patches { route: String, patches: Vec<u8> },
+    Error(DodecaErrorInfo),
+    ErrorResolved { route: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaOpenSourceResult {
+    Ok,
+    Err(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaDeadLinkTarget {
+    Wiki { key: String, title: String },
+    Internal { href: String, title: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditLoad {
+    Ok {
+        source_key: String,
+        route: String,
+        uri: String,
+        content: String,
+        base: String,
+    },
+    Denied,
+    NotFound,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditPreview {
+    Ok {
+        html: String,
+        source_map: Vec<DodecaSidLine>,
+    },
+    Denied,
+    NotFound,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSidLine {
+    pub sid: String,
+    pub line: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditRead {
+    Ok { content: String, base: String },
+    Denied,
+    NotFound,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaEditUploadReq {
+    pub source_key: String,
+    pub filename: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditUpload {
+    Ok { markdown: String, path: String },
+    Denied,
+    NotFound,
+    Error { message: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaEditSaveReq {
+    pub source_key: String,
+    pub buffer: String,
+    pub base: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaEditEntry {
+    pub source_key: String,
+    pub route: String,
+    pub uri: String,
+    pub title: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditList {
+    Ok { entries: Vec<DodecaEditEntry> },
+    Denied,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEditSave {
+    Ok { commit: String, base: String },
+    Denied,
+    NotFound,
+    Conflict { current: String },
+    Error { message: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaEvalResult {
+    Ok(DodecaScopeValue),
+    Err(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaErrorInfo {
+    pub route: String,
+    pub message: String,
+    pub template: Option<String>,
+    pub line: Option<u32>,
+    pub column: Option<u32>,
+    pub source_snippet: Option<DodecaSourceSnippet>,
+    pub snapshot_id: String,
+    pub available_variables: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSourceSnippet {
+    pub lines: Vec<DodecaSourceLine>,
+    pub error_line: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Facet)]
+pub struct DodecaSourceLine {
+    pub number: u32,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+pub struct DodecaScopeEntry {
+    pub name: String,
+    pub value: DodecaScopeValue,
+    pub expandable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Facet)]
+#[repr(u8)]
+pub enum DodecaScopeValue {
+    Null,
+    Bool(bool),
+    Number(f64),
+    String(String),
+    Array { length: usize, preview: String },
+    Object { fields: usize, preview: String },
 }
 
 /// Dodeca HTML minification options from `cell-html-proto`.

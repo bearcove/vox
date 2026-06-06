@@ -71,6 +71,12 @@ use spec_proto::{
     DodecaSourceMapEntry,
 };
 use spec_proto::{
+    DodecaDeadLinkTarget, DodecaDevtoolsEvent, DodecaEditEntry, DodecaEditList, DodecaEditLoad,
+    DodecaEditPreview, DodecaEditRead, DodecaEditSave, DodecaEditSaveReq, DodecaEditUpload,
+    DodecaEditUploadReq, DodecaErrorInfo, DodecaEvalResult, DodecaOpenSourceResult,
+    DodecaScopeEntry, DodecaScopeValue, DodecaSidLine, DodecaSourceLine, DodecaSourceSnippet,
+};
+use spec_proto::{
     TraceyApiCodeUnit, TraceyApiFileData, TraceyApiFileEntry, TraceyApiReverseData, TraceyApiRule,
     TraceyApiSpecData, TraceyApiSpecForward, TraceyApiStaleRef, TraceyConfigPatternRequest,
     TraceyFileRequest, TraceyOutlineCoverage, TraceyOutlineEntry, TraceySearchResult,
@@ -947,6 +953,179 @@ fn sample_dodeca_asset_processing_fixture() -> DodecaAssetProcessingFixture {
             svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
                 .to_string(),
         },
+    }
+}
+
+fn sample_dodeca_source_lines() -> Vec<DodecaSourceLine> {
+    vec![
+        DodecaSourceLine {
+            number: 12,
+            content: "{% for item in data.items %}".to_string(),
+        },
+        DodecaSourceLine {
+            number: 13,
+            content: "{{ item.title }}".to_string(),
+        },
+    ]
+}
+
+fn sample_dodeca_source_snippet() -> DodecaSourceSnippet {
+    DodecaSourceSnippet {
+        lines: sample_dodeca_source_lines(),
+        error_line: 13,
+    }
+}
+
+fn sample_dodeca_error_info() -> DodecaErrorInfo {
+    DodecaErrorInfo {
+        route: "/guide/".to_string(),
+        message: "unknown filter `slugify`".to_string(),
+        template: Some("templates/page.html".to_string()),
+        line: Some(13),
+        column: Some(8),
+        source_snippet: Some(sample_dodeca_source_snippet()),
+        snapshot_id: "snap-devtools-42".to_string(),
+        available_variables: vec!["page".to_string(), "root".to_string(), "data".to_string()],
+    }
+}
+
+fn sample_dodeca_devtools_event() -> DodecaDevtoolsEvent {
+    DodecaDevtoolsEvent::Error(sample_dodeca_error_info())
+}
+
+fn sample_dodeca_scope_entries() -> Vec<DodecaScopeEntry> {
+    vec![
+        DodecaScopeEntry {
+            name: "title".to_string(),
+            value: DodecaScopeValue::String("Phon migration".to_string()),
+            expandable: false,
+        },
+        DodecaScopeEntry {
+            name: "items".to_string(),
+            value: DodecaScopeValue::Array {
+                length: 3,
+                preview: "[intro, install, api]".to_string(),
+            },
+            expandable: true,
+        },
+        DodecaScopeEntry {
+            name: "metrics".to_string(),
+            value: DodecaScopeValue::Object {
+                fields: 2,
+                preview: "{views, updated_at}".to_string(),
+            },
+            expandable: true,
+        },
+        DodecaScopeEntry {
+            name: "score".to_string(),
+            value: DodecaScopeValue::Number(42.5),
+            expandable: false,
+        },
+    ]
+}
+
+fn sample_dodeca_eval_result() -> DodecaEvalResult {
+    DodecaEvalResult::Ok(DodecaScopeValue::Object {
+        fields: 2,
+        preview: "{title, route}".to_string(),
+    })
+}
+
+fn sample_dodeca_dead_link_target() -> DodecaDeadLinkTarget {
+    DodecaDeadLinkTarget::Wiki {
+        key: "missing-page".to_string(),
+        title: "Missing Page".to_string(),
+    }
+}
+
+fn sample_dodeca_open_source_result() -> DodecaOpenSourceResult {
+    DodecaOpenSourceResult::Ok
+}
+
+fn sample_dodeca_sid_lines() -> Vec<DodecaSidLine> {
+    vec![
+        DodecaSidLine {
+            sid: "p-1".to_string(),
+            line: 5,
+        },
+        DodecaSidLine {
+            sid: "code-1".to_string(),
+            line: 17,
+        },
+    ]
+}
+
+fn sample_dodeca_edit_load() -> DodecaEditLoad {
+    DodecaEditLoad::Ok {
+        source_key: "content/guide.md".to_string(),
+        route: "/guide/".to_string(),
+        uri: "file:///workspace/content/guide.md".to_string(),
+        content: "# Guide\n\nWelcome to Phon.".to_string(),
+        base: "a1b2c3d4".to_string(),
+    }
+}
+
+fn sample_dodeca_edit_preview() -> DodecaEditPreview {
+    DodecaEditPreview::Ok {
+        html: "<article><h1>Guide</h1><p>Welcome to Phon.</p></article>".to_string(),
+        source_map: sample_dodeca_sid_lines(),
+    }
+}
+
+fn sample_dodeca_edit_save_req() -> DodecaEditSaveReq {
+    DodecaEditSaveReq {
+        source_key: "content/guide.md".to_string(),
+        buffer: "# Guide\n\nUpdated from browser.".to_string(),
+        base: "a1b2c3d4".to_string(),
+        message: "Update guide".to_string(),
+    }
+}
+
+fn sample_dodeca_edit_save() -> DodecaEditSave {
+    DodecaEditSave::Ok {
+        commit: "deadbeef1234".to_string(),
+        base: "b4c3d2a1".to_string(),
+    }
+}
+
+fn sample_dodeca_edit_upload_req() -> DodecaEditUploadReq {
+    DodecaEditUploadReq {
+        source_key: "content/guide.md".to_string(),
+        filename: "diagram.png".to_string(),
+        bytes: byte_ramp(128, 31),
+    }
+}
+
+fn sample_dodeca_edit_upload() -> DodecaEditUpload {
+    DodecaEditUpload::Ok {
+        markdown: "![diagram](./diagram.png)".to_string(),
+        path: "diagram.png".to_string(),
+    }
+}
+
+fn sample_dodeca_edit_read() -> DodecaEditRead {
+    DodecaEditRead::Ok {
+        content: "# Guide\n\nWelcome to Phon.".to_string(),
+        base: "a1b2c3d4".to_string(),
+    }
+}
+
+fn sample_dodeca_edit_list() -> DodecaEditList {
+    DodecaEditList::Ok {
+        entries: vec![
+            DodecaEditEntry {
+                source_key: "content/guide.md".to_string(),
+                route: "/guide/".to_string(),
+                uri: "file:///workspace/content/guide.md".to_string(),
+                title: "Guide".to_string(),
+            },
+            DodecaEditEntry {
+                source_key: "content/reference.md".to_string(),
+                route: "/reference/".to_string(),
+                uri: "file:///workspace/content/reference.md".to_string(),
+                title: "Reference".to_string(),
+            },
+        ],
     }
 }
 
@@ -3919,6 +4098,230 @@ pub fn run_rpc_echo_dodeca_asset_processing_fixture(spec: SubjectSpec) {
     .unwrap();
 }
 
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.option]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_echo_dodeca_devtools_event(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let payload = sample_dodeca_devtools_event();
+        let result = client
+            .echo_dodeca_devtools_event(payload.clone())
+            .await
+            .map_err(|e| format!("echo_dodeca_devtools_event: {e:?}"))?;
+        if result != payload {
+            return Err(format!(
+                "echo_dodeca_devtools_event: expected {payload:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.option]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_get_scope(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_scope_entries();
+        let result = client
+            .dodeca_devtools_get_scope(Some(vec!["page".to_string()]))
+            .await
+            .map_err(|e| format!("dodeca_devtools_get_scope: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_get_scope: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_eval(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_eval_result();
+        let result = client
+            .dodeca_devtools_eval("snap-devtools-42".to_string(), "page.title".to_string())
+            .await
+            .map_err(|e| format!("dodeca_devtools_eval: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_eval: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_open_dead_link(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_open_source_result();
+        let result = client
+            .dodeca_devtools_open_dead_link("/guide/".to_string(), sample_dodeca_dead_link_target())
+            .await
+            .map_err(|e| format!("dodeca_devtools_open_dead_link: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_open_dead_link: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_load(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_load();
+        let result = client
+            .dodeca_devtools_edit_load("editor-token".to_string(), "/guide/".to_string())
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_load: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_load: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_preview(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_preview();
+        let result = client
+            .dodeca_devtools_edit_preview(
+                "editor-token".to_string(),
+                "content/guide.md".to_string(),
+                "# Guide\n\nUpdated from browser.".to_string(),
+            )
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_preview: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_preview: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_save(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_save();
+        let result = client
+            .dodeca_devtools_edit_save("editor-token".to_string(), sample_dodeca_edit_save_req())
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_save: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_save: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_upload(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_upload();
+        let result = client
+            .dodeca_devtools_edit_upload(
+                "editor-token".to_string(),
+                sample_dodeca_edit_upload_req(),
+            )
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_upload: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_upload: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_read(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_read();
+        let result = client
+            .dodeca_devtools_edit_read(
+                "editor-token".to_string(),
+                "file:///workspace/content/guide.md".to_string(),
+            )
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_read: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_read: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_rpc_dodeca_devtools_edit_list(spec: SubjectSpec) {
+    run_async(async {
+        let (client, mut child, _sh) = accept_subject_spec(spec).await?;
+        let expected = sample_dodeca_edit_list();
+        let result = client
+            .dodeca_devtools_edit_list("editor-token".to_string())
+            .await
+            .map_err(|e| format!("dodeca_devtools_edit_list: {e:?}"))?;
+        if result != expected {
+            return Err(format!(
+                "dodeca_devtools_edit_list: expected {expected:?}, got {result:?}"
+            ));
+        }
+        child.kill().await.ok();
+        Ok::<_, String>(())
+    })
+    .unwrap();
+}
+
 // r[verify encoding.struct.recursive]
 // r[verify encoding.enum.newtype-variants]
 // r[verify encoding.option]
@@ -5630,6 +6033,70 @@ pub fn run_subject_calls_echo_dodeca_search_indexer_fixture(spec: SubjectSpec) {
 // r[verify encoding.enum.payload]
 pub fn run_subject_calls_echo_dodeca_asset_processing_fixture(spec: SubjectSpec) {
     run_subject_client_scenario(spec, "echo_dodeca_asset_processing_fixture");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.option]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_echo_dodeca_devtools_event(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "echo_dodeca_devtools_event");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.option]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_get_scope(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_get_scope");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_eval(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_eval");
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_open_dead_link(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_open_dead_link");
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_load(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_load");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_preview(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_preview");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_save(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_save");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_upload(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_upload");
+}
+
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_read(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_read");
+}
+
+// r[verify encoding.struct]
+// r[verify encoding.vec]
+// r[verify encoding.enum.payload]
+pub fn run_subject_calls_dodeca_devtools_edit_list(spec: SubjectSpec) {
+    run_subject_client_scenario(spec, "dodeca_devtools_edit_list");
 }
 
 // r[verify encoding.struct.recursive]

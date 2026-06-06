@@ -29,6 +29,59 @@ public enum LookupError: Sendable, Error {
   case accessDenied
 }
 
+public struct DodecaSourceLine: Sendable {
+  public var number: UInt32
+  public var content: String
+
+  nonisolated public init(number: UInt32, content: String) {
+    self.number = number
+    self.content = content
+  }
+}
+
+public struct DodecaSourceSnippet: Sendable {
+  public var lines: [DodecaSourceLine]
+  public var errorLine: UInt32
+
+  nonisolated public init(lines: [DodecaSourceLine], errorLine: UInt32) {
+    self.lines = lines
+    self.errorLine = errorLine
+  }
+}
+
+public struct DodecaErrorInfo: Sendable {
+  public var route: String
+  public var message: String
+  public var template: String?
+  public var line: UInt32?
+  public var column: UInt32?
+  public var sourceSnippet: DodecaSourceSnippet?
+  public var snapshotId: String
+  public var availableVariables: [String]
+
+  nonisolated public init(
+    route: String, message: String, template: String?, line: UInt32?, column: UInt32?,
+    sourceSnippet: DodecaSourceSnippet?, snapshotId: String, availableVariables: [String]
+  ) {
+    self.route = route
+    self.message = message
+    self.template = template
+    self.line = line
+    self.column = column
+    self.sourceSnippet = sourceSnippet
+    self.snapshotId = snapshotId
+    self.availableVariables = availableVariables
+  }
+}
+
+public enum DodecaDevtoolsEvent: Sendable {
+  case reload
+  case cssChanged(path: String)
+  case patches(route: String, patches: Data)
+  case error(DodecaErrorInfo)
+  case errorResolved(route: String)
+}
+
 public struct DibsColumnInfo: Sendable {
   public var name: String
   public var sqlType: String
@@ -1234,6 +1287,130 @@ public struct DodecaAssetProcessingFixture: Sendable {
     self.svgSource = svgSource
     self.svgoResult = svgoResult
   }
+}
+
+public enum DodecaScopeValue: Sendable {
+  case null
+  case bool(Bool)
+  case number(Double)
+  case string(String)
+  case array(length: UInt, preview: String)
+  case object(fields: UInt, preview: String)
+}
+
+public struct DodecaScopeEntry: Sendable {
+  public var name: String
+  public var value: DodecaScopeValue
+  public var expandable: Bool
+
+  nonisolated public init(name: String, value: DodecaScopeValue, expandable: Bool) {
+    self.name = name
+    self.value = value
+    self.expandable = expandable
+  }
+}
+
+public enum DodecaEvalResult: Sendable {
+  case ok(DodecaScopeValue)
+  case err(String)
+}
+
+public enum DodecaDeadLinkTarget: Sendable {
+  case wiki(key: String, title: String)
+  case `internal`(href: String, title: String)
+}
+
+public enum DodecaOpenSourceResult: Sendable {
+  case ok
+  case err(String)
+}
+
+public enum DodecaEditLoad: Sendable {
+  case ok(sourceKey: String, route: String, uri: String, content: String, base: String)
+  case denied
+  case notFound
+}
+
+public struct DodecaSidLine: Sendable {
+  public var sid: String
+  public var line: UInt32
+
+  nonisolated public init(sid: String, line: UInt32) {
+    self.sid = sid
+    self.line = line
+  }
+}
+
+public enum DodecaEditPreview: Sendable {
+  case ok(html: String, sourceMap: [DodecaSidLine])
+  case denied
+  case notFound
+}
+
+public struct DodecaEditSaveReq: Sendable {
+  public var sourceKey: String
+  public var buffer: String
+  public var base: String
+  public var message: String
+
+  nonisolated public init(sourceKey: String, buffer: String, base: String, message: String) {
+    self.sourceKey = sourceKey
+    self.buffer = buffer
+    self.base = base
+    self.message = message
+  }
+}
+
+public enum DodecaEditSave: Sendable {
+  case ok(commit: String, base: String)
+  case denied
+  case notFound
+  case conflict(current: String)
+  case error(message: String)
+}
+
+public struct DodecaEditUploadReq: Sendable {
+  public var sourceKey: String
+  public var filename: String
+  public var bytes: Data
+
+  nonisolated public init(sourceKey: String, filename: String, bytes: Data) {
+    self.sourceKey = sourceKey
+    self.filename = filename
+    self.bytes = bytes
+  }
+}
+
+public enum DodecaEditUpload: Sendable {
+  case ok(markdown: String, path: String)
+  case denied
+  case notFound
+  case error(message: String)
+}
+
+public enum DodecaEditRead: Sendable {
+  case ok(content: String, base: String)
+  case denied
+  case notFound
+}
+
+public struct DodecaEditEntry: Sendable {
+  public var sourceKey: String
+  public var route: String
+  public var uri: String
+  public var title: String
+
+  nonisolated public init(sourceKey: String, route: String, uri: String, title: String) {
+    self.sourceKey = sourceKey
+    self.route = route
+    self.uri = uri
+    self.title = title
+  }
+}
+
+public enum DodecaEditList: Sendable {
+  case ok(entries: [DodecaEditEntry])
+  case denied
 }
 
 public struct StyxSpan: Sendable {
@@ -5986,6 +6163,851 @@ nonisolated(unsafe) let testbed_dodecaDevtoolsLsp_ResponseDescriptor: Descriptor
       ])))
 nonisolated(unsafe) let testbed_dodecaDevtoolsLsp_ResponseDescriptorBlocks: [SchemaId: Descriptor] =
   [:]
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x0f05_58bd_f89d_904c)),
+  layout: Layout(
+    size: MemoryLayout<(DodecaDevtoolsEvent)>.size,
+    align: MemoryLayout<(DodecaDevtoolsEvent)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0xd86d_770f_0bd1_ebe3)),
+            layout: Layout(
+              size: MemoryLayout<DodecaDevtoolsEvent>.size,
+              align: MemoryLayout<DodecaDevtoolsEvent>.alignment),
+            access: .enumeration(
+              EnumAccess(
+                tag: { ptr in
+                  switch ptr.assumingMemoryBound(to: DodecaDevtoolsEvent.self).pointee {
+                  case .reload: return 0
+                  case .cssChanged: return 1
+                  case .patches: return 2
+                  case .error: return 3
+                  case .errorResolved: return 4
+                  }
+                },
+                projectPayload: { value, _, scratch in
+                  switch value.assumingMemoryBound(to: DodecaDevtoolsEvent.self).pointee {
+                  case .reload: break
+                  case .cssChanged(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(to: f0)
+                  case .patches(let f0, let f1):
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f0)
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).initialize(to: f1)
+                  case .error(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: DodecaErrorInfo.self)
+                      .initialize(to: f0)
+                  case .errorResolved(let f0):
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(to: f0)
+                  }
+                },
+                destroyPayload: { scratch, localIndex in
+                  switch localIndex {
+                  case 1:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                      count: 1)
+                  case 2:
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                    scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).deinitialize(count: 1)
+                  case 3:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: DodecaErrorInfo.self)
+                      .deinitialize(count: 1)
+                  case 4:
+                    scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                      count: 1)
+                  default: break
+                  }
+                },
+                inject: { slot, localIndex, scratch in
+                  let v: DodecaDevtoolsEvent
+                  switch localIndex {
+                  case 0: v = .reload
+                  case 1:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                    v = .cssChanged(path: f0)
+                  case 2:
+                    let f0 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    let f1 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: Data.self).move()
+                    v = .patches(route: f0, patches: f1)
+                  case 3:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: DodecaErrorInfo.self)
+                      .move()
+                    v = .error(f0)
+                  case 4:
+                    let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                    v = .errorResolved(route: f0)
+                  default: fatalError("bad variant index")
+                  }
+                  slot.assumingMemoryBound(to: DodecaDevtoolsEvent.self).initialize(to: v)
+                },
+                variants: [
+                  VariantAccess(
+                    wireIndex: 0, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                  VariantAccess(
+                    wireIndex: 1,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: 0,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                    ], payloadLayout: MemoryLayout<String>.phonLayout),
+                  VariantAccess(
+                    wireIndex: 2,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: MemoryLayout<(String, Data)>.offset(of: \.0)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                      FieldAccess(
+                        offset: MemoryLayout<(String, Data)>.offset(of: \.1)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0xaa06_67df_4299_d151)),
+                          layout: Layout(
+                            size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                    ], payloadLayout: MemoryLayout<(String, Data)>.phonLayout),
+                  VariantAccess(
+                    wireIndex: 3,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: 0,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x78c0_1c9e_70f5_55f2)),
+                          layout: Layout(
+                            size: MemoryLayout<DodecaErrorInfo>.size,
+                            align: MemoryLayout<DodecaErrorInfo>.alignment),
+                          access: .record(
+                            RecordAccess(
+                              fields: [
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.route)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                    layout: Layout(
+                                      size: MemoryLayout<String>.size,
+                                      align: MemoryLayout<String>.alignment),
+                                    access: .bytes(
+                                      BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.message)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                    layout: Layout(
+                                      size: MemoryLayout<String>.size,
+                                      align: MemoryLayout<String>.alignment),
+                                    access: .bytes(
+                                      BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.template)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x6a00_95b8_e9d4_8792)),
+                                    layout: Layout(
+                                      size: MemoryLayout<String?>.size,
+                                      align: MemoryLayout<String?>.alignment),
+                                    access: .option(
+                                      OptionAccess(
+                                        witness: .of(String.self),
+                                        some: Descriptor(
+                                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                          layout: Layout(
+                                            size: MemoryLayout<String>.size,
+                                            align: MemoryLayout<String>.alignment),
+                                          access: .bytes(
+                                            BytesAccess(stride: 1, elemAlign: 1, witness: .string)))
+                                      )))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.line)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x204c_2281_5e2e_921d)),
+                                    layout: Layout(
+                                      size: MemoryLayout<UInt32?>.size,
+                                      align: MemoryLayout<UInt32?>.alignment),
+                                    access: .option(
+                                      OptionAccess(
+                                        witness: .of(UInt32.self),
+                                        some: Descriptor(
+                                          schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                                          layout: Layout(
+                                            size: MemoryLayout<UInt32>.size,
+                                            align: MemoryLayout<UInt32>.alignment), access: .scalar)
+                                      )))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.column)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x204c_2281_5e2e_921d)),
+                                    layout: Layout(
+                                      size: MemoryLayout<UInt32?>.size,
+                                      align: MemoryLayout<UInt32?>.alignment),
+                                    access: .option(
+                                      OptionAccess(
+                                        witness: .of(UInt32.self),
+                                        some: Descriptor(
+                                          schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                                          layout: Layout(
+                                            size: MemoryLayout<UInt32>.size,
+                                            align: MemoryLayout<UInt32>.alignment), access: .scalar)
+                                      )))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.sourceSnippet)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0xbb31_b979_28cc_5a28)),
+                                    layout: Layout(
+                                      size: MemoryLayout<DodecaSourceSnippet?>.size,
+                                      align: MemoryLayout<DodecaSourceSnippet?>.alignment),
+                                    access: .option(
+                                      OptionAccess(
+                                        witness: .of(DodecaSourceSnippet.self),
+                                        some: Descriptor(
+                                          schema: .concrete(SchemaId(0xa52a_724d_de3b_044b)),
+                                          layout: Layout(
+                                            size: MemoryLayout<DodecaSourceSnippet>.size,
+                                            align: MemoryLayout<DodecaSourceSnippet>.alignment),
+                                          access: .record(
+                                            RecordAccess(
+                                              fields: [
+                                                FieldAccess(
+                                                  offset: MemoryLayout<DodecaSourceSnippet>.offset(
+                                                    of: \DodecaSourceSnippet.lines)!,
+                                                  descriptor: Descriptor(
+                                                    schema: .concrete(
+                                                      SchemaId(0x463a_46b1_1f37_f9dd)),
+                                                    layout: Layout(
+                                                      size: MemoryLayout<[DodecaSourceLine]>.size,
+                                                      align: MemoryLayout<[DodecaSourceLine]>
+                                                        .alignment),
+                                                    access: .sequence(
+                                                      SequenceAccess(
+                                                        element: Descriptor(
+                                                          schema: .concrete(
+                                                            SchemaId(0x1ec7_07b1_fa9e_595e)),
+                                                          layout: Layout(
+                                                            size: MemoryLayout<DodecaSourceLine>
+                                                              .size,
+                                                            align: MemoryLayout<DodecaSourceLine>
+                                                              .alignment),
+                                                          access: .record(
+                                                            RecordAccess(
+                                                              fields: [
+                                                                FieldAccess(
+                                                                  offset: MemoryLayout<
+                                                                    DodecaSourceLine
+                                                                  >.offset(
+                                                                    of: \DodecaSourceLine.number)!,
+                                                                  descriptor: Descriptor(
+                                                                    schema: .concrete(
+                                                                      SchemaId(
+                                                                        0x281c_5be4_f2ee_63b4)),
+                                                                    layout: Layout(
+                                                                      size: MemoryLayout<UInt32>
+                                                                        .size,
+                                                                      align: MemoryLayout<UInt32>
+                                                                        .alignment), access: .scalar
+                                                                  )),
+                                                                FieldAccess(
+                                                                  offset: MemoryLayout<
+                                                                    DodecaSourceLine
+                                                                  >.offset(
+                                                                    of: \DodecaSourceLine.content)!,
+                                                                  descriptor: Descriptor(
+                                                                    schema: .concrete(
+                                                                      SchemaId(
+                                                                        0x6d7d_ce91_4ee1_50e8)),
+                                                                    layout: Layout(
+                                                                      size: MemoryLayout<String>
+                                                                        .size,
+                                                                      align: MemoryLayout<String>
+                                                                        .alignment),
+                                                                    access: .bytes(
+                                                                      BytesAccess(
+                                                                        stride: 1, elemAlign: 1,
+                                                                        witness: .string)))),
+                                                              ], construct: .inPlace))),
+                                                        stride: MemoryLayout<DodecaSourceLine>
+                                                          .stride,
+                                                        elemAlign: MemoryLayout<DodecaSourceLine>
+                                                          .alignment,
+                                                        witness: .of(DodecaSourceLine.self))))),
+                                                FieldAccess(
+                                                  offset: MemoryLayout<DodecaSourceSnippet>.offset(
+                                                    of: \DodecaSourceSnippet.errorLine)!,
+                                                  descriptor: Descriptor(
+                                                    schema: .concrete(
+                                                      SchemaId(0x281c_5be4_f2ee_63b4)),
+                                                    layout: Layout(
+                                                      size: MemoryLayout<UInt32>.size,
+                                                      align: MemoryLayout<UInt32>.alignment),
+                                                    access: .scalar)),
+                                              ], construct: .inPlace))))))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.snapshotId)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                    layout: Layout(
+                                      size: MemoryLayout<String>.size,
+                                      align: MemoryLayout<String>.alignment),
+                                    access: .bytes(
+                                      BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                FieldAccess(
+                                  offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                    of: \DodecaErrorInfo.availableVariables)!,
+                                  descriptor: Descriptor(
+                                    schema: .concrete(SchemaId(0xe3f9_4e9e_ad27_e3d1)),
+                                    layout: Layout(
+                                      size: MemoryLayout<[String]>.size,
+                                      align: MemoryLayout<[String]>.alignment),
+                                    access: .sequence(
+                                      SequenceAccess(
+                                        element: Descriptor(
+                                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                          layout: Layout(
+                                            size: MemoryLayout<String>.size,
+                                            align: MemoryLayout<String>.alignment),
+                                          access: .bytes(
+                                            BytesAccess(stride: 1, elemAlign: 1, witness: .string))),
+                                        stride: MemoryLayout<String>.stride,
+                                        elemAlign: MemoryLayout<String>.alignment,
+                                        witness: .of(String.self))))),
+                              ], construct: .inPlace))))
+                    ], payloadLayout: MemoryLayout<DodecaErrorInfo>.phonLayout),
+                  VariantAccess(
+                    wireIndex: 4,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: 0,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                    ], payloadLayout: MemoryLayout<String>.phonLayout),
+                ]))))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x1385_0436_d3e8_3cf3)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaDevtoolsEvent, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaDevtoolsEvent, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaDevtoolsEvent, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaDevtoolsEvent, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaDevtoolsEvent.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaDevtoolsEvent.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaDevtoolsEvent, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaDevtoolsEvent.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaDevtoolsEvent, VoxError<Infallible>>.self)
+          .initialize(to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0xd86d_770f_0bd1_ebe3)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaDevtoolsEvent>.size,
+                  align: MemoryLayout<DodecaDevtoolsEvent>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaDevtoolsEvent.self).pointee {
+                      case .reload: return 0
+                      case .cssChanged: return 1
+                      case .patches: return 2
+                      case .error: return 3
+                      case .errorResolved: return 4
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaDevtoolsEvent.self).pointee {
+                      case .reload: break
+                      case .cssChanged(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .patches(let f0, let f1):
+                        scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).initialize(to: f0)
+                        scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: Data.self).initialize(to: f1)
+                      case .error(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: DodecaErrorInfo.self)
+                          .initialize(to: f0)
+                      case .errorResolved(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 1:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      case 2:
+                        scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: Data.self).deinitialize(count: 1)
+                      case 3:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: DodecaErrorInfo.self)
+                          .deinitialize(count: 1)
+                      case 4:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaDevtoolsEvent
+                      switch localIndex {
+                      case 0: v = .reload
+                      case 1:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .cssChanged(path: f0)
+                      case 2:
+                        let f0 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).move()
+                        let f1 = scratch.advanced(by: MemoryLayout<(String, Data)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: Data.self).move()
+                        v = .patches(route: f0, patches: f1)
+                      case 3:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                          to: DodecaErrorInfo.self
+                        ).move()
+                        v = .error(f0)
+                      case 4:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .errorResolved(route: f0)
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaDevtoolsEvent.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 1,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: MemoryLayout<(String, Data)>.offset(of: \.0)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, Data)>.offset(of: \.1)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0xaa06_67df_4299_d151)),
+                              layout: Layout(
+                                size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                        ], payloadLayout: MemoryLayout<(String, Data)>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x78c0_1c9e_70f5_55f2)),
+                              layout: Layout(
+                                size: MemoryLayout<DodecaErrorInfo>.size,
+                                align: MemoryLayout<DodecaErrorInfo>.alignment),
+                              access: .record(
+                                RecordAccess(
+                                  fields: [
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.route)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                        layout: Layout(
+                                          size: MemoryLayout<String>.size,
+                                          align: MemoryLayout<String>.alignment),
+                                        access: .bytes(
+                                          BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.message)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                        layout: Layout(
+                                          size: MemoryLayout<String>.size,
+                                          align: MemoryLayout<String>.alignment),
+                                        access: .bytes(
+                                          BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.template)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x6a00_95b8_e9d4_8792)),
+                                        layout: Layout(
+                                          size: MemoryLayout<String?>.size,
+                                          align: MemoryLayout<String?>.alignment),
+                                        access: .option(
+                                          OptionAccess(
+                                            witness: .of(String.self),
+                                            some: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string))))))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.line)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x204c_2281_5e2e_921d)),
+                                        layout: Layout(
+                                          size: MemoryLayout<UInt32?>.size,
+                                          align: MemoryLayout<UInt32?>.alignment),
+                                        access: .option(
+                                          OptionAccess(
+                                            witness: .of(UInt32.self),
+                                            some: Descriptor(
+                                              schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                                              layout: Layout(
+                                                size: MemoryLayout<UInt32>.size,
+                                                align: MemoryLayout<UInt32>.alignment),
+                                              access: .scalar))))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.column)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x204c_2281_5e2e_921d)),
+                                        layout: Layout(
+                                          size: MemoryLayout<UInt32?>.size,
+                                          align: MemoryLayout<UInt32?>.alignment),
+                                        access: .option(
+                                          OptionAccess(
+                                            witness: .of(UInt32.self),
+                                            some: Descriptor(
+                                              schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                                              layout: Layout(
+                                                size: MemoryLayout<UInt32>.size,
+                                                align: MemoryLayout<UInt32>.alignment),
+                                              access: .scalar))))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.sourceSnippet)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0xbb31_b979_28cc_5a28)),
+                                        layout: Layout(
+                                          size: MemoryLayout<DodecaSourceSnippet?>.size,
+                                          align: MemoryLayout<DodecaSourceSnippet?>.alignment),
+                                        access: .option(
+                                          OptionAccess(
+                                            witness: .of(DodecaSourceSnippet.self),
+                                            some: Descriptor(
+                                              schema: .concrete(SchemaId(0xa52a_724d_de3b_044b)),
+                                              layout: Layout(
+                                                size: MemoryLayout<DodecaSourceSnippet>.size,
+                                                align: MemoryLayout<DodecaSourceSnippet>.alignment),
+                                              access: .record(
+                                                RecordAccess(
+                                                  fields: [
+                                                    FieldAccess(
+                                                      offset: MemoryLayout<DodecaSourceSnippet>
+                                                        .offset(of: \DodecaSourceSnippet.lines)!,
+                                                      descriptor: Descriptor(
+                                                        schema: .concrete(
+                                                          SchemaId(0x463a_46b1_1f37_f9dd)),
+                                                        layout: Layout(
+                                                          size: MemoryLayout<[DodecaSourceLine]>
+                                                            .size,
+                                                          align: MemoryLayout<[DodecaSourceLine]>
+                                                            .alignment),
+                                                        access: .sequence(
+                                                          SequenceAccess(
+                                                            element: Descriptor(
+                                                              schema: .concrete(
+                                                                SchemaId(0x1ec7_07b1_fa9e_595e)),
+                                                              layout: Layout(
+                                                                size: MemoryLayout<DodecaSourceLine>
+                                                                  .size,
+                                                                align: MemoryLayout<
+                                                                  DodecaSourceLine
+                                                                >.alignment),
+                                                              access: .record(
+                                                                RecordAccess(
+                                                                  fields: [
+                                                                    FieldAccess(
+                                                                      offset: MemoryLayout<
+                                                                        DodecaSourceLine
+                                                                      >.offset(
+                                                                        of: \DodecaSourceLine.number
+                                                                      )!,
+                                                                      descriptor: Descriptor(
+                                                                        schema: .concrete(
+                                                                          SchemaId(
+                                                                            0x281c_5be4_f2ee_63b4)),
+                                                                        layout: Layout(
+                                                                          size: MemoryLayout<UInt32>
+                                                                            .size,
+                                                                          align: MemoryLayout<
+                                                                            UInt32
+                                                                          >.alignment),
+                                                                        access: .scalar)),
+                                                                    FieldAccess(
+                                                                      offset: MemoryLayout<
+                                                                        DodecaSourceLine
+                                                                      >.offset(
+                                                                        of:
+                                                                          \DodecaSourceLine.content)!,
+                                                                      descriptor: Descriptor(
+                                                                        schema: .concrete(
+                                                                          SchemaId(
+                                                                            0x6d7d_ce91_4ee1_50e8)),
+                                                                        layout: Layout(
+                                                                          size: MemoryLayout<String>
+                                                                            .size,
+                                                                          align: MemoryLayout<
+                                                                            String
+                                                                          >.alignment),
+                                                                        access: .bytes(
+                                                                          BytesAccess(
+                                                                            stride: 1, elemAlign: 1,
+                                                                            witness: .string)))),
+                                                                  ], construct: .inPlace))),
+                                                            stride: MemoryLayout<DodecaSourceLine>
+                                                              .stride,
+                                                            elemAlign: MemoryLayout<
+                                                              DodecaSourceLine
+                                                            >.alignment,
+                                                            witness: .of(DodecaSourceLine.self))))),
+                                                    FieldAccess(
+                                                      offset: MemoryLayout<DodecaSourceSnippet>
+                                                        .offset(
+                                                          of: \DodecaSourceSnippet.errorLine)!,
+                                                      descriptor: Descriptor(
+                                                        schema: .concrete(
+                                                          SchemaId(0x281c_5be4_f2ee_63b4)),
+                                                        layout: Layout(
+                                                          size: MemoryLayout<UInt32>.size,
+                                                          align: MemoryLayout<UInt32>.alignment),
+                                                        access: .scalar)),
+                                                  ], construct: .inPlace))))))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.snapshotId)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                        layout: Layout(
+                                          size: MemoryLayout<String>.size,
+                                          align: MemoryLayout<String>.alignment),
+                                        access: .bytes(
+                                          BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                                    FieldAccess(
+                                      offset: MemoryLayout<DodecaErrorInfo>.offset(
+                                        of: \DodecaErrorInfo.availableVariables)!,
+                                      descriptor: Descriptor(
+                                        schema: .concrete(SchemaId(0xe3f9_4e9e_ad27_e3d1)),
+                                        layout: Layout(
+                                          size: MemoryLayout<[String]>.size,
+                                          align: MemoryLayout<[String]>.alignment),
+                                        access: .sequence(
+                                          SequenceAccess(
+                                            element: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string))),
+                                            stride: MemoryLayout<String>.stride,
+                                            elemAlign: MemoryLayout<String>.alignment,
+                                            witness: .of(String.self))))),
+                                  ], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<DodecaErrorInfo>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 4,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaDevtoolsEvent>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_dibsSchema_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xbc5c_3324_9a2d_c720)),
   layout: Layout(size: MemoryLayout<Void>.size, align: MemoryLayout<Void>.alignment),
@@ -30385,6 +31407,3044 @@ nonisolated(unsafe) let testbed_echoDodecaAssetProcessingFixture_ResponseDescrip
             ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
         ])))
 nonisolated(unsafe) let testbed_echoDodecaAssetProcessingFixture_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x7969_e1f5_deb8_34b7)),
+  layout: Layout(size: MemoryLayout<([String]?)>.size, align: MemoryLayout<([String]?)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0xceee_d43a_f6b9_0ee9)),
+            layout: Layout(
+              size: MemoryLayout<[String]?>.size, align: MemoryLayout<[String]?>.alignment),
+            access: .option(
+              OptionAccess(
+                witness: .of([String].self),
+                some: Descriptor(
+                  schema: .concrete(SchemaId(0xe3f9_4e9e_ad27_e3d1)),
+                  layout: Layout(
+                    size: MemoryLayout<[String]>.size, align: MemoryLayout<[String]>.alignment),
+                  access: .sequence(
+                    SequenceAccess(
+                      element: Descriptor(
+                        schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                        layout: Layout(
+                          size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                        access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))),
+                      stride: MemoryLayout<String>.stride,
+                      elemAlign: MemoryLayout<String>.alignment, witness: .of(String.self))))))))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xd39d_ec13_7365_e83a)),
+  layout: Layout(
+    size: MemoryLayout<Result<[DodecaScopeEntry], VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<[DodecaScopeEntry], VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<[DodecaScopeEntry], VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<[DodecaScopeEntry], VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: [DodecaScopeEntry].self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: [DodecaScopeEntry].self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<[DodecaScopeEntry], VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: [DodecaScopeEntry].self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<[DodecaScopeEntry], VoxError<Infallible>>.self)
+          .initialize(to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0xa242_6b14_bef8_0586)),
+                layout: Layout(
+                  size: MemoryLayout<[DodecaScopeEntry]>.size,
+                  align: MemoryLayout<[DodecaScopeEntry]>.alignment),
+                access: .sequence(
+                  SequenceAccess(
+                    element: Descriptor(
+                      schema: .concrete(SchemaId(0x432d_071c_d0d3_fe52)),
+                      layout: Layout(
+                        size: MemoryLayout<DodecaScopeEntry>.size,
+                        align: MemoryLayout<DodecaScopeEntry>.alignment),
+                      access: .record(
+                        RecordAccess(
+                          fields: [
+                            FieldAccess(
+                              offset: MemoryLayout<DodecaScopeEntry>.offset(
+                                of: \DodecaScopeEntry.name)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                            FieldAccess(
+                              offset: MemoryLayout<DodecaScopeEntry>.offset(
+                                of: \DodecaScopeEntry.value)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0xfd30_c366_f9d3_94e1)),
+                                layout: Layout(
+                                  size: MemoryLayout<DodecaScopeValue>.size,
+                                  align: MemoryLayout<DodecaScopeValue>.alignment),
+                                access: .enumeration(
+                                  EnumAccess(
+                                    tag: { ptr in
+                                      switch ptr.assumingMemoryBound(to: DodecaScopeValue.self)
+                                        .pointee
+                                      {
+                                      case .null: return 0
+                                      case .bool: return 1
+                                      case .number: return 2
+                                      case .string: return 3
+                                      case .array: return 4
+                                      case .object: return 5
+                                      }
+                                    },
+                                    projectPayload: { value, _, scratch in
+                                      switch value.assumingMemoryBound(to: DodecaScopeValue.self)
+                                        .pointee
+                                      {
+                                      case .null: break
+                                      case .bool(let f0):
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: Bool.self)
+                                          .initialize(to: f0)
+                                      case .number(let f0):
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: Double.self)
+                                          .initialize(to: f0)
+                                      case .string(let f0):
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                                          .initialize(to: f0)
+                                      case .array(let f0, let f1):
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).initialize(to: f0)
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).initialize(to: f1)
+                                      case .object(let f0, let f1):
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).initialize(to: f0)
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).initialize(to: f1)
+                                      }
+                                    },
+                                    destroyPayload: { scratch, localIndex in
+                                      switch localIndex {
+                                      case 1:
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: Bool.self)
+                                          .deinitialize(count: 1)
+                                      case 2:
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: Double.self)
+                                          .deinitialize(count: 1)
+                                      case 3:
+                                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                                          .deinitialize(count: 1)
+                                      case 4:
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).deinitialize(count: 1)
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).deinitialize(
+                                          count: 1)
+                                      case 5:
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).deinitialize(count: 1)
+                                        scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).deinitialize(
+                                          count: 1)
+                                      default: break
+                                      }
+                                    },
+                                    inject: { slot, localIndex, scratch in
+                                      let v: DodecaScopeValue
+                                      switch localIndex {
+                                      case 0: v = .null
+                                      case 1:
+                                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                          to: Bool.self
+                                        ).move()
+                                        v = .bool(f0)
+                                      case 2:
+                                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                          to: Double.self
+                                        ).move()
+                                        v = .number(f0)
+                                      case 3:
+                                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                          to: String.self
+                                        ).move()
+                                        v = .string(f0)
+                                      case 4:
+                                        let f0 = scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).move()
+                                        let f1 = scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).move()
+                                        v = .array(length: f0, preview: f1)
+                                      case 5:
+                                        let f0 = scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                        ).assumingMemoryBound(to: UInt.self).move()
+                                        let f1 = scratch.advanced(
+                                          by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                        ).assumingMemoryBound(to: String.self).move()
+                                        v = .object(fields: f0, preview: f1)
+                                      default: fatalError("bad variant index")
+                                      }
+                                      slot.assumingMemoryBound(to: DodecaScopeValue.self)
+                                        .initialize(to: v)
+                                    },
+                                    variants: [
+                                      VariantAccess(
+                                        wireIndex: 0, payloadFields: [],
+                                        payloadLayout: Layout(size: 0, align: 1)),
+                                      VariantAccess(
+                                        wireIndex: 1,
+                                        payloadFields: [
+                                          FieldAccess(
+                                            offset: 0,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x1783_67a8_7f66_fb46)),
+                                              layout: Layout(
+                                                size: MemoryLayout<Bool>.size,
+                                                align: MemoryLayout<Bool>.alignment),
+                                              access: .scalar))
+                                        ], payloadLayout: MemoryLayout<Bool>.phonLayout),
+                                      VariantAccess(
+                                        wireIndex: 2,
+                                        payloadFields: [
+                                          FieldAccess(
+                                            offset: 0,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x3f2e_589d_b81e_95bf)),
+                                              layout: Layout(
+                                                size: MemoryLayout<Double>.size,
+                                                align: MemoryLayout<Double>.alignment),
+                                              access: .scalar))
+                                        ], payloadLayout: MemoryLayout<Double>.phonLayout),
+                                      VariantAccess(
+                                        wireIndex: 3,
+                                        payloadFields: [
+                                          FieldAccess(
+                                            offset: 0,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string))))
+                                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                                      VariantAccess(
+                                        wireIndex: 4,
+                                        payloadFields: [
+                                          FieldAccess(
+                                            offset: MemoryLayout<(UInt, String)>.offset(of: \.0)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0xd935_6298_b816_39ac)),
+                                              layout: Layout(
+                                                size: MemoryLayout<UInt>.size,
+                                                align: MemoryLayout<UInt>.alignment),
+                                              access: .scalar)),
+                                          FieldAccess(
+                                            offset: MemoryLayout<(UInt, String)>.offset(of: \.1)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                        ], payloadLayout: MemoryLayout<(UInt, String)>.phonLayout),
+                                      VariantAccess(
+                                        wireIndex: 5,
+                                        payloadFields: [
+                                          FieldAccess(
+                                            offset: MemoryLayout<(UInt, String)>.offset(of: \.0)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0xd935_6298_b816_39ac)),
+                                              layout: Layout(
+                                                size: MemoryLayout<UInt>.size,
+                                                align: MemoryLayout<UInt>.alignment),
+                                              access: .scalar)),
+                                          FieldAccess(
+                                            offset: MemoryLayout<(UInt, String)>.offset(of: \.1)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                        ], payloadLayout: MemoryLayout<(UInt, String)>.phonLayout),
+                                    ])))),
+                            FieldAccess(
+                              offset: MemoryLayout<DodecaScopeEntry>.offset(
+                                of: \DodecaScopeEntry.expandable)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x1783_67a8_7f66_fb46)),
+                                layout: Layout(
+                                  size: MemoryLayout<Bool>.size, align: MemoryLayout<Bool>.alignment
+                                ), access: .scalar)),
+                          ], construct: .inPlace))), stride: MemoryLayout<DodecaScopeEntry>.stride,
+                    elemAlign: MemoryLayout<DodecaScopeEntry>.alignment,
+                    witness: .of(DodecaScopeEntry.self)))))
+          ], payloadLayout: MemoryLayout<[DodecaScopeEntry]>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x4162_9433_85a5_edd4)),
+  layout: Layout(
+    size: MemoryLayout<(String, String)>.size, align: MemoryLayout<(String, String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ArgsDescriptorBlocks: [SchemaId: Descriptor] =
+  [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x4303_0c40_a64b_32ff)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaEvalResult, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaEvalResult, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaEvalResult, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaEvalResult, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaEvalResult.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaEvalResult.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaEvalResult, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaEvalResult.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaEvalResult, VoxError<Infallible>>.self)
+          .initialize(to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x6277_83a4_0c3e_55f0)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaEvalResult>.size,
+                  align: MemoryLayout<DodecaEvalResult>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaEvalResult.self).pointee {
+                      case .ok: return 0
+                      case .err: return 1
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaEvalResult.self).pointee {
+                      case .ok(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: DodecaScopeValue.self)
+                          .initialize(to: f0)
+                      case .err(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: DodecaScopeValue.self)
+                          .deinitialize(count: 1)
+                      case 1:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaEvalResult
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                          to: DodecaScopeValue.self
+                        ).move()
+                        v = .ok(f0)
+                      case 1:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .err(f0)
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaEvalResult.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0xfd30_c366_f9d3_94e1)),
+                              layout: Layout(
+                                size: MemoryLayout<DodecaScopeValue>.size,
+                                align: MemoryLayout<DodecaScopeValue>.alignment),
+                              access: .enumeration(
+                                EnumAccess(
+                                  tag: { ptr in
+                                    switch ptr.assumingMemoryBound(to: DodecaScopeValue.self)
+                                      .pointee
+                                    {
+                                    case .null: return 0
+                                    case .bool: return 1
+                                    case .number: return 2
+                                    case .string: return 3
+                                    case .array: return 4
+                                    case .object: return 5
+                                    }
+                                  },
+                                  projectPayload: { value, _, scratch in
+                                    switch value.assumingMemoryBound(to: DodecaScopeValue.self)
+                                      .pointee
+                                    {
+                                    case .null: break
+                                    case .bool(let f0):
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: Bool.self)
+                                        .initialize(to: f0)
+                                    case .number(let f0):
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: Double.self)
+                                        .initialize(to: f0)
+                                    case .string(let f0):
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                                        .initialize(to: f0)
+                                    case .array(let f0, let f1):
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).initialize(to: f0)
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).initialize(to: f1)
+                                    case .object(let f0, let f1):
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).initialize(to: f0)
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).initialize(to: f1)
+                                    }
+                                  },
+                                  destroyPayload: { scratch, localIndex in
+                                    switch localIndex {
+                                    case 1:
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: Bool.self)
+                                        .deinitialize(count: 1)
+                                    case 2:
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: Double.self)
+                                        .deinitialize(count: 1)
+                                    case 3:
+                                      scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                                        .deinitialize(count: 1)
+                                    case 4:
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).deinitialize(count: 1)
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                                    case 5:
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).deinitialize(count: 1)
+                                      scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                                    default: break
+                                    }
+                                  },
+                                  inject: { slot, localIndex, scratch in
+                                    let v: DodecaScopeValue
+                                    switch localIndex {
+                                    case 0: v = .null
+                                    case 1:
+                                      let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                        to: Bool.self
+                                      ).move()
+                                      v = .bool(f0)
+                                    case 2:
+                                      let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                        to: Double.self
+                                      ).move()
+                                      v = .number(f0)
+                                    case 3:
+                                      let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                                        to: String.self
+                                      ).move()
+                                      v = .string(f0)
+                                    case 4:
+                                      let f0 = scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).move()
+                                      let f1 = scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).move()
+                                      v = .array(length: f0, preview: f1)
+                                    case 5:
+                                      let f0 = scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.0)!
+                                      ).assumingMemoryBound(to: UInt.self).move()
+                                      let f1 = scratch.advanced(
+                                        by: MemoryLayout<(UInt, String)>.offset(of: \.1)!
+                                      ).assumingMemoryBound(to: String.self).move()
+                                      v = .object(fields: f0, preview: f1)
+                                    default: fatalError("bad variant index")
+                                    }
+                                    slot.assumingMemoryBound(to: DodecaScopeValue.self).initialize(
+                                      to: v)
+                                  },
+                                  variants: [
+                                    VariantAccess(
+                                      wireIndex: 0, payloadFields: [],
+                                      payloadLayout: Layout(size: 0, align: 1)),
+                                    VariantAccess(
+                                      wireIndex: 1,
+                                      payloadFields: [
+                                        FieldAccess(
+                                          offset: 0,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0x1783_67a8_7f66_fb46)),
+                                            layout: Layout(
+                                              size: MemoryLayout<Bool>.size,
+                                              align: MemoryLayout<Bool>.alignment), access: .scalar)
+                                        )
+                                      ], payloadLayout: MemoryLayout<Bool>.phonLayout),
+                                    VariantAccess(
+                                      wireIndex: 2,
+                                      payloadFields: [
+                                        FieldAccess(
+                                          offset: 0,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0x3f2e_589d_b81e_95bf)),
+                                            layout: Layout(
+                                              size: MemoryLayout<Double>.size,
+                                              align: MemoryLayout<Double>.alignment),
+                                            access: .scalar))
+                                      ], payloadLayout: MemoryLayout<Double>.phonLayout),
+                                    VariantAccess(
+                                      wireIndex: 3,
+                                      payloadFields: [
+                                        FieldAccess(
+                                          offset: 0,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                            layout: Layout(
+                                              size: MemoryLayout<String>.size,
+                                              align: MemoryLayout<String>.alignment),
+                                            access: .bytes(
+                                              BytesAccess(stride: 1, elemAlign: 1, witness: .string)
+                                            )))
+                                      ], payloadLayout: MemoryLayout<String>.phonLayout),
+                                    VariantAccess(
+                                      wireIndex: 4,
+                                      payloadFields: [
+                                        FieldAccess(
+                                          offset: MemoryLayout<(UInt, String)>.offset(of: \.0)!,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0xd935_6298_b816_39ac)),
+                                            layout: Layout(
+                                              size: MemoryLayout<UInt>.size,
+                                              align: MemoryLayout<UInt>.alignment), access: .scalar)
+                                        ),
+                                        FieldAccess(
+                                          offset: MemoryLayout<(UInt, String)>.offset(of: \.1)!,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                            layout: Layout(
+                                              size: MemoryLayout<String>.size,
+                                              align: MemoryLayout<String>.alignment),
+                                            access: .bytes(
+                                              BytesAccess(stride: 1, elemAlign: 1, witness: .string)
+                                            ))),
+                                      ], payloadLayout: MemoryLayout<(UInt, String)>.phonLayout),
+                                    VariantAccess(
+                                      wireIndex: 5,
+                                      payloadFields: [
+                                        FieldAccess(
+                                          offset: MemoryLayout<(UInt, String)>.offset(of: \.0)!,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0xd935_6298_b816_39ac)),
+                                            layout: Layout(
+                                              size: MemoryLayout<UInt>.size,
+                                              align: MemoryLayout<UInt>.alignment), access: .scalar)
+                                        ),
+                                        FieldAccess(
+                                          offset: MemoryLayout<(UInt, String)>.offset(of: \.1)!,
+                                          descriptor: Descriptor(
+                                            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                            layout: Layout(
+                                              size: MemoryLayout<String>.size,
+                                              align: MemoryLayout<String>.alignment),
+                                            access: .bytes(
+                                              BytesAccess(stride: 1, elemAlign: 1, witness: .string)
+                                            ))),
+                                      ], payloadLayout: MemoryLayout<(UInt, String)>.phonLayout),
+                                  ]))))
+                        ], payloadLayout: MemoryLayout<DodecaScopeValue>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaEvalResult>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x34d0_dd44_3a66_b6b7)),
+  layout: Layout(
+    size: MemoryLayout<(String, DodecaDeadLinkTarget)>.size,
+    align: MemoryLayout<(String, DodecaDeadLinkTarget)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaDeadLinkTarget)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaDeadLinkTarget)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x46c2_ebb5_eb12_05d1)),
+            layout: Layout(
+              size: MemoryLayout<DodecaDeadLinkTarget>.size,
+              align: MemoryLayout<DodecaDeadLinkTarget>.alignment),
+            access: .enumeration(
+              EnumAccess(
+                tag: { ptr in
+                  switch ptr.assumingMemoryBound(to: DodecaDeadLinkTarget.self).pointee {
+                  case .wiki: return 0
+                  case .`internal`: return 1
+                  }
+                },
+                projectPayload: { value, _, scratch in
+                  switch value.assumingMemoryBound(to: DodecaDeadLinkTarget.self).pointee {
+                  case .wiki(let f0, let f1):
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f0)
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f1)
+                  case .`internal`(let f0, let f1):
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f0)
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).initialize(to: f1)
+                  }
+                },
+                destroyPayload: { scratch, localIndex in
+                  switch localIndex {
+                  case 0:
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                  case 1:
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                    scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                  default: break
+                  }
+                },
+                inject: { slot, localIndex, scratch in
+                  let v: DodecaDeadLinkTarget
+                  switch localIndex {
+                  case 0:
+                    let f0 = scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    let f1 = scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    v = .wiki(key: f0, title: f1)
+                  case 1:
+                    let f0 = scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    let f1 = scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                      .assumingMemoryBound(to: String.self).move()
+                    v = .`internal`(href: f0, title: f1)
+                  default: fatalError("bad variant index")
+                  }
+                  slot.assumingMemoryBound(to: DodecaDeadLinkTarget.self).initialize(to: v)
+                },
+                variants: [
+                  VariantAccess(
+                    wireIndex: 0,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                      FieldAccess(
+                        offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                    ], payloadLayout: MemoryLayout<(String, String)>.phonLayout),
+                  VariantAccess(
+                    wireIndex: 1,
+                    payloadFields: [
+                      FieldAccess(
+                        offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                      FieldAccess(
+                        offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+                        descriptor: Descriptor(
+                          schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                          layout: Layout(
+                            size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                          access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                    ], payloadLayout: MemoryLayout<(String, String)>.phonLayout),
+                ])))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0x45e7_f2b8_16fa_bc67)),
+    layout: Layout(
+      size: MemoryLayout<Result<DodecaOpenSourceResult, VoxError<Infallible>>>.size,
+      align: MemoryLayout<Result<DodecaOpenSourceResult, VoxError<Infallible>>>.alignment),
+    access: .enumeration(
+      EnumAccess(
+        tag: { ptr in
+          switch ptr.assumingMemoryBound(
+            to: Result<DodecaOpenSourceResult, VoxError<Infallible>>.self
+          ).pointee {
+          case .success: return 0
+          case .failure: return 1
+          }
+        },
+        projectPayload: { value, _, scratch in
+          switch value.assumingMemoryBound(
+            to: Result<DodecaOpenSourceResult, VoxError<Infallible>>.self
+          ).pointee {
+          case .success(let f0):
+            scratch.assumingMemoryBound(to: DodecaOpenSourceResult.self).initialize(to: f0)
+          case .failure(let f0):
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+          }
+        },
+        destroyPayload: { scratch, localIndex in
+          if localIndex == 0 {
+            scratch.assumingMemoryBound(to: DodecaOpenSourceResult.self).deinitialize(count: 1)
+          } else {
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+          }
+        },
+        inject: { slot, localIndex, scratch in
+          let v: Result<DodecaOpenSourceResult, VoxError<Infallible>> =
+            localIndex == 0
+            ? .success(scratch.assumingMemoryBound(to: DodecaOpenSourceResult.self).move())
+            : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+          slot.assumingMemoryBound(to: Result<DodecaOpenSourceResult, VoxError<Infallible>>.self)
+            .initialize(to: v)
+        },
+        variants: [
+          VariantAccess(
+            wireIndex: 0,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x13db_55e0_c0fc_f6b5)),
+                  layout: Layout(
+                    size: MemoryLayout<DodecaOpenSourceResult>.size,
+                    align: MemoryLayout<DodecaOpenSourceResult>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: DodecaOpenSourceResult.self).pointee {
+                        case .ok: return 0
+                        case .err: return 1
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: DodecaOpenSourceResult.self).pointee {
+                        case .ok: break
+                        case .err(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 1:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: DodecaOpenSourceResult
+                        switch localIndex {
+                        case 0: v = .ok
+                        case 1:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .err(f0)
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: DodecaOpenSourceResult.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 1,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      ]))))
+            ], payloadLayout: MemoryLayout<DodecaOpenSourceResult>.phonLayout),
+          VariantAccess(
+            wireIndex: 1,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                  layout: Layout(
+                    size: MemoryLayout<VoxError<Infallible>>.size,
+                    align: MemoryLayout<VoxError<Infallible>>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: return 0
+                        case .unknownMethod: return 1
+                        case .invalidPayload: return 2
+                        case .cancelled: return 3
+                        case .connectionClosed: return 4
+                        case .sessionShutdown: return 5
+                        case .sendFailed: return 6
+                        case .indeterminate: return 7
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: fatalError("uninhabited variant payload")
+                        case .unknownMethod: break
+                        case .invalidPayload(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        case .cancelled: break
+                        case .connectionClosed: break
+                        case .sessionShutdown: break
+                        case .sendFailed: break
+                        case .indeterminate: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0: break
+                        case 2:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: VoxError<Infallible>
+                        switch localIndex {
+                        case 0: fatalError("uninhabited variant payload")
+                        case 1: v = .unknownMethod
+                        case 2:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .invalidPayload(f0)
+                        case 3: v = .cancelled
+                        case 4: v = .connectionClosed
+                        case 5: v = .sessionShutdown
+                        case 6: v = .sendFailed
+                        case 7: v = .indeterminate
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                                layout: Layout(
+                                  size: MemoryLayout<Infallible>.size,
+                                  align: MemoryLayout<Infallible>.alignment),
+                                access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                          ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+        ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x4162_9433_85a5_edd4)),
+  layout: Layout(
+    size: MemoryLayout<(String, String)>.size, align: MemoryLayout<(String, String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x855c_66d0_0363_31d1)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaEditLoad, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaEditLoad, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaEditLoad, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaEditLoad, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaEditLoad.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaEditLoad.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaEditLoad, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaEditLoad.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaEditLoad, VoxError<Infallible>>.self).initialize(
+          to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x20d0_3942_0172_f318)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaEditLoad>.size,
+                  align: MemoryLayout<DodecaEditLoad>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaEditLoad.self).pointee {
+                      case .ok: return 0
+                      case .denied: return 1
+                      case .notFound: return 2
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaEditLoad.self).pointee {
+                      case .ok(let f0, let f1, let f2, let f3, let f4):
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.0)!
+                        ).assumingMemoryBound(to: String.self).initialize(to: f0)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.1)!
+                        ).assumingMemoryBound(to: String.self).initialize(to: f1)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.2)!
+                        ).assumingMemoryBound(to: String.self).initialize(to: f2)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.3)!
+                        ).assumingMemoryBound(to: String.self).initialize(to: f3)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.4)!
+                        ).assumingMemoryBound(to: String.self).initialize(to: f4)
+                      case .denied: break
+                      case .notFound: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.0)!
+                        ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.1)!
+                        ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.2)!
+                        ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.3)!
+                        ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.4)!
+                        ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaEditLoad
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.0)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f1 = scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.1)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f2 = scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.2)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f3 = scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.3)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f4 = scratch.advanced(
+                          by: MemoryLayout<(String, String, String, String, String)>.offset(
+                            of: \.4)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        v = .ok(sourceKey: f0, route: f1, uri: f2, content: f3, base: f4)
+                      case 1: v = .denied
+                      case 2: v = .notFound
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaEditLoad.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String, String, String, String)>.offset(
+                              of: \.0)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String, String, String, String)>.offset(
+                              of: \.1)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String, String, String, String)>.offset(
+                              of: \.2)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String, String, String, String)>.offset(
+                              of: \.3)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String, String, String, String)>.offset(
+                              of: \.4)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                        ],
+                        payloadLayout: MemoryLayout<(String, String, String, String, String)>
+                          .phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaEditLoad>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xae21_9e77_b53b_5cb9)),
+  layout: Layout(
+    size: MemoryLayout<(String, String, String)>.size,
+    align: MemoryLayout<(String, String, String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, String, String)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, String, String)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, String, String)>.offset(of: \.2)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ResponseDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0x1613_65db_359c_55bb)),
+    layout: Layout(
+      size: MemoryLayout<Result<DodecaEditPreview, VoxError<Infallible>>>.size,
+      align: MemoryLayout<Result<DodecaEditPreview, VoxError<Infallible>>>.alignment),
+    access: .enumeration(
+      EnumAccess(
+        tag: { ptr in
+          switch ptr.assumingMemoryBound(to: Result<DodecaEditPreview, VoxError<Infallible>>.self)
+            .pointee
+          {
+          case .success: return 0
+          case .failure: return 1
+          }
+        },
+        projectPayload: { value, _, scratch in
+          switch value.assumingMemoryBound(to: Result<DodecaEditPreview, VoxError<Infallible>>.self)
+            .pointee
+          {
+          case .success(let f0):
+            scratch.assumingMemoryBound(to: DodecaEditPreview.self).initialize(to: f0)
+          case .failure(let f0):
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+          }
+        },
+        destroyPayload: { scratch, localIndex in
+          if localIndex == 0 {
+            scratch.assumingMemoryBound(to: DodecaEditPreview.self).deinitialize(count: 1)
+          } else {
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+          }
+        },
+        inject: { slot, localIndex, scratch in
+          let v: Result<DodecaEditPreview, VoxError<Infallible>> =
+            localIndex == 0
+            ? .success(scratch.assumingMemoryBound(to: DodecaEditPreview.self).move())
+            : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+          slot.assumingMemoryBound(to: Result<DodecaEditPreview, VoxError<Infallible>>.self)
+            .initialize(to: v)
+        },
+        variants: [
+          VariantAccess(
+            wireIndex: 0,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0xf1ab_0ff2_e8f9_0626)),
+                  layout: Layout(
+                    size: MemoryLayout<DodecaEditPreview>.size,
+                    align: MemoryLayout<DodecaEditPreview>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: DodecaEditPreview.self).pointee {
+                        case .ok: return 0
+                        case .denied: return 1
+                        case .notFound: return 2
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: DodecaEditPreview.self).pointee {
+                        case .ok(let f0, let f1):
+                          scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.0)!
+                          ).assumingMemoryBound(to: String.self).initialize(to: f0)
+                          scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.1)!
+                          ).assumingMemoryBound(to: [DodecaSidLine].self).initialize(to: f1)
+                        case .denied: break
+                        case .notFound: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0:
+                          scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.0)!
+                          ).assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                          scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.1)!
+                          ).assumingMemoryBound(to: [DodecaSidLine].self).deinitialize(count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: DodecaEditPreview
+                        switch localIndex {
+                        case 0:
+                          let f0 = scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.0)!
+                          ).assumingMemoryBound(to: String.self).move()
+                          let f1 = scratch.advanced(
+                            by: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.1)!
+                          ).assumingMemoryBound(to: [DodecaSidLine].self).move()
+                          v = .ok(html: f0, sourceMap: f1)
+                        case 1: v = .denied
+                        case 2: v = .notFound
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: DodecaEditPreview.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.0)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                            FieldAccess(
+                              offset: MemoryLayout<(String, [DodecaSidLine])>.offset(of: \.1)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0xb82a_f0bf_738b_b291)),
+                                layout: Layout(
+                                  size: MemoryLayout<[DodecaSidLine]>.size,
+                                  align: MemoryLayout<[DodecaSidLine]>.alignment),
+                                access: .sequence(
+                                  SequenceAccess(
+                                    element: Descriptor(
+                                      schema: .concrete(SchemaId(0xb003_9726_c640_b4e3)),
+                                      layout: Layout(
+                                        size: MemoryLayout<DodecaSidLine>.size,
+                                        align: MemoryLayout<DodecaSidLine>.alignment),
+                                      access: .record(
+                                        RecordAccess(
+                                          fields: [
+                                            FieldAccess(
+                                              offset: MemoryLayout<DodecaSidLine>.offset(
+                                                of: \DodecaSidLine.sid)!,
+                                              descriptor: Descriptor(
+                                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                                layout: Layout(
+                                                  size: MemoryLayout<String>.size,
+                                                  align: MemoryLayout<String>.alignment),
+                                                access: .bytes(
+                                                  BytesAccess(
+                                                    stride: 1, elemAlign: 1, witness: .string)))),
+                                            FieldAccess(
+                                              offset: MemoryLayout<DodecaSidLine>.offset(
+                                                of: \DodecaSidLine.line)!,
+                                              descriptor: Descriptor(
+                                                schema: .concrete(SchemaId(0x281c_5be4_f2ee_63b4)),
+                                                layout: Layout(
+                                                  size: MemoryLayout<UInt32>.size,
+                                                  align: MemoryLayout<UInt32>.alignment),
+                                                access: .scalar)),
+                                          ], construct: .inPlace))),
+                                    stride: MemoryLayout<DodecaSidLine>.stride,
+                                    elemAlign: MemoryLayout<DodecaSidLine>.alignment,
+                                    witness: .of(DodecaSidLine.self))))),
+                          ], payloadLayout: MemoryLayout<(String, [DodecaSidLine])>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<DodecaEditPreview>.phonLayout),
+          VariantAccess(
+            wireIndex: 1,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                  layout: Layout(
+                    size: MemoryLayout<VoxError<Infallible>>.size,
+                    align: MemoryLayout<VoxError<Infallible>>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: return 0
+                        case .unknownMethod: return 1
+                        case .invalidPayload: return 2
+                        case .cancelled: return 3
+                        case .connectionClosed: return 4
+                        case .sessionShutdown: return 5
+                        case .sendFailed: return 6
+                        case .indeterminate: return 7
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: fatalError("uninhabited variant payload")
+                        case .unknownMethod: break
+                        case .invalidPayload(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        case .cancelled: break
+                        case .connectionClosed: break
+                        case .sessionShutdown: break
+                        case .sendFailed: break
+                        case .indeterminate: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0: break
+                        case 2:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: VoxError<Infallible>
+                        switch localIndex {
+                        case 0: fatalError("uninhabited variant payload")
+                        case 1: v = .unknownMethod
+                        case 2:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .invalidPayload(f0)
+                        case 3: v = .cancelled
+                        case 4: v = .connectionClosed
+                        case 5: v = .sessionShutdown
+                        case 6: v = .sendFailed
+                        case 7: v = .indeterminate
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                                layout: Layout(
+                                  size: MemoryLayout<Infallible>.size,
+                                  align: MemoryLayout<Infallible>.alignment),
+                                access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                          ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+        ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xb248_ee1c_149f_61e6)),
+  layout: Layout(
+    size: MemoryLayout<(String, DodecaEditSaveReq)>.size,
+    align: MemoryLayout<(String, DodecaEditSaveReq)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaEditSaveReq)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaEditSaveReq)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x33d0_41b0_0206_5105)),
+            layout: Layout(
+              size: MemoryLayout<DodecaEditSaveReq>.size,
+              align: MemoryLayout<DodecaEditSaveReq>.alignment),
+            access: .record(
+              RecordAccess(
+                fields: [
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditSaveReq>.offset(
+                      of: \DodecaEditSaveReq.sourceKey)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditSaveReq>.offset(of: \DodecaEditSaveReq.buffer)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditSaveReq>.offset(of: \DodecaEditSaveReq.base)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditSaveReq>.offset(of: \DodecaEditSaveReq.message)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                ], construct: .inPlace)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x06e5_815f_07aa_5c0c)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaEditSave, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaEditSave, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaEditSave, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaEditSave, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaEditSave.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaEditSave.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaEditSave, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaEditSave.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaEditSave, VoxError<Infallible>>.self).initialize(
+          to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x2fea_f88f_3480_ebf7)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaEditSave>.size,
+                  align: MemoryLayout<DodecaEditSave>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaEditSave.self).pointee {
+                      case .ok: return 0
+                      case .denied: return 1
+                      case .notFound: return 2
+                      case .conflict: return 3
+                      case .error: return 4
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaEditSave.self).pointee {
+                      case .ok(let f0, let f1):
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).initialize(to: f0)
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: String.self).initialize(to: f1)
+                      case .denied: break
+                      case .notFound: break
+                      case .conflict(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .error(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                      case 3:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      case 4:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaEditSave
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(
+                          by: MemoryLayout<(String, String)>.offset(of: \.0)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f1 = scratch.advanced(
+                          by: MemoryLayout<(String, String)>.offset(of: \.1)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        v = .ok(commit: f0, base: f1)
+                      case 1: v = .denied
+                      case 2: v = .notFound
+                      case 3:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .conflict(current: f0)
+                      case 4:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .error(message: f0)
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaEditSave.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                        ], payloadLayout: MemoryLayout<(String, String)>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 3,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 4,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaEditSave>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0xeb01_eb8a_904d_2a71)),
+  layout: Layout(
+    size: MemoryLayout<(String, DodecaEditUploadReq)>.size,
+    align: MemoryLayout<(String, DodecaEditUploadReq)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaEditUploadReq)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, DodecaEditUploadReq)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x2d1e_ebd6_9405_3ec1)),
+            layout: Layout(
+              size: MemoryLayout<DodecaEditUploadReq>.size,
+              align: MemoryLayout<DodecaEditUploadReq>.alignment),
+            access: .record(
+              RecordAccess(
+                fields: [
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditUploadReq>.offset(
+                      of: \DodecaEditUploadReq.sourceKey)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditUploadReq>.offset(
+                      of: \DodecaEditUploadReq.filename)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                      layout: Layout(
+                        size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                  FieldAccess(
+                    offset: MemoryLayout<DodecaEditUploadReq>.offset(
+                      of: \DodecaEditUploadReq.bytes)!,
+                    descriptor: Descriptor(
+                      schema: .concrete(SchemaId(0xaa06_67df_4299_d151)),
+                      layout: Layout(
+                        size: MemoryLayout<Data>.size, align: MemoryLayout<Data>.alignment),
+                      access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .data)))),
+                ], construct: .inPlace)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ResponseDescriptor: Descriptor =
+  Descriptor(
+    schema: .concrete(SchemaId(0xcf23_6c2c_b3af_5fc2)),
+    layout: Layout(
+      size: MemoryLayout<Result<DodecaEditUpload, VoxError<Infallible>>>.size,
+      align: MemoryLayout<Result<DodecaEditUpload, VoxError<Infallible>>>.alignment),
+    access: .enumeration(
+      EnumAccess(
+        tag: { ptr in
+          switch ptr.assumingMemoryBound(to: Result<DodecaEditUpload, VoxError<Infallible>>.self)
+            .pointee
+          {
+          case .success: return 0
+          case .failure: return 1
+          }
+        },
+        projectPayload: { value, _, scratch in
+          switch value.assumingMemoryBound(to: Result<DodecaEditUpload, VoxError<Infallible>>.self)
+            .pointee
+          {
+          case .success(let f0):
+            scratch.assumingMemoryBound(to: DodecaEditUpload.self).initialize(to: f0)
+          case .failure(let f0):
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+          }
+        },
+        destroyPayload: { scratch, localIndex in
+          if localIndex == 0 {
+            scratch.assumingMemoryBound(to: DodecaEditUpload.self).deinitialize(count: 1)
+          } else {
+            scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+          }
+        },
+        inject: { slot, localIndex, scratch in
+          let v: Result<DodecaEditUpload, VoxError<Infallible>> =
+            localIndex == 0
+            ? .success(scratch.assumingMemoryBound(to: DodecaEditUpload.self).move())
+            : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+          slot.assumingMemoryBound(to: Result<DodecaEditUpload, VoxError<Infallible>>.self)
+            .initialize(to: v)
+        },
+        variants: [
+          VariantAccess(
+            wireIndex: 0,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0xef53_5f15_109e_f0e6)),
+                  layout: Layout(
+                    size: MemoryLayout<DodecaEditUpload>.size,
+                    align: MemoryLayout<DodecaEditUpload>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: DodecaEditUpload.self).pointee {
+                        case .ok: return 0
+                        case .denied: return 1
+                        case .notFound: return 2
+                        case .error: return 3
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: DodecaEditUpload.self).pointee {
+                        case .ok(let f0, let f1):
+                          scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                            .assumingMemoryBound(to: String.self).initialize(to: f0)
+                          scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                            .assumingMemoryBound(to: String.self).initialize(to: f1)
+                        case .denied: break
+                        case .notFound: break
+                        case .error(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0:
+                          scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                            .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                          scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                            .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        case 3:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: DodecaEditUpload
+                        switch localIndex {
+                        case 0:
+                          let f0 = scratch.advanced(
+                            by: MemoryLayout<(String, String)>.offset(of: \.0)!
+                          ).assumingMemoryBound(to: String.self).move()
+                          let f1 = scratch.advanced(
+                            by: MemoryLayout<(String, String)>.offset(of: \.1)!
+                          ).assumingMemoryBound(to: String.self).move()
+                          v = .ok(markdown: f0, path: f1)
+                        case 1: v = .denied
+                        case 2: v = .notFound
+                        case 3:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .error(message: f0)
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: DodecaEditUpload.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                            FieldAccess(
+                              offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+                          ], payloadLayout: MemoryLayout<(String, String)>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 3,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      ]))))
+            ], payloadLayout: MemoryLayout<DodecaEditUpload>.phonLayout),
+          VariantAccess(
+            wireIndex: 1,
+            payloadFields: [
+              FieldAccess(
+                offset: 0,
+                descriptor: Descriptor(
+                  schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                  layout: Layout(
+                    size: MemoryLayout<VoxError<Infallible>>.size,
+                    align: MemoryLayout<VoxError<Infallible>>.alignment),
+                  access: .enumeration(
+                    EnumAccess(
+                      tag: { ptr in
+                        switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: return 0
+                        case .unknownMethod: return 1
+                        case .invalidPayload: return 2
+                        case .cancelled: return 3
+                        case .connectionClosed: return 4
+                        case .sessionShutdown: return 5
+                        case .sendFailed: return 6
+                        case .indeterminate: return 7
+                        }
+                      },
+                      projectPayload: { value, _, scratch in
+                        switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                        case .user: fatalError("uninhabited variant payload")
+                        case .unknownMethod: break
+                        case .invalidPayload(let f0):
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                            to: f0)
+                        case .cancelled: break
+                        case .connectionClosed: break
+                        case .sessionShutdown: break
+                        case .sendFailed: break
+                        case .indeterminate: break
+                        }
+                      },
+                      destroyPayload: { scratch, localIndex in
+                        switch localIndex {
+                        case 0: break
+                        case 2:
+                          scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                            count: 1)
+                        default: break
+                        }
+                      },
+                      inject: { slot, localIndex, scratch in
+                        let v: VoxError<Infallible>
+                        switch localIndex {
+                        case 0: fatalError("uninhabited variant payload")
+                        case 1: v = .unknownMethod
+                        case 2:
+                          let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self)
+                            .move()
+                          v = .invalidPayload(f0)
+                        case 3: v = .cancelled
+                        case 4: v = .connectionClosed
+                        case 5: v = .sessionShutdown
+                        case 6: v = .sendFailed
+                        case 7: v = .indeterminate
+                        default: fatalError("bad variant index")
+                        }
+                        slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                      },
+                      variants: [
+                        VariantAccess(
+                          wireIndex: 0,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                                layout: Layout(
+                                  size: MemoryLayout<Infallible>.size,
+                                  align: MemoryLayout<Infallible>.alignment),
+                                access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                          ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 2,
+                          payloadFields: [
+                            FieldAccess(
+                              offset: 0,
+                              descriptor: Descriptor(
+                                schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                layout: Layout(
+                                  size: MemoryLayout<String>.size,
+                                  align: MemoryLayout<String>.alignment),
+                                access: .bytes(
+                                  BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+                          ], payloadLayout: MemoryLayout<String>.phonLayout),
+                        VariantAccess(
+                          wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                        VariantAccess(
+                          wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      ]))))
+            ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+        ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x4162_9433_85a5_edd4)),
+  layout: Layout(
+    size: MemoryLayout<(String, String)>.size, align: MemoryLayout<(String, String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+        FieldAccess(
+          offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string)))),
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x2161_7cb6_2d2c_49df)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaEditRead, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaEditRead, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaEditRead, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaEditRead, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaEditRead.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaEditRead.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaEditRead, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaEditRead.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaEditRead, VoxError<Infallible>>.self).initialize(
+          to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0xed3b_fb61_529c_1da9)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaEditRead>.size,
+                  align: MemoryLayout<DodecaEditRead>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaEditRead.self).pointee {
+                      case .ok: return 0
+                      case .denied: return 1
+                      case .notFound: return 2
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaEditRead.self).pointee {
+                      case .ok(let f0, let f1):
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).initialize(to: f0)
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: String.self).initialize(to: f1)
+                      case .denied: break
+                      case .notFound: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.0)!)
+                          .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                        scratch.advanced(by: MemoryLayout<(String, String)>.offset(of: \.1)!)
+                          .assumingMemoryBound(to: String.self).deinitialize(count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaEditRead
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(
+                          by: MemoryLayout<(String, String)>.offset(of: \.0)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        let f1 = scratch.advanced(
+                          by: MemoryLayout<(String, String)>.offset(of: \.1)!
+                        ).assumingMemoryBound(to: String.self).move()
+                        v = .ok(content: f0, base: f1)
+                      case 1: v = .denied
+                      case 2: v = .notFound
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaEditRead.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String)>.offset(of: \.0)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                          FieldAccess(
+                            offset: MemoryLayout<(String, String)>.offset(of: \.1)!,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            )),
+                        ], payloadLayout: MemoryLayout<(String, String)>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaEditRead>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ResponseDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ArgsDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x3125_3570_ab7d_4573)),
+  layout: Layout(size: MemoryLayout<(String)>.size, align: MemoryLayout<(String)>.alignment),
+  access: .record(
+    RecordAccess(
+      fields: [
+        FieldAccess(
+          offset: 0,
+          descriptor: Descriptor(
+            schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+            layout: Layout(size: MemoryLayout<String>.size, align: MemoryLayout<String>.alignment),
+            access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))))
+      ], construct: .inPlace)))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ArgsDescriptorBlocks:
+  [SchemaId: Descriptor] = [:]
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ResponseDescriptor: Descriptor = Descriptor(
+  schema: .concrete(SchemaId(0x6d4f_55f1_d8a0_69a6)),
+  layout: Layout(
+    size: MemoryLayout<Result<DodecaEditList, VoxError<Infallible>>>.size,
+    align: MemoryLayout<Result<DodecaEditList, VoxError<Infallible>>>.alignment),
+  access: .enumeration(
+    EnumAccess(
+      tag: { ptr in
+        switch ptr.assumingMemoryBound(to: Result<DodecaEditList, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success: return 0
+        case .failure: return 1
+        }
+      },
+      projectPayload: { value, _, scratch in
+        switch value.assumingMemoryBound(to: Result<DodecaEditList, VoxError<Infallible>>.self)
+          .pointee
+        {
+        case .success(let f0):
+          scratch.assumingMemoryBound(to: DodecaEditList.self).initialize(to: f0)
+        case .failure(let f0):
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: f0)
+        }
+      },
+      destroyPayload: { scratch, localIndex in
+        if localIndex == 0 {
+          scratch.assumingMemoryBound(to: DodecaEditList.self).deinitialize(count: 1)
+        } else {
+          scratch.assumingMemoryBound(to: VoxError<Infallible>.self).deinitialize(count: 1)
+        }
+      },
+      inject: { slot, localIndex, scratch in
+        let v: Result<DodecaEditList, VoxError<Infallible>> =
+          localIndex == 0
+          ? .success(scratch.assumingMemoryBound(to: DodecaEditList.self).move())
+          : .failure(scratch.assumingMemoryBound(to: VoxError<Infallible>.self).move())
+        slot.assumingMemoryBound(to: Result<DodecaEditList, VoxError<Infallible>>.self).initialize(
+          to: v)
+      },
+      variants: [
+        VariantAccess(
+          wireIndex: 0,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x72dc_e679_4a31_7c03)),
+                layout: Layout(
+                  size: MemoryLayout<DodecaEditList>.size,
+                  align: MemoryLayout<DodecaEditList>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: DodecaEditList.self).pointee {
+                      case .ok: return 0
+                      case .denied: return 1
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: DodecaEditList.self).pointee {
+                      case .ok(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: [DodecaEditEntry].self)
+                          .initialize(to: f0)
+                      case .denied: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: [DodecaEditEntry].self)
+                          .deinitialize(count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: DodecaEditList
+                      switch localIndex {
+                      case 0:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(
+                          to: [DodecaEditEntry].self
+                        ).move()
+                        v = .ok(entries: f0)
+                      case 1: v = .denied
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: DodecaEditList.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x26aa_ae41_ebea_4c43)),
+                              layout: Layout(
+                                size: MemoryLayout<[DodecaEditEntry]>.size,
+                                align: MemoryLayout<[DodecaEditEntry]>.alignment),
+                              access: .sequence(
+                                SequenceAccess(
+                                  element: Descriptor(
+                                    schema: .concrete(SchemaId(0x5e76_1e98_e6c2_54d4)),
+                                    layout: Layout(
+                                      size: MemoryLayout<DodecaEditEntry>.size,
+                                      align: MemoryLayout<DodecaEditEntry>.alignment),
+                                    access: .record(
+                                      RecordAccess(
+                                        fields: [
+                                          FieldAccess(
+                                            offset: MemoryLayout<DodecaEditEntry>.offset(
+                                              of: \DodecaEditEntry.sourceKey)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                          FieldAccess(
+                                            offset: MemoryLayout<DodecaEditEntry>.offset(
+                                              of: \DodecaEditEntry.route)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                          FieldAccess(
+                                            offset: MemoryLayout<DodecaEditEntry>.offset(
+                                              of: \DodecaEditEntry.uri)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                          FieldAccess(
+                                            offset: MemoryLayout<DodecaEditEntry>.offset(
+                                              of: \DodecaEditEntry.title)!,
+                                            descriptor: Descriptor(
+                                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                                              layout: Layout(
+                                                size: MemoryLayout<String>.size,
+                                                align: MemoryLayout<String>.alignment),
+                                              access: .bytes(
+                                                BytesAccess(
+                                                  stride: 1, elemAlign: 1, witness: .string)))),
+                                        ], construct: .inPlace))),
+                                  stride: MemoryLayout<DodecaEditEntry>.stride,
+                                  elemAlign: MemoryLayout<DodecaEditEntry>.alignment,
+                                  witness: .of(DodecaEditEntry.self)))))
+                        ], payloadLayout: MemoryLayout<[DodecaEditEntry]>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<DodecaEditList>.phonLayout),
+        VariantAccess(
+          wireIndex: 1,
+          payloadFields: [
+            FieldAccess(
+              offset: 0,
+              descriptor: Descriptor(
+                schema: .concrete(SchemaId(0x3032_e627_0c5d_2644)),
+                layout: Layout(
+                  size: MemoryLayout<VoxError<Infallible>>.size,
+                  align: MemoryLayout<VoxError<Infallible>>.alignment),
+                access: .enumeration(
+                  EnumAccess(
+                    tag: { ptr in
+                      switch ptr.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: return 0
+                      case .unknownMethod: return 1
+                      case .invalidPayload: return 2
+                      case .cancelled: return 3
+                      case .connectionClosed: return 4
+                      case .sessionShutdown: return 5
+                      case .sendFailed: return 6
+                      case .indeterminate: return 7
+                      }
+                    },
+                    projectPayload: { value, _, scratch in
+                      switch value.assumingMemoryBound(to: VoxError<Infallible>.self).pointee {
+                      case .user: fatalError("uninhabited variant payload")
+                      case .unknownMethod: break
+                      case .invalidPayload(let f0):
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).initialize(
+                          to: f0)
+                      case .cancelled: break
+                      case .connectionClosed: break
+                      case .sessionShutdown: break
+                      case .sendFailed: break
+                      case .indeterminate: break
+                      }
+                    },
+                    destroyPayload: { scratch, localIndex in
+                      switch localIndex {
+                      case 0: break
+                      case 2:
+                        scratch.advanced(by: 0).assumingMemoryBound(to: String.self).deinitialize(
+                          count: 1)
+                      default: break
+                      }
+                    },
+                    inject: { slot, localIndex, scratch in
+                      let v: VoxError<Infallible>
+                      switch localIndex {
+                      case 0: fatalError("uninhabited variant payload")
+                      case 1: v = .unknownMethod
+                      case 2:
+                        let f0 = scratch.advanced(by: 0).assumingMemoryBound(to: String.self).move()
+                        v = .invalidPayload(f0)
+                      case 3: v = .cancelled
+                      case 4: v = .connectionClosed
+                      case 5: v = .sessionShutdown
+                      case 6: v = .sendFailed
+                      case 7: v = .indeterminate
+                      default: fatalError("bad variant index")
+                      }
+                      slot.assumingMemoryBound(to: VoxError<Infallible>.self).initialize(to: v)
+                    },
+                    variants: [
+                      VariantAccess(
+                        wireIndex: 0,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x8bfe_7856_188d_64f1)),
+                              layout: Layout(
+                                size: MemoryLayout<Infallible>.size,
+                                align: MemoryLayout<Infallible>.alignment),
+                              access: .record(RecordAccess(fields: [], construct: .inPlace))))
+                        ], payloadLayout: MemoryLayout<Infallible>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 1, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 2,
+                        payloadFields: [
+                          FieldAccess(
+                            offset: 0,
+                            descriptor: Descriptor(
+                              schema: .concrete(SchemaId(0x6d7d_ce91_4ee1_50e8)),
+                              layout: Layout(
+                                size: MemoryLayout<String>.size,
+                                align: MemoryLayout<String>.alignment),
+                              access: .bytes(BytesAccess(stride: 1, elemAlign: 1, witness: .string))
+                            ))
+                        ], payloadLayout: MemoryLayout<String>.phonLayout),
+                      VariantAccess(
+                        wireIndex: 3, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 4, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 5, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 6, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                      VariantAccess(
+                        wireIndex: 7, payloadFields: [], payloadLayout: Layout(size: 0, align: 1)),
+                    ]))))
+          ], payloadLayout: MemoryLayout<VoxError<Infallible>>.phonLayout),
+      ])))
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ResponseDescriptorBlocks:
   [SchemaId: Descriptor] = [:]
 nonisolated(unsafe) let testbed_echoStyxValue_ArgsDescriptor: Descriptor = Descriptor(
   schema: .concrete(SchemaId(0xaaaf_df93_caa1_de0f)),
@@ -91564,6 +95624,403 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
         index: 2, isTx: true, elementRoot: SchemaId(0x6d7d_ce91_4ee1_50e8),
         elementSchemaClosure: [232, 80, 225, 78, 145, 206, 125, 109, 0, 0, 0, 0]),
     ]),
+  0x4b4b_956d_a69d_c0ff: PhonMethodSchemas(
+    argsRoot: SchemaId(0x0f05_58bd_f89d_904c),
+    argsSchemaClosure: [
+      76, 144, 157, 248, 189, 88, 5, 15, 11, 0, 0, 0, 157, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 76, 144, 157, 248, 189, 88, 5, 15, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 1, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 227, 235, 209, 11, 15, 119, 109, 216, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 1, 4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0,
+      0, 2, 0, 0, 0, 105, 100, 5, 227, 235, 209, 11, 15, 119, 109, 216, 11, 0, 0, 0, 116, 121, 112,
+      101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0,
+      0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 19, 0, 0, 0, 68, 111, 100, 101, 99, 97, 68, 101, 118, 116, 111, 111, 108, 115,
+      69, 118, 101, 110, 116, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 5, 0, 0, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6,
+      0, 0, 0, 82, 101, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0,
+      0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0,
+      67, 115, 115, 67, 104, 97, 110, 103, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
+      17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 4, 0, 0, 0, 112, 97, 116, 104, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7,
+      0, 0, 0, 80, 97, 116, 99, 104, 101, 115, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0,
+      7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17,
+      2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0,
+      112, 97, 116, 99, 104, 101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 69,
+      114, 114, 111, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 242, 85, 245, 112, 158, 28, 192, 120, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 13, 0, 0, 0, 69, 114, 114, 111, 114, 82, 101, 115, 111, 108, 118, 101,
+      100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105,
+      101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116,
+      101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0,
+      0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0,
+      0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 32, 15, 77, 49, 242, 84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 49,
+      4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 242,
+      85, 245, 112, 158, 28, 192, 120, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 15, 0, 0, 0, 68, 111, 100, 101, 99, 97, 69, 114, 114, 111, 114, 73, 110, 102, 111, 6, 0,
+      0, 0, 102, 105, 101, 108, 100, 115, 17, 8, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0,
+      115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 109, 101, 115, 115, 97, 103, 101, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 8, 0, 0, 0, 116, 101, 109, 112, 108, 97, 116, 101, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 146, 135, 212, 233,
+      184, 149, 0, 106, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 4, 0, 0, 0, 108, 105, 110, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1,
+      0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6,
+      0, 0, 0, 99, 111, 108, 117, 109, 110, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2,
+      0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 0, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 115, 111,
+      117, 114, 99, 101, 95, 115, 110, 105, 112, 112, 101, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 40, 90, 204, 40, 121, 185, 49, 187,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 11, 0, 0, 0, 115, 110, 97, 112, 115, 104, 111, 116, 95, 105, 100, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 19, 0, 0, 0, 97, 118, 97, 105, 108, 97, 98, 108, 101, 95, 118, 97, 114, 105,
+      97, 98, 108, 101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 209, 227, 39, 173, 158, 78, 249, 227, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 153, 0, 0, 0, 22, 6, 0,
+      0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 146, 135, 212, 233, 184,
+      149, 0, 106, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0,
+      79, 112, 116, 105, 111, 110, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 153, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97,
+      3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 11, 0, 0, 0, 116, 121,
+      112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23,
+      6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 1, 0, 0,
+      0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      108, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      75, 4, 59, 222, 77, 114, 42, 165, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 19, 0, 0, 0, 68, 111, 100, 101, 99, 97, 83, 111, 117, 114, 99, 101, 83, 110, 105, 112,
+      112, 101, 116, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70,
+      105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 108, 105, 110,
+      101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 221, 249, 55, 31, 177, 70, 58, 70, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8,
+      0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 101, 114, 114, 111, 114, 95, 108,
+      105, 110, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 103, 1, 0, 0, 22, 6, 0, 0, 0, 83,
+      99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 94, 89, 158, 250, 177, 7, 199, 30,
+      11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0,
+      107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114,
+      117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 68, 111, 100, 101,
+      99, 97, 83, 111, 117, 114, 99, 101, 76, 105, 110, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100,
+      115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 6, 0, 0, 0, 110, 117, 109, 98, 101, 114, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100,
+      1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
+      7, 0, 0, 0, 99, 111, 110, 116, 101, 110, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1,
+      1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 221, 249, 55, 31, 177, 70, 58, 70, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 94, 89, 158, 250, 177, 7, 199, 30, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 153, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109,
+      97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 40, 90, 204, 40, 121, 185, 49, 187, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 1,
+      0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 75, 4, 59, 222, 77, 114, 42, 165, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      209, 227, 39, 173, 158, 78, 249, 227, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4,
+      0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_echoDodecaDevtoolsEvent_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_echoDodecaDevtoolsEvent_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xd86d_770f_0bd1_ebe3),
+    responseRoot: SchemaId(0x1385_0436_d3e8_3cf3),
+    responseSchemaClosure: [
+      243, 60, 232, 211, 54, 4, 133, 19, 13, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 243, 60, 232, 211, 54, 4, 133, 19, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 227,
+      235, 209, 11, 15, 119, 109, 216, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0,
+      69, 114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121,
+      108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 1, 4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 227, 235, 209, 11, 15, 119, 109, 216, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112,
+      97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69,
+      110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 19, 0, 0, 0, 68, 111, 100, 101, 99, 97, 68, 101, 118, 116, 111, 111, 108, 115, 69, 118,
+      101, 110, 116, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 5, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0,
+      82, 101, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0,
+      112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97,
+      114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 67, 115,
+      115, 67, 104, 97, 110, 103, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 1,
+      0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 4, 0, 0, 0, 112, 97, 116, 104, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 80,
+      97, 116, 99, 104, 101, 115, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0,
+      112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 2, 0, 0, 0,
+      22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0,
+      0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 112, 97,
+      116, 99, 104, 101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97,
+      114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 69, 114,
+      114, 111, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121,
+      108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 242, 85, 245, 112, 158, 28, 192, 120, 4, 0, 0, 0, 97, 114, 103, 115,
+      17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 13, 0, 0, 0, 69, 114, 114, 111, 114, 82, 101, 115, 111, 108, 118, 101, 100,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101,
+      108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116, 101,
+      6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0,
+      0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0,
+      0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 32, 15, 77, 49, 242, 84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 49,
+      4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 242,
+      85, 245, 112, 158, 28, 192, 120, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 15, 0, 0, 0, 68, 111, 100, 101, 99, 97, 69, 114, 114, 111, 114, 73, 110, 102, 111, 6, 0,
+      0, 0, 102, 105, 101, 108, 100, 115, 17, 8, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0,
+      115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 109, 101, 115, 115, 97, 103, 101, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 8, 0, 0, 0, 116, 101, 109, 112, 108, 97, 116, 101, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 146, 135, 212, 233,
+      184, 149, 0, 106, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 4, 0, 0, 0, 108, 105, 110, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1,
+      0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6,
+      0, 0, 0, 99, 111, 108, 117, 109, 110, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2,
+      0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 0, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 115, 111,
+      117, 114, 99, 101, 95, 115, 110, 105, 112, 112, 101, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 40, 90, 204, 40, 121, 185, 49, 187,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 11, 0, 0, 0, 115, 110, 97, 112, 115, 104, 111, 116, 95, 105, 100, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 19, 0, 0, 0, 97, 118, 97, 105, 108, 97, 98, 108, 101, 95, 118, 97, 114, 105,
+      97, 98, 108, 101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 209, 227, 39, 173, 158, 78, 249, 227, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 153, 0, 0, 0, 22, 6, 0,
+      0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 146, 135, 212, 233, 184,
+      149, 0, 106, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0,
+      79, 112, 116, 105, 111, 110, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 153, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97,
+      3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 29, 146, 46, 94, 129, 34, 76, 32, 11, 0, 0, 0, 116, 121,
+      112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23,
+      6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 1, 0, 0,
+      0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      108, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      75, 4, 59, 222, 77, 114, 42, 165, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 19, 0, 0, 0, 68, 111, 100, 101, 99, 97, 83, 111, 117, 114, 99, 101, 83, 110, 105, 112,
+      112, 101, 116, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70,
+      105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 108, 105, 110,
+      101, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 221, 249, 55, 31, 177, 70, 58, 70, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8,
+      0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 101, 114, 114, 111, 114, 95, 108,
+      105, 110, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 103, 1, 0, 0, 22, 6, 0, 0, 0, 83,
+      99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 94, 89, 158, 250, 177, 7, 199, 30,
+      11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0,
+      107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114,
+      117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 68, 111, 100, 101,
+      99, 97, 83, 111, 117, 114, 99, 101, 76, 105, 110, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100,
+      115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 6, 0, 0, 0, 110, 117, 109, 98, 101, 114, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100,
+      1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
+      7, 0, 0, 0, 99, 111, 110, 116, 101, 110, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1,
+      1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 221, 249, 55, 31, 177, 70, 58, 70, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 94, 89, 158, 250, 177, 7, 199, 30, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 153, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109,
+      97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 40, 90, 204, 40, 121, 185, 49, 187, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 1,
+      0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 75, 4, 59, 222, 77, 114, 42, 165, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      209, 227, 39, 173, 158, 78, 249, 227, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4,
+      0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0,
+      0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23,
+      7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 241, 100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7,
+      0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0,
+      0, 0, 85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97,
+      100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 9, 0, 0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 16, 0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101,
+      100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110,
+      83, 104, 117, 116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0,
+      83, 101, 110, 100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13,
+      0, 0, 0, 73, 110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0,
+      0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95,
+      112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0,
+      83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0,
+      0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_echoDodecaDevtoolsEvent_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_echoDodecaDevtoolsEvent_ResponseDescriptorBlocks,
+    channels: []),
   0xd4be_2ef2_b58d_cde0: PhonMethodSchemas(
     argsRoot: SchemaId(0xbc5c_3324_9a2d_c720),
     argsSchemaClosure: [32, 199, 45, 154, 36, 51, 92, 188, 0, 0, 0, 0],
@@ -100860,6 +105317,1211 @@ public let testbedMethods: [UInt64: PhonMethodSchemas] = [
     ],
     responseDescriptor: testbed_echoDodecaAssetProcessingFixture_ResponseDescriptor,
     responseDescriptorBlocks: testbed_echoDodecaAssetProcessingFixture_ResponseDescriptorBlocks,
+    channels: []),
+  0x9c27_c520_3ae4_32f6: PhonMethodSchemas(
+    argsRoot: SchemaId(0x7969_e1f5_deb8_34b7),
+    argsSchemaClosure: [
+      183, 52, 184, 222, 245, 225, 105, 121, 3, 0, 0, 0, 157, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 183, 52, 184, 222, 245, 225, 105, 121, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 1, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 233, 14, 185, 246, 58, 212, 238, 206, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 209, 227, 39, 173, 158, 78, 249, 227, 11, 0, 0, 0, 116, 121,
+      112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23,
+      4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101,
+      108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 153, 0, 0, 0, 22, 6, 0,
+      0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 233, 14, 185, 246, 58,
+      212, 238, 206, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0,
+      0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 79, 112, 116, 105, 111, 110, 22, 6, 0, 0,
+      0, 79, 112, 116, 105, 111, 110, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 209, 227, 39, 173, 158, 78, 249, 227, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsGetScope_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsGetScope_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xa242_6b14_bef8_0586),
+    responseRoot: SchemaId(0xd39d_ec13_7365_e83a),
+    responseSchemaClosure: [
+      58, 232, 101, 115, 19, 236, 157, 211, 6, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 58, 232, 101, 115, 19, 236, 157, 211, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 134, 5,
+      248, 190, 20, 107, 66, 162, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 218, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 82, 254, 211, 208, 28, 7, 45, 67, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114,
+      117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 16, 0, 0, 0, 68, 111, 100, 101, 99, 97, 83, 99, 111, 112, 101, 69, 110, 116,
+      114, 121, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 3, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105,
+      101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 110, 97, 109, 101,
+      6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0,
+      0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 118, 97, 108, 117, 101, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 225, 148, 211, 249,
+      102, 195, 48, 253, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 10, 0, 0, 0, 101, 120, 112, 97, 110, 100, 97, 98, 108, 101, 6, 0, 0, 0,
+      115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 70, 251, 102,
+      127, 168, 103, 131, 23, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 171, 4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97,
+      3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 225, 148, 211, 249, 102, 195, 48, 253, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 16, 0, 0, 0, 68, 111, 100, 101, 99, 97, 83, 99, 111, 112, 101, 86, 97,
+      108, 117, 101, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 6, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0,
+      78, 117, 108, 108, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 66, 111, 111,
+      108, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 70, 251, 102, 127, 168, 103, 131, 23, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 6, 0, 0, 0, 78, 117, 109, 98, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
+      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 191, 149, 30, 184, 157, 88, 46,
+      63, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 83, 116, 114, 105, 110, 103,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 5, 0, 0, 0, 65, 114, 114, 97, 121, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 2,
+      0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 6, 0, 0, 0, 108, 101, 110, 103, 116, 104, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 172, 57, 22, 184, 152, 98, 53, 217, 4, 0, 0, 0,
+      97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
+      22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0,
+      0, 0, 112, 114, 101, 118, 105, 101, 119, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6,
+      0, 0, 0, 79, 98, 106, 101, 99, 116, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0,
+      0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 2, 0,
+      0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
+      6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 172, 57, 22, 184, 152, 98, 53, 217, 4, 0, 0, 0, 97, 114,
+      103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0,
+      0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 112,
+      114, 101, 118, 105, 101, 119, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115,
+      17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6,
+      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 134, 5, 248, 190, 20,
+      107, 66, 162, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105,
+      115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 82, 254, 211, 208, 28, 7, 45, 67, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110,
+      117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8,
+      0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116,
+      115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4,
+      0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116,
+      121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120,
+      254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111,
+      119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0,
+      73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97,
+      114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97,
+      110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67,
+      111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111,
+      119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97,
+      105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100,
+      101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122,
+      0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241,
+      100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101,
+      108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsGetScope_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsGetScope_ResponseDescriptorBlocks,
+    channels: []),
+  0x4913_550f_328f_fcc0: PhonMethodSchemas(
+    argsRoot: SchemaId(0x4162_9433_85a5_edd4),
+    argsSchemaClosure: [
+      212, 237, 165, 133, 51, 148, 98, 65, 1, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 212, 237, 165, 133, 51, 148, 98, 65, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEval_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEval_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x6277_83a4_0c3e_55f0),
+    responseRoot: SchemaId(0x4303_0c40_a64b_32ff),
+    responseSchemaClosure: [
+      255, 50, 75, 166, 64, 12, 3, 67, 5, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 255, 50, 75, 166, 64, 12, 3, 67, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 240, 85, 62, 12,
+      164, 131, 119, 98, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 123,
+      1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 240,
+      85, 62, 12, 164, 131, 119, 98, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4,
+      0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 68,
+      111, 100, 101, 99, 97, 69, 118, 97, 108, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 225, 148, 211, 249,
+      102, 195, 48, 253, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      171, 4, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      225, 148, 211, 249, 102, 195, 48, 253, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109,
+      22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0,
+      68, 111, 100, 101, 99, 97, 83, 99, 111, 112, 101, 86, 97, 108, 117, 101, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 6, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 78, 117, 108, 108, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0,
+      0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 66, 111, 111, 108, 5, 0, 0, 0, 105, 110, 100, 101, 120,
+      4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116,
+      121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 70, 251, 102, 127, 168, 103,
+      131, 23, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 78, 117, 109, 98, 101,
+      114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 191, 149, 30, 184, 157, 88, 46, 63, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 6, 0, 0, 0, 83, 116, 114, 105, 110, 103, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3,
+      0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
+      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125,
+      109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 65, 114, 114, 97, 121, 5, 0,
+      0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23,
+      6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108,
+      100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 108, 101, 110, 103, 116, 104,
+      6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      172, 57, 22, 184, 152, 98, 53, 217, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0,
+      114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 112, 114, 101, 118, 105, 101, 119, 6, 0, 0,
+      0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 79, 98, 106, 101, 99, 116, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 6, 0, 0, 0,
+      115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 172, 57, 22,
+      184, 152, 98, 53, 217, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 112, 114, 101, 118, 105, 101, 119, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112,
+      101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0,
+      0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105,
+      97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0,
+      4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
+      86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107,
+      110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14,
+      0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232,
+      80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0,
+      67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0,
+      7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0,
+      0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0,
+      0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0,
+      105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0,
+      0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116,
+      100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110,
+      100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73,
+      110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102,
+      105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEval_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEval_ResponseDescriptorBlocks,
+    channels: []),
+  0x8706_0181_51b9_b53c: PhonMethodSchemas(
+    argsRoot: SchemaId(0x34d0_dd44_3a66_b6b7),
+    argsSchemaClosure: [
+      183, 182, 102, 58, 68, 221, 208, 52, 2, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 183, 182, 102, 58, 68, 221, 208, 52, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 209, 5, 18,
+      235, 181, 235, 194, 70, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 223, 2, 0, 0, 22, 6, 0,
+      0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 209, 5, 18, 235, 181,
+      235, 194, 70, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110,
+      117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 20, 0, 0, 0, 68, 111, 100, 101, 99,
+      97, 68, 101, 97, 100, 76, 105, 110, 107, 84, 97, 114, 103, 101, 116, 8, 0, 0, 0, 118, 97, 114,
+      105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 87, 105, 107, 105, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83,
+      116, 114, 117, 99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 107, 101, 121, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 5, 0, 0, 0, 116, 105, 116, 108, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8,
+      0, 0, 0, 73, 110, 116, 101, 114, 110, 97, 108, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
+      17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 4, 0, 0, 0, 104, 114, 101, 102, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22,
+      5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0,
+      116, 105, 116, 108, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x13db_55e0_c0fc_f6b5),
+    responseRoot: SchemaId(0x45e7_f2b8_16fa_bc67),
+    responseSchemaClosure: [
+      103, 188, 250, 22, 184, 242, 231, 69, 4, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 103, 188, 250, 22, 184, 242, 231, 69, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 181,
+      246, 252, 192, 224, 85, 219, 19, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0,
+      69, 114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121,
+      108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 69, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 181, 246, 252, 192, 224, 85, 219, 19, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112,
+      97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69,
+      110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 22, 0, 0, 0, 68, 111, 100, 101, 99, 97, 79, 112, 101, 110, 83, 111, 117, 114, 99, 101, 82,
+      101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2,
+      0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4,
+      0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 86,
+      111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 8, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 4,
+      0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119, 110, 77,
+      101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73, 110, 118,
+      97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2,
+      0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121,
+      112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125,
+      109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99, 101, 108,
+      108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121,
+      108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110, 110, 101,
+      99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4,
+      4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0,
+      22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15,
+      15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110, 5, 0, 0,
+      0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4,
+      0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108, 101, 100, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101, 114, 109, 105,
+      110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0,
+      83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120,
+      254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4,
+      0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83,
+      116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73, 110,
+      102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0,
+      0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptorBlocks,
+    channels: []),
+  0x380a_66c7_1973_d8a8: PhonMethodSchemas(
+    argsRoot: SchemaId(0x4162_9433_85a5_edd4),
+    argsSchemaClosure: [
+      212, 237, 165, 133, 51, 148, 98, 65, 1, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 212, 237, 165, 133, 51, 148, 98, 65, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditLoad_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditLoad_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x20d0_3942_0172_f318),
+    responseRoot: SchemaId(0x855c_66d0_0363_31d1),
+    responseSchemaClosure: [
+      209, 49, 99, 3, 208, 102, 92, 133, 4, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 209, 49, 99, 3, 208, 102, 92, 133, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 24, 243, 114, 1,
+      66, 57, 208, 32, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 144,
+      3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 24,
+      243, 114, 1, 66, 57, 208, 32, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115,
+      17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0,
+      0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 68, 111,
+      100, 101, 99, 97, 69, 100, 105, 116, 76, 111, 97, 100, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110,
+      116, 115, 17, 3, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
+      17, 5, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 10, 0, 0, 0, 115, 111, 117, 114, 99, 101, 95, 107, 101, 121, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 5, 0, 0, 0, 114, 111, 117, 116, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4,
+      0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 3, 0, 0, 0, 117, 114, 105, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 99, 111,
+      110, 116, 101, 110, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105,
+      101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 98, 97, 115, 101, 6,
+      0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232,
+      80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0,
+      114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 68, 101, 110, 105, 101, 100, 5, 0,
+      0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23,
+      4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0,
+      4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 78, 111, 116, 70, 111, 117, 110, 100, 5, 0, 0,
+      0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4,
+      0, 0, 0, 85, 110, 105, 116, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112,
+      101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0,
+      0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105,
+      97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0,
+      4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24,
+      86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107,
+      110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14,
+      0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232,
+      80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0,
+      67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0,
+      7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0,
+      0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0,
+      0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0,
+      105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0,
+      0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116,
+      100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110,
+      100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73,
+      110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102,
+      105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditLoad_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditLoad_ResponseDescriptorBlocks,
+    channels: []),
+  0x0ca8_b824_2990_8d7a: PhonMethodSchemas(
+    argsRoot: SchemaId(0xae21_9e77_b53b_5cb9),
+    argsSchemaClosure: [
+      185, 92, 59, 181, 119, 158, 33, 174, 1, 0, 0, 0, 17, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 185, 92, 59, 181, 119, 158, 33, 174, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 3, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditPreview_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditPreview_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xf1ab_0ff2_e8f9_0626),
+    responseRoot: SchemaId(0x1613_65db_359c_55bb),
+    responseSchemaClosure: [
+      187, 85, 156, 53, 219, 101, 19, 22, 6, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 187, 85, 156, 53, 219, 101, 19, 22, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 38, 6,
+      249, 232, 242, 15, 171, 241, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 61, 2, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 38, 6, 249, 232, 242, 15, 171, 241, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
+      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 17, 0,
+      0, 0, 68, 111, 100, 101, 99, 97, 69, 100, 105, 116, 80, 114, 101, 118, 105, 101, 119, 8, 0, 0,
+      0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 3, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 104, 116, 109, 108, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 115, 111, 117, 114, 99, 101, 95, 109, 97, 112, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 145, 178, 139, 115,
+      191, 240, 42, 184, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 68, 101, 110, 105, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 8, 0, 0, 0, 78, 111, 116, 70, 111, 117, 110, 100, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110,
+      105, 116, 0, 94, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 227, 180, 64, 198, 38, 151, 3, 176, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 13, 0, 0, 0, 68, 111, 100, 101, 99, 97, 83, 105, 100, 76, 105, 110, 101, 6,
+      0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 115, 105, 100, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 4, 0, 0, 0, 108, 105, 110, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 180, 99, 238, 242, 228, 91, 28, 40, 4, 0, 0, 0,
+      97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
+      149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5,
+      145, 178, 139, 115, 191, 240, 42, 184, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97,
+      109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 76, 105, 115, 116,
+      22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 227, 180, 64, 198, 38, 151, 3, 176, 4, 0,
+      0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109,
+      97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241,
+      100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0,
+      85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0,
+      0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23,
+      7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100,
+      5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7,
+      0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0,
+      0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22,
+      7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16,
+      0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0,
+      0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4,
+      0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117,
+      116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110,
+      100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73,
+      110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102,
+      105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditPreview_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditPreview_ResponseDescriptorBlocks,
+    channels: []),
+  0xa7fd_c44f_02c9_6cfe: PhonMethodSchemas(
+    argsRoot: SchemaId(0xb248_ee1c_149f_61e6),
+    argsSchemaClosure: [
+      230, 97, 159, 20, 28, 238, 72, 178, 2, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 230, 97, 159, 20, 28, 238, 72, 178, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 5, 81, 6, 2,
+      176, 65, 208, 51, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 80, 2, 0, 0, 22, 6, 0, 0, 0,
+      83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 5, 81, 6, 2, 176, 65, 208, 51,
+      11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0,
+      107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114,
+      117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 17, 0, 0, 0, 68, 111, 100, 101,
+      99, 97, 69, 100, 105, 116, 83, 97, 118, 101, 82, 101, 113, 6, 0, 0, 0, 102, 105, 101, 108,
+      100, 115, 17, 4, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 115, 111, 117, 114, 99, 101, 95, 107, 101, 121, 6, 0, 0, 0,
+      115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 98, 117, 102, 102, 101, 114, 6, 0, 0, 0, 115, 99,
+      104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145,
+      206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117,
+      105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 4, 0, 0, 0, 98, 97, 115, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1,
+      1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7,
+      0, 0, 0, 109, 101, 115, 115, 97, 103, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116,
+      101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0,
+      97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditSave_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditSave_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x2fea_f88f_3480_ebf7),
+    responseRoot: SchemaId(0x06e5_815f_07aa_5c0c),
+    responseSchemaClosure: [
+      12, 92, 170, 7, 95, 129, 229, 6, 4, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 12, 92, 170, 7, 95, 129, 229, 6, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 247, 235, 128, 52,
+      143, 248, 234, 47, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 183,
+      3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 247,
+      235, 128, 52, 143, 248, 234, 47, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4,
+      0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 68,
+      111, 100, 101, 99, 97, 69, 100, 105, 116, 83, 97, 118, 101, 8, 0, 0, 0, 118, 97, 114, 105, 97,
+      110, 116, 115, 17, 5, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4,
+      0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117,
+      99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 6, 0, 0, 0, 99, 111, 109, 109, 105, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109,
+      97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109,
+      4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 4, 0, 0, 0, 98, 97, 115, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 68,
+      101, 110, 105, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 78, 111, 116,
+      70, 111, 117, 110, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 67, 111, 110,
+      102, 108, 105, 99, 116, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5,
+      0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0,
+      99, 117, 114, 114, 101, 110, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 69,
+      114, 114, 111, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5, 0,
+      0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 109,
+      101, 115, 115, 97, 103, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0,
+      2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115,
+      17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 76, 3, 0, 0, 22, 6,
+      0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39,
+      230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110,
+      117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114,
+      114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0,
+      85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111,
+      100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100,
+      80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0,
+      0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111,
+      110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83,
+      101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0,
+      0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101, 114, 109, 105, 110, 97,
+      116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117,
+      99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108,
+      108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditSave_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditSave_ResponseDescriptorBlocks,
+    channels: []),
+  0x9bc0_6be0_ed11_0f29: PhonMethodSchemas(
+    argsRoot: SchemaId(0xeb01_eb8a_904d_2a71),
+    argsSchemaClosure: [
+      113, 42, 77, 144, 138, 235, 1, 235, 3, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 113, 42, 77, 144, 138, 235, 1, 235, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 193, 62, 5,
+      148, 214, 235, 30, 45, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 225, 1, 0, 0, 22, 6, 0,
+      0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 193, 62, 5, 148, 214,
+      235, 30, 45, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0,
+      4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0,
+      83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 19, 0, 0, 0, 68,
+      111, 100, 101, 99, 97, 69, 100, 105, 116, 85, 112, 108, 111, 97, 100, 82, 101, 113, 6, 0, 0,
+      0, 102, 105, 101, 108, 100, 115, 17, 3, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 115, 111, 117, 114, 99, 101, 95, 107,
+      101, 121, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108,
+      100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 102, 105, 108, 101, 110, 97,
+      109, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+      8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108,
+      100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 98, 121, 116, 101, 115, 6, 0,
+      0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8,
+      0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209,
+      153, 66, 223, 103, 6, 170, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114,
+      101, 113, 117, 105, 114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109,
+      97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 81, 209, 153, 66, 223, 103, 6, 170, 11, 0, 0, 0, 116,
+      121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100,
+      23, 4, 0, 0, 0, 76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0,
+      101, 108, 101, 109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 32, 15,
+      77, 49, 242, 84, 141, 44, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditUpload_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditUpload_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xef53_5f15_109e_f0e6),
+    responseRoot: SchemaId(0xcf23_6c2c_b3af_5fc2),
+    responseSchemaClosure: [
+      194, 95, 175, 179, 44, 108, 35, 207, 4, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 194, 95, 175, 179, 44, 108, 35, 207, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 230,
+      240, 158, 16, 21, 95, 83, 239, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 249, 2, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 230, 240, 158, 16, 21, 95, 83, 239, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
+      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0,
+      0, 0, 68, 111, 100, 101, 99, 97, 69, 100, 105, 116, 85, 112, 108, 111, 97, 100, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 4, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0,
+      0, 83, 116, 114, 117, 99, 116, 17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0,
+      0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 109, 97, 114, 107, 100, 111, 119, 110, 6,
+      0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232,
+      80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0,
+      114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 112, 97, 116, 104, 6, 0, 0, 0, 115, 99, 104,
+      101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206,
+      125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105,
+      114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 6, 0, 0, 0, 68, 101, 110, 105, 101, 100, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110,
+      105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 8, 0, 0, 0, 78, 111, 116, 70, 111, 117, 110, 100, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110,
+      105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 5, 0, 0, 0, 69, 114, 114, 111, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3,
+      0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 7, 0, 0, 0, 109, 101, 115, 115, 97, 103, 101, 6, 0, 0, 0, 115, 99, 104, 101,
+      109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125,
+      109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114,
+      101, 100, 1, 1, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97,
+      114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110,
+      117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8,
+      0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116,
+      115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4,
+      0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116,
+      121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120,
+      254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111,
+      119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7,
+      0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0,
+      0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0,
+      73, 110, 118, 97, 108, 105, 100, 80, 97, 121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78,
+      145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97,
+      114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97,
+      110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0,
+      0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67,
+      111, 110, 110, 101, 99, 116, 105, 111, 110, 67, 108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115, 115, 105, 111, 110, 83, 104, 117, 116, 100, 111,
+      119, 110, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110,
+      116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97,
+      105, 108, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100,
+      101, 116, 101, 114, 109, 105, 110, 97, 116, 101, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122,
+      0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241,
+      100, 141, 24, 86, 120, 254, 139, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109,
+      115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108, 105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101,
+      108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditUpload_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditUpload_ResponseDescriptorBlocks,
+    channels: []),
+  0x63b8_7d46_d622_9194: PhonMethodSchemas(
+    argsRoot: SchemaId(0x4162_9433_85a5_edd4),
+    argsSchemaClosure: [
+      212, 237, 165, 133, 51, 148, 98, 65, 1, 0, 0, 0, 215, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 212, 237, 165, 133, 51, 148, 98, 65, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 2, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditRead_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditRead_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0xed3b_fb61_529c_1da9),
+    responseRoot: SchemaId(0x2161_7cb6_2d2c_49df),
+    responseSchemaClosure: [
+      223, 73, 44, 45, 182, 124, 97, 33, 4, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 223, 73, 44, 45, 182, 124, 97, 33, 11, 0, 0, 0,
+      116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110,
+      100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101,
+      119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 169, 29, 156, 82,
+      97, 251, 59, 237, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69, 114, 114, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101,
+      116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 55, 2,
+      0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 169, 29,
+      156, 82, 97, 251, 59, 237, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115,
+      17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0,
+      0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 68, 111,
+      100, 101, 99, 97, 69, 100, 105, 116, 82, 101, 97, 100, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110,
+      116, 115, 17, 3, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0,
+      0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116,
+      17, 2, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 7, 0, 0, 0, 99, 111, 110, 116, 101, 110, 116, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97,
+      23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4,
+      0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101,
+      100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101,
+      15, 4, 0, 0, 0, 98, 97, 115, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0,
+      86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 68,
+      101, 110, 105, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 78, 111, 116,
+      70, 111, 117, 110, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0,
+      83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50,
+      48, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0,
+      0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109,
+      2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111,
+      114, 8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97,
+      114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115,
+      101, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17,
+      0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97,
+      109, 101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5,
+      0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100,
+      23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97,
+      121, 108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2,
+      0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114,
+      103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0,
+      105, 110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0,
+      0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67,
+      108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115,
+      115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0,
+      0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105,
+      110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108,
+      105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditRead_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditRead_ResponseDescriptorBlocks,
+    channels: []),
+  0xf2fe_9db4_4953_85aa: PhonMethodSchemas(
+    argsRoot: SchemaId(0x3125_3570_ab7d_4573),
+    argsSchemaClosure: [
+      115, 69, 125, 171, 112, 53, 37, 49, 1, 0, 0, 0, 157, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 115, 69, 125, 171, 112, 53, 37, 49, 11, 0,
+      0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 5, 0, 0, 0, 84, 117, 112, 108, 101, 22, 5, 0, 0, 0, 84, 117, 112, 108, 101,
+      1, 0, 0, 0, 8, 0, 0, 0, 101, 108, 101, 109, 101, 110, 116, 115, 17, 1, 0, 0, 0, 23, 8, 0, 0,
+      0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101,
+      2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97,
+      114, 103, 115, 17, 0, 0, 0, 0,
+    ],
+    argsDescriptor: testbed_dodecaDevtoolsEditList_ArgsDescriptor,
+    argsDescriptorBlocks: testbed_dodecaDevtoolsEditList_ArgsDescriptorBlocks,
+    okRoot: SchemaId(0x72dc_e679_4a31_7c03),
+    responseRoot: SchemaId(0x6d4f_55f1_d8a0_69a6),
+    responseSchemaClosure: [
+      166, 105, 160, 216, 241, 85, 79, 109, 6, 0, 0, 0, 113, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104,
+      101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 166, 105, 160, 216, 241, 85, 79, 109, 11,
+      0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107,
+      105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0,
+      0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 82, 101, 115, 117, 108, 116, 8, 0, 0, 0,
+      118, 97, 114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97,
+      110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 7, 0, 0,
+      0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22,
+      8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 3, 124,
+      49, 74, 121, 230, 220, 114, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86,
+      97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 69,
+      114, 114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108,
+      111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110,
+      99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0,
+      0, 0, 0, 126, 1, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105,
+      100, 5, 3, 124, 49, 74, 121, 230, 220, 114, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114,
+      97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117,
+      109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 14, 0,
+      0, 0, 68, 111, 100, 101, 99, 97, 69, 100, 105, 116, 76, 105, 115, 116, 8, 0, 0, 0, 118, 97,
+      114, 105, 97, 110, 116, 115, 17, 2, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116,
+      3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 2, 0, 0, 0, 79, 107, 5, 0, 0, 0, 105, 110, 100,
+      101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 6, 0, 0, 0, 83, 116,
+      114, 117, 99, 116, 17, 1, 0, 0, 0, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 7, 0, 0, 0, 101, 110, 116, 114, 105, 101, 115, 6, 0, 0, 0, 115,
+      99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0,
+      67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 67, 76, 234, 235,
+      65, 174, 170, 38, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113,
+      117, 105, 114, 101, 100, 1, 1, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 6, 0, 0, 0, 68, 101, 110, 105, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 74, 2, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 212, 84, 194, 230, 152, 30, 118, 94, 11, 0, 0, 0, 116, 121, 112, 101, 95, 112,
+      97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 6, 0, 0, 0, 83,
+      116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 2, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 15, 0, 0, 0, 68, 111, 100, 101, 99, 97, 69, 100, 105, 116, 69, 110,
+      116, 114, 121, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 4, 0, 0, 0, 22, 5, 0, 0, 0, 70,
+      105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 115, 111, 117,
+      114, 99, 101, 95, 107, 101, 121, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0,
+      70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 114, 111,
+      117, 116, 101, 6, 0, 0, 0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114,
+      101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0,
+      105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0,
+      0, 8, 0, 0, 0, 114, 101, 113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101,
+      108, 100, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 3, 0, 0, 0, 117, 114, 105, 6, 0, 0,
+      0, 115, 99, 104, 101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0,
+      0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225,
+      78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101,
+      113, 117, 105, 114, 101, 100, 1, 1, 22, 5, 0, 0, 0, 70, 105, 101, 108, 100, 3, 0, 0, 0, 4, 0,
+      0, 0, 110, 97, 109, 101, 15, 5, 0, 0, 0, 116, 105, 116, 108, 101, 6, 0, 0, 0, 115, 99, 104,
+      101, 109, 97, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111,
+      110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206,
+      125, 109, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 8, 0, 0, 0, 114, 101, 113, 117, 105,
+      114, 101, 100, 1, 1, 149, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101, 109, 97, 3, 0, 0, 0, 2,
+      0, 0, 0, 105, 100, 5, 67, 76, 234, 235, 65, 174, 170, 38, 11, 0, 0, 0, 116, 121, 112, 101, 95,
+      112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105, 110, 100, 23, 4, 0, 0, 0,
+      76, 105, 115, 116, 22, 4, 0, 0, 0, 76, 105, 115, 116, 1, 0, 0, 0, 7, 0, 0, 0, 101, 108, 101,
+      109, 101, 110, 116, 23, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 212, 84, 194, 230, 152,
+      30, 118, 94, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0, 0, 0, 76, 3, 0, 0, 22, 6, 0, 0, 0, 83,
+      99, 104, 101, 109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 68, 38, 93, 12, 39, 230, 50, 48,
+      11, 0, 0, 0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0,
+      107, 105, 110, 100, 23, 4, 0, 0, 0, 69, 110, 117, 109, 22, 4, 0, 0, 0, 69, 110, 117, 109, 2,
+      0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 8, 0, 0, 0, 86, 111, 120, 69, 114, 114, 111, 114,
+      8, 0, 0, 0, 118, 97, 114, 105, 97, 110, 116, 115, 17, 8, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 4, 0, 0, 0, 85, 115, 101,
+      114, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 0, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111,
+      97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67, 111, 110, 99,
+      114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0, 0, 0, 2, 0, 0,
+      0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 4, 0, 0, 0, 97, 114, 103, 115, 17, 0, 0,
+      0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 13, 0, 0, 0, 85, 110, 107, 110, 111, 119, 110, 77, 101, 116, 104, 111, 100, 5, 0, 0,
+      0, 105, 110, 100, 101, 120, 4, 1, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4,
+      0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4,
+      0, 0, 0, 110, 97, 109, 101, 15, 14, 0, 0, 0, 73, 110, 118, 97, 108, 105, 100, 80, 97, 121,
+      108, 111, 97, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 2, 0, 0, 0, 7, 0, 0, 0, 112, 97,
+      121, 108, 111, 97, 100, 23, 7, 0, 0, 0, 78, 101, 119, 116, 121, 112, 101, 23, 8, 0, 0, 0, 67,
+      111, 110, 99, 114, 101, 116, 101, 22, 8, 0, 0, 0, 67, 111, 110, 99, 114, 101, 116, 101, 2, 0,
+      0, 0, 2, 0, 0, 0, 105, 100, 5, 232, 80, 225, 78, 145, 206, 125, 109, 4, 0, 0, 0, 97, 114, 103,
+      115, 17, 0, 0, 0, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0,
+      110, 97, 109, 101, 15, 9, 0, 0, 0, 67, 97, 110, 99, 101, 108, 108, 101, 100, 5, 0, 0, 0, 105,
+      110, 100, 101, 120, 4, 3, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0,
+      0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0,
+      0, 110, 97, 109, 101, 15, 16, 0, 0, 0, 67, 111, 110, 110, 101, 99, 116, 105, 111, 110, 67,
+      108, 111, 115, 101, 100, 5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 4, 0, 0, 0, 7, 0, 0, 0, 112,
+      97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114,
+      105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 15, 0, 0, 0, 83, 101, 115,
+      115, 105, 111, 110, 83, 104, 117, 116, 100, 111, 119, 110, 5, 0, 0, 0, 105, 110, 100, 101,
+      120, 4, 5, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85, 110, 105,
+      116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109,
+      101, 15, 10, 0, 0, 0, 83, 101, 110, 100, 70, 97, 105, 108, 101, 100, 5, 0, 0, 0, 105, 110,
+      100, 101, 120, 4, 6, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97, 100, 23, 4, 0, 0, 0, 85,
+      110, 105, 116, 0, 22, 7, 0, 0, 0, 86, 97, 114, 105, 97, 110, 116, 3, 0, 0, 0, 4, 0, 0, 0, 110,
+      97, 109, 101, 15, 13, 0, 0, 0, 73, 110, 100, 101, 116, 101, 114, 109, 105, 110, 97, 116, 101,
+      5, 0, 0, 0, 105, 110, 100, 101, 120, 4, 7, 0, 0, 0, 7, 0, 0, 0, 112, 97, 121, 108, 111, 97,
+      100, 23, 4, 0, 0, 0, 85, 110, 105, 116, 0, 122, 0, 0, 0, 22, 6, 0, 0, 0, 83, 99, 104, 101,
+      109, 97, 3, 0, 0, 0, 2, 0, 0, 0, 105, 100, 5, 241, 100, 141, 24, 86, 120, 254, 139, 11, 0, 0,
+      0, 116, 121, 112, 101, 95, 112, 97, 114, 97, 109, 115, 17, 0, 0, 0, 0, 4, 0, 0, 0, 107, 105,
+      110, 100, 23, 6, 0, 0, 0, 83, 116, 114, 117, 99, 116, 22, 6, 0, 0, 0, 83, 116, 114, 117, 99,
+      116, 2, 0, 0, 0, 4, 0, 0, 0, 110, 97, 109, 101, 15, 10, 0, 0, 0, 73, 110, 102, 97, 108, 108,
+      105, 98, 108, 101, 6, 0, 0, 0, 102, 105, 101, 108, 100, 115, 17, 0, 0, 0, 0,
+    ],
+    responseDescriptor: testbed_dodecaDevtoolsEditList_ResponseDescriptor,
+    responseDescriptorBlocks: testbed_dodecaDevtoolsEditList_ResponseDescriptorBlocks,
     channels: []),
   0x3223_55b9_bf44_89e1: PhonMethodSchemas(
     argsRoot: SchemaId(0xaaaf_df93_caa1_de0f),
@@ -120270,6 +125932,18 @@ let testbed_dodecaDevtoolsLsp_ArgsEncoder = VoxTypedEncoder(
   testbed_dodecaDevtoolsLsp_ArgsEncodeProgram)
 let testbed_dodecaDevtoolsLsp_ResponseEncoder = VoxTypedEncoder(
   testbed_dodecaDevtoolsLsp_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_echoDodecaDevtoolsEvent_ArgsDescriptor, testbedRegistry,
+    testbed_echoDodecaDevtoolsEvent_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_echoDodecaDevtoolsEvent_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_echoDodecaDevtoolsEvent_ResponseDescriptor, testbedRegistry,
+    testbed_echoDodecaDevtoolsEvent_ResponseDescriptorBlocks)
+let testbed_echoDodecaDevtoolsEvent_ArgsEncoder = VoxTypedEncoder(
+  testbed_echoDodecaDevtoolsEvent_ArgsEncodeProgram)
+let testbed_echoDodecaDevtoolsEvent_ResponseEncoder = VoxTypedEncoder(
+  testbed_echoDodecaDevtoolsEvent_ResponseEncodeProgram)
 nonisolated(unsafe) let testbed_dibsSchema_ArgsEncodeProgram: Lowered = try! lowerTyped(
   testbed_dibsSchema_ArgsDescriptor, testbedRegistry, testbed_dibsSchema_ArgsDescriptorBlocks)
 nonisolated(unsafe) let testbed_dibsSchema_ResponseEncodeProgram: Lowered = try! lowerTyped(
@@ -120642,6 +126316,107 @@ let testbed_echoDodecaAssetProcessingFixture_ArgsEncoder = VoxTypedEncoder(
   testbed_echoDodecaAssetProcessingFixture_ArgsEncodeProgram)
 let testbed_echoDodecaAssetProcessingFixture_ResponseEncoder = VoxTypedEncoder(
   testbed_echoDodecaAssetProcessingFixture_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsGetScope_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsGetScope_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsGetScope_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsGetScope_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsGetScope_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsGetScope_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsGetScope_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsGetScope_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsGetScope_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEval_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEval_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEval_ResponseEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEval_ResponseDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEval_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEval_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEval_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEval_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEval_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsOpenDeadLink_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsOpenDeadLink_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsOpenDeadLink_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsOpenDeadLink_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsOpenDeadLink_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEditLoad_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEditLoad_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditLoad_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditLoad_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditLoad_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditLoad_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditLoad_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditLoad_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditLoad_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditPreview_ArgsDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditPreview_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditPreview_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditPreview_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditPreview_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditPreview_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditPreview_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditPreview_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditPreview_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEditSave_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEditSave_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditSave_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditSave_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditSave_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditSave_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditSave_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditSave_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditSave_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ArgsEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditUpload_ArgsDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditUpload_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditUpload_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditUpload_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditUpload_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditUpload_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditUpload_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditUpload_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditUpload_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEditRead_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEditRead_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditRead_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditRead_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditRead_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditRead_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditRead_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditRead_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditRead_ResponseEncodeProgram)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ArgsEncodeProgram: Lowered = try! lowerTyped(
+  testbed_dodecaDevtoolsEditList_ArgsDescriptor, testbedRegistry,
+  testbed_dodecaDevtoolsEditList_ArgsDescriptorBlocks)
+nonisolated(unsafe) let testbed_dodecaDevtoolsEditList_ResponseEncodeProgram: Lowered =
+  try! lowerTyped(
+    testbed_dodecaDevtoolsEditList_ResponseDescriptor, testbedRegistry,
+    testbed_dodecaDevtoolsEditList_ResponseDescriptorBlocks)
+let testbed_dodecaDevtoolsEditList_ArgsEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditList_ArgsEncodeProgram)
+let testbed_dodecaDevtoolsEditList_ResponseEncoder = VoxTypedEncoder(
+  testbed_dodecaDevtoolsEditList_ResponseEncodeProgram)
 nonisolated(unsafe) let testbed_echoStyxValue_ArgsEncodeProgram: Lowered = try! lowerTyped(
   testbed_echoStyxValue_ArgsDescriptor, testbedRegistry, testbed_echoStyxValue_ArgsDescriptorBlocks)
 nonisolated(unsafe) let testbed_echoStyxValue_ResponseEncodeProgram: Lowered = try! lowerTyped(
@@ -122263,6 +128038,8 @@ public protocol TestbedCaller: Sendable {
   func dodecaDevtoolsLsp(
     token: String, clientToServer: UnboundRx<String>, serverToClient: UnboundTx<String>)
     async throws
+  ///  Echo Dodeca browser devtools push events from `BrowserService::on_event`.
+  func echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent) async throws -> DodecaDevtoolsEvent
   ///  Dibs schema metadata as returned by `DibsService::schema` / `SquelService::schema`.
   func dibsSchema() async throws -> DibsSchemaInfo
   ///  Dibs/Squel-shaped backoffice list query.
@@ -122383,6 +128160,27 @@ public protocol TestbedCaller: Sendable {
   ///  Echo Dodeca CSS/SASS/SVGO asset-processing roots from the asset proto crates.
   func echoDodecaAssetProcessingFixture(fixture: DodecaAssetProcessingFixture) async throws
     -> DodecaAssetProcessingFixture
+  ///  Dodeca devtools scope query from the browser overlay.
+  func dodecaDevtoolsGetScope(path: [String]?) async throws -> [DodecaScopeEntry]
+  ///  Dodeca devtools expression evaluation root.
+  func dodecaDevtoolsEval(snapshotId: String, expression: String) async throws -> DodecaEvalResult
+  ///  Dodeca devtools dead-link source-opening root.
+  func dodecaDevtoolsOpenDeadLink(route: String, target: DodecaDeadLinkTarget) async throws
+    -> DodecaOpenSourceResult
+  ///  Dodeca browser editor load root.
+  func dodecaDevtoolsEditLoad(token: String, route: String) async throws -> DodecaEditLoad
+  ///  Dodeca browser editor preview root.
+  func dodecaDevtoolsEditPreview(token: String, sourceKey: String, buffer: String) async throws
+    -> DodecaEditPreview
+  ///  Dodeca browser editor save root.
+  func dodecaDevtoolsEditSave(token: String, req: DodecaEditSaveReq) async throws -> DodecaEditSave
+  ///  Dodeca browser editor image-upload root.
+  func dodecaDevtoolsEditUpload(token: String, req: DodecaEditUploadReq) async throws
+    -> DodecaEditUpload
+  ///  Dodeca browser editor file-provider read root.
+  func dodecaDevtoolsEditRead(token: String, uri: String) async throws -> DodecaEditRead
+  ///  Dodeca browser editor file tree root.
+  func dodecaDevtoolsEditList(token: String) async throws -> DodecaEditList
   ///  Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
   ///  structs/enums with tags, spans, sequences, objects, and entry key/value
   ///  recursion.
@@ -122874,6 +128672,32 @@ public final class TestbedClient: TestbedCaller, Sendable {
     let result: Result<Void, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)
     switch result {
     case .success: return
+    case .failure(let error): throw error
+    }
+  }
+
+  public func echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent) async throws
+    -> DodecaDevtoolsEvent
+  {
+    let payload = encodeVoxTyped(event, testbed_echoDodecaDevtoolsEvent_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x4b4b_956d_a69d_c0ff, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x4b4b_956d_a69d_c0ff]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x4b4b_956d_a69d_c0ff, .response,
+        readerDescriptor: testbed_echoDodecaDevtoolsEvent_ResponseDescriptor,
+        readerBlocks: testbed_echoDodecaDevtoolsEvent_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaDevtoolsEvent, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
     case .failure(let error): throw error
     }
   }
@@ -124026,6 +129850,232 @@ public final class TestbedClient: TestbedCaller, Sendable {
       throw VoxError<Infallible>.invalidPayload("no response schema advertised")
     }
     let result: Result<DodecaAssetProcessingFixture, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsGetScope(path: [String]?) async throws -> [DodecaScopeEntry] {
+    let payload = encodeVoxTyped(path, testbed_dodecaDevtoolsGetScope_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x9c27_c520_3ae4_32f6, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x9c27_c520_3ae4_32f6]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x9c27_c520_3ae4_32f6, .response,
+        readerDescriptor: testbed_dodecaDevtoolsGetScope_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsGetScope_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<[DodecaScopeEntry], VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEval(snapshotId: String, expression: String) async throws
+    -> DodecaEvalResult
+  {
+    let payload = encodeVoxTyped((snapshotId, expression), testbed_dodecaDevtoolsEval_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x4913_550f_328f_fcc0, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x4913_550f_328f_fcc0]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x4913_550f_328f_fcc0, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEval_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEval_ResponseDescriptorBlocks, local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEvalResult, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsOpenDeadLink(route: String, target: DodecaDeadLinkTarget) async throws
+    -> DodecaOpenSourceResult
+  {
+    let payload = encodeVoxTyped((route, target), testbed_dodecaDevtoolsOpenDeadLink_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x8706_0181_51b9_b53c, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x8706_0181_51b9_b53c]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x8706_0181_51b9_b53c, .response,
+        readerDescriptor: testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsOpenDeadLink_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaOpenSourceResult, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditLoad(token: String, route: String) async throws -> DodecaEditLoad {
+    let payload = encodeVoxTyped((token, route), testbed_dodecaDevtoolsEditLoad_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x380a_66c7_1973_d8a8, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x380a_66c7_1973_d8a8]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x380a_66c7_1973_d8a8, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditLoad_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditLoad_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditLoad, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditPreview(token: String, sourceKey: String, buffer: String)
+    async throws -> DodecaEditPreview
+  {
+    let payload = encodeVoxTyped(
+      (token, sourceKey, buffer), testbed_dodecaDevtoolsEditPreview_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x0ca8_b824_2990_8d7a, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x0ca8_b824_2990_8d7a]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x0ca8_b824_2990_8d7a, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditPreview_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditPreview_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditPreview, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditSave(token: String, req: DodecaEditSaveReq) async throws
+    -> DodecaEditSave
+  {
+    let payload = encodeVoxTyped((token, req), testbed_dodecaDevtoolsEditSave_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0xa7fd_c44f_02c9_6cfe, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xa7fd_c44f_02c9_6cfe]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0xa7fd_c44f_02c9_6cfe, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditSave_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditSave_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditSave, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditUpload(token: String, req: DodecaEditUploadReq) async throws
+    -> DodecaEditUpload
+  {
+    let payload = encodeVoxTyped((token, req), testbed_dodecaDevtoolsEditUpload_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x9bc0_6be0_ed11_0f29, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x9bc0_6be0_ed11_0f29]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x9bc0_6be0_ed11_0f29, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditUpload_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditUpload_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditUpload, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditRead(token: String, uri: String) async throws -> DodecaEditRead {
+    let payload = encodeVoxTyped((token, uri), testbed_dodecaDevtoolsEditRead_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0x63b8_7d46_d622_9194, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0x63b8_7d46_d622_9194]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0x63b8_7d46_d622_9194, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditRead_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditRead_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditRead, VoxError<Infallible>> = try decodeVoxTyped(
+      respDecoder, response)
+    switch result {
+    case .success(let value): return value
+    case .failure(let error): throw error
+    }
+  }
+
+  public func dodecaDevtoolsEditList(token: String) async throws -> DodecaEditList {
+    let payload = encodeVoxTyped(token, testbed_dodecaDevtoolsEditList_ArgsEncoder)
+    let response = try await connection.call(
+      methodId: 0xf2fe_9db4_4953_85aa, metadata: .null, payload: payload, timeout: timeout,
+      finalizeChannels: nil,
+      schemaInfo: ClientSchemaInfo(
+        methodSchemas: testbedMethods[0xf2fe_9db4_4953_85aa]!, registry: testbedRegistry))
+    guard
+      let respDecoder = connection.schemaReceiveTracker.buildDecodeFn(
+        0xf2fe_9db4_4953_85aa, .response,
+        readerDescriptor: testbed_dodecaDevtoolsEditList_ResponseDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditList_ResponseDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      throw VoxError<Infallible>.invalidPayload("no response schema advertised")
+    }
+    let result: Result<DodecaEditList, VoxError<Infallible>> = try decodeVoxTyped(
       respDecoder, response)
     switch result {
     case .success(let value): return value
@@ -125741,6 +131791,8 @@ public protocol TestbedHandler: Sendable {
   ///  Mirrors `dodeca_protocol::DevtoolsService::lsp` with string channels.
   func dodecaDevtoolsLsp(token: String, clientToServer: Rx<String>, serverToClient: Tx<String>)
     async throws
+  ///  Echo Dodeca browser devtools push events from `BrowserService::on_event`.
+  func echoDodecaDevtoolsEvent(event: DodecaDevtoolsEvent) async throws -> DodecaDevtoolsEvent
   ///  Dibs schema metadata as returned by `DibsService::schema` / `SquelService::schema`.
   func dibsSchema() async throws -> DibsSchemaInfo
   ///  Dibs/Squel-shaped backoffice list query.
@@ -125862,6 +131914,27 @@ public protocol TestbedHandler: Sendable {
   ///  Echo Dodeca CSS/SASS/SVGO asset-processing roots from the asset proto crates.
   func echoDodecaAssetProcessingFixture(fixture: DodecaAssetProcessingFixture) async throws
     -> DodecaAssetProcessingFixture
+  ///  Dodeca devtools scope query from the browser overlay.
+  func dodecaDevtoolsGetScope(path: [String]?) async throws -> [DodecaScopeEntry]
+  ///  Dodeca devtools expression evaluation root.
+  func dodecaDevtoolsEval(snapshotId: String, expression: String) async throws -> DodecaEvalResult
+  ///  Dodeca devtools dead-link source-opening root.
+  func dodecaDevtoolsOpenDeadLink(route: String, target: DodecaDeadLinkTarget) async throws
+    -> DodecaOpenSourceResult
+  ///  Dodeca browser editor load root.
+  func dodecaDevtoolsEditLoad(token: String, route: String) async throws -> DodecaEditLoad
+  ///  Dodeca browser editor preview root.
+  func dodecaDevtoolsEditPreview(token: String, sourceKey: String, buffer: String) async throws
+    -> DodecaEditPreview
+  ///  Dodeca browser editor save root.
+  func dodecaDevtoolsEditSave(token: String, req: DodecaEditSaveReq) async throws -> DodecaEditSave
+  ///  Dodeca browser editor image-upload root.
+  func dodecaDevtoolsEditUpload(token: String, req: DodecaEditUploadReq) async throws
+    -> DodecaEditUpload
+  ///  Dodeca browser editor file-provider read root.
+  func dodecaDevtoolsEditRead(token: String, uri: String) async throws -> DodecaEditRead
+  ///  Dodeca browser editor file tree root.
+  func dodecaDevtoolsEditList(token: String) async throws -> DodecaEditList
   ///  Echo a Styx tree value. This mirrors `styx_tree::Value`: recursive
   ///  structs/enums with tags, spans, sequences, objects, and entry key/value
   ///  recursion.
@@ -126101,6 +132174,10 @@ public final class TestbedDispatcher: ServiceDispatcher {
         payload: payload, requestId: requestId, channels: channels, registry: registry,
         schemaSendTracker: schemaSendTracker, schemaReceiveTracker: schemaReceiveTracker,
         taskTx: taskTx)
+    case 0x4b4b_956d_a69d_c0ff:
+      await dispatch_echoDodecaDevtoolsEvent(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0xd4be_2ef2_b58d_cde0:
       await dispatch_dibsSchema(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
@@ -126292,6 +132369,42 @@ public final class TestbedDispatcher: ServiceDispatcher {
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0x7615_bf19_227c_12a0:
       await dispatch_echoDodecaAssetProcessingFixture(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x9c27_c520_3ae4_32f6:
+      await dispatch_dodecaDevtoolsGetScope(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x4913_550f_328f_fcc0:
+      await dispatch_dodecaDevtoolsEval(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x8706_0181_51b9_b53c:
+      await dispatch_dodecaDevtoolsOpenDeadLink(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x380a_66c7_1973_d8a8:
+      await dispatch_dodecaDevtoolsEditLoad(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x0ca8_b824_2990_8d7a:
+      await dispatch_dodecaDevtoolsEditPreview(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0xa7fd_c44f_02c9_6cfe:
+      await dispatch_dodecaDevtoolsEditSave(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x9bc0_6be0_ed11_0f29:
+      await dispatch_dodecaDevtoolsEditUpload(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0x63b8_7d46_d622_9194:
+      await dispatch_dodecaDevtoolsEditRead(
+        payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
+        schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
+    case 0xf2fe_9db4_4953_85aa:
+      await dispatch_dodecaDevtoolsEditList(
         payload: payload, requestId: requestId, schemaSendTracker: schemaSendTracker,
         schemaReceiveTracker: schemaReceiveTracker, taskTx: taskTx)
     case 0x3223_55b9_bf44_89e1:
@@ -127113,6 +133226,47 @@ public final class TestbedDispatcher: ServiceDispatcher {
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x22c5_2346_5669_b301,
         responseSchemaClosure: testbedMethods[0x22c5_2346_5669_b301]!.responseSchemaClosure))
+  }
+
+  private func dispatch_echoDodecaDevtoolsEvent(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x4b4b_956d_a69d_c0ff, .args,
+        readerDescriptor: testbed_echoDodecaDevtoolsEvent_ArgsDescriptor,
+        readerBlocks: testbed_echoDodecaDevtoolsEvent_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x4b4b_956d_a69d_c0ff,
+          responseSchemaClosure: testbedMethods[0x4b4b_956d_a69d_c0ff]!.responseSchemaClosure))
+      return
+    }
+    let args: (DodecaDevtoolsEvent)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x4b4b_956d_a69d_c0ff,
+          responseSchemaClosure: testbedMethods[0x4b4b_956d_a69d_c0ff]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaDevtoolsEvent, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.echoDodecaDevtoolsEvent(event: args)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_echoDodecaDevtoolsEvent_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x4b4b_956d_a69d_c0ff,
+        responseSchemaClosure: testbedMethods[0x4b4b_956d_a69d_c0ff]!.responseSchemaClosure))
   }
 
   private func dispatch_dibsSchema(
@@ -129112,6 +135266,377 @@ public final class TestbedDispatcher: ServiceDispatcher {
       .response(
         requestId: requestId, payload: respPayload, methodId: 0x7615_bf19_227c_12a0,
         responseSchemaClosure: testbedMethods[0x7615_bf19_227c_12a0]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsGetScope(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x9c27_c520_3ae4_32f6, .args,
+        readerDescriptor: testbed_dodecaDevtoolsGetScope_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsGetScope_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x9c27_c520_3ae4_32f6,
+          responseSchemaClosure: testbedMethods[0x9c27_c520_3ae4_32f6]!.responseSchemaClosure))
+      return
+    }
+    let args: ([String]?)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x9c27_c520_3ae4_32f6,
+          responseSchemaClosure: testbedMethods[0x9c27_c520_3ae4_32f6]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<[DodecaScopeEntry], VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsGetScope(path: args)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsGetScope_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x9c27_c520_3ae4_32f6,
+        responseSchemaClosure: testbedMethods[0x9c27_c520_3ae4_32f6]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEval(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x4913_550f_328f_fcc0, .args, readerDescriptor: testbed_dodecaDevtoolsEval_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEval_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x4913_550f_328f_fcc0,
+          responseSchemaClosure: testbedMethods[0x4913_550f_328f_fcc0]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x4913_550f_328f_fcc0,
+          responseSchemaClosure: testbedMethods[0x4913_550f_328f_fcc0]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEvalResult, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEval(snapshotId: args.0, expression: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEval_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x4913_550f_328f_fcc0,
+        responseSchemaClosure: testbedMethods[0x4913_550f_328f_fcc0]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsOpenDeadLink(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x8706_0181_51b9_b53c, .args,
+        readerDescriptor: testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsOpenDeadLink_ArgsDescriptorBlocks,
+        local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x8706_0181_51b9_b53c,
+          responseSchemaClosure: testbedMethods[0x8706_0181_51b9_b53c]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, DodecaDeadLinkTarget)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x8706_0181_51b9_b53c,
+          responseSchemaClosure: testbedMethods[0x8706_0181_51b9_b53c]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaOpenSourceResult, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsOpenDeadLink(route: args.0, target: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsOpenDeadLink_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x8706_0181_51b9_b53c,
+        responseSchemaClosure: testbedMethods[0x8706_0181_51b9_b53c]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditLoad(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x380a_66c7_1973_d8a8, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditLoad_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditLoad_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x380a_66c7_1973_d8a8,
+          responseSchemaClosure: testbedMethods[0x380a_66c7_1973_d8a8]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x380a_66c7_1973_d8a8,
+          responseSchemaClosure: testbedMethods[0x380a_66c7_1973_d8a8]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditLoad, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditLoad(token: args.0, route: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditLoad_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x380a_66c7_1973_d8a8,
+        responseSchemaClosure: testbedMethods[0x380a_66c7_1973_d8a8]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditPreview(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x0ca8_b824_2990_8d7a, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditPreview_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditPreview_ArgsDescriptorBlocks, local: testbedRegistry
+      )
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x0ca8_b824_2990_8d7a,
+          responseSchemaClosure: testbedMethods[0x0ca8_b824_2990_8d7a]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, String, String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x0ca8_b824_2990_8d7a,
+          responseSchemaClosure: testbedMethods[0x0ca8_b824_2990_8d7a]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditPreview, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditPreview(
+        token: args.0, sourceKey: args.1, buffer: args.2)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditPreview_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x0ca8_b824_2990_8d7a,
+        responseSchemaClosure: testbedMethods[0x0ca8_b824_2990_8d7a]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditSave(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0xa7fd_c44f_02c9_6cfe, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditSave_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditSave_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xa7fd_c44f_02c9_6cfe,
+          responseSchemaClosure: testbedMethods[0xa7fd_c44f_02c9_6cfe]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, DodecaEditSaveReq)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xa7fd_c44f_02c9_6cfe,
+          responseSchemaClosure: testbedMethods[0xa7fd_c44f_02c9_6cfe]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditSave, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditSave(token: args.0, req: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditSave_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0xa7fd_c44f_02c9_6cfe,
+        responseSchemaClosure: testbedMethods[0xa7fd_c44f_02c9_6cfe]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditUpload(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x9bc0_6be0_ed11_0f29, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditUpload_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditUpload_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x9bc0_6be0_ed11_0f29,
+          responseSchemaClosure: testbedMethods[0x9bc0_6be0_ed11_0f29]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, DodecaEditUploadReq)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x9bc0_6be0_ed11_0f29,
+          responseSchemaClosure: testbedMethods[0x9bc0_6be0_ed11_0f29]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditUpload, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditUpload(token: args.0, req: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditUpload_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x9bc0_6be0_ed11_0f29,
+        responseSchemaClosure: testbedMethods[0x9bc0_6be0_ed11_0f29]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditRead(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0x63b8_7d46_d622_9194, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditRead_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditRead_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0x63b8_7d46_d622_9194,
+          responseSchemaClosure: testbedMethods[0x63b8_7d46_d622_9194]!.responseSchemaClosure))
+      return
+    }
+    let args: (String, String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0x63b8_7d46_d622_9194,
+          responseSchemaClosure: testbedMethods[0x63b8_7d46_d622_9194]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditRead, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditRead(token: args.0, uri: args.1)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditRead_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0x63b8_7d46_d622_9194,
+        responseSchemaClosure: testbedMethods[0x63b8_7d46_d622_9194]!.responseSchemaClosure))
+  }
+
+  private func dispatch_dodecaDevtoolsEditList(
+    payload: [UInt8], requestId: UInt64, schemaSendTracker: SchemaSendTracker,
+    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+  ) async {
+    guard
+      let argsDecoder = schemaReceiveTracker.buildDecodeFn(
+        0xf2fe_9db4_4953_85aa, .args,
+        readerDescriptor: testbed_dodecaDevtoolsEditList_ArgsDescriptor,
+        readerBlocks: testbed_dodecaDevtoolsEditList_ArgsDescriptorBlocks, local: testbedRegistry)
+    else {
+      taskTx(
+        .response(
+          requestId: requestId,
+          payload: encodeVoxError(.invalidPayload("no args schema advertised")),
+          methodId: 0xf2fe_9db4_4953_85aa,
+          responseSchemaClosure: testbedMethods[0xf2fe_9db4_4953_85aa]!.responseSchemaClosure))
+      return
+    }
+    let args: (String)
+    do { args = try decodeVoxTyped(argsDecoder, payload) } catch {
+      taskTx(
+        .response(
+          requestId: requestId, payload: encodeVoxError(.invalidPayload("decode args")),
+          methodId: 0xf2fe_9db4_4953_85aa,
+          responseSchemaClosure: testbedMethods[0xf2fe_9db4_4953_85aa]!.responseSchemaClosure))
+      return
+    }
+    let voxResult: Result<DodecaEditList, VoxError<Infallible>>
+    do {
+      let voxValue = try await handler.dodecaDevtoolsEditList(token: args)
+      voxResult = .success(voxValue)
+    } catch {
+      voxResult = .failure(.indeterminate)
+    }
+    let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsEditList_ResponseEncoder)
+    taskTx(
+      .response(
+        requestId: requestId, payload: respPayload, methodId: 0xf2fe_9db4_4953_85aa,
+        responseSchemaClosure: testbedMethods[0xf2fe_9db4_4953_85aa]!.responseSchemaClosure))
   }
 
   private func dispatch_echoStyxValue(

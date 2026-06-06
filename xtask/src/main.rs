@@ -811,6 +811,46 @@ fn generate_spec_matrix(
             call: "testbed::run_rpc_echo_dodeca_asset_processing_fixture",
         },
         TestCase {
+            name: "rpc_echo_dodeca_devtools_event",
+            call: "testbed::run_rpc_echo_dodeca_devtools_event",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_get_scope",
+            call: "testbed::run_rpc_dodeca_devtools_get_scope",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_eval",
+            call: "testbed::run_rpc_dodeca_devtools_eval",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_open_dead_link",
+            call: "testbed::run_rpc_dodeca_devtools_open_dead_link",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_load",
+            call: "testbed::run_rpc_dodeca_devtools_edit_load",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_preview",
+            call: "testbed::run_rpc_dodeca_devtools_edit_preview",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_save",
+            call: "testbed::run_rpc_dodeca_devtools_edit_save",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_upload",
+            call: "testbed::run_rpc_dodeca_devtools_edit_upload",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_read",
+            call: "testbed::run_rpc_dodeca_devtools_edit_read",
+        },
+        TestCase {
+            name: "rpc_dodeca_devtools_edit_list",
+            call: "testbed::run_rpc_dodeca_devtools_edit_list",
+        },
+        TestCase {
             name: "rpc_echo_styx_value",
             call: "testbed::run_rpc_echo_styx_value",
         },
@@ -1171,6 +1211,46 @@ fn generate_spec_matrix(
         TestCase {
             name: "subject_calls_echo_dodeca_asset_processing_fixture",
             call: "testbed::run_subject_calls_echo_dodeca_asset_processing_fixture",
+        },
+        TestCase {
+            name: "subject_calls_echo_dodeca_devtools_event",
+            call: "testbed::run_subject_calls_echo_dodeca_devtools_event",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_get_scope",
+            call: "testbed::run_subject_calls_dodeca_devtools_get_scope",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_eval",
+            call: "testbed::run_subject_calls_dodeca_devtools_eval",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_open_dead_link",
+            call: "testbed::run_subject_calls_dodeca_devtools_open_dead_link",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_load",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_load",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_preview",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_preview",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_save",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_save",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_upload",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_upload",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_read",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_read",
+        },
+        TestCase {
+            name: "subject_calls_dodeca_devtools_edit_list",
+            call: "testbed::run_subject_calls_dodeca_devtools_edit_list",
         },
         TestCase {
             name: "subject_calls_echo_styx_value",

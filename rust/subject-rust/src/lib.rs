@@ -67,6 +67,12 @@ use spec_proto::{
     DodecaSourceMapEntry,
 };
 use spec_proto::{
+    DodecaDeadLinkTarget, DodecaDevtoolsEvent, DodecaEditEntry, DodecaEditList, DodecaEditLoad,
+    DodecaEditPreview, DodecaEditRead, DodecaEditSave, DodecaEditSaveReq, DodecaEditUpload,
+    DodecaEditUploadReq, DodecaErrorInfo, DodecaEvalResult, DodecaOpenSourceResult,
+    DodecaScopeEntry, DodecaScopeValue, DodecaSidLine, DodecaSourceLine, DodecaSourceSnippet,
+};
+use spec_proto::{
     StyxLspCapability, StyxLspCodeAction, StyxLspCodeActionKind, StyxLspCodeActionParams,
     StyxLspCompletionItem, StyxLspCompletionKind, StyxLspCompletionParams, StyxLspCursor,
     StyxLspDefinitionParams, StyxLspDiagnostic, StyxLspDiagnosticParams, StyxLspDiagnosticSeverity,
@@ -316,6 +322,179 @@ pub fn sample_dodeca_asset_processing_fixture() -> DodecaAssetProcessingFixture 
             svg: "<svg viewBox=\"0 0 10 10\"><path fill=\"red\" d=\"M0 0h10v10H0z\"/></svg>"
                 .to_string(),
         },
+    }
+}
+
+pub fn sample_dodeca_source_lines() -> Vec<DodecaSourceLine> {
+    vec![
+        DodecaSourceLine {
+            number: 12,
+            content: "{% for item in data.items %}".to_string(),
+        },
+        DodecaSourceLine {
+            number: 13,
+            content: "{{ item.title }}".to_string(),
+        },
+    ]
+}
+
+pub fn sample_dodeca_source_snippet() -> DodecaSourceSnippet {
+    DodecaSourceSnippet {
+        lines: sample_dodeca_source_lines(),
+        error_line: 13,
+    }
+}
+
+pub fn sample_dodeca_error_info() -> DodecaErrorInfo {
+    DodecaErrorInfo {
+        route: "/guide/".to_string(),
+        message: "unknown filter `slugify`".to_string(),
+        template: Some("templates/page.html".to_string()),
+        line: Some(13),
+        column: Some(8),
+        source_snippet: Some(sample_dodeca_source_snippet()),
+        snapshot_id: "snap-devtools-42".to_string(),
+        available_variables: vec!["page".to_string(), "root".to_string(), "data".to_string()],
+    }
+}
+
+pub fn sample_dodeca_devtools_event() -> DodecaDevtoolsEvent {
+    DodecaDevtoolsEvent::Error(sample_dodeca_error_info())
+}
+
+pub fn sample_dodeca_scope_entries() -> Vec<DodecaScopeEntry> {
+    vec![
+        DodecaScopeEntry {
+            name: "title".to_string(),
+            value: DodecaScopeValue::String("Phon migration".to_string()),
+            expandable: false,
+        },
+        DodecaScopeEntry {
+            name: "items".to_string(),
+            value: DodecaScopeValue::Array {
+                length: 3,
+                preview: "[intro, install, api]".to_string(),
+            },
+            expandable: true,
+        },
+        DodecaScopeEntry {
+            name: "metrics".to_string(),
+            value: DodecaScopeValue::Object {
+                fields: 2,
+                preview: "{views, updated_at}".to_string(),
+            },
+            expandable: true,
+        },
+        DodecaScopeEntry {
+            name: "score".to_string(),
+            value: DodecaScopeValue::Number(42.5),
+            expandable: false,
+        },
+    ]
+}
+
+pub fn sample_dodeca_eval_result() -> DodecaEvalResult {
+    DodecaEvalResult::Ok(DodecaScopeValue::Object {
+        fields: 2,
+        preview: "{title, route}".to_string(),
+    })
+}
+
+pub fn sample_dodeca_dead_link_target() -> DodecaDeadLinkTarget {
+    DodecaDeadLinkTarget::Wiki {
+        key: "missing-page".to_string(),
+        title: "Missing Page".to_string(),
+    }
+}
+
+pub fn sample_dodeca_open_source_result() -> DodecaOpenSourceResult {
+    DodecaOpenSourceResult::Ok
+}
+
+pub fn sample_dodeca_sid_lines() -> Vec<DodecaSidLine> {
+    vec![
+        DodecaSidLine {
+            sid: "p-1".to_string(),
+            line: 5,
+        },
+        DodecaSidLine {
+            sid: "code-1".to_string(),
+            line: 17,
+        },
+    ]
+}
+
+pub fn sample_dodeca_edit_load() -> DodecaEditLoad {
+    DodecaEditLoad::Ok {
+        source_key: "content/guide.md".to_string(),
+        route: "/guide/".to_string(),
+        uri: "file:///workspace/content/guide.md".to_string(),
+        content: "# Guide\n\nWelcome to Phon.".to_string(),
+        base: "a1b2c3d4".to_string(),
+    }
+}
+
+pub fn sample_dodeca_edit_preview() -> DodecaEditPreview {
+    DodecaEditPreview::Ok {
+        html: "<article><h1>Guide</h1><p>Welcome to Phon.</p></article>".to_string(),
+        source_map: sample_dodeca_sid_lines(),
+    }
+}
+
+pub fn sample_dodeca_edit_save_req() -> DodecaEditSaveReq {
+    DodecaEditSaveReq {
+        source_key: "content/guide.md".to_string(),
+        buffer: "# Guide\n\nUpdated from browser.".to_string(),
+        base: "a1b2c3d4".to_string(),
+        message: "Update guide".to_string(),
+    }
+}
+
+pub fn sample_dodeca_edit_save() -> DodecaEditSave {
+    DodecaEditSave::Ok {
+        commit: "deadbeef1234".to_string(),
+        base: "b4c3d2a1".to_string(),
+    }
+}
+
+pub fn sample_dodeca_edit_upload_req() -> DodecaEditUploadReq {
+    DodecaEditUploadReq {
+        source_key: "content/guide.md".to_string(),
+        filename: "diagram.png".to_string(),
+        bytes: byte_ramp(128, 31),
+    }
+}
+
+pub fn sample_dodeca_edit_upload() -> DodecaEditUpload {
+    DodecaEditUpload::Ok {
+        markdown: "![diagram](./diagram.png)".to_string(),
+        path: "diagram.png".to_string(),
+    }
+}
+
+pub fn sample_dodeca_edit_read() -> DodecaEditRead {
+    DodecaEditRead::Ok {
+        content: "# Guide\n\nWelcome to Phon.".to_string(),
+        base: "a1b2c3d4".to_string(),
+    }
+}
+
+pub fn sample_dodeca_edit_list() -> DodecaEditList {
+    DodecaEditList::Ok {
+        entries: vec![
+            DodecaEditEntry {
+                source_key: "content/guide.md".to_string(),
+                route: "/guide/".to_string(),
+                uri: "file:///workspace/content/guide.md".to_string(),
+                title: "Guide".to_string(),
+            },
+            DodecaEditEntry {
+                source_key: "content/reference.md".to_string(),
+                route: "/reference/".to_string(),
+                uri: "file:///workspace/content/reference.md".to_string(),
+                title: "Reference".to_string(),
+            },
+        ],
     }
 }
 
@@ -3475,6 +3654,108 @@ impl Testbed for TestbedService {
         fixture: DodecaAssetProcessingFixture,
     ) -> DodecaAssetProcessingFixture {
         fixture
+    }
+
+    async fn echo_dodeca_devtools_event(&self, event: DodecaDevtoolsEvent) -> DodecaDevtoolsEvent {
+        event
+    }
+
+    async fn dodeca_devtools_get_scope(&self, path: Option<Vec<String>>) -> Vec<DodecaScopeEntry> {
+        if path == Some(vec!["page".to_string()]) {
+            sample_dodeca_scope_entries()
+        } else {
+            vec![]
+        }
+    }
+
+    async fn dodeca_devtools_eval(
+        &self,
+        snapshot_id: String,
+        expression: String,
+    ) -> DodecaEvalResult {
+        if snapshot_id == "snap-devtools-42" && expression == "page.title" {
+            sample_dodeca_eval_result()
+        } else {
+            DodecaEvalResult::Err(format!(
+                "unexpected eval input: {snapshot_id:?} {expression:?}"
+            ))
+        }
+    }
+
+    async fn dodeca_devtools_open_dead_link(
+        &self,
+        route: String,
+        target: DodecaDeadLinkTarget,
+    ) -> DodecaOpenSourceResult {
+        if route == "/guide/" && target == sample_dodeca_dead_link_target() {
+            sample_dodeca_open_source_result()
+        } else {
+            DodecaOpenSourceResult::Err(format!("unexpected dead-link input: {route:?} {target:?}"))
+        }
+    }
+
+    async fn dodeca_devtools_edit_load(&self, token: String, route: String) -> DodecaEditLoad {
+        if token == "editor-token" && route == "/guide/" {
+            sample_dodeca_edit_load()
+        } else {
+            DodecaEditLoad::Denied
+        }
+    }
+
+    async fn dodeca_devtools_edit_preview(
+        &self,
+        token: String,
+        source_key: String,
+        buffer: String,
+    ) -> DodecaEditPreview {
+        if token == "editor-token"
+            && source_key == "content/guide.md"
+            && buffer == "# Guide\n\nUpdated from browser."
+        {
+            sample_dodeca_edit_preview()
+        } else {
+            DodecaEditPreview::Denied
+        }
+    }
+
+    async fn dodeca_devtools_edit_save(
+        &self,
+        token: String,
+        req: DodecaEditSaveReq,
+    ) -> DodecaEditSave {
+        if token == "editor-token" && req == sample_dodeca_edit_save_req() {
+            sample_dodeca_edit_save()
+        } else {
+            DodecaEditSave::Denied
+        }
+    }
+
+    async fn dodeca_devtools_edit_upload(
+        &self,
+        token: String,
+        req: DodecaEditUploadReq,
+    ) -> DodecaEditUpload {
+        if token == "editor-token" && req == sample_dodeca_edit_upload_req() {
+            sample_dodeca_edit_upload()
+        } else {
+            DodecaEditUpload::Denied
+        }
+    }
+
+    async fn dodeca_devtools_edit_read(&self, token: String, uri: String) -> DodecaEditRead {
+        if token == "editor-token" && uri == "file:///workspace/content/guide.md" {
+            sample_dodeca_edit_read()
+        } else {
+            DodecaEditRead::Denied
+        }
+    }
+
+    async fn dodeca_devtools_edit_list(&self, token: String) -> DodecaEditList {
+        if token == "editor-token" {
+            sample_dodeca_edit_list()
+        } else {
+            DodecaEditList::Denied
+        }
     }
 
     async fn echo_styx_value(&self, value: StyxValue) -> StyxValue {

@@ -376,6 +376,67 @@ impl Testbed for TestbedService {
         fixture
     }
 
+    async fn echo_dodeca_devtools_event(&self, event: DodecaDevtoolsEvent) -> DodecaDevtoolsEvent {
+        event
+    }
+
+    async fn dodeca_devtools_get_scope(&self, _path: Option<Vec<String>>) -> Vec<DodecaScopeEntry> {
+        unsupported_smoke_method!("dodeca_devtools_get_scope")
+    }
+
+    async fn dodeca_devtools_eval(
+        &self,
+        _snapshot_id: String,
+        _expression: String,
+    ) -> DodecaEvalResult {
+        unsupported_smoke_method!("dodeca_devtools_eval")
+    }
+
+    async fn dodeca_devtools_open_dead_link(
+        &self,
+        _route: String,
+        _target: DodecaDeadLinkTarget,
+    ) -> DodecaOpenSourceResult {
+        unsupported_smoke_method!("dodeca_devtools_open_dead_link")
+    }
+
+    async fn dodeca_devtools_edit_load(&self, _token: String, _route: String) -> DodecaEditLoad {
+        unsupported_smoke_method!("dodeca_devtools_edit_load")
+    }
+
+    async fn dodeca_devtools_edit_preview(
+        &self,
+        _token: String,
+        _source_key: String,
+        _buffer: String,
+    ) -> DodecaEditPreview {
+        unsupported_smoke_method!("dodeca_devtools_edit_preview")
+    }
+
+    async fn dodeca_devtools_edit_save(
+        &self,
+        _token: String,
+        _req: DodecaEditSaveReq,
+    ) -> DodecaEditSave {
+        unsupported_smoke_method!("dodeca_devtools_edit_save")
+    }
+
+    async fn dodeca_devtools_edit_upload(
+        &self,
+        _token: String,
+        _req: DodecaEditUploadReq,
+    ) -> DodecaEditUpload {
+        unsupported_smoke_method!("dodeca_devtools_edit_upload")
+    }
+
+    async fn dodeca_devtools_edit_read(&self, _token: String, _uri: String) -> DodecaEditRead {
+        unsupported_smoke_method!("dodeca_devtools_edit_read")
+    }
+
+    async fn dodeca_devtools_edit_list(&self, _token: String) -> DodecaEditList {
+        unsupported_smoke_method!("dodeca_devtools_edit_list")
+    }
+
     async fn echo_styx_value(&self, value: StyxValue) -> StyxValue {
         value
     }
