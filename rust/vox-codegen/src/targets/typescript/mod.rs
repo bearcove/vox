@@ -770,6 +770,7 @@ mod tests {
     // r[verify rpc.service]
     // r[verify rpc.service.methods]
     // r[verify rpc.handler]
+    // r[verify rpc.one-service-per-connection]
     // r[verify rpc.session-setup]
     fn generated_typescript_emits_rpc_caller_handler_and_session_shapes() {
         let echo = method_descriptor::<(String,), String>(

@@ -213,6 +213,7 @@ describe("Driver channel schema exchange", () => {
     ).toEqual({ tag: "Ok", value: 2 });
   });
 
+  // r[verify rpc]
   // r[verify rpc.channel.discovery]
   it("resolves callee channel handles from decoded wire indexes", async () => {
     const registry = new ChannelRegistry();
