@@ -17,6 +17,7 @@ use std::{
 };
 
 use facet::{Facet, PtrConst, Shape};
+pub use phon::api::{JitFallbackRecord, JitFallbackReport, MethodJitFallbackReport};
 use phon::derive::{Derived, of_shape};
 use phon_engine::{Registry, typed};
 use phon_ir::Lowered;
@@ -162,6 +163,32 @@ impl TypedProgram {
             }
         }
     }
+
+    fn jit_fallback_report(&self) -> JitFallbackReport {
+        let report = phon::api::jit_fallback_report_for_lowered(&self.lowered);
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            let mut report = report;
+            if self.native_decode.is_none() && report.decode.is_empty() {
+                report.decode.push(JitFallbackRecord {
+                    path: "$".to_string(),
+                    reason: "native decode JIT was not compiled for this program",
+                });
+            }
+            if self.native_encode.is_none() && report.encode.is_empty() {
+                report.encode.push(JitFallbackRecord {
+                    path: "$".to_string(),
+                    reason: "native encode JIT was not compiled for this program",
+                });
+            }
+            report
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            report
+        }
+    }
 }
 
 // The lowered program and native executors are immutable after construction, and
@@ -284,6 +311,26 @@ pub fn to_vec_for_shape(ptr: PtrConst, shape: &'static Shape) -> Result<Vec<u8>,
 /// [`Error`] if `shape` cannot be lowered to a phon schema.
 pub fn jit_status_for_shape(shape: &'static Shape) -> Result<JitStatus, Error> {
     Ok(typed_program_for_shape(shape)?.jit_status())
+}
+
+/// Report native-JIT fallback diagnostics for a shape-erased generated bridge root.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema.
+pub fn jit_fallback_report_for_shape(shape: &'static Shape) -> Result<JitFallbackReport, Error> {
+    Ok(typed_program_for_shape(shape)?.jit_fallback_report())
+}
+
+/// Report native-JIT fallback diagnostics scoped to a generated Vox method root.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema.
+pub fn method_jit_fallback_report_for_shape(
+    shape: &'static Shape,
+    method: impl Into<String>,
+    phase: impl Into<String>,
+) -> Result<MethodJitFallbackReport, Error> {
+    Ok(jit_fallback_report_for_shape(shape)?.scoped(method, phase))
 }
 
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes`: `&str`,
@@ -421,6 +468,68 @@ mod tests {
                 "{name} JIT status: {status:?}"
             );
         }
+    }
+
+    #[test]
+    fn vox_wire_shapes_expose_method_scoped_fallback_reports() {
+        for (name, shape) in [
+            ("Message", Message::SHAPE),
+            ("MessagePayload", MessagePayload::SHAPE),
+            ("RequestCall", RequestCall::SHAPE),
+            ("RequestMessage", RequestMessage::SHAPE),
+            ("SchemaMessage", SchemaMessage::SHAPE),
+            ("Payload", Payload::SHAPE),
+            ("DodecaParseResult", DodecaParseResult::SHAPE),
+        ] {
+            let report =
+                method_jit_fallback_report_for_shape(shape, name, "wire").unwrap_or_else(|err| {
+                    panic!("failed to build JIT fallback report for {name}: {err}");
+                });
+            if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+                assert!(report.is_empty(), "{name} fallback report: {report:?}");
+            } else {
+                assert!(!report.is_empty(), "{name} should report unavailable JIT");
+                for record in &report.records {
+                    assert_eq!(record.method, name);
+                    assert_eq!(record.phase, "wire");
+                    assert!(matches!(record.direction, "decode" | "encode"));
+                    assert_eq!(record.path, "$");
+                }
+            }
+        }
+    }
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    #[test]
+    fn unsupported_native_int_program_reports_before_native_compile() {
+        let program = TypedProgram {
+            lowered: Lowered {
+                program: vec![
+                    MemOp::NativeInt {
+                        offset: 0,
+                        mem_size: 4,
+                        signed: false,
+                    },
+                    MemOp::NativeInt {
+                        offset: 4,
+                        mem_size: 4,
+                        signed: true,
+                    },
+                ],
+                blocks: Default::default(),
+            },
+            native_encode: None,
+            native_decode: None,
+        };
+
+        let report = program.jit_fallback_report().scoped("nativeSized", "args");
+        assert_eq!(report.records.len(), 4);
+        assert!(report.records.iter().all(|record| {
+            record.method == "nativeSized"
+                && record.phase == "args"
+                && record.reason.contains("native-sized integer casts")
+                && matches!(record.direction, "decode" | "encode")
+        }));
     }
 
     #[test]
