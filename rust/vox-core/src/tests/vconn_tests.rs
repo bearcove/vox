@@ -1,7 +1,7 @@
 use moire::task::FutureExt;
 use vox_types::{
     ChannelBinder, ConnectionCloseReason, ConnectionSettings, IncomingChannelMessage, Metadata,
-    MethodId, Parity, Payload, RequestCall,
+    MethodId, Parity, Payload, ReplySink, RequestCall, RequestResponse, SelfRef,
 };
 
 use super::utils::*;
@@ -10,6 +10,46 @@ use crate::session::{
     initiator_conduit,
 };
 use crate::{Driver, NoopClient};
+
+#[derive(Clone, Copy)]
+struct ConstHandler(u32);
+
+impl vox_types::Handler<crate::DriverReplySink> for ConstHandler {
+    async fn handle(
+        &self,
+        _call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let result = self.0;
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&result),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+async fn call_u32(caller: &crate::Caller, value: u32) -> u32 {
+    let response = caller
+        .call(RequestCall {
+            channels: Vec::new(),
+            method_id: MethodId(1),
+            args: Payload::outgoing(&value),
+            schemas: Default::default(),
+            metadata: Default::default(),
+        })
+        .await
+        .expect("call should succeed");
+    let response = response.get();
+    let ret_bytes = match &response.ret {
+        Payload::Encoded(bytes) => *bytes,
+        _ => panic!("expected incoming payload in response"),
+    };
+    vox_phon::from_slice(ret_bytes).expect("deserialize response")
+}
 
 // r[verify rpc.virtual-connection.open]
 // r[verify rpc.virtual-connection.accept]
@@ -84,6 +124,68 @@ async fn open_virtual_connection_and_call() {
     };
     let result: u32 = vox_phon::from_slice(ret_bytes).expect("deserialize response");
     assert_eq!(result, 123);
+}
+
+// r[verify rpc.one-service-per-connection]
+#[tokio::test]
+async fn root_and_virtual_connections_bind_separate_services() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+
+    struct ServiceAcceptor;
+
+    impl ConnectionAcceptor for ServiceAcceptor {
+        fn accept(
+            &self,
+            request: &ConnectionRequest,
+            connection: PendingConnection,
+        ) -> Result<(), Metadata> {
+            match request.service() {
+                "Noop" => connection.handle_with(ConstHandler(10)),
+                "Echo" => connection.handle_with(ConstHandler(20)),
+                _ => return Err(Metadata::default()),
+            }
+            Ok(())
+        }
+    }
+
+    let server_task = moire::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(ServiceAcceptor)
+                .establish::<NoopClient>()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let root_caller_guard = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish::<NoopClient>()
+        .await
+        .expect("client handshake failed");
+    let session_handle = root_caller_guard.session.clone().unwrap();
+    let _server_caller_guard = server_task.await.expect("server setup failed");
+
+    assert_eq!(call_u32(&root_caller_guard.caller, 1).await, 10);
+
+    let vconn_handle = session_handle
+        .open_connection(
+            ConnectionSettings {
+                parity: Parity::Odd,
+                max_concurrent_requests: 64,
+                initial_channel_credit: 16,
+            },
+            vox_types::metadata().str("vox-service", "Echo").build(),
+        )
+        .await
+        .expect("open virtual connection");
+
+    let mut vconn_driver = Driver::new(vconn_handle, ());
+    let vconn_caller = crate::Caller::new(vconn_driver.caller());
+    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+
+    assert_eq!(call_u32(&vconn_caller, 2).await, 20);
+    assert_eq!(call_u32(&root_caller_guard.caller, 3).await, 10);
 }
 
 // r[verify connection.open.rejection]
