@@ -36,3 +36,41 @@ public protocol ServiceDispatcher: Sendable {
         taskTx: @escaping @Sendable (TaskMessage) -> Void
     ) async
 }
+
+/// A `ServiceDispatcher` that serves nothing — every call returns `unknownMethod`.
+///
+/// Use it to anchor a connection that exists only as a session base: the common case is the
+/// root connection when the real services live on virtual connections opened via
+/// `SessionHandle.openConnection`. Pairs with `NoopClient` on the peer.
+public struct NoopDispatcher: ServiceDispatcher {
+    public init() {}
+
+    public func encodeVoxError(_: VoxRuntimeError) -> [UInt8] {
+        // The Noop service has no methods, so a real error response is never produced.
+        []
+    }
+
+    public func preregister(
+        methodId _: UInt64,
+        payload _: [UInt8],
+        channels: [UInt64],
+        registry: ChannelRegistry
+    ) async {
+        for id in channels {
+            await registry.markKnown(id)
+        }
+    }
+
+    public func dispatch(
+        methodId: UInt64,
+        payload _: [UInt8],
+        requestId: UInt64,
+        channels _: [UInt64],
+        registry _: ChannelRegistry,
+        schemaSendTracker _: SchemaSendTracker,
+        schemaReceiveTracker _: SchemaTracker,
+        taskTx: @escaping @Sendable (TaskMessage) -> Void
+    ) async {
+        taskTx(.response(requestId: requestId, payload: [], methodId: methodId))
+    }
+}
