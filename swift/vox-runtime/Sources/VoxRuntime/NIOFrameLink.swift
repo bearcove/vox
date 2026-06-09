@@ -196,7 +196,11 @@ final class LengthPrefixDecoder: ByteToMessageDecoder, @unchecked Sendable {
     }
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        guard let frameLen: UInt32 = buffer.getInteger(at: buffer.readerIndex, endianness: .little)
+        // Frame header matches Rust's FdStreamLink: [u32 body_len LE][u32 fd_count LE][body].
+        // fd_count is parsed-but-ignored for now (it's always 0 on the wire until SCM_RIGHTS
+        // fd-passing lands on this side); the field must still be consumed to stay aligned.
+        guard buffer.readableBytes >= 8,
+            let frameLen: UInt32 = buffer.getInteger(at: buffer.readerIndex, endianness: .little)
         else {
             return .needMoreData
         }
@@ -207,12 +211,12 @@ final class LengthPrefixDecoder: ByteToMessageDecoder, @unchecked Sendable {
             throw TransportError.frameDecoding("Frame exceeds \(maxFrameBytes) bytes")
         }
 
-        let needed = 4 + frameLength
+        let needed = 8 + frameLength
         guard buffer.readableBytes >= needed else {
             return .needMoreData
         }
 
-        buffer.moveReaderIndex(forwardBy: 4)
+        buffer.moveReaderIndex(forwardBy: 8)
 
         guard let frameBytes = buffer.readBytes(length: frameLength) else {
             return .needMoreData
@@ -272,8 +276,12 @@ func writeRawFrame(channel: Channel, bytes: [UInt8]) async throws {
         throw TransportError.frameEncoding("frame too large for u32 length prefix")
     }
 
-    var buffer = channel.allocator.buffer(capacity: 4 + bytes.count)
+    // Header matches Rust's FdStreamLink: [u32 body_len LE][u32 fd_count LE][body]. We send
+    // no descriptors yet, so fd_count is always 0 — but the field must be present or the
+    // Rust reader mis-frames (it reads our first 4 body bytes as the count).
+    var buffer = channel.allocator.buffer(capacity: 8 + bytes.count)
     buffer.writeInteger(len, endianness: .little)
+    buffer.writeInteger(UInt32(0), endianness: .little)
     buffer.writeBytes(bytes)
     try await channel.writeAndFlush(buffer)
 }
