@@ -63,14 +63,16 @@ private final class TcpAcceptorState: @unchecked Sendable {
 
                 do {
                     try channel.pipeline.syncOperations.addHandler(
-                        ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit))
+                        ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit, fdFramed: false))
                     )
                     try channel.pipeline.syncOperations.addHandler(rawHandler)
+                    writeVoxLinkPrologue(channel, fdCapable: false)
 
                     let link = NIOFrameLink(
                         channel: channel,
                         frameLimit: frameLimit,
-                        inboundStream: rawStream
+                        inboundStream: rawStream,
+                        fdFramed: false
                     )
                     connContinuation.yield(link)
                     return channel.eventLoop.makeSucceededVoidFuture()

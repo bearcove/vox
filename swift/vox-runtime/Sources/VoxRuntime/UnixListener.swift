@@ -47,14 +47,16 @@ public final class UnixListener: Sendable {
 
                 do {
                     try channel.pipeline.syncOperations.addHandler(
-                        ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit))
+                        ByteToMessageHandler(LengthPrefixDecoder(frameLimit: frameLimit, fdFramed: true))
                     )
                     try channel.pipeline.syncOperations.addHandler(rawHandler)
+                    writeVoxLinkPrologue(channel, fdCapable: true)
 
                     let link = NIOFrameLink(
                         channel: channel,
                         frameLimit: frameLimit,
-                        inboundStream: rawStream
+                        inboundStream: rawStream,
+                        fdFramed: true
                     )
                     yieldConnection.yield(link)
                     return channel.eventLoop.makeSucceededVoidFuture()
