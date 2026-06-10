@@ -25,7 +25,7 @@ jobs:
         with:
           repository: bearcove/phon
           ref: c13cab6873af77c674b8c2dcb6eb40f08cfcf6a0
-          path: phon
+          path: ../phon
 
       - name: Install pnpm
         uses: pnpm/action-setup@v5
