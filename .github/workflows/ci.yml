@@ -256,40 +256,6 @@ jobs:
           cargo nextest run -p spec-tests --test subject_lifecycle
           -E 'test(/(^|::)typescript_/)'
 
-  swift-conformance:
-    name: Conformance / Swift
-    runs-on: macos-15-intel
-    timeout-minutes: 45
-    env:
-      VOX_SWIFT_SUBJECT_CONFIGURATION: debug
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build subject
-        run: swift build -c debug --package-path swift/subject --product subject-swift
-
-      - name: Run VoxRuntime Swift tests
-        run: swift test --no-parallel -Xlinker "-L${PWD}/target/release"
-
-      - name: Run Swift TCP subject matrix tests
-        run: >
-          cargo nextest run -p spec-tests --test spec_matrix --run-ignored all
-          -E 'test(lang_swift_transport_tcp::)'
-
-      - name: Run Swift subject lifecycle tests
-        run: >
-          cargo nextest run -p spec-tests --test subject_lifecycle
-          -E 'test(/(^|::)swift_/)'
-
   swift-linux:
     name: Conformance / Swift (Linux)
     runs-on: bearcove-ubuntu-24.04
