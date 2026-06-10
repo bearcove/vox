@@ -173,7 +173,7 @@ jobs:
         run: swift format --help
 
       - name: Install Rust prerequisites
-        run: apt-get update && apt-get install -y curl ca-certificates
+        run: apt-get update && apt-get install -y build-essential curl ca-certificates
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -282,7 +282,7 @@ jobs:
         run: swift --version
 
       - name: Install Rust prerequisites
-        run: apt-get update && apt-get install -y curl ca-certificates
+        run: apt-get update && apt-get install -y build-essential curl ca-certificates
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
