@@ -136,7 +136,7 @@ zerocopy = { version = "0.8", features = ["derive"] }
 # Benchmarking
 divan = "0.1"
 dprint-plugin-typescript = "0.96"
-figue = "2.0.3"
+figue = "4.0.0"
 prettyplease = "0.2"
 insta = "1"
 unsynn = "0.3"
