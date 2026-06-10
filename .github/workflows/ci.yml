@@ -260,6 +260,8 @@ jobs:
     name: Conformance / Swift
     runs-on: macos-15-intel
     timeout-minutes: 45
+    env:
+      VOX_SWIFT_SUBJECT_CONFIGURATION: debug
     steps:
       - uses: actions/checkout@v6
 
@@ -273,7 +275,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build subject
-        run: swift build -c release --package-path swift/subject
+        run: swift build -c debug --package-path swift/subject --product subject-swift
 
       - name: Run VoxRuntime Swift tests
         run: swift test --no-parallel -Xlinker "-L${PWD}/target/release"

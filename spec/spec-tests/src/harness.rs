@@ -227,20 +227,24 @@ fn swift_subject_binary() -> Result<String, String> {
     SWIFT_SUBJECT_BINARY
         .get_or_init(|| {
             let subject_dir = workspace_root().join("swift").join("subject");
+            let configuration = swift_subject_configuration()?;
             let binary = subject_dir
                 .join(".build")
-                .join("release")
+                .join(configuration)
                 .join(format!("subject-swift{}", std::env::consts::EXE_SUFFIX));
 
             if swift_subject_is_fresh(&subject_dir, &binary)? {
                 return Ok(binary.display().to_string());
             }
 
-            eprintln!("[subject:swift] building release subject at {}", binary.display());
+            eprintln!(
+                "[subject:swift] building {configuration} subject at {}",
+                binary.display()
+            );
             let output = std::process::Command::new("swift")
                 .arg("build")
                 .arg("-c")
-                .arg("release")
+                .arg(configuration)
                 .arg("--product")
                 .arg("subject-swift")
                 .current_dir(&subject_dir)
@@ -249,7 +253,7 @@ fn swift_subject_binary() -> Result<String, String> {
 
             if !output.status.success() {
                 return Err(format!(
-                    "swift build -c release --product subject-swift failed with {}\nstdout:\n{}\nstderr:\n{}",
+                    "swift build -c {configuration} --product subject-swift failed with {}\nstdout:\n{}\nstderr:\n{}",
                     output.status,
                     String::from_utf8_lossy(&output.stdout),
                     String::from_utf8_lossy(&output.stderr)
@@ -258,18 +262,30 @@ fn swift_subject_binary() -> Result<String, String> {
 
             if !binary.exists() {
                 return Err(format!(
-                    "swift build -c release --product subject-swift completed, but {} does not exist",
+                    "swift build -c {configuration} --product subject-swift completed, but {} does not exist",
                     binary.display()
                 ));
             }
 
             eprintln!(
-                "[subject:swift] built release subject at {}",
+                "[subject:swift] built {configuration} subject at {}",
                 binary.display()
             );
             Ok(binary.display().to_string())
         })
         .clone()
+}
+
+fn swift_subject_configuration() -> Result<&'static str, String> {
+    match std::env::var("VOX_SWIFT_SUBJECT_CONFIGURATION") {
+        Ok(value) if value == "debug" => Ok("debug"),
+        Ok(value) if value == "release" => Ok("release"),
+        Ok(value) => Err(format!(
+            "unsupported VOX_SWIFT_SUBJECT_CONFIGURATION={value:?}; expected \"debug\" or \"release\""
+        )),
+        Err(std::env::VarError::NotPresent) => Ok("release"),
+        Err(err) => Err(format!("invalid VOX_SWIFT_SUBJECT_CONFIGURATION: {err}")),
+    }
 }
 
 fn swift_subject_is_fresh(subject_dir: &Path, binary: &Path) -> Result<bool, String> {
