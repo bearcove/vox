@@ -739,7 +739,7 @@ dependencies = [
 
 [[package]]
 name = "facet-cbor"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "facet",
  "facet-core",

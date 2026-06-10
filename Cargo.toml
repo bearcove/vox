@@ -67,7 +67,7 @@ phon-ir = "0.2.0-rc.0"
 phon-schema = "0.2.0-rc.0"
 phon-jit = "0.2.0-rc.0"
 phon-codegen = "0.2.0-rc.0"
-facet-cbor = { path = "rust/facet-cbor", version = "0.3.4" }
+facet-cbor = { path = "rust/facet-cbor", version = "0.3.5" }
 ur-taking-me-with-you = { path = "rust/ur-taking-me-with-you", version = "8.0.0" }
 
 # Not internal crates
