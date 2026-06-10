@@ -36,7 +36,7 @@ jobs:
   rust-tests:
     name: Rust / Tests
     runs-on: bearcove-ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
@@ -56,7 +56,7 @@ jobs:
 
       - name: Test workspace (Rust-only)
         run: >
-          cargo nextest run --workspace
+          cargo nextest run --workspace --jobs 4
           -E 'not test(/lang_.*(typescript|swift)/) and not test(/(^|::)(typescript|swift)_/)'
 
       - name: Check schema compatibility policy
