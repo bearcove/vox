@@ -4,7 +4,6 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BINARY="$SCRIPT_DIR/.build/release/subject-swift"
 RUNTIME_DIR="$SCRIPT_DIR/../vox-runtime"
-PHON_DIR="$SCRIPT_DIR/../../../phon"
 
 if [ "${SUBJECT_SWIFT_PRINT_BIN_PATH:-0}" = "1" ] || [ "${1:-}" = "--print-bin-path" ]; then
   printf '%s\n' "$BINARY"
@@ -24,8 +23,6 @@ else
     "$RUNTIME_DIR/Package.swift" \
     "$RUNTIME_DIR/Package.resolved" \
     "$RUNTIME_DIR/Sources" \
-    "$PHON_DIR/Package.swift" \
-    "$PHON_DIR/swift" \
     -newer "$BINARY" \
     -print \
     -quit)

@@ -259,14 +259,14 @@ jobs:
   swift-linux:
     name: Conformance / Swift (Linux)
     runs-on: bearcove-ubuntu-24.04
+    container:
+      image: swift:6.1
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.1"
+      - name: Show Swift version
+        run: swift --version
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

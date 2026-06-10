@@ -1,6 +1,14 @@
 {
-  "originHash" : "7860985ff33c75e01afece7b494e28ab5c23b5698eb032fdb37cfc25720ccfd3",
+  "originHash" : "1959149d38bb8a8678e982acf050e0bcbcd85603c4d87d8d5055cbda39fc0958",
   "pins" : [
+    {
+      "identity" : "phon",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/bearcove/phon.git",
+      "state" : {
+        "revision" : "c13cab6873af77c674b8c2dcb6eb40f08cfcf6a0"
+      }
+    },
     {
       "identity" : "swift-atomics",
       "kind" : "remoteSourceControl",
