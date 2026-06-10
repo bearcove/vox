@@ -3,6 +3,8 @@ packages:
   # phon-ts lives in the sibling ../phon repo; keep the workspace link until the
   # @bearcove/phon-schema / @bearcove/phon-engine packages are published.
   - "../phon/typescript/packages/*"
+  # CI checks out bearcove/phon here because the sibling checkout is not present.
+  - "phon/typescript/packages/*"
   - "typescript/subject"
   - "typescript/generated"
   - "typescript/tests/browser"
