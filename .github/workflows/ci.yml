@@ -257,7 +257,7 @@ jobs:
   swift-conformance:
     name: Conformance / Swift
     runs-on: macos-15-intel
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
@@ -380,8 +380,8 @@ jobs:
 
       - name: Build wasm targets
         run: |
-          wasm-pack build --target web rust/wasm-browser-tests --out-dir ../../wasm/tests/browser-wasm/pkg
-          wasm-pack build --target web rust/wasm-inprocess-tests --out-dir ../../wasm/tests/browser-inprocess/pkg
+          wasm-pack build --no-opt --target web rust/wasm-browser-tests --out-dir ../../wasm/tests/browser-wasm/pkg
+          wasm-pack build --no-opt --target web rust/wasm-inprocess-tests --out-dir ../../wasm/tests/browser-inprocess/pkg
 
       - name: Install dependencies
         run: pnpm install
