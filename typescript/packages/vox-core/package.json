@@ -26,8 +26,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@bearcove/phon-schema": "workspace:*",
-    "@bearcove/phon-engine": "workspace:*",
+    "@bearcove/phon-schema": "0.2.0-rc.0",
+    "@bearcove/phon-engine": "0.2.0-rc.0",
     "@bearcove/vox-wire": "workspace:*"
   },
   "devDependencies": {
