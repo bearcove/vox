@@ -51,6 +51,34 @@ jobs:
         id: crates-io-auth
         uses: rust-lang/crates-io-auth-action@v1.0.4
 
+      - name: Publish facet-cbor if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' rust/facet-cbor/Cargo.toml)"
+          crate="facet-cbor@${version}"
+
+          if (cd /tmp && cargo info "${crate}") >/dev/null 2>&1; then
+            echo "${crate} is already published"
+            exit 0
+          fi
+
+          cargo publish -p facet-cbor
+
+          for _ in {1..30}; do
+            if (cd /tmp && cargo info "${crate}") >/dev/null 2>&1; then
+              echo "${crate} is available on crates.io"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "${crate} did not become available on crates.io in time" >&2
+          exit 1
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
+
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
