@@ -1336,7 +1336,7 @@ func sampleDodecaSmallCellServicesFixture() -> DodecaSmallCellServicesFixture {
         ),
         subsetFontInput: DodecaSubsetFontInput(
             data: Data([0x77, 0x4f, 0x46, 0x32]),
-            chars: ["A", String(UnicodeScalar(0x00e9)!), String(UnicodeScalar(0x1f41d)!)]
+            chars: [UnicodeScalar(0x41)!, UnicodeScalar(0x00e9)!, UnicodeScalar(0x1f41d)!]
         ),
         fontResults: [
             .decompressSuccess(data: Data([0x00, 0x01, 0x00, 0x00])),

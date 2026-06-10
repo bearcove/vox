@@ -46,7 +46,7 @@ function buildTarget(target) {
   const wasmPack = wasmPackCommand();
   const result = spawnSync(
     wasmPack,
-    ["build", "--target", "web", target.crateArg, "--out-dir", target.outDirArg],
+    ["build", "--no-opt", "--target", "web", target.crateArg, "--out-dir", target.outDirArg],
     {
       cwd: projectRoot,
       stdio: "inherit",

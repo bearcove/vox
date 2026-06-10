@@ -145,7 +145,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        uses: taiki-e/install-action@wasm-pack
 
       - name: Build subject
         run: cargo build -p subject-rust --release
@@ -376,7 +376,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        uses: taiki-e/install-action@wasm-pack
 
       - name: Build wasm targets
         run: |

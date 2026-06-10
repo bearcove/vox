@@ -283,9 +283,8 @@ pub fn swift_scalar_type(scalar: ScalarType) -> String {
         ScalarType::ISize => "Int".into(),
         ScalarType::F32 => "Float".into(),
         ScalarType::F64 => "Double".into(),
-        ScalarType::Char | ScalarType::Str | ScalarType::String | ScalarType::CowStr => {
-            "String".into()
-        }
+        ScalarType::Char => "Unicode.Scalar".into(),
+        ScalarType::Str | ScalarType::String | ScalarType::CowStr => "String".into(),
         ScalarType::Unit => "Void".into(),
         _ => "Data".into(),
     }
@@ -439,4 +438,19 @@ pub fn assert_no_channels_in_return_shape(shape: &'static Shape) {
         !has_channel(shape),
         "channels are not allowed in return types"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use facet::Facet;
+
+    #[test]
+    fn swift_char_uses_unicode_scalar_layout() {
+        assert_eq!(swift_type_base(<char as Facet>::SHAPE), "Unicode.Scalar");
+        assert_eq!(
+            swift_type_base(<Vec<char> as Facet>::SHAPE),
+            "[Unicode.Scalar]"
+        );
+    }
 }

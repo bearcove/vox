@@ -1356,9 +1356,9 @@ public enum DodecaHtmlDiffError: Sendable, Error {
 
 public struct DodecaSubsetFontInput: Sendable {
   public var data: Data
-  public var chars: [String]
+  public var chars: [Unicode.Scalar]
 
-  nonisolated public init(data: Data, chars: [String]) {
+  nonisolated public init(data: Data, chars: [Unicode.Scalar]) {
     self.data = data
     self.chars = chars
   }
@@ -32358,18 +32358,19 @@ nonisolated(unsafe) let testbed_echoDodecaSmallCellServicesFixture_ArgsDescripto
                                 descriptor: Descriptor(
                                   schema: .concrete(SchemaId(0x6689_561c_2146_6234)),
                                   layout: Layout(
-                                    size: MemoryLayout<[String]>.size,
-                                    align: MemoryLayout<[String]>.alignment),
+                                    size: MemoryLayout<[Unicode.Scalar]>.size,
+                                    align: MemoryLayout<[Unicode.Scalar]>.alignment),
                                   access: .sequence(
                                     SequenceAccess(
                                       element: Descriptor(
                                         schema: .concrete(SchemaId(0x1893_7b72_5e2e_911b)),
                                         layout: Layout(
-                                          size: MemoryLayout<String>.size,
-                                          align: MemoryLayout<String>.alignment), access: .scalar),
-                                      stride: MemoryLayout<String>.stride,
-                                      elemAlign: MemoryLayout<String>.alignment,
-                                      witness: .of(String.self))))),
+                                          size: MemoryLayout<Unicode.Scalar>.size,
+                                          align: MemoryLayout<Unicode.Scalar>.alignment),
+                                        access: .scalar),
+                                      stride: MemoryLayout<Unicode.Scalar>.stride,
+                                      elemAlign: MemoryLayout<Unicode.Scalar>.alignment,
+                                      witness: .of(Unicode.Scalar.self))))),
                             ], construct: .inPlace)))),
                     FieldAccess(
                       offset: MemoryLayout<DodecaSmallCellServicesFixture>.offset(
@@ -35819,18 +35820,19 @@ nonisolated(unsafe) let testbed_echoDodecaSmallCellServicesFixture_ResponseDescr
                                     descriptor: Descriptor(
                                       schema: .concrete(SchemaId(0x6689_561c_2146_6234)),
                                       layout: Layout(
-                                        size: MemoryLayout<[String]>.size,
-                                        align: MemoryLayout<[String]>.alignment),
+                                        size: MemoryLayout<[Unicode.Scalar]>.size,
+                                        align: MemoryLayout<[Unicode.Scalar]>.alignment),
                                       access: .sequence(
                                         SequenceAccess(
                                           element: Descriptor(
                                             schema: .concrete(SchemaId(0x1893_7b72_5e2e_911b)),
                                             layout: Layout(
-                                              size: MemoryLayout<String>.size,
-                                              align: MemoryLayout<String>.alignment),
-                                            access: .scalar), stride: MemoryLayout<String>.stride,
-                                          elemAlign: MemoryLayout<String>.alignment,
-                                          witness: .of(String.self))))),
+                                              size: MemoryLayout<Unicode.Scalar>.size,
+                                              align: MemoryLayout<Unicode.Scalar>.alignment),
+                                            access: .scalar),
+                                          stride: MemoryLayout<Unicode.Scalar>.stride,
+                                          elemAlign: MemoryLayout<Unicode.Scalar>.alignment,
+                                          witness: .of(Unicode.Scalar.self))))),
                                 ], construct: .inPlace)))),
                         FieldAccess(
                           offset: MemoryLayout<DodecaSmallCellServicesFixture>.offset(
