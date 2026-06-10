@@ -12,7 +12,7 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/bearcove/phon.git",
-      revision: "c13cab6873af77c674b8c2dcb6eb40f08cfcf6a0"),
+      revision: "290bff341afad44f2d6193f86e61a3d78de6f8c6"),
     .package(url: "https://github.com/apple/swift-nio.git", from: "2.99.0"),
   ],
   targets: [

@@ -160,9 +160,20 @@ jobs:
   generated-bindings:
     name: Generated / Bindings Sync
     runs-on: bearcove-ubuntu-24.04
+    container:
+      image: swift:6.1
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Check Swift formatter
+        run: swift format --help
+
+      - name: Install Rust prerequisites
+        run: apt-get update && apt-get install -y curl ca-certificates
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

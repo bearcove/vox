@@ -3,7 +3,7 @@
 //! phon's `lower_decode` compatibility path (`r[schema.exchange.required]`).
 //!
 //! There is no same-version shortcut: every args/response decode goes through a
-//! compat [`DecodeProgram`](vox_phon::DecodeProgram), built once per (method,
+//! compat [`DecodeProgram`], built once per (method,
 //! direction, reader type) from the peer's schema closure and cached on the tracker.
 
 use std::sync::Arc;

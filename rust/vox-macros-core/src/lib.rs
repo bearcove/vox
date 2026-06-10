@@ -393,15 +393,20 @@ fn generate_service_descriptor_fn(parsed: &ServiceTrait, vox: &TokenStream2) -> 
         Some(d) => quote! { Some(#d) },
         None => quote! { None },
     };
+    let method_count = method_descriptors.len();
+    let method_descriptor_pushes = method_descriptors.into_iter().map(|descriptor| {
+        quote! {
+            methods.push(#descriptor);
+        }
+    });
 
     quote! {
         #[allow(non_snake_case, clippy::all)]
         pub fn #descriptor_fn_name() -> &'static #vox::session::ServiceDescriptor {
             static DESCRIPTOR: std::sync::OnceLock<&'static #vox::session::ServiceDescriptor> = std::sync::OnceLock::new();
             DESCRIPTOR.get_or_init(|| {
-                let methods: Vec<&'static #vox::session::MethodDescriptor> = vec![
-                    #(#method_descriptors),*
-                ];
+                let mut methods: Vec<&'static #vox::session::MethodDescriptor> = Vec::with_capacity(#method_count);
+                #(#method_descriptor_pushes)*
                 Box::leak(Box::new(#vox::session::ServiceDescriptor {
                     service_name: #service_name,
                     methods: Box::leak(methods.into_boxed_slice()),

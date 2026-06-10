@@ -376,6 +376,13 @@ impl Testbed for TestbedService {
         fixture
     }
 
+    async fn echo_dodeca_small_cell_services_fixture(
+        &self,
+        fixture: DodecaSmallCellServicesFixture,
+    ) -> DodecaSmallCellServicesFixture {
+        fixture
+    }
+
     async fn echo_dodeca_devtools_event(&self, event: DodecaDevtoolsEvent) -> DodecaDevtoolsEvent {
         event
     }

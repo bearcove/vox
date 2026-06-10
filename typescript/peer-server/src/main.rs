@@ -11,12 +11,24 @@ use tokio::net::TcpListener;
 use vox_core::acceptor_transport;
 use vox_websocket::WsLink;
 
-#[tokio::main]
-async fn main() {
+const PEER_SERVER_RUNTIME_STACK_BYTES: usize = 32 * 1024 * 1024;
+
+fn main() -> Result<(), String> {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .thread_stack_size(PEER_SERVER_RUNTIME_STACK_BYTES)
+        .enable_all()
+        .build()
+        .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
+    rt.block_on(run())
+}
+
+async fn run() -> Result<(), String> {
     let port = env::var("WS_PORT").unwrap_or_else(|_| "9000".to_string());
     let addr = format!("127.0.0.1:{}", port);
 
-    let listener = TcpListener::bind(&addr).await.unwrap();
+    let listener = TcpListener::bind(&addr)
+        .await
+        .map_err(|e| format!("bind {addr}: {e}"))?;
     eprintln!("WebSocket server listening on ws://{}", addr);
 
     // Print port on stdout for Playwright to parse

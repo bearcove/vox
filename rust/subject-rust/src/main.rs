@@ -83,12 +83,17 @@ fn main() -> Result<(), String> {
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
 
     let mode = std::env::var("SUBJECT_MODE").unwrap_or_else(|_| "server".to_string());
-    match mode.as_str() {
-        "server" => rt.block_on(run_with_subject_timeout(&mode, connect_and_serve())),
-        "client" => rt.block_on(run_with_subject_timeout(&mode, run_client())),
-        "server-listen" => rt.block_on(run_with_subject_timeout(&mode, listen_and_serve())),
+    let task = match mode.as_str() {
+        "server" => Ok(rt.spawn(run_with_subject_timeout("server", connect_and_serve()))),
+        "client" => Ok(rt.spawn(run_with_subject_timeout("client", run_client()))),
+        "server-listen" => Ok(rt.spawn(run_with_subject_timeout(
+            "server-listen",
+            listen_and_serve(),
+        ))),
         other => Err(format!("unknown SUBJECT_MODE: {other}")),
-    }
+    }?;
+    rt.block_on(task)
+        .map_err(|e| format!("subject {mode} task failed: {e}"))?
 }
 
 // r[impl hosted.subject.lifecycle]
