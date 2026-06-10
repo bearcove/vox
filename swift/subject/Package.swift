@@ -10,7 +10,7 @@ let package = Package(
     .package(path: "../vox-runtime"),
     .package(
       url: "https://github.com/bearcove/phon.git",
-      revision: "290bff341afad44f2d6193f86e61a3d78de6f8c6"),
+      revision: "3f6bc6f75996a498a35606febb79430bce0f85d0"),
   ],
   targets: [
     .executableTarget(

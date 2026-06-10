@@ -1,12 +1,12 @@
 {
-  "originHash" : "7ee3db6c2533c4caee3b8f5668b4d90206f25a4f974a6fecf2d526568afdf512",
+  "originHash" : "d310f89e1594d3cd5621e62c5f70b0923da12f23390d348d21544fdcd1c63add",
   "pins" : [
     {
       "identity" : "phon",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bearcove/phon.git",
       "state" : {
-        "revision" : "290bff341afad44f2d6193f86e61a3d78de6f8c6"
+        "revision" : "3f6bc6f75996a498a35606febb79430bce0f85d0"
       }
     },
     {
