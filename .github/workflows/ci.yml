@@ -166,6 +166,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Trust checkout for Git inside container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Show Swift version
         run: swift --version
 
@@ -277,6 +280,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+
+      - name: Trust checkout for Git inside container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Show Swift version
         run: swift --version
