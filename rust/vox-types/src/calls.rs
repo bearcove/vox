@@ -298,7 +298,7 @@ where
 {
     async fn reply(self, result: Result<T, E>) {
         use crate::{Payload, RequestResponse};
-        let wire: Result<T, VoxError<E>> = result.map_err(VoxError::User);
+        let wire: Result<T, VoxError<E>> = result.map_err(|error| VoxError::User(Box::new(error)));
         let ptr = facet::PtrConst::new((&wire as *const Result<T, VoxError<E>>).cast::<u8>());
         let shape = <Result<T, VoxError<E>> as facet::Facet<'wire>>::SHAPE;
         // SAFETY: `wire` lives until `send_reply(...).await` completes in this function,

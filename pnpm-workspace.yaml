@@ -1,8 +1,7 @@
 packages:
   - "typescript/packages/*"
-  # phon-ts lives in the sibling ../phon repo; include its packages so vox can
-  # depend on @bearcove/phon-schema / @bearcove/phon-engine via workspace:* —
-  # mirrors the Rust path deps on ../phon.
+  # phon-ts lives in the sibling ../phon repo; keep the workspace link until the
+  # @bearcove/phon-schema / @bearcove/phon-engine packages are published.
   - "../phon/typescript/packages/*"
   - "typescript/subject"
   - "typescript/generated"

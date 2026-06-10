@@ -13,10 +13,11 @@
 use std::{
     collections::HashMap,
     mem::MaybeUninit,
-    sync::{Arc, LazyLock, RwLock},
+    sync::{Arc, LazyLock},
 };
 
 use facet::{Facet, PtrConst, Shape};
+use moire::sync::SyncMutex;
 pub use phon::api::{JitFallbackRecord, JitFallbackReport, MethodJitFallbackReport};
 use phon::derive::{Derived, of_shape};
 use phon_engine::{Registry, typed};
@@ -196,17 +197,17 @@ impl TypedProgram {
 unsafe impl Send for TypedProgram {}
 unsafe impl Sync for TypedProgram {}
 
-static TYPED_PROGRAMS: LazyLock<RwLock<HashMap<usize, Arc<TypedProgram>>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
+static TYPED_PROGRAMS: LazyLock<SyncMutex<HashMap<usize, Arc<TypedProgram>>>> =
+    LazyLock::new(|| SyncMutex::new("vox-phon.typed_programs", HashMap::new()));
 
 fn typed_program_for_shape(shape: &'static Shape) -> Result<Arc<TypedProgram>, Error> {
     let key = core::ptr::from_ref(shape) as usize;
-    if let Some(program) = TYPED_PROGRAMS.read().unwrap().get(&key) {
+    if let Some(program) = TYPED_PROGRAMS.lock().get(&key) {
         return Ok(Arc::clone(program));
     }
 
     let program = Arc::new(TypedProgram::for_shape(shape)?);
-    let mut cache = TYPED_PROGRAMS.write().unwrap();
+    let mut cache = TYPED_PROGRAMS.lock();
     if let Some(existing) = cache.get(&key) {
         return Ok(Arc::clone(existing));
     }

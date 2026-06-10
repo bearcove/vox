@@ -629,6 +629,13 @@ struct LogicalReceiverState {
     receiver: Option<ChannelMailboxReceiver<LogicalIncomingChannelMessage>>,
 }
 
+type TakenLogicalReceiver = (
+    ChannelMailboxReceiver<LogicalIncomingChannelMessage>,
+    Option<ChannelLivenessHandle>,
+    Option<ChannelCreditReplenisherHandle>,
+    Option<Arc<vox_phon::SchemaBundle>>,
+);
+
 // r[impl rpc.channel.pair]
 // r[impl rpc.channel.pair.binding-propagation]
 /// Shared state between a `Tx`/`Rx` pair created by `channel()`.
@@ -749,14 +756,7 @@ impl ChannelCore {
         });
     }
 
-    pub fn take_logical_receiver(
-        &self,
-    ) -> Option<(
-        ChannelMailboxReceiver<LogicalIncomingChannelMessage>,
-        Option<ChannelLivenessHandle>,
-        Option<ChannelCreditReplenisherHandle>,
-        Option<Arc<vox_phon::SchemaBundle>>,
-    )> {
+    pub fn take_logical_receiver(&self) -> Option<TakenLogicalReceiver> {
         self.logical_receiver
             .lock()
             .expect("channel core logical receiver mutex poisoned")

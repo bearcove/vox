@@ -246,7 +246,7 @@ impl StreamerClient {
                     ::vox::VoxError::Indeterminate => {
                         ::vox::VoxError::<::core::convert::Infallible>::Indeterminate
                     }
-                    ::vox::VoxError::User(never) => match never {},
+                    ::vox::VoxError::User(never) => match *never {},
                 });
             }
         };

@@ -249,7 +249,7 @@ jobs:
         run: swift build -c release --package-path swift/subject
 
       - name: Run VoxRuntime Swift tests
-        run: swift test --no-parallel -Xlinker -L$(pwd)/target/release
+        run: swift test --no-parallel -Xlinker "-L${PWD}/target/release"
 
       - name: Run Swift TCP subject matrix tests
         run: >
@@ -281,7 +281,7 @@ jobs:
         run: swift build -c release --package-path swift/subject
 
       - name: Run VoxRuntime Swift tests
-        run: swift test --no-parallel -Xlinker -L$(pwd)/target/release
+        run: swift test --no-parallel -Xlinker "-L${PWD}/target/release"
 
       - name: Run Swift TCP subject matrix tests
         run: >

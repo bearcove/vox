@@ -459,7 +459,7 @@ fn parse_schema_id(hex: &str) -> Result<SchemaId, SchemaCompatError> {
 
 fn parse_hex(hex: &str) -> Result<Vec<u8>, SchemaCompatError> {
     let trimmed = hex.strip_prefix("0x").unwrap_or(hex);
-    if trimmed.len() % 2 != 0 {
+    if !trimmed.len().is_multiple_of(2) {
         return Err(SchemaCompatError::Hex(format!(
             "hex string has odd length: {hex:?}"
         )));

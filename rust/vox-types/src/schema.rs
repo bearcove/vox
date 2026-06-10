@@ -717,9 +717,10 @@ impl ExtractCtx {
         shape: &'static Shape,
         param_map: &[(&'static Shape, TypeParamName)],
     ) -> Result<TypeRef<MixedId>, SchemaExtractError> {
+        let param_shape = peel_param_shape(shape);
         if let Some((_, name)) = param_map
             .iter()
-            .find(|(param_shape, _)| shape.is_shape(param_shape))
+            .find(|(mapped_shape, _)| param_shape.is_shape(mapped_shape))
         {
             // This shape is a type parameter — emit Var reference.
             // But we still need to extract the concrete type's schema.
@@ -833,7 +834,12 @@ impl ExtractCtx {
         let param_map: Vec<(&'static Shape, TypeParamName)> = shape
             .type_params
             .iter()
-            .map(|tp| (tp.shape, TypeParamName(tp.name.to_string())))
+            .map(|tp| {
+                (
+                    peel_param_shape(tp.shape),
+                    TypeParamName(tp.name.to_string()),
+                )
+            })
             .collect();
         let type_param_names: Vec<TypeParamName> = shape
             .type_params
@@ -1195,6 +1201,24 @@ fn anonymous_tuple_arity(shape: &'static Shape) -> Option<usize> {
             Some(struct_type.fields.len())
         }
         _ => None,
+    }
+}
+
+fn peel_param_shape(mut shape: &'static Shape) -> &'static Shape {
+    loop {
+        if shape.is_transparent()
+            && let Some(inner) = shape.inner
+        {
+            shape = inner;
+            continue;
+        }
+        if let Def::Pointer(ptr_def) = shape.def
+            && let Some(pointee) = ptr_def.pointee
+        {
+            shape = pointee;
+            continue;
+        }
+        return shape;
     }
 }
 

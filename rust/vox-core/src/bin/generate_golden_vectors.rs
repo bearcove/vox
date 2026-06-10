@@ -277,7 +277,7 @@ fn main() {
     );
     write_value!(
         "result/err_user_string.bin",
-        Err::<(), VoxError<String>>(VoxError::User("oops".to_string()))
+        Err::<(), VoxError<String>>(VoxError::User(Box::new("oops".to_string())))
     );
 
     // -------------------------------------------------------------------------

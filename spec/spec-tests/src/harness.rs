@@ -378,7 +378,7 @@ struct TestbedService;
 
 impl TestbedService {
     fn new() -> Self {
-        Self::default()
+        Self
     }
 }
 

@@ -7,6 +7,8 @@ import type { Socket } from "node:net";
 import { LocalLink, LocalLinkAcceptor } from "./transport.ts";
 import { LengthPrefixedFramed } from "./framing.ts";
 
+const LINK_PROLOGUE = Buffer.from([0x56, 0x4f, 0x58, 0x4c, 1, 0]);
+
 const cleanups: Array<() => Promise<void>> = [];
 
 type SocketHandler = (...args: unknown[]) => void;
@@ -71,7 +73,7 @@ describe("LengthPrefixedFramed", () => {
     await expect(
       link.send({ length: 0x1_0000_0000 } as Uint8Array),
     ).rejects.toThrow("frame too large for u32 length prefix");
-    expect(socket.writes).toEqual([]);
+    expect(socket.writes).toEqual([LINK_PROLOGUE]);
   });
 
   // r[verify link.tx.cancel-safe]
@@ -81,8 +83,9 @@ describe("LengthPrefixedFramed", () => {
 
     void link.send(Uint8Array.of(1, 2, 3));
 
-    expect(socket.writes).toHaveLength(1);
-    expect(socket.writes[0]).toEqual(Buffer.from([3, 0, 0, 0, 1, 2, 3]));
+    expect(socket.writes).toHaveLength(2);
+    expect(socket.writes[0]).toEqual(LINK_PROLOGUE);
+    expect(socket.writes[1]).toEqual(Buffer.from([3, 0, 0, 0, 1, 2, 3]));
     link.close();
   });
 

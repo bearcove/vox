@@ -11,7 +11,7 @@ use std::fmt;
 #[repr(u8)]
 pub enum VoxError<E = ::core::convert::Infallible> {
     /// The handler ran and returned an application error.
-    User(E),
+    User(Box<E>),
 
     /// No handler recognized the method ID.
     UnknownMethod,

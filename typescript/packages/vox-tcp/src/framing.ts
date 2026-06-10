@@ -17,6 +17,20 @@
 import net from "node:net";
 import type { Link } from "@bearcove/vox-core";
 
+const LINK_MAGIC = new Uint8Array([0x56, 0x4f, 0x58, 0x4c]); // VOXL
+const LINK_VERSION = 1;
+const LINK_FLAG_FD_CAPABLE = 0x01;
+const LINK_PROLOGUE_LEN = 6;
+const LINK_PROLOGUE = Buffer.from([
+  ...LINK_MAGIC,
+  LINK_VERSION,
+  0,
+]);
+
+function sameBytes(lhs: Uint8Array, rhs: Uint8Array): boolean {
+  return lhs.length === rhs.length && lhs.every((value, idx) => rhs[idx] === value);
+}
+
 /**
  * A length-prefixed TCP connection.
  *
@@ -32,6 +46,7 @@ export class LengthPrefixedFramed implements Link {
   private waitingResolve: ((frame: Uint8Array | null) => void) | null = null;
   private closed = false;
   private error: Error | null = null;
+  private peerPrologueReceived = false;
 
   /** Last successfully decoded frame bytes (for error recovery/debugging). */
   lastDecoded: Uint8Array = new Uint8Array(0);
@@ -60,9 +75,35 @@ export class LengthPrefixedFramed implements Link {
         this.waitingResolve = null;
       }
     });
+
+    socket.write(LINK_PROLOGUE);
   }
 
   private processBuffer() {
+    if (!this.peerPrologueReceived) {
+      if (this.buf.length < LINK_PROLOGUE_LEN) return;
+
+      const prologue = this.buf.subarray(0, LINK_PROLOGUE_LEN);
+      this.buf = this.buf.subarray(LINK_PROLOGUE_LEN);
+      if (!sameBytes(prologue.subarray(0, 4), LINK_MAGIC)) {
+        this.fail(new Error(
+          `bad vox link magic: expected ${Array.from(LINK_MAGIC)}, got ${Array.from(prologue.subarray(0, 4))}`,
+        ));
+        return;
+      }
+      const version = prologue[4] ?? 0;
+      if (version !== LINK_VERSION) {
+        this.fail(new Error(`unsupported vox link version ${version}: this build speaks ${LINK_VERSION}`));
+        return;
+      }
+      const peerFdCapable = ((prologue[5] ?? 0) & LINK_FLAG_FD_CAPABLE) !== 0;
+      if (peerFdCapable) {
+        this.fail(new Error("vox link fd-capability mismatch: peer=true, local=false"));
+        return;
+      }
+      this.peerPrologueReceived = true;
+    }
+
     while (true) {
       if (this.buf.length < 4) break;
 
@@ -96,6 +137,14 @@ export class LengthPrefixedFramed implements Link {
    */
   send(payload: Uint8Array): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      if (this.error) {
+        reject(this.error);
+        return;
+      }
+      if (this.closed) {
+        reject(new Error("link is closed"));
+        return;
+      }
       if (payload.length > 0xffff_ffff) {
         reject(new Error("frame too large for u32 length prefix"));
         return;
@@ -168,5 +217,15 @@ export class LengthPrefixedFramed implements Link {
   /** Returns true if the connection is permanently closed. */
   isClosed(): boolean {
     return this.closed;
+  }
+
+  private fail(error: Error): void {
+    this.error = error;
+    this.closed = true;
+    if (this.waitingResolve) {
+      this.waitingResolve(null);
+      this.waitingResolve = null;
+    }
+    this.socket.destroy(error);
   }
 }

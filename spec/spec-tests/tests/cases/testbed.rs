@@ -124,7 +124,7 @@ pub fn run_rpc_user_error_roundtrip(spec: SubjectSpec) {
         let (client, mut child, _sh) = accept_subject_spec(spec).await?;
         let result = client.divide(10, 0).await;
         match result {
-            Err(VoxError::User(MathError::DivisionByZero)) => {}
+            Err(VoxError::User(error)) if *error == MathError::DivisionByZero => {}
             Ok(resp) => {
                 return Err(format!(
                     "expected Err(User(DivisionByZero)), got Ok({})",
@@ -511,7 +511,7 @@ pub fn run_rpc_divide_overflow(spec: SubjectSpec) {
         // i64::MIN / -1 overflows
         let result = client.divide(i64::MIN, -1).await;
         match result {
-            Err(VoxError::User(MathError::Overflow)) => {}
+            Err(VoxError::User(error)) if *error == MathError::Overflow => {}
             Ok(v) => return Err(format!("divide_overflow: expected Overflow, got Ok({v})")),
             Err(other) => return Err(format!("divide_overflow: expected Overflow, got {other:?}")),
         }
@@ -553,7 +553,7 @@ pub fn run_rpc_lookup_access_denied(spec: SubjectSpec) {
         let (client, mut child, _sh) = accept_subject_spec(spec).await?;
         let result = client.lookup(100).await;
         match result {
-            Err(VoxError::User(LookupError::AccessDenied)) => {}
+            Err(VoxError::User(error)) if *error == LookupError::AccessDenied => {}
             Ok(v) => return Err(format!("expected AccessDenied, got Ok({v:?})")),
             Err(other) => return Err(format!("expected AccessDenied, got {other:?}")),
         }
@@ -5440,7 +5440,7 @@ pub fn run_rpc_tracey_dashboard(spec: SubjectSpec) {
             .tracey_update_file_range(sample_tracey_update_file_range_conflict_request())
             .await
         {
-            Err(VoxError::User(error)) if error == sample_tracey_update_error() => {}
+            Err(VoxError::User(error)) if *error == sample_tracey_update_error() => {}
             Ok(()) => {
                 return Err("tracey_update_file_range conflict: expected user error".to_string());
             }
@@ -5459,7 +5459,7 @@ pub fn run_rpc_tracey_dashboard(spec: SubjectSpec) {
             .tracey_config_add_exclude(sample_tracey_bad_config_pattern_request())
             .await
         {
-            Err(VoxError::User(error)) if error == "invalid pattern" => {}
+            Err(VoxError::User(error)) if error.as_str() == "invalid pattern" => {}
             Ok(()) => {
                 return Err(
                     "tracey_config_add_exclude bad pattern: expected user error".to_string()

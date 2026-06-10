@@ -237,7 +237,7 @@ async fn run_client() -> Result<(), String> {
         }
         "divide_zero" => {
             match client.divide(10, 0).await {
-                Err(vox::VoxError::User(MathError::DivisionByZero)) => {}
+                Err(vox::VoxError::User(error)) if *error == MathError::DivisionByZero => {}
                 other => {
                     return Err(format!(
                         "divide_zero: expected DivisionByZero, got {other:?}"
@@ -248,7 +248,7 @@ async fn run_client() -> Result<(), String> {
         }
         "divide_overflow" => {
             match client.divide(i64::MIN, -1).await {
-                Err(vox::VoxError::User(MathError::Overflow)) => {}
+                Err(vox::VoxError::User(error)) if *error == MathError::Overflow => {}
                 other => return Err(format!("divide_overflow: expected Overflow, got {other:?}")),
             }
             info!("divide_overflow: got expected Overflow error");
@@ -277,7 +277,7 @@ async fn run_client() -> Result<(), String> {
         }
         "lookup_not_found" => {
             match client.lookup(999).await {
-                Err(vox::VoxError::User(spec_proto::LookupError::NotFound)) => {}
+                Err(vox::VoxError::User(error)) if *error == spec_proto::LookupError::NotFound => {}
                 other => {
                     return Err(format!(
                         "lookup_not_found: expected NotFound, got {other:?}"
@@ -288,7 +288,8 @@ async fn run_client() -> Result<(), String> {
         }
         "lookup_access_denied" => {
             match client.lookup(100).await {
-                Err(vox::VoxError::User(spec_proto::LookupError::AccessDenied)) => {}
+                Err(vox::VoxError::User(error))
+                    if *error == spec_proto::LookupError::AccessDenied => {}
                 other => {
                     return Err(format!(
                         "lookup_access_denied: expected AccessDenied, got {other:?}"
@@ -1771,7 +1772,7 @@ async fn run_client() -> Result<(), String> {
                 .tracey_update_file_range(sample_tracey_update_file_range_conflict_request())
                 .await
             {
-                Err(vox::VoxError::User(error)) if error == sample_tracey_update_error() => {}
+                Err(vox::VoxError::User(error)) if *error == sample_tracey_update_error() => {}
                 Ok(()) => {
                     return Err(
                         "tracey_update_file_range conflict: expected user error".to_string()
@@ -1792,7 +1793,7 @@ async fn run_client() -> Result<(), String> {
                 .tracey_config_add_exclude(sample_tracey_bad_config_pattern_request())
                 .await
             {
-                Err(vox::VoxError::User(error)) if error == "invalid pattern" => {}
+                Err(vox::VoxError::User(error)) if error.as_str() == "invalid pattern" => {}
                 Ok(()) => {
                     return Err(
                         "tracey_config_add_exclude bad pattern: expected user error".to_string()

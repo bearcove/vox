@@ -239,7 +239,7 @@ impl CalcClient {
                     }
                     ::vox::VoxError::SendFailed => ::vox::VoxError::<DivError>::SendFailed,
                     ::vox::VoxError::Indeterminate => ::vox::VoxError::<DivError>::Indeterminate,
-                    ::vox::VoxError::User(never) => match never {},
+                    ::vox::VoxError::User(never) => match *never {},
                 });
             }
         };

@@ -999,7 +999,7 @@ fn generate_client_method(
                             #vox::VoxError::SessionShutdown => #vox::VoxError::<#err_ty>::SessionShutdown,
                             #vox::VoxError::SendFailed => #vox::VoxError::<#err_ty>::SendFailed,
                             #vox::VoxError::Indeterminate => #vox::VoxError::<#err_ty>::Indeterminate,
-                            #vox::VoxError::User(never) => match never {},
+                            #vox::VoxError::User(never) => match *never {},
                         });
                     }
                 };
@@ -1056,7 +1056,7 @@ fn generate_client_method(
                             #vox::VoxError::SessionShutdown => #vox::VoxError::<#err_ty>::SessionShutdown,
                             #vox::VoxError::SendFailed => #vox::VoxError::<#err_ty>::SendFailed,
                             #vox::VoxError::Indeterminate => #vox::VoxError::<#err_ty>::Indeterminate,
-                            #vox::VoxError::User(never) => match never {},
+                            #vox::VoxError::User(never) => match *never {},
                         });
                     }
                 };
