@@ -379,9 +379,12 @@ jobs:
         uses: taiki-e/install-action@wasm-pack
 
       - name: Build wasm targets
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "false"
+          CARGO_PROFILE_DEV_OPT_LEVEL: "1"
         run: |
-          wasm-pack build --no-opt --target web rust/wasm-browser-tests --out-dir ../../wasm/tests/browser-wasm/pkg
-          wasm-pack build --no-opt --target web rust/wasm-inprocess-tests --out-dir ../../wasm/tests/browser-inprocess/pkg
+          wasm-pack build --dev --no-opt --target web rust/wasm-browser-tests --out-dir ../../wasm/tests/browser-wasm/pkg
+          wasm-pack build --dev --no-opt --target web rust/wasm-inprocess-tests --out-dir ../../wasm/tests/browser-inprocess/pkg
 
       - name: Install dependencies
         run: pnpm install
@@ -390,6 +393,8 @@ jobs:
         run: pnpm --filter "@bearcove/vox-wasm-playwright-tests" exec playwright install --with-deps chromium
 
       - name: Run Wasm browser tests
+        env:
+          VOX_SKIP_WASM_PACK_BUILD: "1"
         run: pnpm --filter "@bearcove/vox-wasm-playwright-tests" run test
 
   rust-windows:
