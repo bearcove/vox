@@ -195,7 +195,15 @@ jobs:
         with:
           repository: bearcove/phon
           ref: c13cab6873af77c674b8c2dcb6eb40f08cfcf6a0
-          path: ../phon
+          path: phon
+
+      - name: Expose Phon as sibling pnpm workspace
+        run: |
+          if [ -e ../phon ] && [ ! -L ../phon ]; then
+            echo "../phon already exists and is not a symlink"
+            exit 1
+          fi
+          ln -sfn "$GITHUB_WORKSPACE/phon" ../phon
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -333,7 +341,15 @@ jobs:
         with:
           repository: bearcove/phon
           ref: c13cab6873af77c674b8c2dcb6eb40f08cfcf6a0
-          path: ../phon
+          path: phon
+
+      - name: Expose Phon as sibling pnpm workspace
+        run: |
+          if [ -e ../phon ] && [ ! -L ../phon ]; then
+            echo "../phon already exists and is not a symlink"
+            exit 1
+          fi
+          ln -sfn "$GITHUB_WORKSPACE/phon" ../phon
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
