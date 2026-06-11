@@ -23,30 +23,40 @@ Observed, all on ONE connection:
 Cost: hours of debugging across three repos, because the failure
 surface was "absence of data" instead of an error.
 
-**Controlled experiment result (2026-06-11, /tmp/vox-skew)** — pure
-crates.io-rc.0 client vs pure local-HEAD server, 4-method matrix
-(scalar/struct × unit/bool): the HANDSHAKE COMPLETES across versions
-(service routes!), then EVERY call — all four shapes — dies with
-`ConnectionClosed` on the client, while the SERVER logs the session as
-ending cleanly (`ok=true`) with ZERO diagnostics. Three durable facts:
+**Controlled experiment result (2026-06-11, /tmp/vox-skew, CORRECTED)**
+-- pure crates.io-rc.0 client vs pure local-HEAD server, 4-method
+matrix (scalar/struct x unit/bool): **ALL FOUR SHAPES INTEROP
+PERFECTLY.** The three-level architecture (self-describing handshake /
+schema-exchanged Message envelope per
+session.handshake.protocol-schema / schema-exchanged payloads) works
+exactly as designed across these versions.
 
-1. Schema-described payloads are not the broken layer — the rc→HEAD
-   skew lives in the session/envelope layer BELOW the planner's reach,
-   so "schemas make it interoperable" holds for payloads and is not
-   contradicted; the envelope layer has no such bridge and needs the
-   prologue-version gate.
-2. Partial cross-version interop is real today: handshake succeeds,
-   then mid-session death — exactly what
-   transport.prologue.version.wire-coupling forbids.
-3. The server-side silence (clean `ok=true` end on undecodable
-   traffic) is a live rpc.decode-failure.loud violation to fix in
-   task 3.
+A first run of this experiment appeared to show every call dying
+ConnectionClosed with a clean server-side end -- that was a HARNESS
+BUG: the scratch server dropped its NoopClient immediately after
+establish(), and per rpc.caller.liveness.last-drop-closes-connection
+the drop deliberately (and correctly) closed the session. Lesson
+recorded because it is itself instructive: a correct-by-design clean
+close is easily misread as a protocol failure; diagnostics
+distinguishing 'closed by local drop' from 'closed by peer/protocol'
+would have saved an hour (candidate for the battery's assertions).
 
-The incident's demo4 mechanism (bool worked / struct vanished against
-the 20:51-installed server) remains UNPROVEN — that binary's exact
-tree state is unknowable (built pre-commit from a WIP tree). The
-matrix + pinned envelope fixtures cover the class regardless; do not
-over-fit the fix to the unproven mechanism.
+CONSEQUENCES, honestly:
+- The earlier 'vox/phon dialect skew' conclusion for the bee/stax
+  incident is RETRACTED. The bee [patch.crates-io] vox-family pin
+  was justified by that wrong conclusion; whether to keep it (dev
+  lockstep with the living ~/vox tree) is Amos's call, but it is not
+  known to FIX anything.
+- The GPU-span incident's root cause is back to UNKNOWN. Prime
+  suspects are operational, not wire: the wedged staxd kperf session,
+  run/aggregator lifecycle races (aggregator resets on new runs), and
+  sequencing chaos during debugging. Re-test cleanly after a staxd
+  restart, with bee UNPATCHED, before attributing anything to the
+  wire.
+- The spec rules and the battery remain the deliverable: they pin the
+  (now verified-working) contract against regression, and they add
+  the loudness guarantees whose absence made this investigation
+  expensive.
 
 **Open forensic question** (answer while building the battery): which
 axis broke — struct-vs-scalar payload encoding, or unit-return

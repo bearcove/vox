@@ -195,10 +195,10 @@ weight = 11
 > three levels each carry their own evolution story: the transport
 > prologue is tiny and frozen; the handshake is phon SELF-DESCRIBING
 > (decodable by any implementation); the `Message` envelope and all
-> call payloads are schema-exchanged and planner-bridged. (Incident
-> 2026-06-11: mismatched peers passed the handshake, then every call
-> died `ConnectionClosed` client-side while the server logged a clean
-> session end — the gap this rule closes.)
+> call payloads are schema-exchanged and planner-bridged. This
+> architecture was verified working cross-version (crates.io
+> 0.9.0-rc.0 with local HEAD, all method shapes) on 2026-06-11; this
+> rule pins the property so it stays true.
 
 # Conduits
 
