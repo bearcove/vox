@@ -179,6 +179,23 @@ weight = 11
 > After `TransportReject`, the link is unusable for vox traffic and
 > MUST be closed or abandoned by the peers.
 
+> r[transport.prologue.version.wire-coupling]
+>
+> The transport-prologue version identifies the **wire protocol**: the
+> session handshake, conduit framing, call envelope, and codec framing
+> that follow a successful prologue. Any change to those wire shapes
+> that an existing peer cannot interoperate with MUST bump the
+> transport-prologue version, so mismatched peers land in
+> `TransportReject` — a loud failure at connect time on both sides.
+>
+> Partial cross-version interop is forbidden: a peer pair MUST either
+> complete the prologue and interoperate fully, or fail the prologue
+> with an explicit diagnostic. (Incident 2026-06-11: an envelope change
+> without a version bump let mismatched peers connect; scalar calls
+> round-tripped while struct-argument calls were dropped silently —
+> hours of debugging because the failure surface was missing data
+> rather than an error.)
+
 # Conduits
 
 > r[conduit]

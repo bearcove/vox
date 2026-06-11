@@ -194,6 +194,31 @@ registered on the session builder; otherwise they are rejected.
 > This is a call-level error, not a protocol error — the connection
 > remains open.
 
+> r[rpc.decode-failure.loud]
+>
+> A payload that fails to decode — undecodable envelope, argument bytes
+> that do not satisfy their schema, or a schema reference the receiver
+> cannot resolve — is NEVER skipped. The receiver MUST surface it:
+>
+>   * to the local application, as an error-level diagnostic, and
+>   * to the peer, as an error response when the failing payload is an
+>     addressable request, or as a protocol error (connection teardown)
+>     when it is not.
+>
+> "Skip and continue" is forbidden in every implementation. Silence is
+> indistinguishable from missing data and costs consumers hours; an
+> error names the problem immediately.
+
+> r[rpc.no-response.errors-still-surface]
+>
+> Methods whose callers do not await a value (unit returns, channel-only
+> interactions) still have an error path. Decode or dispatch failures
+> for such calls MUST surface per r[rpc.decode-failure.loud] — "no
+> response expected" never means "no error reported". A handler that
+> accepts a call and does nothing (the historical Noop behavior) is a
+> conformance violation; unknown traffic MUST produce
+> r[rpc.unknown-method] or a protocol error.
+
 # Fallible methods
 
 > r[rpc.fallible]
