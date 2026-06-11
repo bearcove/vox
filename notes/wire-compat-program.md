@@ -23,6 +23,31 @@ Observed, all on ONE connection:
 Cost: hours of debugging across three repos, because the failure
 surface was "absence of data" instead of an error.
 
+**Controlled experiment result (2026-06-11, /tmp/vox-skew)** — pure
+crates.io-rc.0 client vs pure local-HEAD server, 4-method matrix
+(scalar/struct × unit/bool): the HANDSHAKE COMPLETES across versions
+(service routes!), then EVERY call — all four shapes — dies with
+`ConnectionClosed` on the client, while the SERVER logs the session as
+ending cleanly (`ok=true`) with ZERO diagnostics. Three durable facts:
+
+1. Schema-described payloads are not the broken layer — the rc→HEAD
+   skew lives in the session/envelope layer BELOW the planner's reach,
+   so "schemas make it interoperable" holds for payloads and is not
+   contradicted; the envelope layer has no such bridge and needs the
+   prologue-version gate.
+2. Partial cross-version interop is real today: handshake succeeds,
+   then mid-session death — exactly what
+   transport.prologue.version.wire-coupling forbids.
+3. The server-side silence (clean `ok=true` end on undecodable
+   traffic) is a live rpc.decode-failure.loud violation to fix in
+   task 3.
+
+The incident's demo4 mechanism (bool worked / struct vanished against
+the 20:51-installed server) remains UNPROVEN — that binary's exact
+tree state is unknowable (built pre-commit from a WIP tree). The
+matrix + pinned envelope fixtures cover the class regardless; do not
+over-fit the fix to the unproven mechanism.
+
 **Open forensic question** (answer while building the battery): which
 axis broke — struct-vs-scalar payload encoding, or unit-return
 (no-response) framing vs request/response framing? The cross-version
