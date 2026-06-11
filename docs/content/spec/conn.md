@@ -179,22 +179,26 @@ weight = 11
 > After `TransportReject`, the link is unusable for vox traffic and
 > MUST be closed or abandoned by the peers.
 
-> r[transport.prologue.version.wire-coupling]
+> r[session.no-partial-interop]
 >
-> The transport-prologue version identifies the **wire protocol**: the
-> session handshake, conduit framing, call envelope, and codec framing
-> that follow a successful prologue. Any change to those wire shapes
-> that an existing peer cannot interoperate with MUST bump the
-> transport-prologue version, so mismatched peers land in
-> `TransportReject` — a loud failure at connect time on both sides.
+> The handshake's verdict is binding for the whole session. After the
+> peers exchange `Message` schemas and proceed past `LetsGo`, every
+> post-handshake payload MUST decode through the plans built from those
+> exchanged schemas. A post-handshake decode failure is a PROTOCOL
+> error: it MUST produce an error-level diagnostic on both peers and
+> tear the session down as an error — a session MUST NOT end "cleanly"
+> because traffic stopped being understandable.
 >
-> Partial cross-version interop is forbidden: a peer pair MUST either
-> complete the prologue and interoperate fully, or fail the prologue
-> with an explicit diagnostic. (Incident 2026-06-11: an envelope change
-> without a version bump let mismatched peers connect; scalar calls
-> round-tripped while struct-argument calls were dropped silently —
-> hours of debugging because the failure surface was missing data
-> rather than an error.)
+> Equivalently: a peer pair either fails the handshake loudly (`Sorry`,
+> `TransportReject`) or interoperates fully. There is no version field
+> anywhere in this design (r[session.handshake.unversioned]) — the
+> three levels each carry their own evolution story: the transport
+> prologue is tiny and frozen; the handshake is phon SELF-DESCRIBING
+> (decodable by any implementation); the `Message` envelope and all
+> call payloads are schema-exchanged and planner-bridged. (Incident
+> 2026-06-11: mismatched peers passed the handshake, then every call
+> died `ConnectionClosed` client-side while the server logged a clean
+> session end — the gap this rule closes.)
 
 # Conduits
 
