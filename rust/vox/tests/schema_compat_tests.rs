@@ -124,13 +124,13 @@ async fn v1_client_v2_server_fills_default() {
     let server_task = tokio::task::spawn(async move {
         let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("Geometry"))
             .on_connection(point_v2::GeometryDispatcher::new(V2GeometryService))
-            .establish::<point_v2::GeometryClient>()
+            .establish::<vox::NoopClient>()
             .await
             .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Geometry"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<point_v1::GeometryClient>()
         .await
         .expect("client handshake failed");
@@ -156,13 +156,13 @@ async fn v2_client_v1_server_skips_unknown_field() {
     let server_task = tokio::task::spawn(async move {
         let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("Geometry"))
             .on_connection(point_v1::GeometryDispatcher::new(V1GeometryService))
-            .establish::<point_v1::GeometryClient>()
+            .establish::<vox::NoopClient>()
             .await
             .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Geometry"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<point_v2::GeometryClient>()
         .await
         .expect("client handshake failed");
@@ -246,13 +246,13 @@ async fn rx_channel_items_use_caller_writer_schema() {
     let server_task = tokio::task::spawn(async move {
         let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("EventSink"))
             .on_connection(channel_rx_v2::EventSinkDispatcher::new(ChannelRxV2Service))
-            .establish::<channel_rx_v2::EventSinkClient>()
+            .establish::<vox::NoopClient>()
             .await
             .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("EventSink"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<channel_rx_v1::EventSinkClient>()
         .await
         .expect("client handshake failed");
@@ -333,13 +333,13 @@ async fn tx_channel_items_use_callee_writer_schema() {
                 .on_connection(channel_tx_v2::EventSourceDispatcher::new(
                     ChannelTxV2Service,
                 ))
-                .establish::<channel_tx_v2::EventSourceClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("EventSource"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<channel_tx_v1::EventSourceClient>()
         .await
         .expect("client handshake failed");
@@ -405,13 +405,13 @@ async fn reordered_fields_are_matched_by_name() {
         let _server_caller =
             acceptor_conduit(server_conduit, test_acceptor_handshake("PairService"))
                 .on_connection(reordered_v1::PairServiceDispatcher::new(PairEchoV1))
-                .establish::<reordered_v1::PairServiceClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("PairService"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<reordered_v2::PairServiceClient>()
         .await
         .expect("client handshake failed");
@@ -486,13 +486,13 @@ async fn evolved_schema_combined_changes() {
         let _server_caller =
             acceptor_conduit(server_conduit, test_acceptor_handshake("ConfigService"))
                 .on_connection(evolved_v1::ConfigServiceDispatcher::new(ConfigServiceV1))
-                .establish::<evolved_v1::ConfigServiceClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("ConfigService"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<evolved_v2::ConfigServiceClient>()
         .await
         .expect("client handshake failed");
@@ -610,13 +610,13 @@ async fn callee_args_schema_error_is_call_level() {
     let server_task = tokio::task::spawn(async move {
         let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("Control"))
             .on_connection(command_new::ControlDispatcher::new(NewControlService))
-            .establish::<command_new::ControlClient>()
+            .establish::<vox::NoopClient>()
             .await
             .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Control"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<command_old::ControlClient>()
         .await
         .expect("client handshake failed");
@@ -650,13 +650,13 @@ async fn missing_required_field_is_same_peer_terminal() {
     let server_task = tokio::task::spawn(async move {
         let _server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake("Daemon"))
             .on_connection(status_old::DaemonDispatcher::new(OldDaemonService))
-            .establish::<status_old::DaemonClient>()
+            .establish::<vox::NoopClient>()
             .await
             .expect("server handshake failed");
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Daemon"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<status_new::DaemonClient>()
         .await
         .expect("client handshake failed");

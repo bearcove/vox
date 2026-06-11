@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace the Rust `ConnectionAcceptor`/`PendingConnection` API with route-returning
+  `ConnectionRouter`/`ConnectionRoute`, including explicit service-mismatch rejection
+  metadata for root and virtual connections.
+
 ## [0.8.2](https://github.com/bearcove/vox/compare/vox-v0.8.1...vox-v0.8.2) - 2026-05-21
 
 ### Other

@@ -366,7 +366,7 @@ pub async fn run_adder_end_to_end<L>(
         let server_caller_guard =
             acceptor_conduit(server_conduit, test_acceptor_handshake("Adder"))
                 .on_connection(AdderDispatcher::new(MyAdder))
-                .establish::<AdderClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -374,7 +374,7 @@ pub async fn run_adder_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Adder"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<AdderClient>()
         .await
         .expect("client handshake failed");
@@ -402,7 +402,7 @@ pub async fn run_request_context_end_to_end<L>(
         let server_caller_guard =
             acceptor_conduit(server_conduit, test_acceptor_handshake("ContextProbe"))
                 .on_connection(ContextProbeDispatcher::new(ContextProbeService))
-                .establish::<ContextProbeClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -410,7 +410,7 @@ pub async fn run_request_context_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("ContextProbe"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<ContextProbeClient>()
         .await
         .expect("client handshake failed");
@@ -459,7 +459,7 @@ pub async fn run_server_middleware_end_to_end<L>(
         let server_caller_guard =
             acceptor_conduit(server_conduit, test_acceptor_handshake("MiddlewareProbe"))
                 .on_connection(dispatcher)
-                .establish::<MiddlewareProbeClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -467,7 +467,7 @@ pub async fn run_server_middleware_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("MiddlewareProbe"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<MiddlewareProbeClient>()
         .await
         .expect("client handshake failed");
@@ -517,7 +517,7 @@ pub async fn run_server_request_peek_end_to_end<L>(
         let server_caller_guard =
             acceptor_conduit(server_conduit, test_acceptor_handshake("Adder"))
                 .on_connection(dispatcher)
-                .establish::<AdderClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -525,7 +525,7 @@ pub async fn run_server_request_peek_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Adder"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<AdderClient>()
         .await
         .expect("client handshake failed");
@@ -568,7 +568,7 @@ pub async fn run_server_response_peek_end_to_end<L>(
         let server_caller_guard =
             acceptor_conduit(server_conduit, test_acceptor_handshake("Adder"))
                 .on_connection(dispatcher)
-                .establish::<AdderClient>()
+                .establish::<vox::NoopClient>()
                 .await
                 .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -576,7 +576,7 @@ pub async fn run_server_response_peek_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(client_conduit, test_initiator_handshake("Adder"))
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
         .establish::<AdderClient>()
         .await
         .expect("client handshake failed");
@@ -618,7 +618,7 @@ pub async fn run_client_middleware_end_to_end<L>(
         .on_connection(ClientMiddlewareProbeDispatcher::new(
             ClientMiddlewareProbeService,
         ))
-        .establish::<ClientMiddlewareProbeClient>()
+        .establish::<vox::NoopClient>()
         .await
         .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -626,13 +626,10 @@ pub async fn run_client_middleware_end_to_end<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(
-        client_conduit,
-        test_initiator_handshake("ClientMiddlewareProbe"),
-    )
-    .establish::<ClientMiddlewareProbeClient>()
-    .await
-    .expect("client handshake failed");
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
+        .establish::<ClientMiddlewareProbeClient>()
+        .await
+        .expect("client handshake failed");
 
     server_ready_rx.await.expect("server setup failed");
 
@@ -685,7 +682,7 @@ pub async fn run_borrowed_return_survives_teardown_over_generated_client<L>(
         .on_connection(BorrowedPayloadProbeDispatcher::new(
             BorrowedPayloadProbeService::new(),
         ))
-        .establish::<BorrowedPayloadProbeClient>()
+        .establish::<vox::NoopClient>()
         .await
         .expect("server handshake failed");
         let _ = server_ready_tx.send(());
@@ -693,13 +690,10 @@ pub async fn run_borrowed_return_survives_teardown_over_generated_client<L>(
         std::future::pending::<()>().await;
     });
 
-    let client = initiator_conduit(
-        client_conduit,
-        test_initiator_handshake("BorrowedPayloadProbe"),
-    )
-    .establish::<BorrowedPayloadProbeClient>()
-    .await
-    .expect("client handshake failed");
+    let client = initiator_conduit(client_conduit, test_initiator_handshake("Noop"))
+        .establish::<BorrowedPayloadProbeClient>()
+        .await
+        .expect("client handshake failed");
     let client_session_handle = client.session.clone().unwrap();
 
     server_ready_rx.await.expect("server setup failed");

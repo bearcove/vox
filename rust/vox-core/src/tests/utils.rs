@@ -178,18 +178,13 @@ impl Handler<DriverReplySink> for BlockingHandler {
     }
 }
 
-use crate::session::{ConnectionAcceptor, ConnectionRequest, PendingConnection};
+use crate::session::{ConnectionRequest, ConnectionRoute, ConnectionRouter};
 
 pub(crate) struct EchoAcceptor;
 
-impl ConnectionAcceptor for EchoAcceptor {
-    fn accept(
-        &self,
-        _request: &ConnectionRequest,
-        connection: PendingConnection,
-    ) -> Result<(), vox_types::Metadata> {
-        connection.handle_with(EchoHandler);
-        Ok(())
+impl ConnectionRouter for EchoAcceptor {
+    fn route(&self, _request: &ConnectionRequest) -> Result<ConnectionRoute, vox_types::Metadata> {
+        Ok(ConnectionRoute::handle(EchoHandler))
     }
 }
 

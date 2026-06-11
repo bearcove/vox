@@ -9,10 +9,7 @@ use std::time::{Duration, Instant};
     feature = "transport-websocket"
 ))]
 use vox_core::initiator;
-use vox_core::{
-    ConnectionAcceptor, ConnectionRequest, FromVoxSession, NoopClient, PendingConnection,
-    SessionError,
-};
+use vox_core::{ConnectionRequest, ConnectionRouter, FromVoxSession, NoopClient, SessionError};
 use vox_types::{
     DEFAULT_INITIAL_CHANNEL_CREDIT, Link, MaybeSend, MaybeSync, Metadata, VoxObserver,
     VoxObserverHandle, metadata_into_owned,
@@ -122,7 +119,7 @@ fn parse_connect_address(addr: String) -> Result<ConnectAddress, SessionError> {
 pub struct ConnectBuilder<Client> {
     addr: String,
     metadata: Metadata,
-    on_connection: Option<Arc<dyn ConnectionAcceptor>>,
+    on_connection: Option<Arc<dyn ConnectionRouter>>,
     connect_timeout: Option<Duration>,
     channel_capacity: u32,
     observer: Option<VoxObserverHandle>,
@@ -145,8 +142,8 @@ impl<Client> ConnectBuilder<Client> {
     }
 
     // r[impl rpc.virtual-connection.accept]
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.on_connection = Some(Arc::new(router));
         self
     }
 
@@ -316,7 +313,7 @@ where
     async fn establish_once(
         parsed: &ConnectAddress,
         metadata: vox_types::Metadata,
-        on_connection: Option<Arc<dyn ConnectionAcceptor>>,
+        on_connection: Option<Arc<dyn ConnectionRouter>>,
         connect_timeout: Option<Duration>,
         channel_capacity: u32,
         observer: Option<VoxObserverHandle>,
@@ -344,8 +341,8 @@ where
                     "vox high-level connect attempt"
                 );
                 let mut builder = initiator(vox_stream::tcp_link_source(host.clone()));
-                if let Some(acceptor) = on_connection.clone() {
-                    builder = builder.on_connection(AcceptorRef(acceptor));
+                if let Some(router) = on_connection.clone() {
+                    builder = builder.on_connection(RouterRef(router));
                 }
                 if let Some(timeout) = connect_timeout {
                     builder = builder.connect_timeout(timeout);
@@ -365,8 +362,8 @@ where
                     "vox high-level connect attempt"
                 );
                 let mut builder = initiator(vox_stream::local_link_source(host.clone()));
-                if let Some(acceptor) = on_connection.clone() {
-                    builder = builder.on_connection(AcceptorRef(acceptor));
+                if let Some(router) = on_connection.clone() {
+                    builder = builder.on_connection(RouterRef(router));
                 }
                 if let Some(timeout) = connect_timeout {
                     builder = builder.connect_timeout(timeout);
@@ -389,8 +386,8 @@ where
                     "vox high-level connect attempt"
                 );
                 let mut builder = initiator(vox_websocket::ws_link_source(url.clone()));
-                if let Some(acceptor) = on_connection {
-                    builder = builder.on_connection(AcceptorRef(acceptor));
+                if let Some(router) = on_connection {
+                    builder = builder.on_connection(RouterRef(router));
                 }
                 if let Some(timeout) = connect_timeout {
                     builder = builder.connect_timeout(timeout);
@@ -451,22 +448,22 @@ where
 /// # Ok(())
 /// # }
 /// ```
-pub fn serve<A: ConnectionAcceptor>(addr: impl std::fmt::Display, acceptor: A) -> ServeBuilder<A> {
-    ServeBuilder::new(addr.to_string(), acceptor)
+pub fn serve<R: ConnectionRouter>(addr: impl std::fmt::Display, router: R) -> ServeBuilder<R> {
+    ServeBuilder::new(addr.to_string(), router)
 }
 
-pub struct ServeBuilder<A> {
+pub struct ServeBuilder<R> {
     addr: String,
-    acceptor: A,
+    router: R,
     channel_capacity: u32,
     observer: Option<VoxObserverHandle>,
 }
 
-impl<A> ServeBuilder<A> {
-    fn new(addr: String, acceptor: A) -> Self {
+impl<R> ServeBuilder<R> {
+    fn new(addr: String, router: R) -> Self {
         Self {
             addr,
-            acceptor,
+            router,
             channel_capacity: DEFAULT_INITIAL_CHANNEL_CREDIT,
             observer: None,
         }
@@ -491,14 +488,14 @@ impl<A> ServeBuilder<A> {
     }
 }
 
-impl<A> ServeBuilder<A>
+impl<R> ServeBuilder<R>
 where
-    A: ConnectionAcceptor,
+    R: ConnectionRouter,
 {
     pub async fn run(self) -> Result<(), ServeError> {
         let Self {
             addr,
-            acceptor,
+            router,
             channel_capacity,
             observer,
         } = self;
@@ -513,41 +510,41 @@ where
             feature = "transport-websocket",
             feature = "transport-websocket-tls"
         )))]
-        let _ = (&host, &acceptor, &observer);
+        let _ = (&host, &router, &observer);
 
         match scheme.as_str() {
             #[cfg(feature = "transport-tcp")]
             "tcp" => {
                 let listener = tokio::net::TcpListener::bind(&host).await?;
                 let mut builder =
-                    serve_listener(listener, acceptor).channel_capacity(channel_capacity);
+                    serve_listener(listener, router).channel_capacity(channel_capacity);
                 if let Some(observer) = observer {
                     builder = builder.observer_handle(observer);
                 }
                 Ok(builder.await?)
             }
             #[cfg(feature = "transport-local")]
-            "local" => local::serve_local(&host, acceptor, channel_capacity, observer).await,
+            "local" => local::serve_local(&host, router, channel_capacity, observer).await,
             #[cfg(all(feature = "transport-websocket", not(target_arch = "wasm32")))]
             "ws" => {
                 let listener = WsListener::bind(&host).await?;
                 let mut builder =
-                    serve_listener(listener, acceptor).channel_capacity(channel_capacity);
+                    serve_listener(listener, router).channel_capacity(channel_capacity);
                 if let Some(observer) = observer {
                     builder = builder.observer_handle(observer);
                 }
                 Ok(builder.await?)
             }
             #[cfg(all(feature = "transport-websocket-tls", not(target_arch = "wasm32")))]
-            "wss" => wss::serve_wss(&host, acceptor, channel_capacity, observer).await,
+            "wss" => wss::serve_wss(&host, router, channel_capacity, observer).await,
             _ => Err(ServeError::UnsupportedScheme { scheme }),
         }
     }
 }
 
-impl<A> IntoFuture for ServeBuilder<A>
+impl<R> IntoFuture for ServeBuilder<R>
 where
-    A: ConnectionAcceptor,
+    R: ConnectionRouter,
 {
     type Output = Result<(), ServeError>;
     type IntoFuture = BoxHighLevelFuture<Self::Output>;
@@ -559,7 +556,7 @@ where
 
 /// Serve a vox service on a pre-bound listener.
 ///
-/// Takes a [`VoxListener`] (e.g. `TcpListener`) and a [`ConnectionAcceptor`].
+/// Takes a [`VoxListener`] (e.g. `TcpListener`) and a [`ConnectionRouter`].
 /// Each incoming connection is handled in a spawned task. Runs until an I/O
 /// error occurs on the listener.
 ///
@@ -582,28 +579,28 @@ where
 /// # Ok(())
 /// # }
 /// ```
-pub fn serve_listener<L, A>(listener: L, acceptor: A) -> ServeListenerBuilder<L, A>
+pub fn serve_listener<L, R>(listener: L, router: R) -> ServeListenerBuilder<L, R>
 where
     L: VoxListener,
     <L::Link as Link>::Tx: MaybeSend + MaybeSync + 'static,
     <L::Link as Link>::Rx: MaybeSend + 'static,
-    A: ConnectionAcceptor,
+    R: ConnectionRouter,
 {
-    ServeListenerBuilder::new(listener, acceptor)
+    ServeListenerBuilder::new(listener, router)
 }
 
-pub struct ServeListenerBuilder<L, A> {
+pub struct ServeListenerBuilder<L, R> {
     listener: L,
-    acceptor: A,
+    router: R,
     channel_capacity: u32,
     observer: Option<VoxObserverHandle>,
 }
 
-impl<L, A> ServeListenerBuilder<L, A> {
-    fn new(listener: L, acceptor: A) -> Self {
+impl<L, R> ServeListenerBuilder<L, R> {
+    fn new(listener: L, router: R) -> Self {
         Self {
             listener,
-            acceptor,
+            router,
             channel_capacity: DEFAULT_INITIAL_CHANNEL_CREDIT,
             observer: None,
         }
@@ -628,27 +625,27 @@ impl<L, A> ServeListenerBuilder<L, A> {
     }
 }
 
-impl<L, A> ServeListenerBuilder<L, A>
+impl<L, R> ServeListenerBuilder<L, R>
 where
     L: VoxListener,
     <L::Link as Link>::Tx: MaybeSend + MaybeSync + 'static,
     <L::Link as Link>::Rx: MaybeSend + 'static,
-    A: ConnectionAcceptor,
+    R: ConnectionRouter,
 {
     pub async fn run(mut self) -> Result<(), SessionError> {
         validate_channel_capacity(self.channel_capacity)?;
-        let acceptor: Arc<dyn ConnectionAcceptor> = Arc::new(self.acceptor);
+        let router: Arc<dyn ConnectionRouter> = Arc::new(self.router);
         loop {
             tracing::trace!("vox high-level listener waiting for connection");
             let link = self.listener.accept().await.map_err(SessionError::Io)?;
             tracing::debug!("vox high-level listener accepted raw connection");
-            let acceptor = acceptor.clone();
+            let router = router.clone();
             let observer = self.observer.clone();
             let channel_capacity = self.channel_capacity;
             moire::spawn(async move {
                 tracing::trace!("vox high-level listener establishing root session");
                 let mut builder = vox_core::acceptor_on(link)
-                    .on_connection(AcceptorRef(acceptor))
+                    .on_connection(RouterRef(router))
                     .channel_capacity(channel_capacity);
                 if let Some(observer) = observer {
                     builder = builder.observer_handle(observer);
@@ -669,12 +666,12 @@ where
     }
 }
 
-impl<L, A> IntoFuture for ServeListenerBuilder<L, A>
+impl<L, R> IntoFuture for ServeListenerBuilder<L, R>
 where
     L: VoxListener,
     <L::Link as Link>::Tx: MaybeSend + MaybeSync + 'static,
     <L::Link as Link>::Rx: MaybeSend + 'static,
-    A: ConnectionAcceptor,
+    R: ConnectionRouter,
 {
     type Output = Result<(), SessionError>;
     type IntoFuture = BoxHighLevelFuture<Self::Output>;
@@ -684,15 +681,11 @@ where
     }
 }
 
-/// Wrapper that implements `ConnectionAcceptor` by delegating to an `Arc<dyn ConnectionAcceptor>`.
-struct AcceptorRef(Arc<dyn ConnectionAcceptor>);
+/// Wrapper that implements `ConnectionRouter` by delegating to an `Arc<dyn ConnectionRouter>`.
+struct RouterRef(Arc<dyn ConnectionRouter>);
 
-impl ConnectionAcceptor for AcceptorRef {
-    fn accept(
-        &self,
-        request: &ConnectionRequest,
-        connection: PendingConnection,
-    ) -> Result<(), Metadata> {
-        self.0.accept(request, connection)
+impl ConnectionRouter for RouterRef {
+    fn route(&self, request: &ConnectionRequest) -> Result<vox_core::ConnectionRoute, Metadata> {
+        self.0.route(request)
     }
 }

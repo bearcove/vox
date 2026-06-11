@@ -1033,11 +1033,14 @@ async fn main() -> Result<()> {
 
     vox::serve(
         &serve_addr,
-        vox::acceptor_fn(move |req, conn| {
+        vox::router_fn(move |req| {
             let _ = req.service();
-            let client: Arc<TestbedClient> = Arc::new(conn.handle_with_client(()));
             let cfg = cfg.clone();
-            tokio::spawn(async move {
+            Ok(vox::ConnectionRoute::handle_with_client::<TestbedClient>(
+                (),
+                move |client| {
+                    let client: Arc<TestbedClient> = Arc::new(client);
+                    tokio::spawn(async move {
                 let mut results = Vec::<BenchResult>::new();
                 eprintln!("session established, running benchmark matrix...");
 
@@ -1086,9 +1089,10 @@ async fn main() -> Result<()> {
                     print_json(&results);
                 }
 
-                std::process::exit(0);
-            });
-            Ok(())
+                        std::process::exit(0);
+                    });
+                },
+            ))
         }),
     )
     .await?;

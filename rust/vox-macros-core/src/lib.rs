@@ -513,6 +513,7 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
     let trait_name = parsed.name.clone();
     let dispatcher_name = format_ident!("{}Dispatcher", parsed.name());
     let descriptor_fn_name = format_ident!("{}_service_descriptor", parsed.name().to_snake_case());
+    let service_name_str = parsed.name().to_string();
 
     // Generate the if-else dispatch arms inside handle()
     let dispatch_arms: Vec<TokenStream2> = parsed
@@ -619,6 +620,10 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
             H: #trait_name,
             R: #vox::ReplySink,
         {
+            fn service_name(&self) -> Option<&'static str> {
+                Some(#service_name_str)
+            }
+
             fn args_have_channels(&self, method_id: #vox::MethodId) -> bool {
                 #(#args_have_channels_arms)*
                 false
@@ -637,7 +642,7 @@ fn generate_dispatcher(parsed: &ServiceTrait, vox: &TokenStream2) -> TokenStream
             }
         }
 
-        // ConnectionAcceptor is implemented via blanket impl on Handler<DriverReplySink>.
+        // ConnectionRouter is implemented via blanket impl on Handler<DriverReplySink>.
     }
 }
 
@@ -1030,8 +1035,16 @@ fn generate_client_method(
                     let result: Result<#ok_ty_decode, #vox::VoxError<#err_ty>> =
                         #vox::schema_deser::schema_deserialize_response_borrowed::<Result<#ok_ty_decode, #vox::VoxError<#err_ty>>>(ret_bytes, method_id, &schema_tracker)
                             .map_err(|e| {
+                                let erased_error = #vox::schema_deser::schema_deserialize_erased_response_error::<#err_ty>(
+                                    ret_bytes,
+                                    method_id,
+                                    &schema_tracker,
+                                );
                                 #finish_call_bindings
-                                #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string())
+                                match erased_error {
+                                    Ok(Some(error)) => error,
+                                    _ => #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string()),
+                                }
                             })?;
                     match result {
                         Ok(ret) => Ok(ret),
@@ -1092,8 +1105,16 @@ fn generate_client_method(
                             &schema_tracker,
                         )
                         .map_err(|e| {
+                            let erased_error = #vox::schema_deser::schema_deserialize_erased_response_error::<#err_ty>(
+                                ret_bytes,
+                                method_id,
+                                &schema_tracker,
+                            );
                             #finish_call_bindings
-                            #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string())
+                            match erased_error {
+                                Ok(Some(error)) => error,
+                                _ => #vox::VoxError::<#err_ty>::InvalidPayload(e.to_string()),
+                            }
                         })?;
                     match result {
                         Ok(ret) => Ok(ret),

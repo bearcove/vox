@@ -38,7 +38,7 @@ pub struct SessionKeepaliveConfig {
 
 /// Metadata wrapper with typed getters for well-known `vox-*` keys.
 ///
-/// Passed to [`ConnectionAcceptor::accept`] when a peer opens a connection.
+/// Passed to [`ConnectionRouter::route`] when a peer opens a connection.
 pub struct ConnectionRequest<'a> {
     metadata: &'a vox_types::Metadata,
     service: &'a str,
@@ -96,174 +96,201 @@ impl<'a> ConnectionRequest<'a> {
     }
 }
 
-/// A connection that has been opened but not yet accepted.
-///
-/// The acceptor receives this and decides its fate by calling one of:
-/// - `handle_with(handler)` — run a Driver with this handler (common case)
-/// - `proxy_to(other_handle)` — pipe messages to/from another connection
-/// - `into_handle()` — take the raw ConnectionHandle for custom use
-pub struct PendingConnection {
-    handle: Option<ConnectionHandle>,
-    caller_slot: Option<Arc<std::sync::Mutex<Option<crate::Caller>>>>,
+#[cfg(not(target_arch = "wasm32"))]
+type ConnectionTask = Box<dyn FnOnce(ConnectionHandle) + Send + 'static>;
+#[cfg(target_arch = "wasm32")]
+type ConnectionTask = Box<dyn FnOnce(ConnectionHandle) + 'static>;
+#[cfg(not(target_arch = "wasm32"))]
+type ClientHook = Box<dyn FnOnce(crate::Caller) + Send + 'static>;
+#[cfg(target_arch = "wasm32")]
+type ClientHook = Box<dyn FnOnce(crate::Caller) + 'static>;
+
+/// The route selected for an inbound root or virtual connection.
+pub enum ConnectionRoute {
+    /// Run a Vox driver on the connection with the given service handler.
+    Handle {
+        handler: Box<dyn crate::ErasedHandler>,
+        client_hook: Option<ClientHook>,
+    },
+    /// Proxy this connection to an already-open connection.
+    ProxyTo(ConnectionHandle),
+    /// Hand the raw connection to user code.
+    Custom(ConnectionTask),
 }
 
-impl PendingConnection {
-    fn new(handle: ConnectionHandle) -> Self {
-        Self {
-            handle: Some(handle),
-            caller_slot: None,
+impl ConnectionRoute {
+    pub fn handle(handler: impl Handler<crate::DriverReplySink> + 'static) -> Self {
+        Self::Handle {
+            handler: Box::new(handler),
+            client_hook: None,
         }
     }
 
-    /// Create a PendingConnection that captures the Caller when handle_with is called.
-    fn with_caller_slot(
-        handle: ConnectionHandle,
-        caller_slot: Arc<std::sync::Mutex<Option<crate::Caller>>>,
-    ) -> Self {
-        Self {
-            handle: Some(handle),
-            caller_slot: Some(caller_slot),
-        }
-    }
-
-    /// Accept this connection and run a Driver with the given handler.
-    pub fn handle_with(mut self, handler: impl Handler<crate::DriverReplySink> + 'static) {
-        let handle = self
-            .handle
-            .take()
-            .expect("PendingConnection already consumed");
-        let conn_id = handle.connection_id();
-        trace!(%conn_id, "PendingConnection::handle_with: creating driver");
-        let mut driver = crate::Driver::new(handle, handler);
-        if let Some(slot) = &self.caller_slot {
-            let caller = crate::Caller::new(driver.caller());
-            *slot.lock().unwrap() = Some(caller);
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        tokio::spawn(async move {
-            trace!(%conn_id, "PendingConnection driver starting");
-            driver.run().await;
-            trace!(%conn_id, "PendingConnection driver exited");
-        });
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_futures::spawn_local(async move { driver.run().await });
-    }
-
-    /// Accept this connection, run a Driver, and return a typed client for the peer.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn handle_with_client<C: crate::FromVoxSession>(
-        mut self,
         handler: impl Handler<crate::DriverReplySink> + 'static,
-    ) -> C {
-        let handle = self
-            .handle
-            .take()
-            .expect("PendingConnection already consumed");
-        let conn_id = handle.connection_id();
-        trace!(%conn_id, "PendingConnection::handle_with_client: creating driver");
-        let mut driver = crate::Driver::new(handle, handler);
-        let caller = crate::Caller::new(driver.caller());
-        if let Some(slot) = &self.caller_slot {
-            *slot.lock().unwrap() = Some(caller.clone());
+        f: impl FnOnce(C) + Send + 'static,
+    ) -> Self {
+        Self::Handle {
+            handler: Box::new(handler),
+            client_hook: Some(Box::new(move |caller| f(C::from_vox_session(caller, None)))),
         }
-        #[cfg(not(target_arch = "wasm32"))]
-        tokio::spawn(async move {
-            trace!(%conn_id, "PendingConnection driver starting");
-            driver.run().await;
-            trace!(%conn_id, "PendingConnection driver exited");
-        });
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_futures::spawn_local(async move { driver.run().await });
-        C::from_vox_session(caller, None)
     }
 
-    /// Accept this connection and proxy all traffic to/from another connection.
-    pub fn proxy_to(mut self, other: ConnectionHandle) {
-        let handle = self
-            .handle
-            .take()
-            .expect("PendingConnection already consumed");
-        #[cfg(not(target_arch = "wasm32"))]
-        tokio::spawn(async move {
-            let _ = proxy_connections(handle, other).await;
-        });
-        #[cfg(target_arch = "wasm32")]
-        wasm_bindgen_futures::spawn_local(async move {
-            let _ = proxy_connections(handle, other).await;
-        });
+    #[cfg(target_arch = "wasm32")]
+    pub fn handle_with_client<C: crate::FromVoxSession>(
+        handler: impl Handler<crate::DriverReplySink> + 'static,
+        f: impl FnOnce(C) + 'static,
+    ) -> Self {
+        Self::Handle {
+            handler: Box::new(handler),
+            client_hook: Some(Box::new(move |caller| f(C::from_vox_session(caller, None)))),
+        }
     }
 
-    /// Take the raw ConnectionHandle for custom use.
-    pub fn into_handle(mut self) -> ConnectionHandle {
-        self.handle
-            .take()
-            .expect("PendingConnection already consumed")
+    pub fn proxy_to(connection: ConnectionHandle) -> Self {
+        Self::ProxyTo(connection)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn custom(f: impl FnOnce(ConnectionHandle) + Send + 'static) -> Self {
+        Self::Custom(Box::new(f))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn custom(f: impl FnOnce(ConnectionHandle) + 'static) -> Self {
+        Self::Custom(Box::new(f))
+    }
+
+    // r[impl rpc.one-service-per-connection]
+    fn validate_requested_service(&self, requested: &str) -> Result<(), Metadata> {
+        if let Self::Handle { handler, .. } = self
+            && let Some(available) = handler.service_name()
+            && requested != available
+        {
+            return Err(service_mismatch_metadata(requested, available));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn start_virtual(self, handle: ConnectionHandle) {
+        match self {
+            Self::Handle {
+                handler,
+                client_hook,
+            } => {
+                let caller = spawn_connection_driver(handle, handler, client_hook.is_some());
+                if let (Some(hook), Some(caller)) = (client_hook, caller) {
+                    hook(caller);
+                }
+            }
+            Self::ProxyTo(other) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                tokio::spawn(async move {
+                    let _ = proxy_connections(handle, other).await;
+                });
+                #[cfg(target_arch = "wasm32")]
+                wasm_bindgen_futures::spawn_local(async move {
+                    let _ = proxy_connections(handle, other).await;
+                });
+            }
+            Self::Custom(task) => task(handle),
+        }
+    }
+
+    pub(crate) fn start_root(
+        self,
+        handle: ConnectionHandle,
+    ) -> Result<crate::Caller, SessionError> {
+        match self {
+            Self::Handle {
+                handler,
+                client_hook,
+            } => {
+                let caller = spawn_connection_driver(handle, handler, true)
+                    .expect("root driver spawn captures caller");
+                if let Some(hook) = client_hook {
+                    hook(caller.clone());
+                }
+                Ok(caller)
+            }
+            Self::ProxyTo(_) | Self::Custom(_) => Err(SessionError::Protocol(
+                "root connection route must run a service handler".into(),
+            )),
+        }
     }
 }
 
-impl Drop for PendingConnection {
-    fn drop(&mut self) {
-        if let Some(handle) = self.handle.take() {
-            let conn_id = handle.connection_id();
-            warn!(%conn_id, "PendingConnection dropped without being consumed — closing connection");
-            if let Some(tx) = handle.control_tx.as_ref() {
-                let _ = send_drop_control(tx, DropControlRequest::Close(conn_id));
-            }
-        }
-    }
+fn spawn_connection_driver(
+    handle: ConnectionHandle,
+    handler: Box<dyn crate::ErasedHandler>,
+    capture_caller: bool,
+) -> Option<crate::Caller> {
+    let conn_id = handle.connection_id();
+    trace!(%conn_id, "starting routed connection driver");
+    let mut driver = crate::Driver::new(handle, handler);
+    let caller = capture_caller.then(|| crate::Caller::new(driver.caller()));
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::spawn(async move {
+        trace!(%conn_id, "routed connection driver starting");
+        driver.run().await;
+        trace!(%conn_id, "routed connection driver exited");
+    });
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(async move { driver.run().await });
+    caller
 }
 
 // r[impl rpc.virtual-connection.accept]
-pub trait ConnectionAcceptor: MaybeSend + MaybeSync + 'static {
-    fn accept(
-        &self,
-        request: &ConnectionRequest,
-        connection: PendingConnection,
-    ) -> Result<(), Metadata>;
+pub trait ConnectionRouter: MaybeSend + MaybeSync + 'static {
+    fn route(&self, request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata>;
 }
 
-/// Any `Handler<DriverReplySink>` is automatically a `ConnectionAcceptor`.
-impl<H> ConnectionAcceptor for H
+/// Any `Handler<DriverReplySink>` is automatically a single-service router.
+impl<H> ConnectionRouter for H
 where
     H: Handler<crate::DriverReplySink> + Clone + MaybeSend + MaybeSync + 'static,
 {
-    fn accept(
-        &self,
-        _request: &ConnectionRequest,
-        connection: PendingConnection,
-    ) -> Result<(), Metadata> {
-        connection.handle_with(self.clone());
-        Ok(())
+    fn route(&self, _request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
+        Ok(ConnectionRoute::handle(self.clone()))
     }
 }
 
-/// Wrapper that turns a closure into a `ConnectionAcceptor`.
-pub struct AcceptorFn<F>(pub F);
+fn service_mismatch_metadata(requested: &str, available: &str) -> Metadata {
+    vox_types::metadata()
+        .str(
+            "error",
+            format!("requested vox service {requested:?}, but this endpoint serves {available:?}"),
+        )
+        .str("vox-service-requested", requested)
+        .str("vox-service-available", available)
+        .build()
+}
 
-impl<F> ConnectionAcceptor for AcceptorFn<F>
+/// Wrapper that turns a closure into a `ConnectionRouter`.
+pub struct RouterFn<F>(pub F);
+
+impl<F> ConnectionRouter for RouterFn<F>
 where
-    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata>
+    F: Fn(&ConnectionRequest) -> Result<ConnectionRoute, Metadata>
         + MaybeSend
         + MaybeSync
         + 'static,
 {
-    fn accept(
-        &self,
-        request: &ConnectionRequest,
-        connection: PendingConnection,
-    ) -> Result<(), Metadata> {
-        (self.0)(request, connection)
+    fn route(&self, request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
+        (self.0)(request)
     }
 }
 
-/// Create a `ConnectionAcceptor` from a closure.
-pub fn acceptor_fn<F>(f: F) -> AcceptorFn<F>
+/// Create a `ConnectionRouter` from a closure.
+pub fn router_fn<F>(f: F) -> RouterFn<F>
 where
-    F: Fn(&ConnectionRequest, PendingConnection) -> Result<(), Metadata>
+    F: Fn(&ConnectionRequest) -> Result<ConnectionRoute, Metadata>
         + MaybeSend
         + MaybeSync
         + 'static,
 {
-    AcceptorFn(f)
+    RouterFn(f)
 }
 
 // ---------------------------------------------------------------------------
@@ -447,8 +474,8 @@ pub struct Session {
     /// Allocator for outbound virtual connection IDs (uses session parity).
     conn_ids: IdAllocator<ConnectionId>,
 
-    /// Callback for accepting inbound virtual connections.
-    on_connection: Option<Arc<dyn ConnectionAcceptor>>,
+    /// Router for inbound root and virtual connections.
+    on_connection: Option<Arc<dyn ConnectionRouter>>,
 
     /// Receiver for open requests from SessionHandle.
     open_rx: mpsc::Receiver<OpenRequest>,
@@ -978,7 +1005,10 @@ impl std::fmt::Display for SessionError {
         match self {
             Self::Io(e) => write!(f, "io error: {e}"),
             Self::Protocol(msg) => write!(f, "protocol error: {msg}"),
-            Self::Rejected(_) => write!(f, "connection rejected"),
+            Self::Rejected(metadata) => match vox_types::metadata_get_str(metadata, "error") {
+                Some(reason) => write!(f, "connection rejected: {reason}"),
+                None => write!(f, "connection rejected"),
+            },
             Self::ConnectTimeout => write!(f, "connect timeout"),
         }
     }
@@ -1060,7 +1090,7 @@ impl Session {
     fn pre_handshake<Tx, Rx>(
         tx: Tx,
         rx: Rx,
-        on_connection: Option<Arc<dyn ConnectionAcceptor>>,
+        on_connection: Option<Arc<dyn ConnectionRouter>>,
         open_rx: mpsc::Receiver<OpenRequest>,
         close_rx: mpsc::Receiver<CloseRequest>,
         control_tx: mpsc::UnboundedSender<DropControlRequest>,
@@ -1680,50 +1710,55 @@ impl Session {
                 return;
             }
         };
-        let pending = PendingConnection::new(handle);
-        let acceptor = self.on_connection.as_ref().unwrap();
-        trace!(%conn_id, "calling acceptor for virtual connection");
-        match acceptor.accept(&request, pending) {
-            Ok(()) => {
-                trace!(%conn_id, "acceptor accepted virtual connection, sending ConnectionAccept");
-                let _ = self
-                    .sess_core
-                    .send(
-                        Message {
-                            connection_id: conn_id,
-                            payload: MessagePayload::ConnectionAccept(
-                                vox_types::ConnectionAccept {
-                                    connection_settings: our_settings,
-                                    metadata: vox_types::Metadata::default(),
-                                },
-                            ),
-                        },
-                        None,
-                        None,
-                    )
-                    .await;
+        let router = self.on_connection.as_ref().unwrap();
+        trace!(%conn_id, "routing virtual connection");
+        let route = match router.route(&request) {
+            Ok(route) => route,
+            Err(metadata) => {
+                trace!(%conn_id, "router rejected virtual connection");
+                self.reject_pending_inbound(conn_id, metadata).await;
+                return;
             }
-            Err(reject_metadata) => {
-                // Clean up the connection slot we created.
-                trace!(%conn_id, "acceptor rejected, removing conn slot");
-                self.conns.remove(&conn_id);
-                let _ = self
-                    .sess_core
-                    .send(
-                        Message {
-                            connection_id: conn_id,
-                            payload: MessagePayload::ConnectionReject(
-                                vox_types::ConnectionReject {
-                                    metadata: reject_metadata,
-                                },
-                            ),
-                        },
-                        None,
-                        None,
-                    )
-                    .await;
-            }
+        };
+        if let Err(metadata) = route.validate_requested_service(request.service()) {
+            trace!(%conn_id, "router selected mismatched service for virtual connection");
+            self.reject_pending_inbound(conn_id, metadata).await;
+            return;
         }
+
+        route.start_virtual(handle);
+        trace!(%conn_id, "router accepted virtual connection, sending ConnectionAccept");
+        let _ = self
+            .sess_core
+            .send(
+                Message {
+                    connection_id: conn_id,
+                    payload: MessagePayload::ConnectionAccept(vox_types::ConnectionAccept {
+                        connection_settings: our_settings,
+                        metadata: vox_types::Metadata::default(),
+                    }),
+                },
+                None,
+                None,
+            )
+            .await;
+    }
+
+    async fn reject_pending_inbound(&mut self, conn_id: ConnectionId, metadata: Metadata) {
+        self.conns.remove(&conn_id);
+        let _ = self
+            .sess_core
+            .send(
+                Message {
+                    connection_id: conn_id,
+                    payload: MessagePayload::ConnectionReject(vox_types::ConnectionReject {
+                        metadata,
+                    }),
+                },
+                None,
+                None,
+            )
+            .await;
     }
 
     fn handle_inbound_accept(&mut self, conn_id: ConnectionId, accept: SelfRef<ConnectionAccept>) {

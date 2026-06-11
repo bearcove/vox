@@ -19,9 +19,23 @@ impl Echo for EchoService {
     }
 }
 
+fn echo_router() -> impl vox::ConnectionRouter {
+    vox::router_fn(
+        |request: &vox::ConnectionRequest| -> Result<vox::ConnectionRoute, vox::Metadata> {
+            match request.service() {
+                "Noop" => Ok(vox::ConnectionRoute::handle(())),
+                "Echo" => Ok(vox::ConnectionRoute::handle(EchoDispatcher::new(
+                    EchoService,
+                ))),
+                _ => Err(Default::default()),
+            }
+        },
+    )
+}
+
 async fn vconn_server(server_link: impl vox::Link + Send + 'static) -> vox::NoopClient {
     vox::acceptor_on(server_link)
-        .on_connection(EchoDispatcher::new(EchoService))
+        .on_connection(echo_router())
         .establish::<vox::NoopClient>()
         .await
         .expect("server establish")
@@ -164,15 +178,12 @@ async fn reject_virtual_connection() {
 
     let server = tokio::spawn(async move {
         vox::acceptor_on(server_link)
-            .on_connection(vox::acceptor_fn(
-                |req: &vox::ConnectionRequest, conn: vox::PendingConnection| match req.service() {
-                    "Noop" => {
-                        conn.handle_with(());
-                        Ok(())
-                    }
+            .on_connection(vox::router_fn(|req: &vox::ConnectionRequest| {
+                match req.service() {
+                    "Noop" => Ok(vox::ConnectionRoute::handle(())),
                     _ => Err(Default::default()),
-                },
-            ))
+                }
+            }))
             .establish::<vox::NoopClient>()
             .await
             .expect("server establish")
@@ -242,9 +253,17 @@ async fn close_virtual_connection() {
 
     let server = tokio::spawn(async move {
         vox::acceptor_on(server_link)
-            .on_connection(CounterDispatcher::new(CounterService {
-                count: std::sync::Arc::new(AtomicU32::new(0)),
-            }))
+            .on_connection(vox::router_fn(
+                |request: &vox::ConnectionRequest| match request.service() {
+                    "Noop" => Ok(vox::ConnectionRoute::handle(())),
+                    "Counter" => Ok(vox::ConnectionRoute::handle(CounterDispatcher::new(
+                        CounterService {
+                            count: std::sync::Arc::new(AtomicU32::new(0)),
+                        },
+                    ))),
+                    _ => Err(Default::default()),
+                },
+            ))
             .establish::<vox::NoopClient>()
             .await
             .expect("server establish")

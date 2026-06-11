@@ -61,14 +61,14 @@
 //! # }
 //! ```
 //!
-//! For multi-service routing, use [`acceptor_fn()`]:
+//! For multi-service routing, use [`router_fn()`]:
 //!
 //! ```ignore
-//! vox::serve("0.0.0.0:9000", vox::acceptor_fn(|req, conn| {
+//! vox::serve("0.0.0.0:9000", vox::router_fn(|req| {
 //!     match req.service() {
-//!         "Hello" => { conn.handle_with(HelloDispatcher::new(HelloService)); Ok(()) }
-//!         "Chat" => { conn.handle_with(ChatDispatcher::new(ChatService)); Ok(()) }
-//!         _ => Err(vec![]),
+//!         "Hello" => Ok(vox::ConnectionRoute::handle(HelloDispatcher::new(HelloService))),
+//!         "Chat" => Ok(vox::ConnectionRoute::handle(ChatDispatcher::new(ChatService))),
+//!         _ => Err(Default::default()),
 //!     }
 //! })).await?;
 //! ```
@@ -125,6 +125,7 @@ pub mod hash {
 // Re-export vox-types items used by generated code
 pub use vox_types::{
     Backing,
+    BindingDirection,
     BoxMiddlewareFuture,
     // Traits
     Call,
@@ -245,13 +246,13 @@ pub use vox_core::{acceptor_on_link, initiator_on_link};
 // Session types
 #[cfg(feature = "runtime")]
 pub use vox_core::{
-    ConnectionHandle, ConnectionRequest, ConnectionState, PendingConnection, Session,
-    SessionConfig, SessionError, SessionHandle, SessionKeepaliveConfig,
+    ConnectionHandle, ConnectionRequest, ConnectionRoute, ConnectionRouter, ConnectionState,
+    Session, SessionConfig, SessionError, SessionHandle, SessionKeepaliveConfig,
 };
 
-// Connection acceptor
+// Connection routing
 #[cfg(feature = "runtime")]
-pub use vox_core::{AcceptorFn, ConnectionAcceptor, acceptor_fn, proxy_connections};
+pub use vox_core::{RouterFn, proxy_connections, router_fn};
 
 // Session builders (for advanced customization)
 #[cfg(feature = "runtime")]

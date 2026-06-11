@@ -11,7 +11,7 @@ use std::sync::Arc;
 use facet::Facet;
 use vox_phon::{DecodeProgram, Error};
 use vox_types::schema::{PlanCacheKey, SchemaRecvTracker};
-use vox_types::{BindingDirection, MethodId};
+use vox_types::{BindingDirection, MethodId, VoxError};
 
 /// Deserialize args from a request (caller → callee direction).
 // r[impl schema.exchange.required]
@@ -50,6 +50,37 @@ pub fn schema_deserialize_response<T: Facet<'static>>(
 ) -> Result<T, Error> {
     let program = resolve_program::<T>(method_id, BindingDirection::Response, tracker)?;
     vox_phon::decode_owned_with_program::<T>(&program, bytes)
+}
+
+/// Try to recover an infrastructure `VoxError` from an erased response error shape.
+///
+/// Some responders cannot know the caller's `Ok` shape when emitting an
+/// infrastructure error, notably an empty/unknown handler. They advertise
+/// `Result<(), VoxError<Infallible>>`; this still goes through the normal schema
+/// compatibility path, but targets the erased wire shape so the caller can recover
+/// the definite terminal error instead of reporting an unrelated `Ok`-arm schema
+/// mismatch.
+pub fn schema_deserialize_erased_response_error<E>(
+    bytes: &[u8],
+    method_id: MethodId,
+    tracker: &SchemaRecvTracker,
+) -> Result<Option<VoxError<E>>, Error> {
+    let decoded: Result<(), VoxError<core::convert::Infallible>> =
+        schema_deserialize_response(bytes, method_id, tracker)?;
+    Ok(decoded.err().map(map_erased_vox_error))
+}
+
+fn map_erased_vox_error<E>(error: VoxError<core::convert::Infallible>) -> VoxError<E> {
+    match error {
+        VoxError::User(never) => match *never {},
+        VoxError::UnknownMethod => VoxError::UnknownMethod,
+        VoxError::InvalidPayload(message) => VoxError::InvalidPayload(message),
+        VoxError::Cancelled => VoxError::Cancelled,
+        VoxError::ConnectionClosed => VoxError::ConnectionClosed,
+        VoxError::SessionShutdown => VoxError::SessionShutdown,
+        VoxError::SendFailed => VoxError::SendFailed,
+        VoxError::Indeterminate => VoxError::Indeterminate,
+    }
 }
 
 /// Resolve (and cache) the compat decode program for `T` against the peer's schema

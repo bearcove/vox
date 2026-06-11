@@ -1,5 +1,5 @@
 use eyre::{Result, eyre};
-use vox::{ConnectionSettings, Metadata, Parity, SessionHandle};
+use vox::{ConnectionRoute, ConnectionRouter, ConnectionSettings, Metadata, Parity, SessionHandle};
 
 #[vox::service]
 trait MathText {
@@ -20,19 +20,12 @@ impl MathText for UpstreamMathText {
     }
 }
 
-fn upstream_acceptor(
-    request: &vox::ConnectionRequest,
-    connection: vox::PendingConnection,
-) -> Result<(), Metadata> {
+fn upstream_router(request: &vox::ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
     match request.service() {
-        "Noop" => {
-            connection.handle_with(());
-            Ok(())
-        }
-        "MathText" => {
-            connection.handle_with(MathTextDispatcher::new(UpstreamMathText));
-            Ok(())
-        }
+        "Noop" => Ok(ConnectionRoute::handle(())),
+        "MathText" => Ok(ConnectionRoute::handle(MathTextDispatcher::new(
+            UpstreamMathText,
+        ))),
         _ => Err(vox::metadata().str("error", "unknown service").build()),
     }
 }
@@ -42,16 +35,11 @@ struct ProxyAcceptor {
     upstream_session: SessionHandle,
 }
 
-impl vox::ConnectionAcceptor for ProxyAcceptor {
-    fn accept(
-        &self,
-        request: &vox::ConnectionRequest,
-        connection: vox::PendingConnection,
-    ) -> Result<(), Metadata> {
+impl ConnectionRouter for ProxyAcceptor {
+    fn route(&self, request: &vox::ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
         match request.service() {
             "Noop" => {
-                connection.handle_with(());
-                return Ok(());
+                return Ok(ConnectionRoute::handle(()));
             }
             "MathText" => {}
             _ => {
@@ -60,33 +48,33 @@ impl vox::ConnectionAcceptor for ProxyAcceptor {
         }
 
         let upstream_session = self.upstream_session.clone();
-        let incoming_handle = connection.into_handle();
-        tokio::spawn(async move {
-            println!("[host] guest-a opened proxy vconn; opening upstream vconn to guest-b");
-            match upstream_session
-                .open_connection(
-                    ConnectionSettings {
-                        parity: Parity::Odd,
-                        max_concurrent_requests: 64,
-                        initial_channel_credit: 16,
-                    },
-                    vox::metadata()
-                        .str(vox::VOX_SERVICE_METADATA_KEY, "MathText")
-                        .build(),
-                )
-                .await
-            {
-                Ok(upstream_conn) => {
-                    println!("[host] upstream vconn to guest-b is ready");
-                    let _ = vox::proxy_connections(incoming_handle, upstream_conn).await;
+        Ok(ConnectionRoute::custom(move |incoming_handle| {
+            tokio::spawn(async move {
+                println!("[host] guest-a opened proxy vconn; opening upstream vconn to guest-b");
+                match upstream_session
+                    .open_connection(
+                        ConnectionSettings {
+                            parity: Parity::Odd,
+                            max_concurrent_requests: 64,
+                            initial_channel_credit: 16,
+                        },
+                        vox::metadata()
+                            .str(vox::VOX_SERVICE_METADATA_KEY, "MathText")
+                            .build(),
+                    )
+                    .await
+                {
+                    Ok(upstream_conn) => {
+                        println!("[host] upstream vconn to guest-b is ready");
+                        let _ = vox::proxy_connections(incoming_handle, upstream_conn).await;
+                    }
+                    Err(err) => {
+                        let msg = format!("failed to open upstream vconn: {err:?}");
+                        eprintln!("[host] {msg}");
+                    }
                 }
-                Err(err) => {
-                    let msg = format!("failed to open upstream vconn: {err:?}");
-                    eprintln!("[host] {msg}");
-                }
-            }
-        });
-        Ok(())
+            });
+        }))
     }
 }
 
@@ -108,7 +96,7 @@ async fn main() -> Result<()> {
         )
         .await
         .expect("guest-b acceptor_on_link")
-        .on_connection(vox::acceptor_fn(upstream_acceptor))
+        .on_connection(vox::router_fn(upstream_router))
         .establish::<vox::NoopClient>()
         .await
         .expect("guest-b establish");

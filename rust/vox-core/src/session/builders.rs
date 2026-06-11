@@ -3,8 +3,8 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use moire::sync::mpsc;
 use vox_types::{
     Conduit, ConnectionSettings, DEFAULT_INITIAL_CHANNEL_CREDIT, HandshakeResult, Link, MaybeSend,
-    MaybeSync, MessageFamily, Metadata, MetadataExt, Parity, SplitLink, VoxObserver,
-    VoxObserverHandle, metadata_into_owned,
+    MaybeSync, MessageFamily, Metadata, Parity, SplitLink, VoxObserver, VoxObserverHandle,
+    metadata_into_owned,
 };
 
 use crate::LinkSource;
@@ -14,8 +14,8 @@ use crate::{
 };
 
 use super::{
-    CloseRequest, ConnectionAcceptor, OpenRequest, Session, SessionError, SessionHandle,
-    SessionKeepaliveConfig,
+    CloseRequest, ConnectionRequest, ConnectionRouter, OpenRequest, Session, SessionError,
+    SessionHandle, SessionKeepaliveConfig,
 };
 use crate::FromVoxSession;
 
@@ -25,6 +25,18 @@ pub const VOX_SERVICE_METADATA_KEY: &str = "vox-service";
 /// Inject `vox-service` metadata from `Client::SERVICE_NAME`.
 fn inject_service_metadata<Client: FromVoxSession>(metadata: &mut Metadata) {
     vox_types::meta_set(metadata, VOX_SERVICE_METADATA_KEY, Client::SERVICE_NAME);
+}
+
+fn route_root_connection(
+    router: &dyn ConnectionRouter,
+    request: &ConnectionRequest<'_>,
+    handle: super::ConnectionHandle,
+) -> Result<crate::Caller, SessionError> {
+    let route = router.route(request).map_err(SessionError::Rejected)?;
+    route
+        .validate_requested_service(request.service())
+        .map_err(SessionError::Rejected)?;
+    route.start_root(handle)
 }
 
 /// A pinned, boxed session future. On non-WASM this is `Send + 'static`;
@@ -145,7 +157,7 @@ pub fn acceptor_transport<L: Link>(link: L) -> SessionTransportAcceptorBuilder<L
 pub struct SessionConfig {
     pub root_settings: ConnectionSettings,
     pub metadata: Metadata,
-    pub on_connection: Option<Arc<dyn ConnectionAcceptor>>,
+    pub on_connection: Option<Arc<dyn ConnectionRouter>>,
     pub keepalive: Option<SessionKeepaliveConfig>,
     pub spawn_fn: SpawnFn,
     pub connect_timeout: Option<std::time::Duration>,
@@ -193,8 +205,8 @@ impl<C> SessionInitiatorBuilder<C> {
         }
     }
 
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.config.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.config.on_connection = Some(Arc::new(router));
         self
     }
 
@@ -262,12 +274,12 @@ impl<C> SessionInitiatorBuilder<C> {
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control");
-        let acceptor: Arc<dyn ConnectionAcceptor> =
+        let router: Arc<dyn ConnectionRouter> =
             config.on_connection.unwrap_or_else(|| Arc::new(()));
         let mut session = Session::pre_handshake(
             tx,
             rx,
-            Some(acceptor.clone()),
+            Some(router.clone()),
             open_rx,
             close_rx,
             control_tx.clone(),
@@ -281,37 +293,10 @@ impl<C> SessionInitiatorBuilder<C> {
             close_tx,
             control_tx,
         };
-        // Route the root connection through the acceptor.
-        let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
-        let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        vox_types::meta_set(
-            &mut peer_metadata,
-            VOX_SERVICE_METADATA_KEY,
-            Client::SERVICE_NAME,
-        );
+        vox_types::meta_set(&mut peer_metadata, "vox-connection-kind", "root");
         let request = super::ConnectionRequest::new(&peer_metadata)?;
-        tracing::debug!(
-            service = Client::SERVICE_NAME,
-            "vox root connection routing to acceptor"
-        );
-        match acceptor.accept(&request, pending) {
-            Ok(()) => tracing::debug!(
-                service = Client::SERVICE_NAME,
-                "vox root connection accepted"
-            ),
-            Err(metadata) => {
-                tracing::debug!(
-                    service = Client::SERVICE_NAME,
-                    metadata_len = metadata.meta_len(),
-                    "vox root connection rejected"
-                );
-                return Err(SessionError::Rejected(metadata));
-            }
-        }
-        let caller =
-            caller_slot.lock().unwrap().take().expect(
-                "root connection acceptor must call handle_with (not into_handle or proxy_to)",
-            );
+        tracing::debug!(service = request.service(), "vox root connection routing");
+        let caller = route_root_connection(router.as_ref(), &request, handle)?;
         let client = Client::from_vox_session(caller, Some(session_handle));
         (config.spawn_fn)(Box::pin(async move { session.run().await }));
         Ok(client)
@@ -366,8 +351,8 @@ impl<S> SessionSourceInitiatorBuilder<S> {
         self
     }
 
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.config.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.config.on_connection = Some(Arc::new(router));
         self
     }
 
@@ -501,8 +486,8 @@ impl<L> SessionTransportInitiatorBuilder<L> {
         self
     }
 
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.config.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.config.on_connection = Some(Arc::new(router));
         self
     }
 
@@ -632,8 +617,8 @@ impl<C> SessionAcceptorBuilder<C> {
         }
     }
 
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.config.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.config.on_connection = Some(Arc::new(router));
         self
     }
 
@@ -698,12 +683,12 @@ impl<C> SessionAcceptorBuilder<C> {
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
         let (control_tx, control_rx) = mpsc::unbounded_channel("session.control");
-        let acceptor: Arc<dyn ConnectionAcceptor> =
+        let router: Arc<dyn ConnectionRouter> =
             config.on_connection.unwrap_or_else(|| Arc::new(()));
         let mut session = Session::pre_handshake(
             tx,
             rx,
-            Some(acceptor.clone()),
+            Some(router.clone()),
             open_rx,
             close_rx,
             control_tx.clone(),
@@ -717,37 +702,10 @@ impl<C> SessionAcceptorBuilder<C> {
             close_tx,
             control_tx,
         };
-        // Route the root connection through the acceptor.
-        let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
-        let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        vox_types::meta_set(
-            &mut peer_metadata,
-            VOX_SERVICE_METADATA_KEY,
-            Client::SERVICE_NAME,
-        );
+        vox_types::meta_set(&mut peer_metadata, "vox-connection-kind", "root");
         let request = super::ConnectionRequest::new(&peer_metadata)?;
-        tracing::debug!(
-            service = Client::SERVICE_NAME,
-            "vox root connection routing to acceptor"
-        );
-        match acceptor.accept(&request, pending) {
-            Ok(()) => tracing::debug!(
-                service = Client::SERVICE_NAME,
-                "vox root connection accepted"
-            ),
-            Err(metadata) => {
-                tracing::debug!(
-                    service = Client::SERVICE_NAME,
-                    metadata_len = metadata.meta_len(),
-                    "vox root connection rejected"
-                );
-                return Err(SessionError::Rejected(metadata));
-            }
-        }
-        let caller =
-            caller_slot.lock().unwrap().take().expect(
-                "root connection acceptor must call handle_with (not into_handle or proxy_to)",
-            );
+        tracing::debug!(service = request.service(), "vox root connection routing");
+        let caller = route_root_connection(router.as_ref(), &request, handle)?;
         let client = Client::from_vox_session(caller, Some(session_handle));
         (config.spawn_fn)(Box::pin(async move { session.run().await }));
         Ok(client)
@@ -803,8 +761,8 @@ impl<L: Link> SessionTransportAcceptorBuilder<L> {
         self
     }
 
-    pub fn on_connection(mut self, acceptor: impl ConnectionAcceptor) -> Self {
-        self.config.on_connection = Some(Arc::new(acceptor));
+    pub fn on_connection(mut self, router: impl ConnectionRouter) -> Self {
+        self.config.on_connection = Some(Arc::new(router));
         self
     }
 

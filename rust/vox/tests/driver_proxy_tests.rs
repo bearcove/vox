@@ -1,6 +1,9 @@
 //! Tests for proxy_connections — transparent call forwarding between sessions.
 
-use vox::{ConnectionSettings, Driver, Metadata, Parity, SessionHandle, memory_link_pair};
+use vox::{
+    ConnectionRoute, ConnectionRouter, ConnectionSettings, Driver, Metadata, Parity, SessionHandle,
+    memory_link_pair,
+};
 
 #[vox::service]
 trait Echo {
@@ -16,37 +19,44 @@ impl Echo for EchoService {
     }
 }
 
+fn echo_router() -> impl ConnectionRouter {
+    vox::router_fn(
+        |request: &vox::ConnectionRequest| -> Result<ConnectionRoute, Metadata> {
+            match request.service() {
+                "Noop" => Ok(ConnectionRoute::handle(())),
+                "Echo" => Ok(ConnectionRoute::handle(EchoDispatcher::new(EchoService))),
+                _ => Err(Default::default()),
+            }
+        },
+    )
+}
+
 struct ProxyAcceptor {
     upstream_session: SessionHandle,
 }
 
-impl vox::ConnectionAcceptor for ProxyAcceptor {
-    fn accept(
-        &self,
-        request: &vox::ConnectionRequest,
-        connection: vox::PendingConnection,
-    ) -> Result<(), Metadata> {
+impl ConnectionRouter for ProxyAcceptor {
+    fn route(&self, request: &vox::ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
         if request.service() == "Noop" {
-            connection.handle_with(());
-            return Ok(());
+            return Ok(ConnectionRoute::handle(()));
         }
         let upstream_session = self.upstream_session.clone();
-        let incoming = connection.into_handle();
-        tokio::spawn(async move {
-            let upstream = upstream_session
-                .open_connection(
-                    ConnectionSettings {
-                        parity: Parity::Odd,
-                        max_concurrent_requests: 64,
-                        initial_channel_credit: 16,
-                    },
-                    vox_types::metadata().str("vox-service", "Echo").build(),
-                )
-                .await
-                .expect("open upstream connection");
-            let _ = vox::proxy_connections(incoming, upstream).await;
-        });
-        Ok(())
+        Ok(ConnectionRoute::custom(move |incoming| {
+            tokio::spawn(async move {
+                let upstream = upstream_session
+                    .open_connection(
+                        ConnectionSettings {
+                            parity: Parity::Odd,
+                            max_concurrent_requests: 64,
+                            initial_channel_credit: 16,
+                        },
+                        vox_types::metadata().str("vox-service", "Echo").build(),
+                    )
+                    .await
+                    .expect("open upstream connection");
+                let _ = vox::proxy_connections(incoming, upstream).await;
+            });
+        }))
     }
 }
 
@@ -60,7 +70,7 @@ async fn proxy_connections_forwards_calls() {
     // guest-b: accepts virtual connections with EchoService
     let guest_b_task = tokio::spawn(async move {
         let guard = vox::acceptor_on(guest_b_link)
-            .on_connection(EchoDispatcher::new(EchoService))
+            .on_connection(echo_router())
             .establish::<vox::NoopClient>()
             .await
             .expect("guest-b establish");

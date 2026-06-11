@@ -13,9 +13,9 @@ use vox_types::{
 
 use super::utils::*;
 use crate::session::{
-    ConnectionAcceptor, ConnectionMessage, ConnectionRequest, PendingConnection, SessionError,
+    ConnectionMessage, ConnectionRequest, ConnectionRoute, ConnectionRouter, SessionError,
     SessionHandle, SessionKeepaliveConfig, acceptor_conduit, acceptor_on, initiator_conduit,
-    initiator_on, proxy_connections,
+    initiator_on, proxy_connections, router_fn,
 };
 use crate::{BareConduit, Driver, NoopClient, memory_link_pair};
 
@@ -1480,14 +1480,11 @@ async fn virtual_connection_request_ids_use_connection_parity() {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
                 acceptor_conduit(server_conduit, test_acceptor_handshake())
-                    .on_connection(crate::session::acceptor_fn(
-                        move |_request: &ConnectionRequest, connection: PendingConnection| {
-                            connection.handle_with(BlockingHandler {
-                                was_cancelled: Arc::clone(&was_cancelled),
-                            });
-                            Ok(())
-                        },
-                    ))
+                    .on_connection(router_fn(move |_request: &ConnectionRequest| {
+                        Ok(ConnectionRoute::handle(BlockingHandler {
+                            was_cancelled: Arc::clone(&was_cancelled),
+                        }))
+                    }))
                     .establish::<NoopClient>()
                     .await
                     .expect("server handshake failed")
@@ -2083,37 +2080,31 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
     struct ProxyHostAcceptor {
         upstream_session: SessionHandle,
     }
-    impl ConnectionAcceptor for ProxyHostAcceptor {
-        fn accept(
-            &self,
-            request: &ConnectionRequest,
-            connection: PendingConnection,
-        ) -> Result<(), Metadata> {
+    impl ConnectionRouter for ProxyHostAcceptor {
+        fn route(&self, request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
             if request.service() == "Noop" {
-                connection.handle_with(());
-                return Ok(());
+                return Ok(ConnectionRoute::handle(()));
             }
-            // Virtual connections — proxy to upstream.
             let upstream_session = self.upstream_session.clone();
-            let incoming = connection.into_handle();
-            moire::task::spawn(
-                async move {
-                    let upstream = upstream_session
-                        .open_connection(
-                            ConnectionSettings {
-                                parity: Parity::Odd,
-                                max_concurrent_requests: 64,
-                                initial_channel_credit: 16,
-                            },
-                            vox_types::metadata().str("vox-service", "Echo").build(),
-                        )
-                        .await
-                        .expect("host->guest-b open_connection");
-                    let _ = proxy_connections(incoming, upstream).await;
-                }
-                .named("host_proxy_vconn"),
-            );
-            Ok(())
+            Ok(ConnectionRoute::custom(move |incoming| {
+                moire::task::spawn(
+                    async move {
+                        let upstream = upstream_session
+                            .open_connection(
+                                ConnectionSettings {
+                                    parity: Parity::Odd,
+                                    max_concurrent_requests: 64,
+                                    initial_channel_credit: 16,
+                                },
+                                vox_types::metadata().str("vox-service", "Echo").build(),
+                            )
+                            .await
+                            .expect("host->guest-b open_connection");
+                        let _ = proxy_connections(incoming, upstream).await;
+                    }
+                    .named("host_proxy_vconn"),
+                );
+            }))
         }
     }
 

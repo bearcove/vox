@@ -224,6 +224,16 @@ pub trait ReplySink: MaybeSend + MaybeSync + 'static {
 /// Generated clients hold a `Caller` (from `vox-core`) as a public field
 /// and use it to start API-level calls.
 pub trait Handler<R: ReplySink>: MaybeSend + MaybeSync + 'static {
+    /// Return the service name this handler accepts, if it has a single known service.
+    ///
+    /// Generated dispatchers and the Noop handler report a concrete service name.
+    /// Custom acceptors that intentionally route multiple services can leave this as
+    /// `None` and validate `ConnectionRequest::service()` themselves.
+    // r[impl rpc.one-service-per-connection]
+    fn service_name(&self) -> Option<&'static str> {
+        None
+    }
+
     /// Return whether the method's argument shape contains any channels.
     fn args_have_channels(&self, _method_id: MethodId) -> bool {
         false
@@ -247,12 +257,19 @@ pub trait Handler<R: ReplySink>: MaybeSend + MaybeSync + 'static {
 }
 
 impl<R: ReplySink> Handler<R> for () {
+    fn service_name(&self) -> Option<&'static str> {
+        Some("Noop")
+    }
+
     async fn handle(
         &self,
         _call: SelfRef<RequestCall<'static>>,
-        _reply: R,
+        reply: R,
         _schemas: Arc<SchemaRecvTracker>,
     ) {
+        reply
+            .send_error(VoxError::<core::convert::Infallible>::UnknownMethod)
+            .await;
     }
 }
 
@@ -466,7 +483,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn unit_handler_is_noop() {
+    async fn unit_handler_reports_unknown_method() {
+        let saw_send_reply = Arc::new(Mutex::new(false));
+        let saw_outgoing_payload = Arc::new(Mutex::new(false));
         let req = crate::SelfRef::owning(
             crate::Backing::Boxed(Box::<[u8]>::default()),
             RequestCall {
@@ -480,12 +499,18 @@ mod tests {
         ().handle(
             req,
             RecordingReplySink {
-                saw_send_reply: Arc::new(Mutex::new(false)),
-                saw_outgoing_payload: Arc::new(Mutex::new(false)),
+                saw_send_reply: Arc::clone(&saw_send_reply),
+                saw_outgoing_payload: Arc::clone(&saw_outgoing_payload),
             },
             Arc::new(crate::SchemaRecvTracker::new()),
         )
         .await;
+        assert!(*saw_send_reply.lock().expect("send-reply mutex poisoned"));
+        assert!(
+            *saw_outgoing_payload
+                .lock()
+                .expect("payload-kind mutex poisoned")
+        );
     }
 
     #[test]

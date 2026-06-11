@@ -152,18 +152,18 @@ This requires a trait on generated clients that exposes the service name.
 
 ### Server side
 
-A factory closure receives a `ConnectionContext` with the requested
-service name and returns the appropriate dispatcher:
+A router receives a `ConnectionRequest` with the requested service name
+and returns the appropriate `ConnectionRoute`:
 
 ```rust
-vox::serve(listener, |cx: &ConnectionContext| match cx.service_name() {
-    "Hello" => Some(HelloDispatcher::new(HelloService)),
-    "Chat" => Some(ChatDispatcher::new(ChatService)),
-    _ => None, // reject unknown services
-}).await?;
+vox::serve(listener, vox::router_fn(|req: &vox::ConnectionRequest| match req.service() {
+    "Hello" => Ok(vox::ConnectionRoute::handle(HelloDispatcher::new(HelloService))),
+    "Chat" => Ok(vox::ConnectionRoute::handle(ChatDispatcher::new(ChatService))),
+    _ => Err(Default::default()), // reject unknown services
+})).await?;
 ```
 
-The same factory handles both root and virtual connections.
+The same router handles both root and virtual connections.
 
 ### Everything is metadata
 
@@ -180,38 +180,44 @@ Service routing and transport info use the same mechanism:
 | `vox-peer-pid` | Peer process ID | Unix socket transport |
 | `vox-connection-kind` | `"root"` or `"virtual"` | Session layer |
 
-The factory just reads metadata — no special enum for transport info,
-no separate `ConnectionContext` struct. It's all `Metadata`:
+The router just reads metadata through `ConnectionRequest` — no special enum
+for transport info:
 
 ```rust
-vox::serve(listener, |metadata: &Metadata| {
-    let service = metadata.get_str("vox-service")?;
-    match service {
-        "Hello" => Some(HelloDispatcher::new(HelloService)),
-        "Chat" => Some(ChatDispatcher::new(ChatService)),
-        _ => None,
+vox::serve(listener, vox::router_fn(|req: &vox::ConnectionRequest| {
+    match req.service() {
+        "Hello" => Ok(vox::ConnectionRoute::handle(HelloDispatcher::new(HelloService))),
+        "Chat" => Ok(vox::ConnectionRoute::handle(ChatDispatcher::new(ChatService))),
+        _ => Err(Default::default()),
     }
-}).await?;
+})).await?;
 ```
 
 If the factory needs transport details (for auth, logging, etc), it
 reads more metadata:
 
 ```rust
-vox::serve(listener, |metadata: &Metadata| {
-    let service = metadata.get_str("vox-service")?;
-    let peer = metadata.get_str("vox-peer-addr").unwrap_or("unknown");
+vox::serve(listener, vox::router_fn(|req: &vox::ConnectionRequest| {
+    let service = req.service();
+    let peer = req.peer_addr().unwrap_or("unknown");
     log::info!("new {service} connection from {peer}");
     // ...
-}).await?;
+    Err(Default::default())
+})).await?;
 ```
 
-### Why this replaces `ConnectionAcceptor`
+### `ConnectionRouter` and `ConnectionRoute`
 
-Today, `ConnectionAcceptor` is a trait that handles virtual connection
-setup. With the factory model, root and virtual connections go through
-the same routing — both just present metadata to the factory.
-`ConnectionAcceptor` becomes unnecessary.
+Root and virtual connections go through the same routing path. A
+`ConnectionRouter` chooses one `ConnectionRoute` for the inbound connection:
+
+- `ConnectionRoute::handle(handler)` runs a Vox driver for a service handler.
+- `ConnectionRoute::proxy_to(connection)` forwards bytes to another connection.
+- `ConnectionRoute::custom(f)` hands the raw `ConnectionHandle` to user code.
+
+The route is selected before the connection driver starts. For `handle(...)`
+routes, Vox validates that the requested `vox-service` matches the handler's
+service name and rejects mismatches with detailed metadata.
 
 ### User metadata
 
@@ -295,23 +301,24 @@ feature entirely.
     - `connect_timeout`: per-attempt timeout (default 5s in `vox::connect()`)
     - `recovery_timeout`: total recovery window before giving up
     - `SessionConfig` refactored — helpers pass config as whole struct, not individual fields
-11. ✅ Unified `ConnectionAcceptor` + `PendingConnection`
+11. ✅ Unified root + virtual routing through `ConnectionRouter`
     - `ConnectionRequest` wraps metadata with typed getters
       (`service()`, `transport()`, `peer_addr()`, `is_root()`, `is_virtual()`)
-    - `ConnectionAcceptor::accept(&self, req: &ConnectionRequest, conn: PendingConnection)
-       -> Result<(), Metadata<'static>>`
-    - `PendingConnection`: `handle_with()`, `proxy_to()`, `into_handle()`
-    - Blanket impl: any `Handler<DriverReplySink> + Clone` is a `ConnectionAcceptor`
-    - `acceptor_fn()` wrapper for closure-based factories
+    - `ConnectionRouter::route(&self, req: &ConnectionRequest)
+       -> Result<ConnectionRoute, Metadata>`
+    - `ConnectionRoute`: `handle()`, `handle_with_client()`, `proxy_to()`, `custom()`
+    - Blanket impl: any `Handler<DriverReplySink> + Clone` is a single-service router
+    - `router_fn()` wrapper for closure-based routers
     - `AcceptedConnection`, `ConnectionSetup` removed
-    - Root and virtual connections go through the same acceptor
+    - `ConnectionAcceptor` and `PendingConnection` removed from the Rust API
+    - Root and virtual connections go through the same router
     - `establish()` no longer takes a `handler` parameter
     - `proxy_connections()` returns `Result`, checks parity mismatch
-12. ✅ `vox::serve(listener, acceptor)` — symmetric to `vox::connect()`
+12. ✅ `vox::serve(listener, router)` — symmetric to `vox::connect()`
     - `VoxListener` trait implemented for `TcpListener`, `LocalLinkAcceptor`
     - Accepts connections in a loop, spawns sessions
     - Single-service: `vox::serve(listener, EchoDispatcher::new(EchoService))`
-    - Multi-service factory: `vox::serve(listener, acceptor_fn(|req, conn| { ... }))`
+    - Multi-service router: `vox::serve(listener, router_fn(|req| { ... }))`
 13. ✅ Facade re-export hygiene + crate documentation
     - Replaced `pub use vox_core::*` with curated, grouped explicit re-exports
     - Rewrote crate-level doc comment with `connect()` / `serve()` examples

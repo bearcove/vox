@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use vox_core::ConnectionAcceptor;
+use vox_core::ConnectionRouter;
 use vox_types::VoxObserverHandle;
 
 use super::{ServeError, VoxListener, serve_listener};
@@ -95,7 +95,7 @@ fn parse_query_params(s: &str) -> (&str, std::collections::HashMap<String, std::
 
 pub(super) async fn serve_wss(
     host: &str,
-    acceptor: impl ConnectionAcceptor,
+    router: impl ConnectionRouter,
     channel_capacity: u32,
     observer: Option<VoxObserverHandle>,
 ) -> Result<(), ServeError> {
@@ -113,7 +113,7 @@ pub(super) async fn serve_wss(
         ))
     })?;
     let listener = WssListener::bind(host_part, cert.as_ref(), key.as_ref()).await?;
-    let mut builder = serve_listener(listener, acceptor).channel_capacity(channel_capacity);
+    let mut builder = serve_listener(listener, router).channel_capacity(channel_capacity);
     if let Some(observer) = observer {
         builder = builder.observer_handle(observer);
     }

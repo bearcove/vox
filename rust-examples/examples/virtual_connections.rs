@@ -50,23 +50,15 @@ impl StringLab for StringLabService {
     }
 }
 
-fn lab_acceptor(
-    request: &vox::ConnectionRequest,
-    connection: vox::PendingConnection,
-) -> Result<(), Metadata> {
+fn lab_router(request: &vox::ConnectionRequest) -> Result<vox::ConnectionRoute, Metadata> {
     match request.service() {
-        "Noop" => {
-            connection.handle_with(());
-            Ok(())
-        }
-        "CounterLab" => {
-            connection.handle_with(CounterLabDispatcher::new(CounterLabService::new()));
-            Ok(())
-        }
-        "StringLab" => {
-            connection.handle_with(StringLabDispatcher::new(StringLabService));
-            Ok(())
-        }
+        "Noop" => Ok(vox::ConnectionRoute::handle(())),
+        "CounterLab" => Ok(vox::ConnectionRoute::handle(CounterLabDispatcher::new(
+            CounterLabService::new(),
+        ))),
+        "StringLab" => Ok(vox::ConnectionRoute::handle(StringLabDispatcher::new(
+            StringLabService,
+        ))),
         _ => Err(vox::metadata().str("error", "unknown service").build()),
     }
 }
@@ -87,7 +79,7 @@ async fn main() -> Result<()> {
         let (socket, _) = listener.accept().await.expect("accept");
         println!("[server] client connected; establishing root session");
         let server_root_guard = vox::acceptor_on(StreamLink::tcp(socket))
-            .on_connection(vox::acceptor_fn(lab_acceptor))
+            .on_connection(vox::router_fn(lab_router))
             .establish::<vox::NoopClient>()
             .await
             .expect("server establish");

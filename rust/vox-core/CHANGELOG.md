@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace `ConnectionAcceptor` and `PendingConnection` with the route-returning
+  `ConnectionRouter`/`ConnectionRoute` model, and route root connections from the
+  peer's negotiated `vox-service` metadata.
+
 ## [0.8.2](https://github.com/bearcove/vox/compare/vox-core-v0.8.1...vox-core-v0.8.2) - 2026-05-21
 
 ### Other

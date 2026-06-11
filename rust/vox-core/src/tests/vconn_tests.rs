@@ -6,8 +6,8 @@ use vox_types::{
 
 use super::utils::*;
 use crate::session::{
-    ConnectionAcceptor, ConnectionRequest, PendingConnection, SessionError, acceptor_conduit,
-    initiator_conduit,
+    ConnectionRequest, ConnectionRoute, ConnectionRouter, SessionError, acceptor_conduit,
+    initiator_conduit, router_fn,
 };
 use crate::{Driver, NoopClient};
 
@@ -133,18 +133,13 @@ async fn root_and_virtual_connections_bind_separate_services() {
 
     struct ServiceAcceptor;
 
-    impl ConnectionAcceptor for ServiceAcceptor {
-        fn accept(
-            &self,
-            request: &ConnectionRequest,
-            connection: PendingConnection,
-        ) -> Result<(), Metadata> {
+    impl ConnectionRouter for ServiceAcceptor {
+        fn route(&self, request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
             match request.service() {
-                "Noop" => connection.handle_with(ConstHandler(10)),
-                "Echo" => connection.handle_with(ConstHandler(20)),
+                "Noop" => Ok(ConnectionRoute::handle(ConstHandler(10))),
+                "Echo" => Ok(ConnectionRoute::handle(ConstHandler(20))),
                 _ => return Err(Metadata::default()),
             }
-            Ok(())
         }
     }
 
@@ -196,17 +191,12 @@ async fn reject_virtual_connection() {
     let server_task = moire::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .on_connection(crate::session::acceptor_fn(
-                    |request: &ConnectionRequest, connection: PendingConnection| match request
-                        .service()
-                    {
-                        "Noop" => {
-                            connection.handle_with(EchoHandler);
-                            Ok(())
-                        }
+                .on_connection(router_fn(|request: &ConnectionRequest| {
+                    match request.service() {
+                        "Noop" => Ok(ConnectionRoute::handle(EchoHandler)),
                         _ => Err(Default::default()),
-                    },
-                ))
+                    }
+                }))
                 .establish::<NoopClient>()
                 .await
                 .expect("server handshake failed")
@@ -536,14 +526,9 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
 
     struct LocalEchoAcceptor;
 
-    impl ConnectionAcceptor for LocalEchoAcceptor {
-        fn accept(
-            &self,
-            _request: &ConnectionRequest,
-            connection: PendingConnection,
-        ) -> Result<(), Metadata> {
-            connection.handle_with(EchoHandler);
-            Ok(())
+    impl ConnectionRouter for LocalEchoAcceptor {
+        fn route(&self, _request: &ConnectionRequest) -> Result<ConnectionRoute, Metadata> {
+            Ok(ConnectionRoute::handle(EchoHandler))
         }
     }
 

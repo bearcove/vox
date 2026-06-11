@@ -1111,6 +1111,10 @@ impl ChannelSink for DriverChannelSink {
 /// Boxes the future returned by `handle()` so the trait is dyn-safe.
 /// Implemented automatically for any `Handler<DriverReplySink>`.
 pub trait ErasedHandler: MaybeSend + MaybeSync + 'static {
+    fn service_name(&self) -> Option<&'static str> {
+        None
+    }
+
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         let _ = method_id;
         false
@@ -1130,6 +1134,10 @@ pub trait ErasedHandler: MaybeSend + MaybeSync + 'static {
 }
 
 impl<H: Handler<DriverReplySink>> ErasedHandler for H {
+    fn service_name(&self) -> Option<&'static str> {
+        Handler::service_name(self)
+    }
+
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         Handler::args_have_channels(self, method_id)
     }
@@ -1149,6 +1157,10 @@ impl<H: Handler<DriverReplySink>> ErasedHandler for H {
 }
 
 impl Handler<DriverReplySink> for Box<dyn ErasedHandler> {
+    fn service_name(&self) -> Option<&'static str> {
+        (**self).service_name()
+    }
+
     fn args_have_channels(&self, method_id: vox_types::MethodId) -> bool {
         (**self).args_have_channels(method_id)
     }
@@ -1306,7 +1318,7 @@ impl Caller {
 /// virtual connections pass `None`.
 pub trait FromVoxSession {
     /// The service name for this client, used for automatic `vox-service` metadata.
-    /// Generated clients return `Some("ServiceName")`. `NoopClient` returns `None`.
+    /// Generated clients return their trait name. `NoopClient` returns `"Noop"`.
     const SERVICE_NAME: &'static str;
 
     fn from_vox_session(

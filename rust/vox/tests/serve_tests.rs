@@ -16,6 +16,20 @@ impl Echo for EchoService {
     }
 }
 
+fn echo_router() -> impl vox::ConnectionRouter {
+    vox::router_fn(
+        |request: &vox::ConnectionRequest| -> Result<vox::ConnectionRoute, vox::Metadata> {
+            match request.service() {
+                "Noop" => Ok(vox::ConnectionRoute::handle(())),
+                "Echo" => Ok(vox::ConnectionRoute::handle(EchoDispatcher::new(
+                    EchoService,
+                ))),
+                _ => Err(Default::default()),
+            }
+        },
+    )
+}
+
 #[vox::service]
 trait Ping {
     async fn ping(&self, value: u32) -> u32;
@@ -197,7 +211,7 @@ async fn connect_builder_can_configure_inbound_virtual_connections_before_await(
     });
 
     let client: PingClient = vox::connect(format!("tcp://{addr}"))
-        .on_connection(EchoDispatcher::new(EchoService))
+        .on_connection(echo_router())
         .await
         .expect("connect");
 

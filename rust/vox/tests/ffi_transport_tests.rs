@@ -29,6 +29,34 @@ impl Pong for PongService {
     }
 }
 
+fn ping_router() -> impl vox::ConnectionRouter {
+    vox::router_fn(
+        |request: &vox::ConnectionRequest| -> Result<vox::ConnectionRoute, vox::Metadata> {
+            match request.service() {
+                "Noop" => Ok(vox::ConnectionRoute::handle(())),
+                "Ping" => Ok(vox::ConnectionRoute::handle(PingDispatcher::new(
+                    PingService,
+                ))),
+                _ => Err(Default::default()),
+            }
+        },
+    )
+}
+
+fn pong_router() -> impl vox::ConnectionRouter {
+    vox::router_fn(
+        |request: &vox::ConnectionRequest| -> Result<vox::ConnectionRoute, vox::Metadata> {
+            match request.service() {
+                "Noop" => Ok(vox::ConnectionRoute::handle(())),
+                "Pong" => Ok(vox::ConnectionRoute::handle(PongDispatcher::new(
+                    PongService,
+                ))),
+                _ => Err(Default::default()),
+            }
+        },
+    )
+}
+
 declare_link_endpoint!(mod ffi_pair_ab_a { export = vox_ffi_pair_ab_a_v1; });
 declare_link_endpoint!(mod ffi_pair_ab_b { export = vox_ffi_pair_ab_b_v1; });
 declare_link_endpoint!(mod ffi_pair_ba_a { export = vox_ffi_pair_ba_a_v1; });
@@ -65,7 +93,7 @@ async fn ffi_transport_supports_bidirectional_calls_with_two_services_when_a_ini
     let server = tokio::spawn(async move {
         let link = ffi_pair_ab_b::accept().await.expect("accept ffi link");
         let root = vox::acceptor_on(link)
-            .on_connection(PongDispatcher::new(PongService))
+            .on_connection(pong_router())
             .establish::<vox::NoopClient>()
             .await
             .expect("acceptor establish");
@@ -77,7 +105,7 @@ async fn ffi_transport_supports_bidirectional_calls_with_two_services_when_a_ini
 
     let link = ffi_pair_ab_a::connect(ffi_pair_ab_b::vtable()).expect("connect ffi link");
     let root = vox::initiator_on(link)
-        .on_connection(PingDispatcher::new(PingService))
+        .on_connection(ping_router())
         .establish::<vox::NoopClient>()
         .await
         .expect("initiator establish");
@@ -100,7 +128,7 @@ async fn ffi_transport_supports_bidirectional_calls_with_two_services_when_b_ini
     let server = tokio::spawn(async move {
         let link = ffi_pair_ba_a::accept().await.expect("accept ffi link");
         let root = vox::acceptor_on(link)
-            .on_connection(PingDispatcher::new(PingService))
+            .on_connection(ping_router())
             .establish::<vox::NoopClient>()
             .await
             .expect("acceptor establish");
@@ -112,7 +140,7 @@ async fn ffi_transport_supports_bidirectional_calls_with_two_services_when_b_ini
 
     let link = ffi_pair_ba_b::connect(ffi_pair_ba_a::vtable()).expect("connect ffi link");
     let root = vox::initiator_on(link)
-        .on_connection(PongDispatcher::new(PongService))
+        .on_connection(pong_router())
         .establish::<vox::NoopClient>()
         .await
         .expect("initiator establish");
