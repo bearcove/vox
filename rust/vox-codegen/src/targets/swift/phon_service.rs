@@ -132,7 +132,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
     out.push('\n');
 
     out.push_str(&format!(
-        "public let {name}Methods: [UInt64: PhonMethodSchemas] = [\n"
+        "nonisolated public let {name}Methods: [UInt64: PhonMethodSchemas] = [\n"
     ));
     for m in service.methods {
         let mname = m.method_name.to_lower_camel_case();
@@ -223,10 +223,10 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
             "nonisolated(unsafe) let {name}_{mname}_ResponseEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_ResponseDescriptor, {name}Registry, {name}_{mname}_ResponseDescriptorBlocks)\n"
         ));
         out.push_str(&format!(
-            "let {name}_{mname}_ArgsEncoder = VoxTypedEncoder({name}_{mname}_ArgsEncodeProgram)\n"
+            "nonisolated let {name}_{mname}_ArgsEncoder = VoxTypedEncoder({name}_{mname}_ArgsEncodeProgram)\n"
         ));
         out.push_str(&format!(
-            "let {name}_{mname}_ResponseEncoder = VoxTypedEncoder({name}_{mname}_ResponseEncodeProgram)\n"
+            "nonisolated let {name}_{mname}_ResponseEncoder = VoxTypedEncoder({name}_{mname}_ResponseEncodeProgram)\n"
         ));
     }
     out.push('\n');
@@ -261,7 +261,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
                 "nonisolated(unsafe) let {name}_{mname}_{an}_ElementEncodeProgram: Lowered = try! lowerTyped({name}_{mname}_{an}_ElementDescriptor, {name}Registry, {name}_{mname}_{an}_ElementDescriptorBlocks)\n"
             ));
             out.push_str(&format!(
-                "let {name}_{mname}_{an}_ElementEncoder = VoxTypedEncoder({name}_{mname}_{an}_ElementEncodeProgram)\n"
+                "nonisolated let {name}_{mname}_{an}_ElementEncoder = VoxTypedEncoder({name}_{mname}_{an}_ElementEncodeProgram)\n"
             ));
         }
     }

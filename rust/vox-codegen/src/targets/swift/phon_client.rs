@@ -72,7 +72,11 @@ pub fn generate_phon_client(service: &ServiceDescriptor) -> String {
     // The client.
     // r[impl rpc.caller]
     out.push_str(&format!(
-        "public final class {service_name}Client: {service_name}Caller, Sendable {{\n"
+        "public final class {service_name}Client: {service_name}Caller, ExpectedRootClient, Sendable {{\n"
+    ));
+    out.push_str(&format!(
+        "    nonisolated public static let voxServiceName = \"{}\"\n\n",
+        service.service_name
     ));
     out.push_str("    private let connection: VoxConnection\n");
     out.push_str("    private let timeout: TimeInterval?\n\n");

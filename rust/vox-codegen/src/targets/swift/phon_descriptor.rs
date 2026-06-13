@@ -552,34 +552,50 @@ fn enum_access(
         }
         // project: bind each associated value, store it into scratch at its offset.
         let binds: Vec<String> = (0..fields.len()).map(|k| format!("let f{k}")).collect();
-        let mut proj = format!("case .{case}({}): ", binds.join(", "));
-        for (k, ty) in tys.iter().enumerate() {
-            proj.push_str(&format!(
-                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).initialize(to: f{k}); ",
+        let project_statements: Vec<String> = tys
+            .iter()
+            .enumerate()
+            .map(|(k, ty)| {
+                format!(
+                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).initialize(to: f{k});",
                 offset(k),
                 ty
-            ));
-        }
+                )
+            })
+            .collect();
+        let proj = format!(
+            "case .{case}({}): {}",
+            binds.join(", "),
+            project_statements.join(" ")
+        );
         project_cases.push_str(&format!("{proj}\n            "));
         // destroy: deinit each field at its offset.
-        let mut des = format!("case {i}: ");
-        for (k, ty) in tys.iter().enumerate() {
-            des.push_str(&format!(
-                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).deinitialize(count: 1); ",
+        let destroy_statements: Vec<String> = tys
+            .iter()
+            .enumerate()
+            .map(|(k, ty)| {
+                format!(
+                "scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).deinitialize(count: 1);",
                 offset(k),
                 ty
-            ));
-        }
+                )
+            })
+            .collect();
+        let des = format!("case {i}: {}", destroy_statements.join(" "));
         destroy_cases.push_str(&format!("{des}\n            "));
         // inject: move each field out of scratch, construct the case (labels for struct).
-        let mut inj = format!("case {i}: ");
-        for (k, ty) in tys.iter().enumerate() {
-            inj.push_str(&format!(
-                "let f{k} = scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).move(); ",
-                offset(k),
-                ty
-            ));
-        }
+        let move_statements: Vec<String> = tys
+            .iter()
+            .enumerate()
+            .map(|(k, ty)| {
+                format!(
+                    "let f{k} = scratch.advanced(by: {}).assumingMemoryBound(to: {}.self).move();",
+                    offset(k),
+                    ty
+                )
+            })
+            .collect();
+        let mut inj = format!("case {i}: {}", move_statements.join(" "));
         let args: Vec<String> = fields
             .iter()
             .enumerate()

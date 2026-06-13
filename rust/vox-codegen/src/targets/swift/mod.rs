@@ -14,6 +14,7 @@ pub mod phon_service;
 pub mod types;
 
 use facet_core::Shape;
+use heck::ToUpperCamelCase;
 use vox_types::ServiceDescriptor;
 
 pub use types::{collect_named_types, generate_named_types};
@@ -52,7 +53,42 @@ pub fn generate_service(service: &ServiceDescriptor) -> String {
     out.push_str(&phon_service::generate_phon_service(service));
     out.push_str(&phon_client::generate_phon_client(service));
     out.push_str(&phon_server::generate_phon_server(service));
+    rewrite_wire_type_identifiers(out, service)
+}
+
+fn rewrite_wire_type_identifiers(out: String, service: &ServiceDescriptor) -> String {
+    let prefix = service.service_name.to_upper_camel_case();
+    let out = replace_swift_identifier(&out, "VoxError", &format!("{prefix}VoxError"));
+    replace_swift_identifier(&out, "Infallible", &format!("{prefix}Infallible"))
+}
+
+fn replace_swift_identifier(input: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut cursor = 0;
+
+    while let Some(rel_start) = input[cursor..].find(from) {
+        let start = cursor + rel_start;
+        let end = start + from.len();
+        let before = input[..start].chars().next_back();
+        let after = input[end..].chars().next();
+        let is_identifier = before.is_some_and(is_swift_identifier_char)
+            || after.is_some_and(is_swift_identifier_char);
+
+        out.push_str(&input[cursor..start]);
+        if is_identifier {
+            out.push_str(from);
+        } else {
+            out.push_str(to);
+        }
+        cursor = end;
+    }
+
+    out.push_str(&input[cursor..]);
     out
+}
+
+fn is_swift_identifier_char(ch: char) -> bool {
+    ch == '_' || ch.is_ascii_alphanumeric()
 }
 
 fn validate_channel_rules(service: &ServiceDescriptor) {
@@ -384,7 +420,8 @@ mod tests {
             "generated Swift must expose async caller methods matching the source service:\n{generated}"
         );
         assert!(
-            generated.contains("public final class TestSvcClient: TestSvcCaller, Sendable {")
+            generated.contains("public final class TestSvcClient: TestSvcCaller, ExpectedRootClient, Sendable {")
+                && generated.contains("    nonisolated public static let voxServiceName = \"TestSvc\"")
                 && generated.contains("    private let connection: VoxConnection")
                 && generated
                     .contains("    public init(connection: VoxConnection, timeout: TimeInterval? = 30.0)")
@@ -395,7 +432,7 @@ mod tests {
                 && generated.contains(&format!(
                     "schemaInfo: ClientSchemaInfo(methodSchemas: testSvcMethods[{echo_id}]!, registry: testSvcRegistry)"
                 ))
-                && generated.contains("let result: Result<String, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)"),
+                && generated.contains("let result: Result<String, TestSvcVoxError<TestSvcInfallible>> = try decodeVoxTyped(respDecoder, response)"),
             "generated Swift client must delegate request serialization and response handling to VoxConnection:\n{generated}"
         );
         assert!(
@@ -474,7 +511,7 @@ mod tests {
         );
         assert!(
             generated.contains(
-                "throw VoxError<Infallible>.invalidPayload(\"no response schema advertised\")",
+                "throw SchemaSvcVoxError<SchemaSvcInfallible>.invalidPayload(\"no response schema advertised\")",
             ),
             "generated Swift client must surface response decode-plan failure on the call:\n{generated}"
         );
