@@ -12,6 +12,11 @@ should move into `docs/content/spec/conn.md` and `docs/content/spec/rpc.md`
 with Tracey requirements. Until then this file should not contain Tracey
 requirement annotations.
 
+Companion review:
+`docs/design/lane-model-user-review-and-reliability.md` checks this model
+against local Vox users and sketches retry, reliable-stream, and observability
+semantics.
+
 ## Problem
 
 The current model has three concepts tangled together:
