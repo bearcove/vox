@@ -1,4 +1,4 @@
-# Rootless Connections and Mux Links
+# Rootless Connections and Service Lanes
 
 Status: tentative design note, not spec.
 
@@ -44,68 +44,69 @@ run an ordinary connection over it.
 
 ## Direction
 
-Remove service-bearing root connections.
+Remove service-bearing root lanes.
 
-A fresh Vox RPC instance over a `Link` should establish a connection to a
-service set, plus protocol control needed to run requests against that set.
-There should be no application-visible root service, no root caller, and no
-`NoopClient` liveness token.
+A fresh Vox RPC instance over a `Link` should establish a connection: the
+authenticated, observable protocol envelope shared by the two peers. The
+connection can then contain service lanes. Each lane is one service namespace.
+
+There should be no application-visible root lane, no root service, no root
+caller, and no `NoopClient` liveness token.
 
 Keep `Link` dumb.
 
 A `Link` remains a bidirectional frame source/sink: send one payload, receive
 one payload, preserve order, apply backpressure at send, close gracefully. A
-`Link` should not know about service schemas, operations, request IDs, channel
-IDs, discovery, observability, or auth policy.
+`Link` should not know about connections, lanes, service schemas, operations,
+request IDs, channel IDs, discovery, observability, or auth policy.
 
-Keep the core one-link, one-connection, many possible services.
+Keep the core one-link, one-connection, many possible lanes.
 
 The common path should not include mux concepts at all:
 
 ```text
 tcp/ws/ffi/xpc/etc link
     -> one Vox RPC connection
-    -> authorized service set
+    -> authorized service lanes
 ```
 
-Put topology tricks outside the core RPC connection.
+Lanes are not the problem. The special root lane is.
 
-Instead of making one Vox session contain many virtual connections, any
-advanced topology should produce more links:
+The current "virtual connection" idea has two jobs mixed together:
 
-- a second TCP/Unix/XPC/FFI connection;
-- a platform rendezvous that hands both sides a connected local link;
-- a NAT-punching protocol that yields a link through the punched hole;
-- an optional multiplexing transport that opens child links over one carrier.
+- a service lane, where one lane is one service;
+- a topology trick, where one physical carrier creates another link-like path.
 
-Each produced link is just another `Link`. Vox RPC runs independently over
-that link, including its own transport prologue, handshake, schema exchange,
-request state, channels, and shutdown.
+The service-lane job belongs in Vox core. The topology job can live below or
+beside Vox as a wrapper, rendezvous protocol, or optional mux transport that
+hands Vox another `Link`.
 
 That gives us a smaller stack:
 
 ```text
 ordinary transport:
 
-    link -> Vox connection -> authorized service set
+    link -> Vox connection -> lane(Catalog)
+                           -> lane(Metrics)
+                           -> lane(Admin)
 
 advanced transport or rendezvous, outside core RPC:
 
-    mechanism -> link A -> Vox connection -> service set A
-              -> link B -> Vox connection -> service set B
-              -> link C -> Vox connection -> service set C
+    mechanism -> link A -> Vox connection -> lanes...
+              -> link B -> Vox connection -> lanes...
+              -> link C -> Vox connection -> lanes...
 ```
 
-The current names are probably wrong. Tentative vocabulary:
+Tentative vocabulary:
 
 | Old | Tentative | Meaning |
 | --- | --- | --- |
 | link | link | Dumb bidirectional frame transport. |
-| session | connection | A Vox RPC instance over one link. Stronger than a link because it has Vox handshake/schema/request state. |
-| connection | optional extra link | Current virtual connection functionality, probably replaced by separate links produced by transports, rendezvous, or optional mux. |
+| session | connection | A Vox RPC instance over one link. It owns handshake state, peer identity, auth policy, observability, and lane lifecycle. |
+| connection | lane | A service namespace inside a connection. One lane equals one service. |
 
 The most important naming decision is not the exact word. It is that the
-special root service disappears.
+special root lane disappears.
 
 ## Directionality
 
@@ -118,13 +119,14 @@ not imply the first Vox connection needs to become bidirectional service soup.
 
 Current thesis:
 
-- a Vox connection has one logical requester/opener;
-- requests on that Vox connection are initiated by the opener, but they may
-  target any service in the service set authorized for that connection;
+- a Vox connection authenticates the peers and holds shared connection state;
+- a lane is opened for one service;
+- requests on that lane target that lane's service;
 - responses, request-scoped channels, cancellation, credit, and errors flow
-  both ways as part of that service interaction;
+  both ways as part of that lane's service interaction;
 - if the accepted side wants to call services on the opener, it obtains
-  another link and opens another Vox connection in that logical direction.
+  another link or opens an allowed reverse lane, depending on the eventual
+  connection policy.
 
 The "another link" mechanism can be boring: dial a known address, connect over
 FFI, ask an HTTP cell to establish a companion connection, use XPC rendezvous,
@@ -136,7 +138,7 @@ to be the peer serving the Vox service, that does not need to be a Vox RPC
 primitive. A lower-level wrapper protocol can negotiate, authenticate, punch
 holes, exchange handles, or otherwise set up the actual link. Once the wrapper
 hands Vox a `Link`, Vox only cares which side opens the Vox connection and
-which services are requested or authorized on that connection.
+which lanes are requested or authorized on that connection.
 
 This avoids the confusing "one connection where both peers are arbitrary
 clients and servers at once" model without forcing every user to carry
@@ -148,14 +150,14 @@ entire service, that should probably be represented as an explicit second link
 or service capability, not as accidental bidirectionality on the same service
 connection.
 
-## Service Sets
+## Service Lanes
 
-Multiple services on one connection are probably a core feature.
+Multiple service lanes on one connection are a core feature.
 
 Rust services are traits. Forcing users to define one giant trait that composes
 all smaller service traits is awkward, brittle, and fights the language. Vox
-should let an endpoint serve a set of service traits and let a peer obtain
-typed clients for the subset it is allowed to call.
+should let an endpoint serve several service traits and let a peer open typed
+lanes for the subset it is allowed to call.
 
 Sketch:
 
@@ -172,32 +174,33 @@ server.await?;
 ```rust
 let conn = vox::connect("local:///tmp/app.sock").await?;
 
-let catalog: CatalogClient = conn.client()?;
-let metrics: MetricsClient = conn.client()?;
+let catalog: CatalogClient = conn.open_lane().await?;
+let metrics: MetricsClient = conn.open_lane().await?;
 ```
 
 The generated client types still stay small and trait-shaped. The shared
-connection is what composes them.
+connection is what composes them, and each generated client is backed by a
+lane for its service.
 
-The protocol needs a real service routing story. A request should identify the
-target service as well as the target method, either through the request envelope
-or through well-known protocol metadata. Service identity cannot be only a
-connection-open convention if one connection can carry multiple services.
+The protocol needs a real lane-open story. Opening a lane should identify the
+target service and negotiate or validate the service's request/response/channel
+schemas. After a lane is open, ordinary requests on that lane can identify only
+methods within that lane's service namespace.
 
 Open details:
 
-- Does the opener request a set of services during connection establishment,
-  or may it attempt any service and receive structured denials?
+- Does connection establishment advertise a filtered service catalog, or are
+  lanes opened optimistically and rejected with structured denials?
 - Are service IDs strings, schema-derived stable IDs, or both?
-- Is a generated `FooClient` created only after a service grant, or is a denied
-  call reported on first use?
-- Can a server add or remove service availability during a connection, or is
-  availability fixed once established?
+- Is a generated `FooClient` created only after lane open succeeds, or can it
+  exist as a lazy handle whose first call opens the lane?
+- Can a server add, remove, retire, or mark lane availability during a
+  connection, or is lane availability fixed once advertised?
 
 ## Authorization and Readiness
 
-Service composition makes authorization a first-class part of connection
-establishment and request routing.
+Service lanes make authorization a first-class part of connection and lane
+establishment.
 
 The server may implement a service, but still not allow a given peer to call
 it. The reason can depend on:
@@ -205,7 +208,7 @@ it. The reason can depend on:
 - transport evidence, such as mTLS identity, Unix peer credentials, XPC code
   identity, or in-process component identity;
 - connection metadata, such as requested tenant, account, or capability token;
-- service identity;
+- lane/service identity;
 - method identity;
 - dynamic service readiness.
 
@@ -213,23 +216,27 @@ These states should be distinguishable:
 
 | State | Meaning | Client-facing shape |
 | --- | --- | --- |
-| unknown service | The peer does not implement or does not reveal that service. | `UnknownService` or equivalent. |
-| forbidden service | The peer implements it, but this caller is not authorized. | `Forbidden` with optional redaction. |
-| not ready | The service exists but is temporarily unavailable or waiting for dependencies. | `ServiceUnavailable`/`NotReady`, optionally with retry or progress metadata. |
-| ready | Calls may proceed, subject to per-method auth. | Normal request handling. |
+| unknown lane service | The peer does not implement or does not reveal that service. | `UnknownService` or equivalent lane-open rejection. |
+| forbidden lane | The peer implements the service, but this caller is not authorized to open its lane. | `Forbidden` with optional redaction. |
+| not ready | The service lane exists but is temporarily unavailable or waiting for dependencies. | `ServiceUnavailable`/`NotReady`, optionally with retry or progress metadata. |
+| ready | The lane may open and calls may proceed, subject to per-method auth. | Normal lane and request handling. |
 
 Discovery must be filtered by authorization. An unauthenticated peer should not
-learn every private service just because the connection supports service sets.
+learn every private service just because the connection supports lanes.
 
 Readiness should not be faked as "service does not exist". If a service is
 implemented but warming up, blocked on a dependency, draining, or administratively
 paused, that is observability and policy data. It should be visible to callers
 that are allowed to know it, and to local devtools.
 
+This also gives devtools a clearer shape: connection health/auth belongs to the
+connection, while per-service readiness and failures belong to lanes.
+
 ## Optional Mux Links
 
 If Vox grows a mux primitive, it should be transport-shaped, not RPC-shaped,
-and it should be optional. The core redesign does not depend on it.
+and it should be optional. It produces links. It does not replace service
+lanes.
 
 Sketch:
 
@@ -258,9 +265,9 @@ Names are placeholders. The shape matters:
   link.
 
 `open_link` metadata is transport/mux metadata, not request metadata. It might
-include a logical purpose, desired service name, or resumable setup hint, but
-the child link still has to perform its own Vox handshake because a `Link` does
-not know Vox schemas.
+include a logical purpose or resumable setup hint, but the child link still has
+to perform its own Vox connection handshake because a `Link` does not know Vox
+connections or lanes.
 
 This primitive belongs beside TCP, Unix sockets, WebSocket, FFI, XPC, and
 memory links. It should not be a hidden mandatory layer under every Vox
@@ -273,6 +280,11 @@ The existing spec uses Dodeca to justify virtual connections:
 ```text
 Host <-> HTTP Server Cell <-> Browser
 ```
+
+Dodeca is useful because it mixes both concerns. Some of its current virtual
+connections are service lanes: one service namespace inside an already
+authenticated host/cell connection. Some of its topology pressure may instead
+belong below Vox, as extra local/FFI links or rendezvous.
 
 The browser opens a WebSocket Vox session to the HTTP server cell. The cell
 already has a local/FFI Vox session to the host. Today the HTTP server cell
@@ -297,12 +309,14 @@ The mux version would look like:
 ```text
 Browser
   -> WebSocket link
-  -> Vox connection for DevtoolsService
+  -> Vox connection
+  -> lane(DevtoolsService)
 
 HTTP Server Cell
   -> existing mux carrier to Host
   -> opens child link to Host
-  -> Vox connection for DevtoolsService
+  -> Vox connection
+  -> lane(DevtoolsService)
 
 Proxy
   -> browser link/connection <-> host child link/connection
@@ -313,21 +327,27 @@ or reimplement the Devtools RPC surface if it chooses the proxy shape. It
 forwards frames between two links.
 
 The stronger conclusion is not "Dodeca proves core mux is required". It is:
-reverse/proxy topologies should be modeled as separate links. A mux carrier is
-one possible way to obtain those links, not the core Vox connection model.
+service composition should be modeled as lanes, while reverse/proxy topologies
+may be modeled as separate links. A mux carrier is one possible way to obtain
+those links, not the core Vox lane model.
 
-## Handshake and Schema Cost
+## Handshake, Lanes, and Schema Cost
 
-Every produced link should perform a full semantic Vox setup by default:
+Every produced link should perform a full semantic Vox connection setup by
+default:
 
 - transport prologue;
 - Vox handshake;
-- protocol schema exchange;
-- service/schema compatibility check;
-- connection settings;
+- protocol schema exchange for the connection envelope;
+- connection settings and limits;
 - auth/authorization checks.
 
 That is the correct baseline because the produced link is just a link.
+
+Opening a lane should be cheaper than creating a new link and connection. Lane
+open should negotiate the service identity, service schema compatibility,
+authorization, readiness, and lane-local limits. It should not repeat DNS/TCP,
+TLS, transport prologue, or connection-auth work.
 
 If this is too expensive for high-churn links, optimize with explicit
 resumption rather than hidden parent/session state. For example:
@@ -389,7 +409,8 @@ The rootless model needs protocol language for at least:
 
 - stop accepting new physical links;
 - stop opening/accepting new produced links in rendezvous/mux transports;
-- stop accepting new requests on a Vox connection;
+- stop opening new lanes on a Vox connection;
+- stop accepting new requests on retiring lanes;
 - let in-flight requests and request-scoped channels finish;
 - fail/cancel the remaining work after a deadline;
 - report shutdown reason distinctly from peer death.
@@ -404,21 +425,21 @@ For a mux carrier, retire means "do not open or accept new child links". It may
 also propagate retire to existing child Vox connections, but those child
 connections still need their own drain/close state.
 
-For a Vox connection, retire means "do not send new requests on this service
-connection". Existing request scopes and their channels may continue until
-they finish or are cancelled.
+For a Vox connection, retire means "do not open new lanes". For a lane, retire
+means "do not send new requests on this service lane". Existing request scopes
+and their channels may continue until they finish or are cancelled.
 
 This area is intentionally not specified yet.
 
 ## Auth and Peer Evidence
 
 Authentication and access control cannot be an afterthought because they decide
-which links and services may be opened.
+which connections, lanes, and requests may be opened.
 
 The model should be:
 
 ```text
-transport evidence -> connection peer identity -> service-set auth -> request auth
+transport evidence -> connection peer identity -> lane auth/readiness -> request auth
 ```
 
 Examples of transport evidence:
@@ -451,11 +472,12 @@ Important consequences:
   mechanisms, or mux carriers;
 - produced-link open/accept spans attach to the mechanism that produced the
   link;
-- Vox handshake/schema spans attach to each Vox connection;
-- request progress attaches to request scopes, not to keepalive or arbitrary
-  logs;
-- request-scoped channel activity is visible under the request that introduced
-  the channel;
+- Vox handshake/schema spans attach to each connection;
+- lane open/accept/reject/readiness spans attach to lanes;
+- request progress attaches to request scopes within lanes, not to keepalive or
+  arbitrary logs;
+- request-scoped channel activity is visible under the request, lane, and
+  connection that introduced the channel;
 - observability/control traffic must not deadlock behind the application lane
   it is trying to explain.
 
@@ -470,7 +492,8 @@ Retries should not happen below a Vox connection or below a request scope.
 Transport/rendezvous/mux/link code can reconnect or re-establish links only
 when it has an explicit higher-level operation telling it what is safe to
 resume. A raw send failure is not proof that the peer did not observe the
-frame.
+frame. Lane reopen is also not a delivery guarantee; it only recreates a
+service namespace inside a live connection.
 
 Raw Vox channels are ordered streams with flow control. They are not durable
 queues. Reliable delivery across peer death needs a layer above request scopes:
@@ -534,8 +557,8 @@ Client using multiple services on the same connection:
 ```rust
 let conn = vox::connect("local:///tmp/app.sock").await?;
 
-let catalog: CatalogClient = conn.client()?;
-let metrics: MetricsClient = conn.client()?;
+let catalog: CatalogClient = conn.open_lane().await?;
+let metrics: MetricsClient = conn.open_lane().await?;
 
 let entry = catalog.lookup("facet".to_owned()).await?;
 let snapshot = metrics.snapshot().await?;
@@ -558,9 +581,11 @@ Optional mux carrier, one side opens multiple links:
 
 ```rust
 let carrier = vox::mux::connect("local:///tmp/host.sock").await?;
+let link = carrier.open_link().await?;
+let conn = vox::connect_on(link).await?;
 
-let catalog: CatalogClient = carrier.connect().await?;
-let metrics: MetricsClient = carrier.connect().await?;
+let catalog: CatalogClient = conn.open_lane().await?;
+let metrics: MetricsClient = conn.open_lane().await?;
 ```
 
 Optional mux carrier, accepted physical peer also opens a link back:
@@ -568,12 +593,19 @@ Optional mux carrier, accepted physical peer also opens a link back:
 ```rust
 let carrier = vox::mux::accept(link).await?;
 
-let serve = carrier.serve(|cx| match cx.service_name() {
-    "Worker" => Some(WorkerDispatcher::new(worker.clone()).boxed()),
-    _ => None,
+let serve = carrier.serve_links(|link| {
+    let worker = worker.clone();
+    async move {
+        let conn = vox::accept_on(link)
+            .service(WorkerDispatcher::new(worker))
+            .await?;
+        conn.closed().await
+    }
 });
 
-let control: ControlClient = carrier.connect().await?;
+let control_link = carrier.open_link().await?;
+let control_conn = vox::connect_on(control_link).await?;
+let control: ControlClient = control_conn.open_lane().await?;
 
 tokio::try_join!(serve, async move {
     control.ready().await?;
@@ -594,22 +626,22 @@ identify the compatibility pressure.
 
 | Checkout | Evidence | Redesign pressure |
 | --- | --- | --- |
-| `/Users/amos/dodeca` | Uses `NoopClient`, `SessionHandle`, `ConnectionAcceptor`, `open_connection`, and `proxy_connections`. `cells/cell-http/src/devtools.rs` proxies browser Devtools connections through the host. `crates/dodeca/src/cell_loader.rs` stores root sessions for cell links and opens reverse virtual connections. | Important stress case, but not proof that mux belongs in core. May simplify to separate FFI/local links or app-level forwarding. |
+| `/Users/amos/dodeca` | Uses `NoopClient`, `SessionHandle`, `ConnectionAcceptor`, `open_connection`, and `proxy_connections`. `cells/cell-http/src/devtools.rs` proxies browser Devtools connections through the host. `crates/dodeca/src/cell_loader.rs` stores root sessions for cell links and opens reverse virtual connections. | Important stress case. Some current virtual connections should become service lanes; topology pressure may simplify to separate FFI/local links or app-level forwarding. |
 | `/Users/amos/stax` | Server accept loops use `.on_connection(...).establish::<vox::NoopClient>()`; clients are mostly simple `vox::connect`. The daemon has custom channel capacity, observer, and keepalive setup. | Root liveness should disappear; advanced server config still needs an explicit server builder/future. |
 | `/Users/amos/bee` and `/Users/amos/bee-audio` | Rust FFI/server paths use `.on_connection(...).establish::<vox::NoopClient>()`; Swift app code stores `SessionHandle`; generated TypeScript clients call `established.rootConnection().caller()`. | Cross-language API should remove root handles and generated root access. Swift needs an explicit driven connection/server object. |
 | `/Users/amos/dibs` | Example app and service code use `.on_connection(...).establish::<vox::NoopClient>()`; TypeScript generated client uses root connection. | Mostly ordinary service serving and generated-client migration. |
-| `/Users/amos/hotmeal` | WASM/browser fuzz paths establish with `NoopClient`; WebSocket links are common. | Browser/WebSocket path should benefit from one link -> one connection with an authorized service set. |
+| `/Users/amos/hotmeal` | WASM/browser fuzz paths establish with `NoopClient`; WebSocket links are common. | Browser/WebSocket path should benefit from one link -> one connection with authorized service lanes. |
 | `/Users/amos/styx` | LSP extension tests and server setup use `.on_connection(dispatcher)`. | Mostly simple server migration. |
-| `/Users/amos/vixenware/ccc.vixen.rs` | Backend implements `ConnectionAcceptor` and serves Ccc; client manually establishes TLS/TCP before Vox. | Good auth/evidence case: mTLS/TLS evidence must reach service-set authorization. |
-| `/Users/amos/vixenware/vixen` | Many Rust paths use `NoopClient`, `.on_connection`, and `vox::serve`; Swift app opens a virtual connection with a VFS dispatcher after a Noop root session; FSKit/local socket code needs local peer identity. | Strong cross-language and local-IPC stress case. May become separate local/XPC/FFI links plus local peer evidence, not necessarily mux. |
+| `/Users/amos/vixenware/ccc.vixen.rs` | Backend implements `ConnectionAcceptor` and serves Ccc; client manually establishes TLS/TCP before Vox. | Good auth/evidence case: mTLS/TLS evidence must reach lane authorization. |
+| `/Users/amos/vixenware/vixen` | Many Rust paths use `NoopClient`, `.on_connection`, and `vox::serve`; Swift app opens a virtual connection with a VFS dispatcher after a Noop root session; FSKit/local socket code needs local peer identity. | Strong cross-language and local-IPC stress case. The VFS virtual connection likely maps to a lane; local/XPC/FFI links still need peer evidence. |
 | `/Users/amos/helix`, `/Users/amos/helix-fastenc`, `/Users/amos/helix-sched` | Older trace server code uses `vox::serve_listener`; generated web clients use root connection. | Mostly older simple server/client migration, but useful for compatibility shims and examples. |
 
 Compatibility classes:
 
 - Simple generated clients: should become easier. `rootConnection().caller()` and root `Caller` fields disappear from generated public API.
 - Simple servers: should become clearer. They drive a server future; no `NoopClient` token.
-- Configured servers: still need builder knobs for channel capacity, keepalive, observers, auth/evidence, and graceful shutdown.
-- Reverse-service users: need a way to obtain another link in the reverse logical direction. That can be a normal dial, FFI callback, XPC rendezvous, NAT-punching result, or optional mux child link.
+- Configured servers: still need builder knobs for lane limits, channel capacity, keepalive, observers, auth/evidence, and graceful shutdown.
+- Reverse-service users: need either an authorized reverse lane on the same connection or a way to obtain another link in the reverse logical direction. Another link can be a normal dial, FFI callback, XPC rendezvous, NAT-punching result, or optional mux child link.
 - Proxy users: need link-to-link proxy helpers when they choose frame proxying, but application-level forwarding may be better for some products.
 - Swift/TypeScript users: need the same conceptual model, without Rust-only drop semantics becoming protocol behavior.
 
@@ -620,7 +652,7 @@ Likely order:
 1. Introduce explicit server/connection futures while keeping current protocol.
    Make examples teach "drive the server future" and stop teaching root
    liveness.
-2. Define the rootless one-link, service-set connection API and generated
+2. Define the rootless connection/lane API and generated
    client/server shapes.
 3. Add peer evidence types to accepted links/connections before auth APIs grow
    around untrusted metadata.
@@ -630,18 +662,18 @@ Likely order:
    direct local/FFI/XPC links, explicit rendezvous, or application forwarding.
 6. Only introduce a mux carrier abstraction if the real migrations still need
    multiple links over one carrier.
-7. Decide whether current virtual connections remain as an internal bridge,
-   disappear, or become an optional mux transport implementation detail.
+7. Split current virtual-connection machinery into service lanes and any
+   separate topology/link-producing machinery that still proves necessary.
 8. Promote surviving semantics into the spec with Tracey requirements.
 
 ## Open Questions
 
-- Is a Vox connection bound to an explicit service set at establishment time,
-  or can service availability be discovered/denied lazily per request?
-- Is service selection part of the request envelope, well-known protocol
+- Is lane availability advertised during connection establishment, discovered
+  by service catalog, or denied lazily when opening a lane?
+- Is service selection part of the lane-open envelope, well-known protocol
   metadata, or both?
-- Does an accepted service connection ever initiate requests on the same
-  connection, or do all callbacks use another link?
+- Does an accepted connection ever initiate requests on the same
+  connection by opening reverse lanes, or do all callbacks use another link?
 - Is mux needed at all in core, or should it live as a separate transport crate?
 - Should NAT traversal be entirely external: a rendezvous/punching protocol that
   returns an ordinary `Link` to Vox?
@@ -651,13 +683,13 @@ Likely order:
   observability, or is it transport-private?
 - How does graceful retire propagate from external carriers/rendezvous
   mechanisms to produced links and then to request scopes?
-- How should request-scoped channel lifetime interact with service-connection
-  retire?
+- How should request-scoped channel lifetime interact with lane retire and
+  connection retire?
 - Which evidence fields are portable enough for core Vox, and which belong in
   transport-specific extension structs?
 - What exact API shape lets Dodeca choose between app-level forwarding,
   separate-link proxying, or optional mux without making every Vox user pay for
   it?
-- Can the first mux transport be implemented over existing Vox virtual
-  connections as a migration bridge, or would that preserve too much of the
-  root/session model we are trying to remove?
+- Can the first migration bridge reuse existing virtual-connection machinery
+  for lanes, or would that preserve too much of the root/session model we are
+  trying to remove?
