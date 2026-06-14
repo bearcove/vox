@@ -46,10 +46,10 @@ run an ordinary connection over it.
 
 Remove service-bearing root connections.
 
-A fresh Vox RPC instance over a `Link` should establish exactly the service
-surface that the opener asked for, plus protocol control needed to run that
-surface. There should be no application-visible root service, no root caller,
-and no `NoopClient` liveness token.
+A fresh Vox RPC instance over a `Link` should establish a connection to a
+service set, plus protocol control needed to run requests against that set.
+There should be no application-visible root service, no root caller, and no
+`NoopClient` liveness token.
 
 Keep `Link` dumb.
 
@@ -58,14 +58,14 @@ one payload, preserve order, apply backpressure at send, close gracefully. A
 `Link` should not know about service schemas, operations, request IDs, channel
 IDs, discovery, observability, or auth policy.
 
-Keep the core one-link, one-connection, one-service.
+Keep the core one-link, one-connection, many possible services.
 
 The common path should not include mux concepts at all:
 
 ```text
 tcp/ws/ffi/xpc/etc link
     -> one Vox RPC connection
-    -> one requested service surface
+    -> authorized service set
 ```
 
 Put topology tricks outside the core RPC connection.
@@ -87,13 +87,13 @@ That gives us a smaller stack:
 ```text
 ordinary transport:
 
-    link -> Vox connection -> requested service
+    link -> Vox connection -> authorized service set
 
 advanced transport or rendezvous, outside core RPC:
 
-    mechanism -> link A -> Vox connection -> service A
-              -> link B -> Vox connection -> service B
-              -> link C -> Vox connection -> service C
+    mechanism -> link A -> Vox connection -> service set A
+              -> link B -> Vox connection -> service set B
+              -> link C -> Vox connection -> service set C
 ```
 
 The current names are probably wrong. Tentative vocabulary:
@@ -118,11 +118,12 @@ not imply the first Vox connection needs to become bidirectional service soup.
 
 Current thesis:
 
-- a Vox connection has one logical service opener;
-- requests on that Vox connection are initiated by the opener;
+- a Vox connection has one logical requester/opener;
+- requests on that Vox connection are initiated by the opener, but they may
+  target any service in the service set authorized for that connection;
 - responses, request-scoped channels, cancellation, credit, and errors flow
   both ways as part of that service interaction;
-- if the accepted side wants to call a service on the opener, it obtains
+- if the accepted side wants to call services on the opener, it obtains
   another link and opens another Vox connection in that logical direction.
 
 The "another link" mechanism can be boring: dial a known address, connect over
@@ -135,7 +136,7 @@ to be the peer serving the Vox service, that does not need to be a Vox RPC
 primitive. A lower-level wrapper protocol can negotiate, authenticate, punch
 holes, exchange handles, or otherwise set up the actual link. Once the wrapper
 hands Vox a `Link`, Vox only cares which side opens the Vox connection and
-which service is being requested.
+which services are requested or authorized on that connection.
 
 This avoids the confusing "one connection where both peers are arbitrary
 clients and servers at once" model without forcing every user to carry
@@ -146,6 +147,84 @@ has bidirectional protocol traffic. If a method wants the peer to invoke an
 entire service, that should probably be represented as an explicit second link
 or service capability, not as accidental bidirectionality on the same service
 connection.
+
+## Service Sets
+
+Multiple services on one connection are probably a core feature.
+
+Rust services are traits. Forcing users to define one giant trait that composes
+all smaller service traits is awkward, brittle, and fights the language. Vox
+should let an endpoint serve a set of service traits and let a peer obtain
+typed clients for the subset it is allowed to call.
+
+Sketch:
+
+```rust
+let server = vox::Server::new(listener)
+    .service(CatalogDispatcher::new(catalog))
+    .service(MetricsDispatcher::new(metrics))
+    .service(AdminDispatcher::new(admin))
+    .authorize(authz);
+
+server.await?;
+```
+
+```rust
+let conn = vox::connect("local:///tmp/app.sock").await?;
+
+let catalog: CatalogClient = conn.client()?;
+let metrics: MetricsClient = conn.client()?;
+```
+
+The generated client types still stay small and trait-shaped. The shared
+connection is what composes them.
+
+The protocol needs a real service routing story. A request should identify the
+target service as well as the target method, either through the request envelope
+or through well-known protocol metadata. Service identity cannot be only a
+connection-open convention if one connection can carry multiple services.
+
+Open details:
+
+- Does the opener request a set of services during connection establishment,
+  or may it attempt any service and receive structured denials?
+- Are service IDs strings, schema-derived stable IDs, or both?
+- Is a generated `FooClient` created only after a service grant, or is a denied
+  call reported on first use?
+- Can a server add or remove service availability during a connection, or is
+  availability fixed once established?
+
+## Authorization and Readiness
+
+Service composition makes authorization a first-class part of connection
+establishment and request routing.
+
+The server may implement a service, but still not allow a given peer to call
+it. The reason can depend on:
+
+- transport evidence, such as mTLS identity, Unix peer credentials, XPC code
+  identity, or in-process component identity;
+- connection metadata, such as requested tenant, account, or capability token;
+- service identity;
+- method identity;
+- dynamic service readiness.
+
+These states should be distinguishable:
+
+| State | Meaning | Client-facing shape |
+| --- | --- | --- |
+| unknown service | The peer does not implement or does not reveal that service. | `UnknownService` or equivalent. |
+| forbidden service | The peer implements it, but this caller is not authorized. | `Forbidden` with optional redaction. |
+| not ready | The service exists but is temporarily unavailable or waiting for dependencies. | `ServiceUnavailable`/`NotReady`, optionally with retry or progress metadata. |
+| ready | Calls may proceed, subject to per-method auth. | Normal request handling. |
+
+Discovery must be filtered by authorization. An unauthenticated peer should not
+learn every private service just because the connection supports service sets.
+
+Readiness should not be faked as "service does not exist". If a service is
+implemented but warming up, blocked on a dependency, draining, or administratively
+paused, that is observability and policy data. It should be visible to callers
+that are allowed to know it, and to local devtools.
 
 ## Optional Mux Links
 
@@ -339,7 +418,7 @@ which links and services may be opened.
 The model should be:
 
 ```text
-transport evidence -> mux/connection peer identity -> service-open auth -> request auth
+transport evidence -> connection peer identity -> service-set auth -> request auth
 ```
 
 Examples of transport evidence:
@@ -438,6 +517,30 @@ async fn main() -> eyre::Result<()> {
 }
 ```
 
+Server with multiple services:
+
+```rust
+let server = vox::Server::new(listener)
+    .service(CatalogDispatcher::new(catalog))
+    .service(MetricsDispatcher::new(metrics))
+    .service(AdminDispatcher::new(admin))
+    .authorize(authz);
+
+server.await?;
+```
+
+Client using multiple services on the same connection:
+
+```rust
+let conn = vox::connect("local:///tmp/app.sock").await?;
+
+let catalog: CatalogClient = conn.client()?;
+let metrics: MetricsClient = conn.client()?;
+
+let entry = catalog.lookup("facet".to_owned()).await?;
+let snapshot = metrics.snapshot().await?;
+```
+
 Server with explicit graceful shutdown:
 
 ```rust
@@ -495,9 +598,9 @@ identify the compatibility pressure.
 | `/Users/amos/stax` | Server accept loops use `.on_connection(...).establish::<vox::NoopClient>()`; clients are mostly simple `vox::connect`. The daemon has custom channel capacity, observer, and keepalive setup. | Root liveness should disappear; advanced server config still needs an explicit server builder/future. |
 | `/Users/amos/bee` and `/Users/amos/bee-audio` | Rust FFI/server paths use `.on_connection(...).establish::<vox::NoopClient>()`; Swift app code stores `SessionHandle`; generated TypeScript clients call `established.rootConnection().caller()`. | Cross-language API should remove root handles and generated root access. Swift needs an explicit driven connection/server object. |
 | `/Users/amos/dibs` | Example app and service code use `.on_connection(...).establish::<vox::NoopClient>()`; TypeScript generated client uses root connection. | Mostly ordinary service serving and generated-client migration. |
-| `/Users/amos/hotmeal` | WASM/browser fuzz paths establish with `NoopClient`; WebSocket links are common. | Browser/WebSocket path should benefit from one link -> one service connection. |
+| `/Users/amos/hotmeal` | WASM/browser fuzz paths establish with `NoopClient`; WebSocket links are common. | Browser/WebSocket path should benefit from one link -> one connection with an authorized service set. |
 | `/Users/amos/styx` | LSP extension tests and server setup use `.on_connection(dispatcher)`. | Mostly simple server migration. |
-| `/Users/amos/vixenware/ccc.vixen.rs` | Backend implements `ConnectionAcceptor` and serves Ccc; client manually establishes TLS/TCP before Vox. | Good auth/evidence case: mTLS/TLS evidence must reach service-open auth. |
+| `/Users/amos/vixenware/ccc.vixen.rs` | Backend implements `ConnectionAcceptor` and serves Ccc; client manually establishes TLS/TCP before Vox. | Good auth/evidence case: mTLS/TLS evidence must reach service-set authorization. |
 | `/Users/amos/vixenware/vixen` | Many Rust paths use `NoopClient`, `.on_connection`, and `vox::serve`; Swift app opens a virtual connection with a VFS dispatcher after a Noop root session; FSKit/local socket code needs local peer identity. | Strong cross-language and local-IPC stress case. May become separate local/XPC/FFI links plus local peer evidence, not necessarily mux. |
 | `/Users/amos/helix`, `/Users/amos/helix-fastenc`, `/Users/amos/helix-sched` | Older trace server code uses `vox::serve_listener`; generated web clients use root connection. | Mostly older simple server/client migration, but useful for compatibility shims and examples. |
 
@@ -517,7 +620,7 @@ Likely order:
 1. Introduce explicit server/connection futures while keeping current protocol.
    Make examples teach "drive the server future" and stop teaching root
    liveness.
-2. Define the rootless one-link, one-service connection API and generated
+2. Define the rootless one-link, service-set connection API and generated
    client/server shapes.
 3. Add peer evidence types to accepted links/connections before auth APIs grow
    around untrusted metadata.
@@ -533,8 +636,10 @@ Likely order:
 
 ## Open Questions
 
-- Is a Vox connection always bound to exactly one service surface?
-- Is service selection part of the Vox handshake, connection metadata, or both?
+- Is a Vox connection bound to an explicit service set at establishment time,
+  or can service availability be discovered/denied lazily per request?
+- Is service selection part of the request envelope, well-known protocol
+  metadata, or both?
 - Does an accepted service connection ever initiate requests on the same
   connection, or do all callbacks use another link?
 - Is mux needed at all in core, or should it live as a separate transport crate?
