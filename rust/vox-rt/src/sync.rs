@@ -79,6 +79,11 @@ pub mod oneshot {
 }
 
 mod mutex {
+    #![expect(
+        clippy::disallowed_types,
+        reason = "vox-rt is the facade that wraps Tokio mutexes"
+    )]
+
     use std::fmt;
 
     pub struct Mutex<T>(tokio::sync::Mutex<T>);
@@ -217,6 +222,11 @@ mod notify {
 pub use notify::*;
 
 mod rwlock {
+    #![expect(
+        clippy::disallowed_types,
+        reason = "vox-rt is the facade that wraps Tokio and parking_lot rwlocks"
+    )]
+
     use std::fmt;
 
     pub struct RwLock<T>(tokio::sync::RwLock<T>);

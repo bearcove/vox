@@ -4,6 +4,7 @@ import {
   ConnectionError,
   type ConnectionHandle,
   Driver,
+  type Lane,
   type Link,
   type Rx,
   type Tx,
@@ -341,22 +342,27 @@ export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
   const activeDrivers = new Set<Promise<void>>();
 
   const dispatcher = new TestbedDispatcher(new TestbedService());
+  const driveLane = (lane: Lane) => {
+    const driver = new Driver(lane, dispatcher);
+    const run = driver.run().catch((error) => {
+      if (!(error instanceof ConnectionError)) {
+        throw error;
+      }
+    }).finally(() => {
+      activeDrivers.delete(run);
+    });
+    activeDrivers.add(run);
+  };
 
   wss.on("connection", (socket) => {
     const link = new NodeWsLink(socket);
-    void accept(link).then((connection) => {
+    void accept(link, { onLane: driveLane }).then((connection) => {
       const handle = connection.handle();
       activeConnections.add(handle);
-      const driver = new Driver(connection.lane(), dispatcher);
-      const run = driver.run().catch((error) => {
-        if (!(error instanceof ConnectionError)) {
-          throw error;
-        }
-      }).finally(() => {
-        activeDrivers.delete(run);
+      void connection.closed().finally(() => {
         activeConnections.delete(handle);
       });
-      activeDrivers.add(run);
+      driveLane(connection.lane());
     }).catch((error) => {
       console.error("[ts-ws-server] connection error:", error);
       link.close();

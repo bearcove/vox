@@ -188,6 +188,7 @@ actor LaneState {
     struct LaneRecord: Sendable {
         let dispatcher: any ServiceDispatcher
         let localSettings: ConnectionSettings
+        let channelRegistry: ChannelRegistry
     }
 
     private var nextConnId: UInt64
@@ -213,11 +214,13 @@ actor LaneState {
     func addLane(
         _ connId: UInt64,
         dispatcher: any ServiceDispatcher,
-        localSettings: ConnectionSettings
+        localSettings: ConnectionSettings,
+        channelRegistry: ChannelRegistry
     ) {
         lanes[connId] = LaneRecord(
             dispatcher: dispatcher,
-            localSettings: localSettings
+            localSettings: localSettings,
+            channelRegistry: channelRegistry
         )
     }
 

@@ -581,7 +581,7 @@ private func awaitConnectionOpenId(
     while ContinuousClock.now - start < timeout {
         let sent = await transport.sent()
         for message in sent {
-            if case .connectionOpen = message.payload {
+            if case .laneOpen = message.payload {
                 return message.connectionId
             }
         }
@@ -594,13 +594,13 @@ private func awaitConnectionAccept(
     _ transport: ScriptedTransport,
     connectionId: UInt64,
     timeoutMs: UInt64 = 1_000
-) async -> ConnectionAccept? {
+) async -> LaneAccept? {
     let start = ContinuousClock.now
     let timeout = Duration.milliseconds(Int64(timeoutMs))
     while ContinuousClock.now - start < timeout {
         let sent = await transport.sent()
         for message in sent where message.connectionId == connectionId {
-            if case .connectionAccept(let accept) = message.payload {
+            if case .laneAccept(let accept) = message.payload {
                 return accept
             }
         }
@@ -613,13 +613,13 @@ private func awaitConnectionClose(
     _ transport: ScriptedTransport,
     connectionId: UInt64,
     timeoutMs: UInt64 = 1_000
-) async -> ConnectionClose? {
+) async -> LaneClose? {
     let start = ContinuousClock.now
     let timeout = Duration.milliseconds(Int64(timeoutMs))
     while ContinuousClock.now - start < timeout {
         let sent = await transport.sent()
         for message in sent where message.connectionId == connectionId {
-            if case .connectionClose(let close) = message.payload {
+            if case .laneClose(let close) = message.payload {
                 return close
             }
         }
@@ -1862,12 +1862,12 @@ struct ConnectionFailureTests {
             }
 
             guard let connId = await awaitConnectionOpenId(transport) else {
-                Issue.record("expected ConnectionOpen")
+                Issue.record("expected LaneOpen")
                 return
             }
             #expect(connId == 1)
-            let opens = await transport.sent().compactMap { message -> ConnectionOpen? in
-                if case .connectionOpen(let open) = message.payload {
+            let opens = await transport.sent().compactMap { message -> LaneOpen? in
+                if case .laneOpen(let open) = message.payload {
                     return open
                 }
                 return nil
@@ -1935,7 +1935,7 @@ struct ConnectionFailureTests {
             }
 
             guard let connId = await awaitConnectionOpenId(transport) else {
-                Issue.record("expected ConnectionOpen")
+                Issue.record("expected LaneOpen")
                 return
             }
             await transport.enqueueMessage(
@@ -2043,7 +2043,7 @@ struct ConnectionFailureTests {
             }
 
             guard let connId = await awaitConnectionOpenId(transport) else {
-                Issue.record("expected ConnectionOpen")
+                Issue.record("expected LaneOpen")
                 return
             }
             await transport.enqueueMessage(
@@ -2070,7 +2070,7 @@ struct ConnectionFailureTests {
 
             secondReference = nil
             guard await awaitConnectionClose(transport, connectionId: connId) != nil else {
-                Issue.record("expected virtual ConnectionClose after last reference")
+                Issue.record("expected virtual LaneClose after last reference")
                 return
             }
         }
@@ -2113,7 +2113,7 @@ struct ConnectionFailureTests {
             }
 
             guard let connId = await awaitConnectionOpenId(transport) else {
-                Issue.record("expected ConnectionOpen")
+                Issue.record("expected LaneOpen")
                 return
             }
             await transport.enqueueMessage(
@@ -2165,7 +2165,7 @@ struct ConnectionFailureTests {
 
             serviceLane = nil
             guard await awaitConnectionClose(transport, connectionId: connId) != nil else {
-                Issue.record("expected service lane ConnectionClose after lane drop")
+                Issue.record("expected service lane LaneClose after lane drop")
                 return
             }
 
@@ -2207,7 +2207,7 @@ struct ConnectionFailureTests {
             )
 
             guard let accept = await awaitConnectionAccept(transport, connectionId: connId) else {
-                Issue.record("expected ConnectionAccept")
+                Issue.record("expected LaneAccept")
                 return
             }
             #expect(accept.connectionSettings.parity == .even)
@@ -2259,7 +2259,7 @@ struct ConnectionFailureTests {
             }
 
             guard let connId = await awaitConnectionOpenId(transport) else {
-                Issue.record("expected ConnectionOpen")
+                Issue.record("expected LaneOpen")
                 return
             }
 
