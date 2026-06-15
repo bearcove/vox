@@ -3,7 +3,9 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use vox::{ConnectionHandle, ConnectionSettings, Driver, Parity, memory_link_pair};
+use vox::{
+    ConnectionError, ConnectionHandle, ConnectionSettings, Driver, Parity, memory_link_pair,
+};
 
 #[vox::service]
 trait Echo {
@@ -233,7 +235,10 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
         )
         .await;
 
-    assert!(result.is_ok(), "default acceptor should accept connections");
+    assert!(
+        matches!(result, Err(ConnectionError::Rejected(_))),
+        "expected Rejected, got: {result:?}"
+    );
 }
 
 #[tokio::test]

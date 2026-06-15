@@ -1,14 +1,14 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use vox_rt::task::FutureExt;
 use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
-    ChannelItem, ChannelMessage, ChannelSink, ConnectionRole, ConnectionSettings, HandshakeResult,
-    IncomingChannelMessage, Message, MessagePayload, Metadata, MethodId, Parity, Payload,
-    ReplySink, RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage, RequestResponse,
-    Rx, SelfRef, Tx, VoxError, channel,
+    ChannelItem, ChannelMessage, ChannelSink, ConnectionRole, ConnectionSettings, Handler,
+    HandshakeResult, IncomingChannelMessage, Message, MessagePayload, Metadata, MethodId, Parity,
+    Payload, ReplySink, RequestBody, RequestCall, RequestCancel, RequestId, RequestMessage,
+    RequestResponse, Rx, SelfRef, Tx, VoxError, channel,
 };
 
 use super::utils::*;
@@ -31,6 +31,129 @@ fn initiator_handshake_with_request_limits(our_max: u32, peer_max: u32) -> Hands
     handshake.our_settings.max_concurrent_requests = our_max;
     handshake.peer_settings.max_concurrent_requests = peer_max;
     handshake
+}
+
+struct CaptureClientAcceptor<H> {
+    handler: H,
+    accepted: Mutex<Option<tokio::sync::oneshot::Sender<TestLaneClient>>>,
+}
+
+impl<H> CaptureClientAcceptor<H> {
+    fn new(handler: H, accepted: tokio::sync::oneshot::Sender<TestLaneClient>) -> Self {
+        Self {
+            handler,
+            accepted: Mutex::new(Some(accepted)),
+        }
+    }
+}
+
+impl<H> LaneAcceptor for CaptureClientAcceptor<H>
+where
+    H: Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
+    fn accept(&self, _request: &LaneRequest, lane: PendingLane) -> Result<(), Metadata> {
+        let client = lane.handle_with_client::<TestLaneClient>(self.handler.clone());
+        if let Some(accepted) = self
+            .accepted
+            .lock()
+            .expect("accepted lane mutex poisoned")
+            .take()
+        {
+            let _ = accepted.send(client);
+        }
+        Ok(())
+    }
+}
+
+async fn captured_test_lane_pair_with<H>(
+    client_conduit: MessageConduit,
+    server_conduit: MessageConduit,
+    client_handshake: HandshakeResult,
+    server_handshake: HandshakeResult,
+    handler: H,
+) -> (
+    TestLaneClient,
+    TestLaneClient,
+    crate::connection::ConnectionHandle,
+)
+where
+    H: Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
+    captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        client_handshake,
+        server_handshake,
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 64,
+            initial_channel_credit: vox_types::DEFAULT_INITIAL_CHANNEL_CREDIT,
+        },
+        handler,
+    )
+    .await
+}
+
+async fn captured_test_lane_pair_with_settings<H>(
+    client_conduit: MessageConduit,
+    server_conduit: MessageConduit,
+    client_handshake: HandshakeResult,
+    server_handshake: HandshakeResult,
+    lane_settings: ConnectionSettings,
+    handler: H,
+) -> (
+    TestLaneClient,
+    TestLaneClient,
+    crate::connection::ConnectionHandle,
+)
+where
+    H: Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
+    let (accepted_tx, accepted_rx) = tokio::sync::oneshot::channel();
+    let server_task = vox_rt::task::spawn(
+        async move {
+            let server_connection = acceptor_conduit(server_conduit, server_handshake)
+                .on_connection(CaptureClientAcceptor::new(handler, accepted_tx))
+                .establish_connection()
+                .await
+                .expect("server handshake failed");
+            let server_client = accepted_rx.await.expect("server lane accepted");
+            (server_connection, server_client)
+        }
+        .named("server_setup"),
+    );
+
+    let client_connection = initiator_conduit(client_conduit, client_handshake)
+        .establish_connection()
+        .await
+        .expect("client handshake failed");
+    let client = client_connection
+        .open_lane_with_settings::<TestLaneClient>(lane_settings)
+        .await
+        .expect("client handshake failed");
+    let (server_connection, server_client) = server_task.await.expect("server setup failed");
+    (client, server_client, server_connection)
+}
+
+async fn captured_test_lane_pair<H>(
+    handler: H,
+) -> (
+    TestLaneClient,
+    TestLaneClient,
+    crate::connection::ConnectionHandle,
+)
+where
+    H: Handler<crate::DriverReplySink> + Clone + Send + Sync + 'static,
+{
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    captured_test_lane_pair_with(
+        client_conduit,
+        server_conduit,
+        test_initiator_handshake(),
+        test_acceptor_handshake(),
+        handler,
+    )
+    .await
 }
 
 async fn wait_for_outstanding_requests(caller: &crate::Caller, expected: usize) {
@@ -99,7 +222,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
                     let _ = server_session_tx.send(handle);
                 })
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -166,13 +289,17 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
 
     let (client_session_tx, client_session_rx) =
         tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
+    let (accepted_tx, accepted_rx) = tokio::sync::oneshot::channel();
 
     let server_task = vox_rt::task::spawn(
         async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
+            let server_connection = acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_connection(CaptureClientAcceptor::new((), accepted_tx))
+                .establish_connection()
                 .await
-                .expect("server handshake failed")
+                .expect("server handshake failed");
+            let server_caller = accepted_rx.await.expect("server lane accepted");
+            (server_connection, server_caller)
         }
         .named("server_setup"),
     );
@@ -186,7 +313,7 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
         .await
         .expect("client handshake failed");
 
-    let server_caller = server_task.await.expect("server setup failed");
+    let (_server_connection, server_caller) = server_task.await.expect("server setup failed");
     let client_session = client_session_rx.await.expect("client session handle sent");
 
     let (updates_tx, mut updates_rx) = channel::<u32>();
@@ -275,7 +402,7 @@ async fn cancel_aborts_in_flight_handler() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(BlockingHandler { was_cancelled })
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -425,7 +552,7 @@ async fn call_through_phon_handshake_reaches_handler() {
             Duration::from_secs(1),
             acceptor_on(server_link)
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>(),
+                .establish_connection(),
         ),
         tokio::time::timeout(
             Duration::from_secs(1),
@@ -436,9 +563,10 @@ async fn call_through_phon_handshake_reaches_handler() {
 
     let _server_caller = server_result.expect("server establish failed");
     let caller = client_result.expect("client establish failed");
-    assert_eq!(
-        caller.caller.debug_snapshot().connections[0].connection_id,
-        vox_types::LaneId::ROOT
+    assert!(
+        !caller.caller.debug_snapshot().connections[0]
+            .connection_id
+            .is_root()
     );
 
     let response = tokio::time::timeout(
@@ -548,7 +676,7 @@ async fn slow_incoming_request_does_not_block_later_request() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(PipeliningHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -629,7 +757,7 @@ async fn call_error_does_not_close_connection_or_cancel_other_requests() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(ScopedErrorHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -736,7 +864,7 @@ async fn handler_panic_returns_error_response_instead_of_hanging() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(PanicHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -793,7 +921,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
                     let _ = session_tx.send(handle);
                 })
                 .on_connection(BlockingHandler { was_cancelled })
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -863,11 +991,12 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
     let (session_tx, session_rx) = tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
+    let (accepted_tx, accepted_rx) = tokio::sync::oneshot::channel();
     let server_task = vox_rt::task::spawn(
         {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
-                acceptor_conduit(
+                let server_connection = acceptor_conduit(
                     server_conduit,
                     acceptor_handshake_with_request_limits(1, 64),
                 )
@@ -875,23 +1004,36 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
                     let handle = vox_rt::task::spawn(fut);
                     let _ = session_tx.send(handle);
                 })
-                .on_connection(BlockingHandler { was_cancelled })
-                .establish::<TestLaneClient>()
+                .on_connection(CaptureClientAcceptor::new(
+                    BlockingHandler { was_cancelled },
+                    accepted_tx,
+                ))
+                .establish_connection()
                 .await
-                .expect("server handshake failed")
+                .expect("server handshake failed");
+                let server_guard = accepted_rx.await.expect("server lane accepted");
+                (server_connection, server_guard)
             }
         }
         .named("server_setup"),
     );
 
-    let client_guard = initiator_conduit(
+    let client_connection = initiator_conduit(
         client_conduit,
         initiator_handshake_with_request_limits(64, 1),
     )
-    .establish::<TestLaneClient>()
+    .establish_connection()
     .await
     .expect("client handshake failed");
-    let server_guard = server_task.await.expect("server setup failed");
+    let client_guard = client_connection
+        .open_lane_with_settings::<TestLaneClient>(ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 1,
+            initial_channel_credit: 16,
+        })
+        .await
+        .expect("client lane open failed");
+    let (server_connection, server_guard) = server_task.await.expect("server setup failed");
     let server_session_task = session_rx.await.expect("session handle sent");
 
     let first_caller = client_guard.caller.clone();
@@ -930,6 +1072,7 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
     );
 
     drop(server_guard);
+    drop(server_connection);
     server_session_task.abort();
 
     let first_result = tokio::time::timeout(Duration::from_millis(500), first_call)
@@ -965,31 +1108,19 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let server_task = vox_rt::task::spawn(
-        {
-            let was_cancelled = Arc::clone(&was_cancelled);
-            async move {
-                acceptor_conduit(
-                    server_conduit,
-                    acceptor_handshake_with_request_limits(1, 64),
-                )
-                .on_connection(BlockingHandler { was_cancelled })
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-            }
-        }
-        .named("server_setup"),
-    );
-
-    let client_guard = initiator_conduit(
+    let (client_guard, server_guard, _server_connection) = captured_test_lane_pair_with_settings(
         client_conduit,
+        server_conduit,
         initiator_handshake_with_request_limits(64, 1),
+        acceptor_handshake_with_request_limits(1, 64),
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 1,
+            initial_channel_credit: 16,
+        },
+        BlockingHandler { was_cancelled },
     )
-    .establish::<TestLaneClient>()
-    .await
-    .expect("client handshake failed");
-    let server_guard = server_task.await.expect("server setup failed");
+    .await;
     let client_sender = client_guard.caller.driver().connection_sender().clone();
 
     let first_arg = 1_u32;
@@ -1039,24 +1170,8 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
 // r[verify session.protocol-error]
 #[tokio::test]
 async fn wrong_parity_request_id_closes_with_protocol_error() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_guard = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
-    let server_guard = server_task.await.expect("server setup failed");
+    let (client_guard, server_guard, _server_connection) =
+        captured_test_lane_pair(EchoHandler).await;
     let client_sender = client_guard.caller.driver().connection_sender().clone();
 
     send_raw_root_call(&client_sender, RequestId(2), 1).await;
@@ -1072,28 +1187,9 @@ async fn wrong_parity_request_id_closes_with_protocol_error() {
 // r[verify session.protocol-error]
 #[tokio::test]
 async fn duplicate_inflight_request_id_closes_with_protocol_error() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let server_task = vox_rt::task::spawn(
-        {
-            let was_cancelled = Arc::clone(&was_cancelled);
-            async move {
-                acceptor_conduit(server_conduit, test_acceptor_handshake())
-                    .on_connection(BlockingHandler { was_cancelled })
-                    .establish::<TestLaneClient>()
-                    .await
-                    .expect("server handshake failed")
-            }
-        }
-        .named("server_setup"),
-    );
-
-    let client_guard = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
-    let server_guard = server_task.await.expect("server setup failed");
+    let (client_guard, server_guard, _server_connection) =
+        captured_test_lane_pair(BlockingHandler { was_cancelled }).await;
     let client_sender = client_guard.caller.driver().connection_sender().clone();
 
     send_raw_root_call(&client_sender, RequestId(1), 1).await;
@@ -1120,7 +1216,7 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
                 .on_connection(BlockingHandler {
                     was_cancelled: Arc::new(AtomicBool::new(false)),
                 })
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -1184,7 +1280,7 @@ async fn dropping_root_caller_shuts_down_session() {
                     let _ = server_session_tx.send(handle);
                 })
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -1234,7 +1330,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -1336,7 +1432,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
                 },
             )
             .on_connection(EchoAcceptor)
-            .establish::<TestLaneClient>()
+            .establish_connection()
             .await
             .expect("server handshake failed")
         }
@@ -1415,14 +1511,14 @@ async fn acceptor_builder_customization_supports_opening_connections() {
                 },
             )
             .on_connection(EchoAcceptor)
-            .establish::<TestLaneClient>()
+            .establish_connection()
             .await
             .expect("initiator handshake failed")
         }
         .named("initiator_setup"),
     );
 
-    let _acceptor_caller_guard = acceptor_conduit(
+    let acceptor_session_handle = acceptor_conduit(
         server_conduit,
         HandshakeResult {
             role: ConnectionRole::Acceptor,
@@ -1441,12 +1537,11 @@ async fn acceptor_builder_customization_supports_opening_connections() {
             peer_metadata: vox_types::metadata().str("vox-service", "Noop").build(),
         },
     )
-    .establish::<TestLaneClient>()
+    .establish_connection()
     .await
     .expect("acceptor handshake failed");
-    let acceptor_session_handle = _acceptor_caller_guard.connection.clone().unwrap();
 
-    let _initiator_caller_guard = initiator_task.await.expect("initiator setup failed");
+    let _initiator_session_handle = initiator_task.await.expect("initiator setup failed");
 
     let vconn_handle = acceptor_session_handle
         .open_lane_handle(
@@ -1488,7 +1583,7 @@ async fn virtual_connection_request_ids_use_connection_parity() {
                             Ok(())
                         },
                     ))
-                    .establish::<TestLaneClient>()
+                    .establish_connection()
                     .await
                     .expect("server handshake failed")
             }
@@ -1570,7 +1665,7 @@ async fn close_root_connection_is_rejected() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -1604,7 +1699,7 @@ async fn echo_call_across_memory_link() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -1645,25 +1740,8 @@ async fn echo_call_across_memory_link() {
 
 #[tokio::test]
 async fn buffers_inbound_channel_items_until_rx_is_registered() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
+    let (client_caller, server_caller, _server_connection) = captured_test_lane_pair(()).await;
     let client_sender = client_caller.caller.driver().connection_sender().clone();
-
-    let server_caller = server_task.await.expect("server setup failed");
 
     let channel_id = ChannelId(99);
     let value = 123_u32;
@@ -1705,25 +1783,9 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
 
 #[tokio::test]
 async fn grant_credit_unblocks_driver_created_tx_channel() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
+    let (client_caller, server_caller, _server_connection) = captured_test_lane_pair(()).await;
     let client_sender = client_caller.caller.driver().connection_sender().clone();
 
-    let server_caller = server_task.await.expect("server setup failed");
     let (channel_id, sink) = server_caller.caller.driver().create_tx_channel();
 
     // Exhaust the default 16 credits.
@@ -1768,24 +1830,7 @@ async fn grant_credit_unblocks_driver_created_tx_channel() {
 // r[verify rpc.debug.snapshot]
 #[tokio::test]
 async fn debug_snapshot_reports_driver_channel_credit_state() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let _client_caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
-
-    let server_caller = server_task.await.expect("server setup failed");
+    let (_client_caller, server_caller, _server_connection) = captured_test_lane_pair(()).await;
     let (channel_id, sink) = server_caller.caller.driver().create_tx_channel();
     let mut tx = Tx::<u32>::unbound();
     tx.bind(sink);
@@ -1832,23 +1877,21 @@ async fn configured_channel_capacity_controls_initial_credit() {
     client_handshake.our_settings.initial_channel_credit = 2;
     client_handshake.peer_settings.initial_channel_credit = 2;
 
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, server_handshake)
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_caller = initiator_conduit(client_conduit, client_handshake)
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
+    let (client_caller, server_caller, _server_connection) = captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        client_handshake,
+        server_handshake,
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 64,
+            initial_channel_credit: 2,
+        },
+        (),
+    )
+    .await;
     let client_sender = client_caller.caller.driver().connection_sender().clone();
 
-    let server_caller = server_task.await.expect("server setup failed");
     let (channel_id, sink) = server_caller.caller.driver().create_tx_channel();
 
     for _ in 0..2 {
@@ -1892,24 +1935,7 @@ async fn configured_channel_capacity_controls_initial_credit() {
 // r[verify rpc.channel.reset]
 #[tokio::test]
 async fn dropping_bound_rx_makes_peer_tx_send_fail() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
-
-    let server_caller = server_task.await.expect("server setup failed");
+    let (client_caller, server_caller, _server_connection) = captured_test_lane_pair(()).await;
     let (channel_id, sink) = server_caller.caller.driver().create_tx_channel();
 
     let mut server_tx = Tx::<u32>::unbound();
@@ -1954,25 +1980,9 @@ async fn dropping_bound_rx_makes_peer_tx_send_fail() {
 
 #[tokio::test]
 async fn buffered_close_before_registration_keeps_channel_terminal() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed")
-        }
-        .named("server_setup"),
-    );
-
-    let client_caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
+    let (client_caller, server_caller, _server_connection) = captured_test_lane_pair(()).await;
     let client_sender = client_caller.caller.driver().connection_sender().clone();
 
-    let server_caller = server_task.await.expect("server setup failed");
     let channel_id = ChannelId(77);
 
     client_sender
@@ -2027,29 +2037,8 @@ async fn buffered_close_before_registration_keeps_channel_terminal() {
 
 #[tokio::test]
 async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
-    let (client_conduit, server_conduit) = message_conduit_pair();
-
-    let server_task = vox_rt::task::spawn(
-        async move {
-            let server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
-                .await
-                .expect("server handshake failed");
-            (
-                server_caller.caller.driver().connection_sender().clone(),
-                server_caller,
-            )
-        }
-        .named("server_setup"),
-    );
-
-    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
-        .await
-        .expect("client handshake failed");
-
-    let (server_sender, _server_caller_guard) = server_task.await.expect("server setup failed");
+    let (caller, server_caller, _server_connection) = captured_test_lane_pair(EchoHandler).await;
+    let server_sender = server_caller.caller.driver().connection_sender().clone();
 
     server_sender
         .send(crate::connection::ConnectionMessage::Request(

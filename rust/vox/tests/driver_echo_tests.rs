@@ -169,16 +169,17 @@ async fn echo_call_across_memory_link() {
 async fn in_flight_call_returns_error_when_peer_closes() {
     let (client_link, server_link) = memory_link_pair(16);
 
-    // Server: establish then immediately drop to close connection.
+    // Server: establish then shut down the whole connection.
     let server = tokio::spawn(async move {
         let server = vox::acceptor_on(server_link)
             .on_connection(EchoDispatcher::new(EchoService))
             .establish_connection()
             .await
             .expect("server establish");
-        // Keep alive briefly so client can establish, then drop.
+        // Keep alive briefly so client can establish, then close.
         tokio::time::sleep(Duration::from_millis(50)).await;
-        drop(server);
+        server.shutdown().expect("server shutdown");
+        server.closed().await;
     });
 
     let client = vox::initiator_on(client_link)

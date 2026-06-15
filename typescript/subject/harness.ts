@@ -19,7 +19,7 @@ export async function runSubjectServer(createDispatcher: () => Dispatcher, metad
       throw new Error("PEER_ADDR env var not set");
     }
 
-    const acceptLanes = process.env.ACCEPT_CONNECTIONS === "1";
+    const acceptLanes = process.env.ACCEPT_CONNECTIONS !== "0";
 
     console.error(`server mode: connecting to ${addr}, acceptLanes=${acceptLanes}`);
     const connection = await connect(tcpConnector(addr), {

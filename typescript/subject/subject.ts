@@ -5030,7 +5030,7 @@ async function runServer() {
   }
 
   // r[impl rpc.virtual-connection.accept] - Check if we should accept incoming service lanes.
-  const acceptLanes = process.env.ACCEPT_CONNECTIONS === "1";
+  const acceptLanes = process.env.ACCEPT_CONNECTIONS !== "0";
 
   console.error(`server mode: connecting to ${addr}, acceptLanes=${acceptLanes}`);
   const connection = await connect(makeConnector(addr), {
@@ -6323,6 +6323,13 @@ async function runServerListen() {
 
   const connection = await accept(acceptTcp(socket), {
     metadata: voxServiceMetadata("Testbed"),
+    onLane: (lane) => {
+      const driver = new Driver(
+        lane,
+        new TestbedDispatcher(new TestbedService()),
+      );
+      void driver.run();
+    },
   });
   const driver = new Driver(
     connection.lane(),

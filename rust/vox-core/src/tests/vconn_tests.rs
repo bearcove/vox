@@ -66,7 +66,7 @@ async fn open_virtual_connection_and_call() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -147,7 +147,7 @@ async fn root_and_virtual_connections_bind_separate_services() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(ServiceAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -200,7 +200,7 @@ async fn reject_virtual_connection() {
                         _ => Err(Default::default()),
                     },
                 ))
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -241,23 +241,21 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
     let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
         .named("server_setup"),
     );
 
-    let _client_caller_guard = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
+    let connection_handle = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish_connection()
         .await
         .expect("client handshake failed");
-    let connection_handle = _client_caller_guard.connection.clone().unwrap();
 
-    let _server_caller_guard = server_task.await.expect("server setup failed");
+    let _server_guard = server_task.await.expect("server setup failed");
 
-    // With the unified acceptor model, no explicit acceptor means the default
-    // () acceptor is used, which accepts all connections with a no-op handler.
+    // No explicit acceptor means inbound service lanes are rejected.
     let result = connection_handle
         .open_lane_handle(
             ConnectionSettings {
@@ -270,8 +268,8 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
         .await;
 
     assert!(
-        result.is_ok(),
-        "default acceptor should accept connections: {result:?}"
+        matches!(result, Err(ConnectionError::Rejected(_))),
+        "expected Rejected, got: {result:?}"
     );
 }
 
@@ -283,21 +281,19 @@ async fn close_unknown_virtual_connection_is_rejected() {
     let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
-                .on_connection(EchoHandler)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
         .named("server_setup"),
     );
 
-    let _client_caller_guard = initiator_conduit(client_conduit, test_initiator_handshake())
-        .establish::<TestLaneClient>()
+    let connection_handle = initiator_conduit(client_conduit, test_initiator_handshake())
+        .establish_connection()
         .await
         .expect("client handshake failed");
-    let connection_handle = _client_caller_guard.connection.clone().unwrap();
 
-    let _server_caller_guard = server_task.await.expect("server setup failed");
+    let _server_guard = server_task.await.expect("server setup failed");
 
     let missing_conn_id = vox_types::LaneId(1);
     let result = connection_handle
@@ -320,7 +316,7 @@ async fn close_virtual_connection() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -402,7 +398,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -464,7 +460,7 @@ async fn close_virtual_connection_closes_registered_rx_channels() {
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }
@@ -540,7 +536,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(LocalEchoAcceptor)
-                .establish::<TestLaneClient>()
+                .establish_connection()
                 .await
                 .expect("server handshake failed")
         }

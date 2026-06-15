@@ -156,17 +156,15 @@ async fn listen_and_serve() -> Result<(), String> {
         .map_err(|e| format!("accept: {e}"))?;
     stream.set_nodelay(true).ok();
 
-    let client = acceptor_on(vox_stream::StreamLink::tcp(stream))
+    let connection = acceptor_on(vox_stream::StreamLink::tcp(stream))
         .on_connection(TestbedDispatcher::new(TestbedService))
-        .establish::<TestbedClient>()
+        .establish_connection()
         .await
         .map_err(|e| format!("handshake: {e}"))?;
 
     // r[impl hosted.subject.lifecycle]
-    client.caller.closed().await;
-    if let Some(connection) = client.connection.as_ref() {
-        connection.shutdown().ok();
-    }
+    connection.closed().await;
+    connection.shutdown().ok();
     Ok(())
 }
 
@@ -179,25 +177,23 @@ async fn connect_and_serve() -> Result<(), String> {
         None => ("tcp", addr.clone()),
     };
 
-    let client = match scheme {
+    let connection = match scheme {
         "tcp" => initiator(tcp_link_source(host))
             .on_connection(dispatcher.clone())
-            .establish::<TestbedClient>()
+            .establish_connection()
             .await
             .map_err(|e| format!("handshake failed: {e}"))?,
         "local" => initiator(local_link_source(host))
             .on_connection(dispatcher.clone())
-            .establish::<TestbedClient>()
+            .establish_connection()
             .await
             .map_err(|e| format!("handshake failed: {e}"))?,
         _ => return Err(format!("unsupported PEER_ADDR scheme: {scheme}")),
     };
 
     // r[impl hosted.subject.lifecycle]
-    client.caller.closed().await;
-    if let Some(connection) = client.connection.as_ref() {
-        connection.shutdown().ok();
-    }
+    connection.closed().await;
+    connection.shutdown().ok();
     Ok(())
 }
 
