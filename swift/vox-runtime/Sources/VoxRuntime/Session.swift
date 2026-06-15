@@ -19,6 +19,10 @@ private func injectExpectedRootService(
     return metadata.metaSetting("vox-service", .string(serviceName))
 }
 
+private func injectDefaultRootService(_ metadata: Metadata) -> Metadata {
+    injectExpectedRootService(metadata, serviceName: NoopClient.voxServiceName)
+}
+
 // r[impl session]
 // r[impl connection.root]
 public final class Session: @unchecked Sendable {
@@ -92,6 +96,7 @@ public final class Session: @unchecked Sendable {
         metadata: Metadata = .null
     ) async throws -> Session {
         // r[impl rpc.session-setup]
+        let metadata = injectDefaultRootService(metadata)
         let attachment = try await connector.openAttachment()
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
@@ -151,15 +156,18 @@ public final class Session: @unchecked Sendable {
         _ link: any Link,
         dispatcher: any ServiceDispatcher,
         onConnection: (any ConnectionAcceptor)? = nil,
-        keepalive: SessionKeepaliveConfig? = nil
+        keepalive: SessionKeepaliveConfig? = nil,
+        metadata: Metadata = .null
     ) async throws -> Session {
         // r[impl rpc.session-setup]
+        let metadata = injectDefaultRootService(metadata)
         let (connection, driver, handle, peerMetadata) =
             try await establishInitiator(
                 attachment: .fresh(link),
                 dispatcher: dispatcher,
                 connectionAcceptor: onConnection,
-                keepalive: keepalive
+                keepalive: keepalive,
+                metadata: metadata
             )
         return Session(
             role: .initiator,

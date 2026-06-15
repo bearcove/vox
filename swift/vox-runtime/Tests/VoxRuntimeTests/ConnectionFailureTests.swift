@@ -268,6 +268,14 @@ private struct NoopDispatcher: ServiceDispatcher {
     ) async {}
 }
 
+private struct ScriptedConnector: SessionConnector {
+    let transport: ScriptedTransport
+
+    func openAttachment() async throws -> LinkAttachment {
+        .initiator(transport)
+    }
+}
+
 private final class RecordingRuntimeObserver: VoxRuntimeObserver, @unchecked Sendable {
     private let lock = NSLock()
     private var events: [VoxDriverObserverEvent] = []
@@ -828,6 +836,80 @@ struct ConnectionFailureTests {
         #expect(hello.connectionSettings.maxConcurrentRequests == 64)
         #expect(hello.connectionSettings.initialChannelCredit == 16)
         #expect(Array(hello.messagePayloadSchema) == MessageSchemaClosure)
+    }
+
+    // r[verify rpc.session-setup]
+    @Test func untypedInitiatorSessionDefaultsRootServiceToNoop() async throws {
+        let transport = ScriptedTransport()
+        let session = try await Session.initiator(
+            ScriptedConnector(transport: transport),
+            dispatcher: NoopDispatcher()
+        )
+        #expect(session.rootConnection.connectionId == 0)
+
+        let sent = await transport.sentHandshakeMessages()
+        guard let first = sent.first, case .hello(let hello) = first else {
+            Issue.record("expected hello to be sent")
+            return
+        }
+        #expect(hello.metadata.metaStr("vox-service") == "Noop")
+    }
+
+    // r[verify rpc.session-setup]
+    @Test func untypedInitiatorSessionPreservesExplicitRootServiceMetadata() async throws {
+        let transport = ScriptedTransport()
+        let metadata = meta([("vox-service", "Vfs"), ("prefix", "app")])
+        let session = try await Session.initiator(
+            ScriptedConnector(transport: transport),
+            dispatcher: NoopDispatcher(),
+            metadata: metadata
+        )
+        #expect(session.rootConnection.connectionId == 0)
+
+        let sent = await transport.sentHandshakeMessages()
+        guard let first = sent.first, case .hello(let hello) = first else {
+            Issue.record("expected hello to be sent")
+            return
+        }
+        #expect(hello.metadata.metaStr("vox-service") == "Vfs")
+        #expect(hello.metadata.metaStr("prefix") == "app")
+    }
+
+    // r[verify rpc.session-setup]
+    @Test func freshLinkInitiatorSessionDefaultsRootServiceToNoop() async throws {
+        let transport = ScriptedTransport()
+        let session = try await Session.establishOverFreshLink(
+            transport,
+            dispatcher: NoopDispatcher()
+        )
+        #expect(session.rootConnection.connectionId == 0)
+
+        let sent = await transport.sentHandshakeMessages()
+        guard let first = sent.first, case .hello(let hello) = first else {
+            Issue.record("expected hello to be sent")
+            return
+        }
+        #expect(hello.metadata.metaStr("vox-service") == "Noop")
+    }
+
+    // r[verify rpc.session-setup]
+    @Test func freshLinkInitiatorSessionPreservesExplicitRootServiceMetadata() async throws {
+        let transport = ScriptedTransport()
+        let metadata = meta([("vox-service", "Vfs"), ("prefix", "app")])
+        let session = try await Session.establishOverFreshLink(
+            transport,
+            dispatcher: NoopDispatcher(),
+            metadata: metadata
+        )
+        #expect(session.rootConnection.connectionId == 0)
+
+        let sent = await transport.sentHandshakeMessages()
+        guard let first = sent.first, case .hello(let hello) = first else {
+            Issue.record("expected hello to be sent")
+            return
+        }
+        #expect(hello.metadata.metaStr("vox-service") == "Vfs")
+        #expect(hello.metadata.metaStr("prefix") == "app")
     }
 
     // r[verify conduit]
