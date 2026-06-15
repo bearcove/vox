@@ -1,4 +1,4 @@
-use moire::task::FutureExt;
+use vox_rt::task::FutureExt;
 use vox_types::{
     ChannelBinder, ConnectionCloseReason, ConnectionSettings, IncomingChannelMessage, Metadata,
     MethodId, Parity, Payload, ReplySink, RequestCall, RequestResponse, SelfRef,
@@ -62,7 +62,7 @@ async fn open_virtual_connection_and_call() {
     let _ = tracing_subscriber::fmt::try_init();
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -101,7 +101,7 @@ async fn open_virtual_connection_and_call() {
     // Set up a driver on the client side for the virtual connection.
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     // Make a call on the virtual connection.
     let args_value: u32 = 123;
@@ -143,7 +143,7 @@ async fn root_and_virtual_connections_bind_separate_services() {
         }
     }
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(ServiceAcceptor)
@@ -177,7 +177,7 @@ async fn root_and_virtual_connections_bind_separate_services() {
 
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let vconn_caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     assert_eq!(call_u32(&vconn_caller, 2).await, 20);
     assert_eq!(call_u32(&root_caller_guard.caller, 3).await, 10);
@@ -188,7 +188,7 @@ async fn root_and_virtual_connections_bind_separate_services() {
 async fn reject_virtual_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(crate::connection::lane_acceptor_fn(
@@ -238,7 +238,7 @@ async fn reject_virtual_connection() {
 async fn open_virtual_connection_without_acceptor_is_rejected() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -280,7 +280,7 @@ async fn open_virtual_connection_without_acceptor_is_rejected() {
 async fn close_unknown_virtual_connection_is_rejected() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
@@ -316,7 +316,7 @@ async fn close_unknown_virtual_connection_is_rejected() {
 async fn close_virtual_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -355,7 +355,7 @@ async fn close_virtual_connection() {
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let caller = crate::Caller::new(vconn_driver.caller());
     let caller_closed = caller.clone();
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     // Make a call to confirm the connection works.
     let args_value: u32 = 42;
@@ -398,7 +398,7 @@ async fn close_virtual_connection() {
 async fn dropping_last_virtual_caller_closes_virtual_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -431,7 +431,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
 
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let vconn_caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     let response = vconn_caller
         .call(RequestCall {
@@ -460,7 +460,7 @@ async fn dropping_last_virtual_caller_closes_virtual_connection() {
 async fn close_virtual_connection_closes_registered_rx_channels() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -494,7 +494,7 @@ async fn close_virtual_connection_closes_registered_rx_channels() {
     let conn_id = vconn_handle.connection_id();
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     let (_channel_id, bound_rx) = caller.driver().create_rx();
     let mut rx_items = bound_rx.receiver;
@@ -525,7 +525,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let (client_session_tx, client_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
 
     struct LocalEchoAcceptor;
 
@@ -536,7 +536,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
         }
     }
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(LocalEchoAcceptor)
@@ -549,7 +549,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
 
     let root_caller = initiator_conduit(client_conduit, test_initiator_handshake())
         .spawn_fn(move |fut| {
-            let handle = moire::task::spawn(fut.named("client_session"));
+            let handle = vox_rt::task::spawn(fut.named("client_session"));
             let _ = client_session_tx.send(handle);
         })
         .establish::<TestLaneClient>()
@@ -574,7 +574,7 @@ async fn dropping_root_caller_waits_for_virtual_connections_before_session_shutd
 
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let vconn_caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     drop(root_caller);
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;

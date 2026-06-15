@@ -1,4 +1,4 @@
-use moire::sync::mpsc;
+use vox_rt::sync::mpsc;
 use vox_types::{Backing, Link, LinkRx, LinkTx};
 
 /// One in-process frame: bytes, plus any descriptors moving with it.

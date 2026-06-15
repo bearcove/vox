@@ -26,6 +26,6 @@ vox-types = { workspace = true }
 spec-proto.workspace = true
 facet-value.workspace = true
 tokio = { workspace = true, features = ["rt", "net"] }
-moire = { workspace = true }
+vox-rt = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

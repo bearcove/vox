@@ -189,7 +189,7 @@ where
     type Msg = F;
     type Error = BareConduitError;
 
-    #[moire::instrument]
+    #[vox_rt::instrument]
     async fn recv(&mut self) -> Result<Option<SelfRef<F::Msg<'static>>>, Self::Error> {
         let backing = match self.link_rx.recv().await.map_err(|error| {
             BareConduitError::Io(std::io::Error::other(format!("link recv failed: {error}")))

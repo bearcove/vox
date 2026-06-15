@@ -17,13 +17,13 @@ use std::{
 };
 
 use facet::{Facet, PtrConst, Shape};
-use moire::sync::SyncMutex;
 pub use phon::api::{JitFallbackRecord, JitFallbackReport, MethodJitFallbackReport};
 use phon::derive::{Derived, of_shape};
 use phon_engine::{Registry, typed};
 use phon_ir::Lowered;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use phon_ir::MemOp;
+use vox_rt::sync::SyncMutex;
 
 pub mod schema;
 pub use schema::{

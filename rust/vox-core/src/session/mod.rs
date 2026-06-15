@@ -7,9 +7,9 @@ use std::{
 };
 
 use facet_core::Shape;
-use moire::sync::mpsc;
 use tokio::sync::{mpsc as tokio_mpsc, oneshot as tokio_oneshot, watch};
 use tracing::{trace, warn};
+use vox_rt::sync::mpsc;
 use vox_types::{
     BoxFut, ChannelMessage, ConduitRx, ConduitTx, ConnectionRole, ConnectionSettings, Handler,
     HandshakeResult, IdAllocator, LaneAccept, LaneClose, LaneId, LaneOpen, LaneReject, MaybeSend,
@@ -224,13 +224,13 @@ where
 struct OpenRequest {
     settings: ConnectionSettings,
     metadata: Metadata,
-    result_tx: moire::sync::oneshot::Sender<Result<LaneHandle, ConnectionError>>,
+    result_tx: vox_rt::sync::oneshot::Sender<Result<LaneHandle, ConnectionError>>,
 }
 
 struct CloseRequest {
     conn_id: LaneId,
     metadata: Metadata,
-    result_tx: moire::sync::oneshot::Sender<Result<(), ConnectionError>>,
+    result_tx: vox_rt::sync::oneshot::Sender<Result<(), ConnectionError>>,
 }
 
 #[derive(Debug, Clone)]
@@ -338,7 +338,7 @@ impl ConnectionHandle {
         settings: ConnectionSettings,
         metadata: Metadata,
     ) -> Result<LaneHandle, ConnectionError> {
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.open_result");
+        let (result_tx, result_rx) = vox_rt::sync::oneshot::channel("session.open_result");
         self.open_tx
             .send(OpenRequest {
                 settings,
@@ -362,7 +362,7 @@ impl ConnectionHandle {
         lane_id: LaneId,
         metadata: Metadata,
     ) -> Result<(), ConnectionError> {
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.close_result");
+        let (result_tx, result_rx) = vox_rt::sync::oneshot::channel("session.close_result");
         self.close_tx
             .send(CloseRequest {
                 conn_id: lane_id,
@@ -473,7 +473,7 @@ enum ConnectionSlot {
 /// Debug-printable wrapper that omits the oneshot sender.
 struct PendingOutboundData {
     local_settings: ConnectionSettings,
-    result_tx: Option<moire::sync::oneshot::Sender<Result<LaneHandle, ConnectionError>>>,
+    result_tx: Option<vox_rt::sync::oneshot::Sender<Result<LaneHandle, ConnectionError>>>,
 }
 
 impl std::fmt::Debug for PendingOutboundData {
@@ -2877,7 +2877,7 @@ where
 mod tests {
     use std::sync::Mutex;
 
-    use moire::sync::mpsc;
+    use vox_rt::sync::mpsc;
     use vox_types::{
         Backing, BindingDirection, Conduit, DriverEvent, HandshakeResult, LaneAccept, LaneReject,
         Payload, RequestCall, SelfRef, TransportEvent, VoxObserverHandle,
@@ -3396,7 +3396,7 @@ mod tests {
     async fn duplicate_connection_accept_is_ignored_after_first() {
         let mut session = make_session();
         let conn_id = LaneId(1);
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.test.open_result");
+        let (result_tx, result_rx) = vox_rt::sync::oneshot::channel("session.test.open_result");
 
         session.conns.insert(
             conn_id,
@@ -3431,7 +3431,7 @@ mod tests {
     async fn duplicate_connection_reject_is_ignored_after_first() {
         let mut session = make_session();
         let conn_id = LaneId(1);
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.test.open_result");
+        let (result_tx, result_rx) = vox_rt::sync::oneshot::channel("session.test.open_result");
 
         session.conns.insert(
             conn_id,
@@ -3466,7 +3466,7 @@ mod tests {
     async fn inbound_accept_with_zero_initial_credit_rejects_pending_open() {
         let mut session = make_session();
         let conn_id = LaneId(1);
-        let (result_tx, result_rx) = moire::sync::oneshot::channel("session.test.open_result");
+        let (result_tx, result_rx) = vox_rt::sync::oneshot::channel("session.test.open_result");
 
         session.conns.insert(
             conn_id,
@@ -3515,9 +3515,10 @@ mod tests {
     #[tokio::test]
     async fn close_request_clears_pending_outbound_open() {
         let mut session = make_session();
-        let (open_result_tx, open_result_rx) = moire::sync::oneshot::channel("session.open.result");
+        let (open_result_tx, open_result_rx) =
+            vox_rt::sync::oneshot::channel("session.open.result");
         let (close_result_tx, close_result_rx) =
-            moire::sync::oneshot::channel("session.close.result");
+            vox_rt::sync::oneshot::channel("session.close.result");
 
         session.conns.insert(
             LaneId(1),

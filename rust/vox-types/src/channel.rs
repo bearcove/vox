@@ -8,11 +8,11 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use facet::{Facet, FacetOpaqueAdapter, OpaqueDeserialize, OpaqueSerialize};
 use facet_core::PtrConst;
-#[cfg(target_arch = "wasm32")]
-use moire::sync::TryAcquireError;
-use moire::sync::{Notify, Semaphore};
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::TryAcquireError;
+#[cfg(target_arch = "wasm32")]
+use vox_rt::sync::TryAcquireError;
+use vox_rt::sync::{Notify, Semaphore};
 
 use crate::{
     Backing, BindingDirection, ChannelClose, ChannelItem, ChannelReset, Metadata, MethodDescriptor,
@@ -728,7 +728,7 @@ impl ChannelCore {
         drop(guard);
         let core = Arc::clone(self);
 
-        moire::task::spawn(async move {
+        vox_rt::task::spawn(async move {
             let mut receiver = bound.receiver;
             let replenisher = bound.replenisher.clone();
             while let Some(msg) = receiver.recv().await {

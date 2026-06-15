@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use moire::task::FutureExt;
+use vox_rt::task::FutureExt;
 use vox_types::{
     Backing, ChannelBody, ChannelClose, ChannelDirection, ChannelGrantCredit, ChannelId,
     ChannelItem, ChannelMessage, ChannelSink, ConnectionRole, ConnectionSettings, HandshakeResult,
@@ -87,15 +87,15 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let (client_session_tx, client_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
     let (server_session_tx, server_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .spawn_fn(move |fut| {
-                    let handle = moire::task::spawn(fut.named("server_session"));
+                    let handle = vox_rt::task::spawn(fut.named("server_session"));
                     let _ = server_session_tx.send(handle);
                 })
                 .on_connection(EchoHandler)
@@ -108,7 +108,7 @@ async fn dropping_one_root_caller_clone_keeps_session_alive_until_last_drop() {
 
     let caller = initiator_conduit(client_conduit, test_initiator_handshake())
         .spawn_fn(move |fut| {
-            let handle = moire::task::spawn(fut.named("client_session"));
+            let handle = vox_rt::task::spawn(fut.named("client_session"));
             let _ = client_session_tx.send(handle);
         })
         .establish::<TestLaneClient>()
@@ -165,9 +165,9 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let (client_session_tx, client_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -179,7 +179,7 @@ async fn dropping_root_caller_keeps_session_alive_while_bound_stream_rx_exists()
 
     let root_caller = initiator_conduit(client_conduit, test_initiator_handshake())
         .spawn_fn(move |fut| {
-            let handle = moire::task::spawn(fut.named("client_session"));
+            let handle = vox_rt::task::spawn(fut.named("client_session"));
             let _ = client_session_tx.send(handle);
         })
         .establish::<TestLaneClient>()
@@ -271,7 +271,7 @@ async fn cancel_aborts_in_flight_handler() {
     let was_cancelled = Arc::new(AtomicBool::new(false));
     let was_cancelled_check = was_cancelled.clone();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(BlockingHandler { was_cancelled })
@@ -293,7 +293,7 @@ async fn cancel_aborts_in_flight_handler() {
     let _server_caller_guard = server_task.await.expect("server setup failed");
 
     // Spawn the call as a task so we can concurrently send a cancel.
-    let call_task = moire::task::spawn(
+    let call_task = vox_rt::task::spawn(
         async move {
             let args_value: u32 = 99;
             caller
@@ -544,7 +544,7 @@ impl vox_types::Handler<crate::DriverReplySink> for ScopedErrorHandler {
 async fn slow_incoming_request_does_not_block_later_request() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(PipeliningHandler)
@@ -625,7 +625,7 @@ async fn slow_incoming_request_does_not_block_later_request() {
 async fn call_error_does_not_close_connection_or_cancel_other_requests() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(ScopedErrorHandler)
@@ -732,7 +732,7 @@ async fn call_error_does_not_close_connection_or_cancel_other_requests() {
 async fn handler_panic_returns_error_response_instead_of_hanging() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(PanicHandler)
@@ -784,12 +784,12 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
     let was_cancelled = Arc::new(AtomicBool::new(false));
     let was_cancelled_check = was_cancelled.clone();
 
-    let (session_tx, session_rx) = tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
-    let server_task = moire::task::spawn(
+    let (session_tx, session_rx) = tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .spawn_fn(move |fut| {
-                    let handle = moire::task::spawn(fut);
+                    let handle = vox_rt::task::spawn(fut);
                     let _ = session_tx.send(handle);
                 })
                 .on_connection(BlockingHandler { was_cancelled })
@@ -808,7 +808,7 @@ async fn in_flight_call_returns_cancelled_when_peer_closes() {
     let server_caller_guard = server_task.await.expect("server setup failed");
     let server_session_task = session_rx.await.expect("session handle sent");
 
-    let call_task = moire::task::spawn(
+    let call_task = vox_rt::task::spawn(
         async move {
             caller
                 .caller
@@ -862,8 +862,8 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let (session_tx, session_rx) = tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
-    let server_task = moire::task::spawn(
+    let (session_tx, session_rx) = tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
+    let server_task = vox_rt::task::spawn(
         {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
@@ -872,7 +872,7 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
                     acceptor_handshake_with_request_limits(1, 64),
                 )
                 .spawn_fn(move |fut| {
-                    let handle = moire::task::spawn(fut);
+                    let handle = vox_rt::task::spawn(fut);
                     let _ = session_tx.send(handle);
                 })
                 .on_connection(BlockingHandler { was_cancelled })
@@ -965,7 +965,7 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
@@ -1041,7 +1041,7 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
 async fn wrong_parity_request_id_closes_with_protocol_error() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
@@ -1075,7 +1075,7 @@ async fn duplicate_inflight_request_id_closes_with_protocol_error() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
@@ -1114,7 +1114,7 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
     let client_conduit = DropPongConduit::new(BareConduit::new(client_link));
     let server_conduit = BareConduit::new(server_link);
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(BlockingHandler {
@@ -1138,7 +1138,7 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
 
     let _server_caller_guard = server_task.await.expect("server setup failed");
 
-    let call_task = moire::task::spawn(
+    let call_task = vox_rt::task::spawn(
         async move {
             caller
                 .caller
@@ -1172,15 +1172,15 @@ async fn dropping_root_caller_shuts_down_session() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let (client_session_tx, client_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
     let (server_session_tx, server_session_rx) =
-        tokio::sync::oneshot::channel::<moire::task::JoinHandle<()>>();
+        tokio::sync::oneshot::channel::<vox_rt::task::JoinHandle<()>>();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .spawn_fn(move |fut| {
-                    let handle = moire::task::spawn(fut.named("server_session"));
+                    let handle = vox_rt::task::spawn(fut.named("server_session"));
                     let _ = server_session_tx.send(handle);
                 })
                 .on_connection(EchoHandler)
@@ -1193,7 +1193,7 @@ async fn dropping_root_caller_shuts_down_session() {
 
     let caller = initiator_conduit(client_conduit, test_initiator_handshake())
         .spawn_fn(move |fut| {
-            let handle = moire::task::spawn(fut.named("client_session"));
+            let handle = vox_rt::task::spawn(fut.named("client_session"));
             let _ = client_session_tx.send(handle);
         })
         .establish::<TestLaneClient>()
@@ -1229,7 +1229,7 @@ async fn dropping_root_caller_shuts_down_session() {
 async fn schema_tracker_is_per_connection_not_per_session() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -1288,7 +1288,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
 
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let vconn_caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_driver"));
 
     let args_value: u32 = 200;
     let response = vconn_caller
@@ -1314,7 +1314,7 @@ async fn schema_tracker_is_per_connection_not_per_session() {
 async fn initiator_builder_customization_controls_allocated_connection_parity() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(
                 server_conduit,
@@ -1393,7 +1393,7 @@ async fn initiator_builder_customization_controls_allocated_connection_parity() 
 async fn acceptor_builder_customization_supports_opening_connections() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let initiator_task = moire::task::spawn(
+    let initiator_task = vox_rt::task::spawn(
         async move {
             initiator_conduit(
                 client_conduit,
@@ -1475,7 +1475,7 @@ async fn virtual_connection_request_ids_use_connection_parity() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
     let was_cancelled = Arc::new(AtomicBool::new(false));
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         {
             let was_cancelled = Arc::clone(&was_cancelled);
             async move {
@@ -1523,7 +1523,7 @@ async fn virtual_connection_request_ids_use_connection_parity() {
 
     let mut vconn_driver = Driver::new(vconn_handle, ());
     let vconn_caller = crate::Caller::new(vconn_driver.caller());
-    moire::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
+    vox_rt::task::spawn(async move { vconn_driver.run().await }.named("vconn_client_driver"));
 
     let call_caller = vconn_caller.clone();
     let call_task = tokio::spawn(async move {
@@ -1566,7 +1566,7 @@ async fn virtual_connection_request_ids_use_connection_parity() {
 async fn close_root_connection_is_rejected() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
@@ -1600,7 +1600,7 @@ async fn echo_call_across_memory_link() {
 
     // Server and client handshakes must run concurrently — both sides exchange
     // settings before either can proceed.
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
@@ -1647,7 +1647,7 @@ async fn echo_call_across_memory_link() {
 async fn buffers_inbound_channel_items_until_rx_is_registered() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -1707,7 +1707,7 @@ async fn buffers_inbound_channel_items_until_rx_is_registered() {
 async fn grant_credit_unblocks_driver_created_tx_channel() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -1734,7 +1734,7 @@ async fn grant_credit_unblocks_driver_created_tx_channel() {
             .expect("send within initial credit");
     }
 
-    let send_task = moire::task::spawn(async move {
+    let send_task = vox_rt::task::spawn(async move {
         let value = 42_u32;
         sink.send_payload(Payload::outgoing(&value)).await
     });
@@ -1770,7 +1770,7 @@ async fn grant_credit_unblocks_driver_created_tx_channel() {
 async fn debug_snapshot_reports_driver_channel_credit_state() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -1832,7 +1832,7 @@ async fn configured_channel_capacity_controls_initial_credit() {
     client_handshake.our_settings.initial_channel_credit = 2;
     client_handshake.peer_settings.initial_channel_credit = 2;
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, server_handshake)
                 .establish::<TestLaneClient>()
@@ -1858,7 +1858,7 @@ async fn configured_channel_capacity_controls_initial_credit() {
             .expect("send within configured initial credit");
     }
 
-    let send_task = moire::task::spawn(async move {
+    let send_task = vox_rt::task::spawn(async move {
         let value = 42_u32;
         sink.send_payload(Payload::outgoing(&value)).await
     });
@@ -1894,7 +1894,7 @@ async fn configured_channel_capacity_controls_initial_credit() {
 async fn dropping_bound_rx_makes_peer_tx_send_fail() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -1956,7 +1956,7 @@ async fn dropping_bound_rx_makes_peer_tx_send_fail() {
 async fn buffered_close_before_registration_keeps_channel_terminal() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .establish::<TestLaneClient>()
@@ -2029,7 +2029,7 @@ async fn buffered_close_before_registration_keeps_channel_terminal() {
 async fn unsolicited_response_id_is_ignored_and_does_not_break_calls() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let server_task = moire::task::spawn(
+    let server_task = vox_rt::task::spawn(
         async move {
             let server_caller = acceptor_conduit(server_conduit, test_acceptor_handshake())
                 .on_connection(EchoHandler)
@@ -2104,7 +2104,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
             // Virtual connections — proxy to upstream.
             let upstream_session = self.upstream_session.clone();
             let incoming = connection.into_handle();
-            moire::task::spawn(
+            vox_rt::task::spawn(
                 async move {
                     let upstream = upstream_session
                         .open_lane_handle(
@@ -2125,7 +2125,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         }
     }
 
-    let guest_b_task = moire::task::spawn(
+    let guest_b_task = vox_rt::task::spawn(
         async move {
             let guard = acceptor_conduit(guest_b_conduit, test_acceptor_handshake())
                 .on_connection(EchoAcceptor)
@@ -2144,7 +2144,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
         .expect("host<->guest-b establish");
     let host_to_b_session = _host_to_b_guard.connection.clone().unwrap();
 
-    let host_for_a_task = moire::task::spawn(
+    let host_for_a_task = vox_rt::task::spawn(
         async move {
             let guard = acceptor_conduit(host_a_conduit, test_acceptor_handshake())
                 .on_connection(ProxyHostAcceptor {
@@ -2181,7 +2181,7 @@ async fn proxy_connections_forwards_calls_without_service_specific_proxy_code() 
     let mut proxy_driver = Driver::new(proxy_conn, ());
     let proxy_caller = crate::Caller::new(proxy_driver.caller());
     let proxy_driver_task =
-        moire::task::spawn(async move { proxy_driver.run().await }.named("guest_a_proxy_driver"));
+        vox_rt::task::spawn(async move { proxy_driver.run().await }.named("guest_a_proxy_driver"));
 
     let args_value: u32 = 777;
     let response = proxy_caller

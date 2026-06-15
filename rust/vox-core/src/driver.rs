@@ -9,10 +9,10 @@ use vox_types::time::Instant;
 
 use futures_util::future::{AbortHandle, Abortable, FutureExt as FuturesFutureExt};
 use futures_util::stream::{FuturesUnordered, StreamExt as _};
-use moire::sync::{Semaphore, SyncMutex};
 use tokio::sync::watch;
+use vox_rt::sync::{Semaphore, SyncMutex};
 
-use moire::task::FutureExt as _;
+use vox_rt::task::FutureExt as _;
 use vox_types::{
     BoxFut, CallResult, ChannelBinder, ChannelBody, ChannelClose, ChannelCreditReplenisher,
     ChannelCreditReplenisherHandle, ChannelEventContext, ChannelId, ChannelItem,
@@ -34,7 +34,7 @@ use vox_types::{
 use crate::connection::{
     ConnectionMessage, ConnectionSender, DropControlRequest, FailureDisposition, LaneHandle,
 };
-use moire::sync::mpsc;
+use vox_rt::sync::mpsc;
 
 /// A pending response for one outbound request attempt.
 ///
@@ -50,7 +50,7 @@ struct PendingResponse {
     fds: vox_types::FrameFds,
 }
 
-type ResponseSlot = moire::sync::oneshot::Sender<PendingResponse>;
+type ResponseSlot = vox_rt::sync::oneshot::Sender<PendingResponse>;
 
 struct InFlightHandler {
     /// Aborts the handler future hosted on `Driver::handler_futs`. Triggered
@@ -790,7 +790,7 @@ mod tests {
 
     #[tokio::test]
     async fn replenisher_batches_at_half_the_initial_window() {
-        let (tx, mut rx) = moire::sync::mpsc::unbounded_channel("test.replenisher");
+        let (tx, mut rx) = vox_rt::sync::mpsc::unbounded_channel("test.replenisher");
         let replenisher = DriverChannelCreditReplenisher::new(
             vox_types::LaneId::ROOT,
             ChannelId(7),
@@ -825,7 +825,7 @@ mod tests {
 
     #[tokio::test]
     async fn replenisher_grants_one_by_one_for_single_credit_windows() {
-        let (tx, mut rx) = moire::sync::mpsc::unbounded_channel("test.replenisher.single");
+        let (tx, mut rx) = vox_rt::sync::mpsc::unbounded_channel("test.replenisher.single");
         let replenisher = DriverChannelCreditReplenisher::new(
             vox_types::LaneId::ROOT,
             ChannelId(9),
@@ -1796,7 +1796,7 @@ impl DriverCaller {
 
         // Register the response slot before sending, so the driver can
         // route the response even if it arrives before we start awaiting.
-        let (tx, rx) = moire::sync::oneshot::channel("driver.response");
+        let (tx, rx) = vox_rt::sync::oneshot::channel("driver.response");
         self.shared.pending_responses.lock().insert(req_id, tx);
         self.shared.start_request(
             req_id,

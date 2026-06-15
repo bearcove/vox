@@ -255,7 +255,7 @@ impl ConnectBuilder {
                         channel_capacity,
                         observer.clone(),
                     );
-                    let result = match moire::time::timeout(remaining, attempt).await {
+                    let result = match vox_rt::time::timeout(remaining, attempt).await {
                         Ok(r) => r,
                         Err(_) => Err(ConnectionError::ConnectTimeout),
                     };
@@ -285,7 +285,7 @@ impl ConnectBuilder {
                                 ?sleep,
                                 "vox high-level connect attempt failed; backing off"
                             );
-                            moire::time::sleep(sleep).await;
+                            vox_rt::time::sleep(sleep).await;
                             backoff = backoff.saturating_mul(2).min(INITIAL_CONNECT_BACKOFF_MAX);
                         }
                     }
@@ -699,7 +699,7 @@ where
             let acceptor = acceptor.clone();
             let observer = self.observer.clone();
             let channel_capacity = self.channel_capacity;
-            moire::spawn(async move {
+            vox_rt::spawn(async move {
                 tracing::trace!("vox high-level listener establishing connection");
                 let mut builder = vox_core::acceptor_on(link)
                     .on_connection(AcceptorRef(acceptor))

@@ -107,12 +107,12 @@ const SPEC_RUNTIME_STACK_BYTES: usize = 32 * 1024 * 1024;
 /// immediately and then re-raised. This prevents the silent-task-panic
 /// problem where tokio tasks panic and nobody notices, causing mysterious
 /// timeouts in tests.
-pub fn spawn_loud<F>(fut: F) -> moire::task::JoinHandle<F::Output>
+pub fn spawn_loud<F>(fut: F) -> vox_rt::task::JoinHandle<F::Output>
 where
     F: Future + Send + 'static,
     F::Output: Send + 'static,
 {
-    moire::task::spawn(async move {
+    vox_rt::task::spawn(async move {
         // Inner spawn so we can catch the panic via JoinError
         let inner = tokio::task::spawn(fut);
         match inner.await {
@@ -3388,7 +3388,7 @@ impl Testbed for TestbedService {
 
     async fn post_reply_generate(&self, output: Tx<i32>) {
         spawn_loud(async move {
-            moire::time::sleep(Duration::from_millis(10)).await;
+            vox_rt::time::sleep(Duration::from_millis(10)).await;
             for i in 0..5 {
                 if output.send(i).await.is_err() {
                     break;

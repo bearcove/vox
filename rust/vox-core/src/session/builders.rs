@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
-use moire::sync::mpsc;
+use vox_rt::sync::mpsc;
 use vox_types::{
     Conduit, ConnectionSettings, DEFAULT_INITIAL_CHANNEL_CREDIT, HandshakeResult, Link, MaybeSend,
     MaybeSync, MessageFamily, Metadata, Parity, SplitLink, VoxObserver, VoxObserverHandle,
@@ -700,7 +700,7 @@ impl<C> ConnectionAcceptorBuilder<C> {
         self
     }
 
-    #[moire::instrument]
+    #[vox_rt::instrument]
     pub async fn establish_connection(self) -> Result<ConnectionHandle, ConnectionError>
     where
         C: Conduit<Msg = MessageFamily> + 'static,
@@ -835,7 +835,7 @@ impl<L: Link> ConnectionTransportAcceptorBuilder<L> {
         self
     }
 
-    #[moire::instrument]
+    #[vox_rt::instrument]
     pub async fn establish_connection(self) -> Result<ConnectionHandle, ConnectionError>
     where
         L: Link + MaybeSend + 'static,
@@ -865,7 +865,7 @@ impl<L: Link> ConnectionTransportAcceptorBuilder<L> {
             .await
     }
 
-    #[moire::instrument]
+    #[vox_rt::instrument]
     pub async fn establish<Client: FromVoxLane>(self) -> Result<Client, ConnectionError>
     where
         L: Link + MaybeSend + 'static,
