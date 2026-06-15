@@ -15,7 +15,7 @@ type MemItem = Vec<u8>;
 ///
 /// Each direction is an unbounded channel carrying raw bytes (and, on Unix,
 /// any `Fd`s travelling with them) — no serialization, no IO. Useful for
-/// testing Conduits, Session, and anything above the transport layer
+/// testing Conduits, Connection, and anything above the transport layer
 /// without real networking.
 // r[impl transport.memory]
 pub struct MemoryLink {

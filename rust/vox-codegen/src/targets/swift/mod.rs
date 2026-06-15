@@ -385,9 +385,9 @@ mod tests {
         );
         assert!(
             generated.contains("public final class TestSvcClient: TestSvcCaller, Sendable {")
-                && generated.contains("    private let connection: VoxConnection")
+                && generated.contains("    private let connection: VoxLane")
                 && generated
-                    .contains("    public init(connection: VoxConnection, timeout: TimeInterval? = 30.0)")
+                    .contains("    public init(connection: VoxLane, timeout: TimeInterval? = 30.0)")
                 && generated.contains("let payload = encodeVoxTyped(message, testSvc_echo_ArgsEncoder)")
                 && generated.contains(&format!(
                     "methodId: {echo_id}, metadata: .null, payload: payload, timeout: timeout,"
@@ -396,7 +396,7 @@ mod tests {
                     "schemaInfo: ClientSchemaInfo(methodSchemas: testSvcMethods[{echo_id}]!, registry: testSvcRegistry)"
                 ))
                 && generated.contains("let result: Result<String, VoxError<Infallible>> = try decodeVoxTyped(respDecoder, response)"),
-            "generated Swift client must delegate request serialization and response handling to VoxConnection:\n{generated}"
+            "generated Swift client must delegate request serialization and response handling to VoxLane:\n{generated}"
         );
         assert!(
             generated.contains("public protocol TestSvcHandler: Sendable {")

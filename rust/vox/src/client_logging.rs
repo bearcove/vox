@@ -152,6 +152,22 @@ mod tests {
     use super::{ClientLogging, ClientLoggingOptions, RedactedMetadata};
     use crate::{MethodDescriptor, MethodId, meta_set, metadata};
 
+    #[derive(Clone)]
+    struct LoggingTestClient {
+        caller: crate::Caller,
+    }
+
+    impl crate::FromVoxLane for LoggingTestClient {
+        const SERVICE_NAME: &'static str = "Audit";
+
+        fn from_vox_lane(
+            caller: crate::Caller,
+            _connection: Option<crate::ConnectionHandle>,
+        ) -> Self {
+            Self { caller }
+        }
+    }
+
     // r[verify rpc.metadata.sigils]
     #[test]
     fn metadata_debug_redacts_sensitive_values() {
@@ -188,7 +204,7 @@ mod tests {
         // Server side: establish and immediately close
         let server = tokio::spawn(async move {
             let _caller = crate::acceptor_on(link_b)
-                .establish::<crate::NoopClient>()
+                .establish::<LoggingTestClient>()
                 .await
                 .expect("server establish");
             // Close the link so the client gets an error on next call
@@ -197,7 +213,7 @@ mod tests {
 
         // Client side: establish with the logging middleware
         let caller = crate::initiator_on(link_a)
-            .establish::<crate::NoopClient>()
+            .establish::<LoggingTestClient>()
             .await
             .expect("client establish");
 

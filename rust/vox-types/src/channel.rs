@@ -23,7 +23,7 @@ use crate::{
     ChannelSendOutcome, ChannelTrySendOutcome, ConnectionCloseReason, SourceLocation,
     VoxObserverHandle,
 };
-use crate::{ChannelId, ConnectionId};
+use crate::{ChannelId, LaneId};
 
 // ---------------------------------------------------------------------------
 // Thread-local channel binder — set during deserialization so TryFrom impls
@@ -386,7 +386,7 @@ pub trait ChannelCreditReplenisher: crate::MaybeSend + crate::MaybeSync + 'stati
         None
     }
 
-    fn connection_id(&self) -> Option<ConnectionId> {
+    fn connection_id(&self) -> Option<LaneId> {
         None
     }
 
@@ -1062,7 +1062,7 @@ pub trait ChannelSink: crate::MaybeSend + crate::MaybeSync + 'static {
         None
     }
 
-    fn connection_id(&self) -> Option<ConnectionId> {
+    fn connection_id(&self) -> Option<LaneId> {
         None
     }
 
@@ -1182,7 +1182,7 @@ impl<S: ChannelSink> ChannelSink for CreditSink<S> {
         self.inner.channel_id()
     }
 
-    fn connection_id(&self) -> Option<ConnectionId> {
+    fn connection_id(&self) -> Option<LaneId> {
         self.inner.connection_id()
     }
 

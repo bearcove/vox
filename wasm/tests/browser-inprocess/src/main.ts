@@ -5,10 +5,7 @@
 
 import init, { start_acceptor } from "../pkg/wasm_inprocess_tests.js";
 import { InProcessLink } from "@bearcove/vox-inprocess";
-import {
-  session,
-  voxServiceMetadata,
-} from "@bearcove/vox-core";
+import { connectOnLink } from "@bearcove/vox-core";
 import type { TestbedClient } from "@bearcove/vox-generated/testbed.generated.ts";
 
 // Make test results available to Playwright
@@ -340,14 +337,14 @@ async function runTests(): Promise<void> {
       link.pushMessage(payload);
     });
 
-    log("Establishing session as initiator...");
-    const established = await session.initiatorOn(link, { metadata: voxServiceMetadata("Testbed") });
+    log("Establishing connection as initiator...");
+    const connection = await connectOnLink(link);
 
     // Import the TestbedClient constructor dynamically to avoid circular issues
     const { TestbedClient } = await import(
       "@bearcove/vox-generated/testbed.generated.ts"
     );
-    const client = new TestbedClient(established.rootConnection().caller());
+    const client = await connection.openLane(TestbedClient);
 
     log("Connection established! Running tests...");
 

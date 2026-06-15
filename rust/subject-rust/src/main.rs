@@ -164,8 +164,8 @@ async fn listen_and_serve() -> Result<(), String> {
 
     // r[impl hosted.subject.lifecycle]
     client.caller.closed().await;
-    if let Some(session) = client.session.as_ref() {
-        session.shutdown().ok();
+    if let Some(connection) = client.connection.as_ref() {
+        connection.shutdown().ok();
     }
     Ok(())
 }
@@ -179,7 +179,7 @@ async fn connect_and_serve() -> Result<(), String> {
         None => ("tcp", addr.clone()),
     };
 
-    let root_caller_guard = match scheme {
+    let client = match scheme {
         "tcp" => initiator(tcp_link_source(host))
             .on_connection(dispatcher.clone())
             .establish::<TestbedClient>()
@@ -194,9 +194,9 @@ async fn connect_and_serve() -> Result<(), String> {
     };
 
     // r[impl hosted.subject.lifecycle]
-    root_caller_guard.caller.closed().await;
-    if let Some(session) = root_caller_guard.session.as_ref() {
-        session.shutdown().ok();
+    client.caller.closed().await;
+    if let Some(connection) = client.connection.as_ref() {
+        connection.shutdown().ok();
     }
     Ok(())
 }
@@ -2004,8 +2004,8 @@ async fn run_client() -> Result<(), String> {
         other => return Err(format!("unknown CLIENT_SCENARIO: {other}")),
     }
 
-    if let Some(session) = client.session.as_ref() {
-        session.shutdown().ok();
+    if let Some(connection) = client.connection.as_ref() {
+        connection.shutdown().ok();
     }
     tokio::time::timeout(Duration::from_secs(1), client.caller.closed())
         .await

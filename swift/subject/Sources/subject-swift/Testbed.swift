@@ -138670,10 +138670,10 @@ public protocol TestbedCaller: Sendable {
 }
 
 public final class TestbedClient: TestbedCaller, Sendable {
-  private let connection: VoxConnection
+  private let connection: VoxLane
   private let timeout: TimeInterval?
 
-  public init(connection: VoxConnection, timeout: TimeInterval? = 30.0) {
+  public init(connection: VoxLane, timeout: TimeInterval? = 30.0) {
     self.connection = connection
     self.timeout = timeout
   }

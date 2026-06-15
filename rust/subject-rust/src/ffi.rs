@@ -131,9 +131,9 @@ fn bootstrap_service_once(peer: *const vox_link_vtable) {
                     ffi_log("[subject-rust ffi] runtime thread: waiting for caller close");
                     client.caller.closed().await;
                     ffi_log("[subject-rust ffi] runtime thread: caller closed");
-                    if let Some(session) = client.session.as_ref() {
-                        let _ = session.shutdown();
-                        ffi_log("[subject-rust ffi] runtime thread: session shutdown requested");
+                    if let Some(connection) = client.connection.as_ref() {
+                        let _ = connection.shutdown();
+                        ffi_log("[subject-rust ffi] runtime thread: connection shutdown requested");
                     }
                 }
                 Err(error) => {

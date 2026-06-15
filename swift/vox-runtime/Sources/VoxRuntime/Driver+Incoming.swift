@@ -3,12 +3,12 @@ import Foundation
 extension Driver {
     // r[impl rpc.virtual-connection.accept]
     // r[impl connection.virtual]
-    func addVirtualConnection(
+    func addLane(
         _ connId: UInt64,
         dispatcher: any ServiceDispatcher,
         localSettings: ConnectionSettings
     ) async {
-        await virtualConnState.addConnection(
+        await laneState.addLane(
             connId,
             dispatcher: dispatcher,
             localSettings: localSettings
@@ -17,8 +17,8 @@ extension Driver {
 
     // r[impl connection.close]
     // r[impl connection.virtual]
-    func removeVirtualConnection(_ connId: UInt64) async {
-        await virtualConnState.removeConnection(connId)
+    func removeLane(_ connId: UInt64) async {
+        await laneState.removeLane(connId)
     }
 
     /// Handle an incoming message.
@@ -77,11 +77,11 @@ extension Driver {
                 try await sendProtocolError("connection.open")
                 throw ConnectionError.protocolViolation(rule: "connection.open")
             }
-            guard !(await virtualConnState.contains(msg.connectionId)) else {
+            guard !(await laneState.contains(msg.connectionId)) else {
                 try await sendProtocolError("connection.open")
                 throw ConnectionError.protocolViolation(rule: "connection.open")
             }
-            if let acceptor = connectionAcceptor {
+            if let acceptor = laneAcceptor {
                 let metadata = open.metadata
                 guard let service = metadata.metaStr("vox-service") else {
                     // Missing or non-string vox-service metadata — reject
@@ -99,13 +99,13 @@ extension Driver {
                     maxConcurrentRequests: open.connectionSettings.maxConcurrentRequests,
                     initialChannelCredit: open.connectionSettings.initialChannelCredit
                 )
-                let request = ConnectionRequest(metadata: metadata, service: service)
+                let request = LaneRequest(metadata: metadata, service: service)
                 let connId = msg.connectionId
-                let pending = PendingConnection(
+                let pending = PendingLane(
                     accept: { [weak self] dispatcher in
                         guard let self else { return }
                         Task {
-                            await self.addVirtualConnection(
+                            await self.addLane(
                                 connId,
                                 dispatcher: dispatcher,
                                 localSettings: localSettings
@@ -126,14 +126,14 @@ extension Driver {
                         }
                     }
                 )
-                acceptor.accept(request: request, connection: pending)
+                acceptor.accept(request: request, lane: pending)
             } else {
                 try await conduit.send(messageReject(connectionId: msg.connectionId, metadata: .null))
             }
         case .connectionAccept(let accept):
             // r[impl connection.open]
             // r[impl rpc.virtual-connection.open]
-            guard let pending = await virtualConnState.takePendingOutbound(msg.connectionId) else {
+            guard let pending = await laneState.takePendingOutbound(msg.connectionId) else {
                 break
             }
             do {
@@ -143,20 +143,20 @@ extension Driver {
                 try await sendProtocolError("connection.open")
                 throw ConnectionError.protocolViolation(rule: "connection.open")
             }
-            let connection = makeConnection(
+            let lane = makeLane(
                 connectionId: msg.connectionId,
                 localSettings: pending.localSettings,
                 peerSettings: accept.connectionSettings
             )
-            await virtualConnState.addConnection(
+            await laneState.addLane(
                 msg.connectionId,
                 dispatcher: pending.dispatcher ?? dispatcher,
                 localSettings: pending.localSettings
             )
-            pending.responseTx(.success(connection))
+            pending.responseTx(.success(lane))
         case .connectionReject(let reject):
             // r[impl connection.open.rejection]
-            guard let pending = await virtualConnState.takePendingOutbound(msg.connectionId) else {
+            guard let pending = await laneState.takePendingOutbound(msg.connectionId) else {
                 break
             }
             pending.responseTx(.failure(.rejected(metadata: reject.metadata)))
@@ -164,13 +164,13 @@ extension Driver {
             // r[impl connection.close]
             warnLog("received ConnectionClose conn_id=\(msg.connectionId)")
             if msg.connectionId == 0 {
-                warnLog("received ConnectionClose for root connection; shutting down driver")
+                warnLog("received ConnectionClose for control lane; shutting down driver")
                 await failAllPending()
                 throw ConnectionError.connectionClosed
             }
-            await removeVirtualConnection(msg.connectionId)
+            await removeLane(msg.connectionId)
             await failPendingResponses(connectionId: msg.connectionId)
-            await finishIfRootClosedAndNoVirtualConnections()
+            await finishIfControlLaneClosedAndNoServiceLanes()
         case .requestMessage(let request):
             switch request.body {
             case .call(let call):
@@ -266,8 +266,8 @@ extension Driver {
         if connId == 0 {
             effectiveDispatcher = dispatcher
             localMaxConcurrentRequests =
-                localRootSettings?.maxConcurrentRequests ?? negotiated.maxConcurrentRequests
-        } else if let vconn = await virtualConnState.connection(for: connId) {
+                localControlSettings?.maxConcurrentRequests ?? negotiated.maxConcurrentRequests
+        } else if let vconn = await laneState.lane(for: connId) {
             effectiveDispatcher = vconn.dispatcher
             localMaxConcurrentRequests = vconn.localSettings.maxConcurrentRequests
         } else {
@@ -404,11 +404,11 @@ extension Driver {
         }
     }
 
-    func finishIfRootClosedAndNoVirtualConnections() async {
-        guard await state.isRootInternallyClosed() else {
+    func finishIfControlLaneClosedAndNoServiceLanes() async {
+        guard await state.isControlLaneInternallyClosed() else {
             return
         }
-        guard await virtualConnState.isEmpty() else {
+        guard await laneState.isEmpty() else {
             return
         }
         eventContinuation.finish()

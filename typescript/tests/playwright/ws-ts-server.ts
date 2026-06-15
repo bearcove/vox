@@ -1,11 +1,11 @@
 import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import {
+  accept,
+  ConnectionError,
+  type ConnectionHandle,
   Driver,
-  SessionError,
-  session,
   type Link,
   type Rx,
-  type SessionHandle,
   type Tx,
 } from "@bearcove/vox-core";
 import type {
@@ -337,28 +337,28 @@ export interface TsWsServerHandle {
 
 export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
   const wss = new WebSocketServer({ host: "127.0.0.1", port });
-  const activeSessions = new Set<SessionHandle>();
+  const activeConnections = new Set<ConnectionHandle>();
   const activeDrivers = new Set<Promise<void>>();
 
   const dispatcher = new TestbedDispatcher(new TestbedService());
 
   wss.on("connection", (socket) => {
     const link = new NodeWsLink(socket);
-    void session.acceptorTransport(link).then((established) => {
-      const handle = established.handle();
-      activeSessions.add(handle);
-      const driver = new Driver(established.rootConnection(), dispatcher);
+    void accept(link).then((connection) => {
+      const handle = connection.handle();
+      activeConnections.add(handle);
+      const driver = new Driver(connection.lane(), dispatcher);
       const run = driver.run().catch((error) => {
-        if (!(error instanceof SessionError)) {
+        if (!(error instanceof ConnectionError)) {
           throw error;
         }
       }).finally(() => {
         activeDrivers.delete(run);
-        activeSessions.delete(handle);
+        activeConnections.delete(handle);
       });
       activeDrivers.add(run);
     }).catch((error) => {
-      console.error("[ts-ws-server] session error:", error);
+      console.error("[ts-ws-server] connection error:", error);
       link.close();
     });
   });
@@ -370,7 +370,7 @@ export async function startTsWsServer(port: number): Promise<TsWsServerHandle> {
 
   return {
     async close(): Promise<void> {
-      for (const handle of activeSessions) {
+      for (const handle of activeConnections) {
         handle.shutdown();
       }
       for (const client of wss.clients) {
