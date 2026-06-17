@@ -257,7 +257,7 @@ impl<C> SessionInitiatorBuilder<C> {
             config,
         } = self;
         validate_negotiated_root_settings(&config.root_settings, &handshake_result)?;
-        let mut peer_metadata = std::mem::take(&mut handshake_result.peer_metadata);
+        let peer_metadata = std::mem::take(&mut handshake_result.peer_metadata);
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
@@ -284,24 +284,16 @@ impl<C> SessionInitiatorBuilder<C> {
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
         let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        vox_types::meta_set(
-            &mut peer_metadata,
-            VOX_SERVICE_METADATA_KEY,
-            Client::SERVICE_NAME,
-        );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(
-            service = Client::SERVICE_NAME,
+            service = request.service(),
             "vox root connection routing to acceptor"
         );
         match acceptor.accept(&request, pending) {
-            Ok(()) => tracing::debug!(
-                service = Client::SERVICE_NAME,
-                "vox root connection accepted"
-            ),
+            Ok(()) => tracing::debug!(service = request.service(), "vox root connection accepted"),
             Err(metadata) => {
                 tracing::debug!(
-                    service = Client::SERVICE_NAME,
+                    service = request.service(),
                     metadata_len = metadata.meta_len(),
                     "vox root connection rejected"
                 );
@@ -693,7 +685,7 @@ impl<C> SessionAcceptorBuilder<C> {
             config,
         } = self;
         validate_negotiated_root_settings(&config.root_settings, &handshake_result)?;
-        let mut peer_metadata = std::mem::take(&mut handshake_result.peer_metadata);
+        let peer_metadata = std::mem::take(&mut handshake_result.peer_metadata);
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("session.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("session.close", 4);
@@ -720,24 +712,16 @@ impl<C> SessionAcceptorBuilder<C> {
         // Route the root connection through the acceptor.
         let caller_slot = Arc::new(std::sync::Mutex::new(None::<crate::Caller>));
         let pending = super::PendingConnection::with_caller_slot(handle, caller_slot.clone());
-        vox_types::meta_set(
-            &mut peer_metadata,
-            VOX_SERVICE_METADATA_KEY,
-            Client::SERVICE_NAME,
-        );
         let request = super::ConnectionRequest::new(&peer_metadata)?;
         tracing::debug!(
-            service = Client::SERVICE_NAME,
+            service = request.service(),
             "vox root connection routing to acceptor"
         );
         match acceptor.accept(&request, pending) {
-            Ok(()) => tracing::debug!(
-                service = Client::SERVICE_NAME,
-                "vox root connection accepted"
-            ),
+            Ok(()) => tracing::debug!(service = request.service(), "vox root connection accepted"),
             Err(metadata) => {
                 tracing::debug!(
-                    service = Client::SERVICE_NAME,
+                    service = request.service(),
                     metadata_len = metadata.meta_len(),
                     "vox root connection rejected"
                 );
