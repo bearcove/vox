@@ -117177,13 +117177,15 @@ public protocol TestbedCaller: Sendable {
   ///  Dibs migration runner with streamed migration logs.
   func dibsMigrate(request: DibsMigrateRequest, logs: UnboundTx<DibsMigrationLog>) async throws
     -> Result<DibsMigrateResult, DibsError>
-  ///  Server returns before streaming numbers back to the client.
+  ///  Historical name: server streams numbers on a request-scoped channel, then
+  ///  returns after the channel is terminal.
   ///
-  ///  Tests: callee-held `Tx<T>` outlives the unary method response.
+  ///  Tests: callee-held `Tx<T>` remains live while the request is in flight.
   func postReplyGenerate(output: UnboundTx<Int32>) async throws
-  ///  Server returns before receiving numbers from the client, then reports their sum.
+  ///  Historical name: server receives numbers and reports their sum on a
+  ///  request-scoped channel before returning.
   ///
-  ///  Tests: callee-held `Rx<T>` outlives the unary method response.
+  ///  Tests: callee-held `Rx<T>` remains live while the request is in flight.
   func postReplySum(input: UnboundRx<Int32>, result: UnboundTx<Int64>) async throws
   ///  Echo a point back.
   func echoPoint(point: Point) async throws -> Point
@@ -121012,13 +121014,15 @@ public protocol TestbedHandler: Sendable {
   func dibsMigrate(request: DibsMigrateRequest, logs: Tx<DibsMigrationLog>) async throws -> Result<
     DibsMigrateResult, DibsError
   >
-  ///  Server returns before streaming numbers back to the client.
+  ///  Historical name: server streams numbers on a request-scoped channel, then
+  ///  returns after the channel is terminal.
   ///
-  ///  Tests: callee-held `Tx<T>` outlives the unary method response.
+  ///  Tests: callee-held `Tx<T>` remains live while the request is in flight.
   func postReplyGenerate(output: Tx<Int32>) async throws
-  ///  Server returns before receiving numbers from the client, then reports their sum.
+  ///  Historical name: server receives numbers and reports their sum on a
+  ///  request-scoped channel before returning.
   ///
-  ///  Tests: callee-held `Rx<T>` outlives the unary method response.
+  ///  Tests: callee-held `Rx<T>` remains live while the request is in flight.
   func postReplySum(input: Rx<Int32>, result: Tx<Int64>) async throws
   ///  Echo a point back.
   func echoPoint(point: Point) async throws -> Point
