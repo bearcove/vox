@@ -122160,7 +122160,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
   public func dispatch(
     methodId: UInt64, payload: [UInt8], requestId: UInt64, channels: [UInt64],
     registry: ChannelRegistry, schemaSendTracker: SchemaSendTracker,
-    schemaReceiveTracker: SchemaTracker, taskTx: @escaping @Sendable (TaskMessage) -> Void
+    schemaReceiveTracker: SchemaTracker, context: RequestContext,
+    taskTx: @escaping @Sendable (TaskMessage) -> Void
   ) async {
     switch methodId {
     case 0x880b_c4ee_e235_74be:
