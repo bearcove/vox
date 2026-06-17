@@ -123012,6 +123012,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_generate_ResponseEncoder)
     taskTx(
       .response(
@@ -123095,6 +123097,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_transform_ResponseEncoder)
     taskTx(
       .response(
@@ -123179,6 +123183,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    outbound.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_dodecaByteTunnel_ResponseEncoder)
     taskTx(
       .response(
@@ -123264,6 +123270,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    serverToClient.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_dodecaDevtoolsLsp_ResponseEncoder)
     taskTx(
       .response(
@@ -123644,6 +123652,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    logs.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_dibsMigrate_ResponseEncoder)
     taskTx(
       .response(
@@ -123704,6 +123714,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_postReplyGenerate_ResponseEncoder)
     taskTx(
       .response(
@@ -123788,6 +123800,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    result.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_postReplySum_ResponseEncoder)
     taskTx(
       .response(
@@ -124473,6 +124487,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_generateLarge_ResponseEncoder)
     taskTx(
       .response(
@@ -126442,6 +126458,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(
       voxResult, testbed_staxSubscribeFlamegraphUpdates_ResponseEncoder)
     taskTx(
@@ -126548,6 +126566,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    records.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_staxMacosRecord_ResponseEncoder)
     taskTx(
       .response(
@@ -126858,6 +126878,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    output.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_helixSubscribePulses_ResponseEncoder)
     taskTx(
       .response(
@@ -128404,6 +128426,8 @@ public final class TestbedDispatcher: ServiceDispatcher {
     } catch {
       voxResult = .failure(.indeterminate)
     }
+    // r[impl rpc.request.scope.channels]
+    updates.close()
     let respPayload = encodeVoxTyped(voxResult, testbed_traceySubscribeUpdates_ResponseEncoder)
     taskTx(
       .response(
