@@ -211,7 +211,7 @@ jobs:
           node-version: "25"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
         with:
           version: 11
 
@@ -331,7 +331,7 @@ jobs:
           node-version: "25"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
         with:
           version: 11
 
