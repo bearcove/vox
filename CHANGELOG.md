@@ -4,7 +4,7 @@ All notable changes to Vox are documented here.
 
 ## [Unreleased]
 
-## [0.9.0-rc.1](https://github.com/bearcove/vox/compare/vox-rt-macros-v0.9.0-rc.0...vox-rt-macros-v0.9.0-rc.1) - 2026-06-18
+## [0.10.0-rc.0] - 2026-06-18
 
 ### Other
 
@@ -16,8 +16,6 @@ All notable changes to Vox are documented here.
 ### Changed
 
 - Remove the implicit `From<DriverCaller> for ()` conversion. Use `NoopCaller` when you need to retain root connection liveness without exposing root RPC methods.
-
-- No entries yet.
 
 ## [7.0.0] - 2026-03-02
 
