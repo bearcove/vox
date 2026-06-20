@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260519.1",
+    "@typescript/native-preview": "7.0.0-dev.20260618.1",
     "oxlint": "^1.60.0",
     "tsdown": "^0.22.0",
     "typescript": "^6.0.0"
