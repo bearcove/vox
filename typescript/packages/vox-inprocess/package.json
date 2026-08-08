@@ -1,6 +1,6 @@
 {
   "name": "@bearcove/vox-inprocess",
-  "version": "0.2.0",
+  "version": "0.10.0-rc.5",
   "private": false,
   "type": "module",
   "exports": {
@@ -22,18 +22,19 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "dependencies": {
     "@bearcove/vox-core": "workspace:*"
   },
   "devDependencies": {
-    "vitest": "^4.0.0"
+    "vitest": "^4.1.10"
   },
   "license": "MIT OR Apache-2.0",
   "description": "In-process transport for vox — WASM to TypeScript communication without network",
-  "repository": "https://github.com/bearcove/vox",
-  "homepage": "https://github.com/bearcove/vox",
+  "repository": "https://github.com/facet-rs/facet",
+  "homepage": "https://github.com/facet-rs/facet",
   "keywords": [
     "vox",
     "ipc",
@@ -41,5 +42,6 @@
     "typescript",
     "wasm",
     "in-process"
-  ]
+  ],
+  "readme": "README.md"
 }

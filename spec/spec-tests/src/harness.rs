@@ -177,6 +177,21 @@ pub fn workspace_root() -> &'static std::path::Path {
         .expect("workspace root")
 }
 
+fn cargo_target_dir() -> std::path::PathBuf {
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR") {
+        return target_dir.into();
+    }
+
+    let root = workspace_root();
+    if root.join("Cargo.toml").exists() {
+        root.join("target")
+    } else {
+        root.parent()
+            .expect("monorepo workspace root")
+            .join("target")
+    }
+}
+
 pub fn subject_cmd() -> String {
     match std::env::var("SUBJECT_CMD") {
         Ok(s) if !s.trim().is_empty() => s,
@@ -188,16 +203,12 @@ pub fn subject_cmd_for_language(language: SubjectLanguage) -> String {
     match language {
         SubjectLanguage::Rust => {
             let exe = format!("subject-rust{}", std::env::consts::EXE_SUFFIX);
-            let debug = workspace_root().join("target").join("debug").join(&exe);
+            let target_dir = cargo_target_dir();
+            let debug = target_dir.join("debug").join(&exe);
             if debug.exists() {
                 debug.display().to_string()
             } else {
-                workspace_root()
-                    .join("target")
-                    .join("release")
-                    .join(&exe)
-                    .display()
-                    .to_string()
+                target_dir.join("release").join(exe).display().to_string()
             }
         }
         SubjectLanguage::Swift => swift_subject_binary()
@@ -4292,7 +4303,7 @@ async fn spawn_subject_cmd_with_env(
 
     let mut command = if cmd.ends_with(".sh") {
         let mut c = Command::new("sh");
-        c.arg("-lc").arg(cmd);
+        c.arg("-c").arg(cmd);
         c
     } else {
         Command::new(cmd)
@@ -4508,7 +4519,7 @@ pub async fn spawn_server_subject(spec: SubjectSpec) -> Result<(String, Child), 
 
     let mut command = if cmd.ends_with(".sh") {
         let mut c = Command::new("sh");
-        c.arg("-lc").arg(cmd);
+        c.arg("-c").arg(cmd);
         c
     } else {
         Command::new(cmd)
@@ -4612,9 +4623,9 @@ pub fn run_cross_language_scenario(
             return Ok(());
         }
 
+        let client_cmd = subject_cmd_for_language(client_spec.language);
         let (server_addr, mut server_child) = spawn_server_subject(server_spec).await?;
 
-        let client_cmd = subject_cmd_for_language(client_spec.language);
         let mut client_child = match spawn_subject_cmd_with_env(
             &client_cmd,
             &server_addr,

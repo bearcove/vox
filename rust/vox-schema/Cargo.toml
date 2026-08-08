@@ -1,6 +1,6 @@
 [package]
 name = "vox-schema"
-version.workspace = true
+version = "0.10.0-rc.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -20,4 +20,3 @@ rustdoc-args = ["--html-in-header", "arborium-header.html"]
 blake3.workspace = true
 facet.workspace = true
 facet-core.workspace = true
-indexmap.workspace = true

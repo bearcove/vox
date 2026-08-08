@@ -7,8 +7,8 @@
 use std::io;
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufWriter};
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
+use vox_rt::sync::{mpsc, oneshot};
+use vox_rt::task::JoinHandle;
 
 use vox_types::{Backing, Link, LinkRx, LinkTx};
 
@@ -101,6 +101,12 @@ pub struct StreamLink<R, W> {
     writer: W,
 }
 
+#[derive(Debug)]
+struct QueuedFrame {
+    bytes: Vec<u8>,
+    flushed: oneshot::Sender<()>,
+}
+
 impl<R, W> StreamLink<R, W> {
     /// Construct from separate read and write halves.
     pub fn new(reader: R, writer: W) -> Self {
@@ -108,6 +114,7 @@ impl<R, W> StreamLink<R, W> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl StreamLink<tokio::net::tcp::OwnedReadHalf, tokio::net::tcp::OwnedWriteHalf> {
     /// Wrap a [`TcpStream`](tokio::net::TcpStream).
     pub fn tcp(stream: tokio::net::TcpStream) -> Self {
@@ -125,8 +132,10 @@ pub struct TcpLinkSource {
 }
 
 /// Default DNS resolution timeout.
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_RESOLVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 /// Default TCP connect timeout.
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -189,6 +198,7 @@ impl LinkSource for TcpLinkSource {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl StreamLink<tokio::io::Stdin, tokio::io::Stdout> {
     /// Wrap stdio (stdin for reading, stdout for writing).
     pub fn stdio() -> Self {
@@ -228,13 +238,12 @@ where
     type Rx = StreamLinkRx<BufReader<R>>;
 
     fn split(self) -> (Self::Tx, Self::Rx) {
-        let (tx_chan, mut rx_chan) = mpsc::channel::<Vec<u8>>(128);
-        let (read_tx, read_rx) = mpsc::channel::<io::Result<Option<Backing>>>(128);
+        let (tx_chan, mut rx_chan) = mpsc::channel::<QueuedFrame>("stream_link_tx", 128);
+        let (read_tx, read_rx) = mpsc::channel::<io::Result<Option<Backing>>>("stream_link_rx", 128);
         let mut reader = BufReader::new(self.reader);
         let mut writer = BufWriter::new(self.writer);
 
-        let reader_task = tokio::spawn(async move {
-            // Validate the peer's link prologue before any framing.
+        let reader_task = vox_rt::spawn(async move {
             let mut prologue = [0u8; LINK_PROLOGUE_LEN];
             match read_frame_exact(&mut reader, &mut prologue, "link prologue").await {
                 Ok(ReadExactOutcome::Complete) => {
@@ -283,23 +292,28 @@ where
             }
         });
 
-        let writer_task = tokio::spawn(async move {
+        let writer_task = vox_rt::spawn(async move {
             // Announce the link prologue before any framed message, and flush so the peer
             // can validate immediately rather than blocking until the first real frame.
             writer.write_all(&link_prologue(false)).await?;
             writer.flush().await?;
-            while let Some(bytes) = rx_chan.recv().await {
-                let len = frame_len_prefix(bytes.len())?;
+            while let Some(frame) = rx_chan.recv().await {
+                let len = frame_len_prefix(frame.bytes.len())?;
                 writer.write_all(&len).await?;
-                writer.write_all(&bytes).await?;
+                writer.write_all(&frame.bytes).await?;
+                let mut flushed = vec![frame.flushed];
                 // Drain any already-queued messages before flushing,
                 // so bursts coalesce into fewer syscalls.
-                while let Ok(bytes) = rx_chan.try_recv() {
-                    let len = frame_len_prefix(bytes.len())?;
+                while let Ok(frame) = rx_chan.try_recv() {
+                    let len = frame_len_prefix(frame.bytes.len())?;
                     writer.write_all(&len).await?;
-                    writer.write_all(&bytes).await?;
+                    writer.write_all(&frame.bytes).await?;
+                    flushed.push(frame.flushed);
                 }
                 writer.flush().await?;
+                for flushed in flushed {
+                    let _ = flushed.send(());
+                }
             }
             writer.shutdown().await?;
             Ok(())
@@ -325,7 +339,7 @@ where
 
 /// Sending half of a [`StreamLink`].
 pub struct StreamLinkTx {
-    tx: mpsc::Sender<Vec<u8>>,
+    tx: mpsc::Sender<QueuedFrame>,
     writer_task: JoinHandle<io::Result<()>>,
 }
 
@@ -338,8 +352,14 @@ impl LinkTx for StreamLinkTx {
         let permit = self.tx.clone().reserve_owned().await.map_err(|_| {
             io::Error::new(io::ErrorKind::ConnectionReset, "stream writer task stopped")
         })?;
-        drop(permit.send(bytes));
-        Ok(())
+        let (flushed, wait_for_flush) = oneshot::channel("stream_link_flushed");
+        drop(permit.send(QueuedFrame { bytes, flushed }));
+        wait_for_flush.await.map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::ConnectionReset,
+                "stream writer stopped before frame was flushed",
+            )
+        })
     }
 
     async fn close(self) -> io::Result<()> {
@@ -448,6 +468,7 @@ pub type LocalServerStream = tokio::net::windows::named_pipe::NamedPipeServer;
 /// This is a thin cross-platform wrapper:
 /// - Unix: a Unix domain socket listener
 /// - Windows: a named pipe acceptor with one pending server instance
+#[cfg(not(target_arch = "wasm32"))]
 pub struct LocalListener {
     #[cfg(unix)]
     inner: tokio::net::UnixListener,
@@ -457,6 +478,7 @@ pub struct LocalListener {
     next_server: tokio::net::windows::named_pipe::NamedPipeServer,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalListener {
     /// Bind to a local endpoint.
     #[cfg(unix)]
@@ -600,6 +622,7 @@ pub struct LocalLink {
     inner: StreamLink<BoxReader, BoxWriter>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalLink {
     /// Connect to a local endpoint by address.
     #[cfg(unix)]
@@ -645,20 +668,24 @@ impl Link for LocalLink {
 /// Each call to `next_link` connects to the same local endpoint and yields an
 /// initiator attachment.
 // r[impl transport.stream.local]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct LocalLinkSource {
     addr: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn local_link_source(addr: impl Into<String>) -> LocalLinkSource {
     LocalLinkSource::new(addr)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalLinkSource {
     pub fn new(addr: impl Into<String>) -> Self {
         Self { addr: addr.into() }
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LinkSource for LocalLinkSource {
     type Link = LocalLink;
 
@@ -674,6 +701,7 @@ impl LinkSource for LocalLinkSource {
 
 /// Accepts incoming [`LocalLink`] connections.
 // r[impl transport.stream.local]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct LocalLinkAcceptor {
     #[cfg(unix)]
     listener: tokio::net::UnixListener,
@@ -744,6 +772,7 @@ pub fn try_local_lock(addr: &str) -> io::Result<LocalLockOutcome> {
     }))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalLinkAcceptor {
     /// Bind to a local address with exclusive file locking.
     ///
@@ -905,15 +934,23 @@ mod tests {
     }
 
     // r[verify link.tx.cancel-safe]
+    // r[verify transport.iroh.cancel-safe]
     #[tokio::test]
     async fn send_cancel_before_capacity_does_not_enqueue() {
-        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(1);
+        let (tx, mut rx) = mpsc::channel::<QueuedFrame>("cancel_before_capacity", 1);
         let link_tx = StreamLinkTx {
             tx,
-            writer_task: tokio::spawn(async { Ok(()) }),
+            writer_task: vox_rt::spawn(async { Ok(()) }),
         };
 
-        link_tx.send(b"first".to_vec()).await.unwrap();
+        let (flushed, _wait_for_flush) = oneshot::channel("first_flushed");
+        link_tx
+            .tx
+            .try_send(QueuedFrame {
+                bytes: b"first".to_vec(),
+                flushed,
+            })
+            .unwrap();
         {
             let pending = link_tx.send(b"second".to_vec());
             tokio::pin!(pending);
@@ -925,7 +962,7 @@ mod tests {
             );
         }
 
-        assert_eq!(rx.recv().await.unwrap(), b"first".to_vec());
+        assert_eq!(rx.recv().await.unwrap().bytes, b"first".to_vec());
         assert!(matches!(
             rx.try_recv(),
             Err(mpsc::error::TryRecvError::Empty)
@@ -934,8 +971,41 @@ mod tests {
         link_tx.close().await.unwrap();
     }
 
+    // r[verify link.tx.cancel-safe]
+    // r[verify transport.iroh.cancel-safe]
+    #[tokio::test]
+    async fn send_cancel_after_enqueue_still_flushes_once() {
+        let (tx, mut rx) = mpsc::channel::<QueuedFrame>("cancel_after_enqueue", 1);
+        let (started_tx, started_rx) = oneshot::channel("writer_started");
+        let (release_tx, release_rx) = oneshot::channel("writer_release");
+        let (recorded_tx, recorded_rx) = oneshot::channel("frame_recorded");
+        let writer_task = vox_rt::spawn(async move {
+            let frame = rx.recv().await.expect("queued frame");
+            let _ = started_tx.send(());
+            let _ = release_rx.await;
+            let _ = recorded_tx.send(frame.bytes);
+            let _ = frame.flushed.send(());
+            Ok(())
+        });
+        let link_tx = StreamLinkTx { tx, writer_task };
+
+        {
+            let pending = link_tx.send(b"committed".to_vec());
+            tokio::pin!(pending);
+            tokio::select! {
+                result = &mut pending => panic!("send completed before writer release: {result:?}"),
+                result = started_rx => result.expect("writer started"),
+            }
+        }
+
+        let _ = release_tx.send(());
+        assert_eq!(recorded_rx.await.unwrap(), b"committed".to_vec());
+        link_tx.close().await.unwrap();
+    }
+
     // r[verify link.tx.close]
     // r[verify link.rx.eof]
+    // r[verify transport.iroh.close]
     #[tokio::test]
     async fn eof_on_peer_close() {
         let (a, b) = duplex_pair();

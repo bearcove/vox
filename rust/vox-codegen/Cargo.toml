@@ -1,7 +1,8 @@
 [package]
 name = "vox-codegen"
-version.workspace = true
+version = "0.10.0-rc.6"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
@@ -33,4 +34,3 @@ phon-codegen.workspace = true
 facet.workspace = true
 facet-value.workspace = true
 spec-proto = { path = "../../spec/spec-proto" }
-vox = { path = "../vox" }

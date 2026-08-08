@@ -26,7 +26,8 @@
 //! # }
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let client: HelloClient = vox::connect("127.0.0.1:9000").await?;
+//! let conn = vox::connect("127.0.0.1:9000").await?;
+//! let client: HelloClient = conn.open_lane().await?;
 //! let reply = client.say_hello().await?;
 //! # Ok(())
 //! # }
@@ -195,6 +196,7 @@ pub use vox_types::{
     PeerIdentity,
     PeerIdentityForm,
     ProtocolErrorKind,
+    PublicKeyAlgorithm,
     ReplySink,
     RequestAuthorizationContext,
     RequestCall,

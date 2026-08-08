@@ -14,7 +14,7 @@
 //! `u32` UTF-8 byte length + bytes, followed by the auxiliary `u64` root.
 
 use std::collections::BTreeSet;
-use std::mem::MaybeUninit;
+use std::mem::{ManuallyDrop, MaybeUninit};
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ use phon_ir::MemOp;
 use phon_schema::bytes::Reader;
 use phon_schema::{Schema, SchemaId, schema_from_bytes, schema_to_bytes};
 
-use crate::Error;
+use crate::{Error, derive_error, shape_name};
 
 /// A decoded schema closure: the root type's id and every reachable composite
 /// schema. The writer's view of a type, used to build a compat decode program.
@@ -55,7 +55,7 @@ pub struct AuxiliaryRoot {
 // r[impl schema.format.self-contained]
 // r[impl schema.principles.once-per-type]
 pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
-    let d = of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
+    let d = of::<T>().map_err(|e| derive_error(T::SHAPE, e))?;
     Ok(encode_bundle(d.root, &d.schemas))
 }
 
@@ -68,7 +68,7 @@ pub fn schema_bytes<'a, T: Facet<'a>>() -> Result<Vec<u8>, Error> {
 // r[impl schema.format.self-contained]
 // r[impl schema.principles.once-per-type]
 pub fn schema_bytes_for_shape(shape: &'static Shape) -> Result<Vec<u8>, Error> {
-    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    let d = of_shape(shape).map_err(|e| derive_error(shape, e))?;
     Ok(encode_bundle(d.root, &d.schemas))
 }
 
@@ -82,20 +82,18 @@ pub fn schema_bytes_for_shape_with_auxiliary_roots(
     shape: &'static Shape,
     auxiliary_roots: &[(&str, &'static Shape)],
 ) -> Result<Vec<u8>, Error> {
-    let primary =
-        of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    let primary = of_shape(shape).map_err(|e| derive_error(shape, e))?;
     let mut schemas = primary.schemas;
-    let mut seen: BTreeSet<u64> = schemas.iter().map(|s| s.id.0).collect();
+    let mut seen: BTreeSet<u64> = schemas.iter().map(|s| s.id.as_u64()).collect();
     let mut roots = Vec::with_capacity(auxiliary_roots.len());
 
     for &(role, aux_shape) in auxiliary_roots {
         if role.is_empty() {
             return Err(Error("auxiliary schema root role must not be empty".into()));
         }
-        let derived = of_shape(aux_shape)
-            .map_err(|e| Error(format!("derive {}: {e}", aux_shape.type_identifier)))?;
+        let derived = of_shape(aux_shape).map_err(|e| derive_error(aux_shape, e))?;
         for schema in derived.schemas {
-            if seen.insert(schema.id.0) {
+            if seen.insert(schema.id.as_u64()) {
                 schemas.push(schema);
             }
         }
@@ -119,7 +117,7 @@ pub fn schema_bytes_for_shape_with_auxiliary_roots(
 /// # Errors
 /// [`Error`] if the shape cannot be lowered to a phon schema.
 pub fn schema_id_for_shape(shape: &'static Shape) -> Result<SchemaId, Error> {
-    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
+    let d = of_shape(shape).map_err(|e| derive_error(shape, e))?;
     Ok(d.root)
 }
 
@@ -134,8 +132,8 @@ pub fn schema_id_for_shape(shape: &'static Shape) -> Result<SchemaId, Error> {
 pub fn recursive_schema_ids_for_shape(
     shape: &'static Shape,
 ) -> Result<std::collections::BTreeSet<u64>, Error> {
-    let d = of_shape(shape).map_err(|e| Error(format!("derive {}: {e}", shape.type_identifier)))?;
-    Ok(d.descriptor_blocks.keys().map(|id| id.0).collect())
+    let d = of_shape(shape).map_err(|e| derive_error(shape, e))?;
+    Ok(d.descriptor_blocks.keys().map(|id| id.as_u64()).collect())
 }
 
 /// Encode a `(root, schemas)` closure to self-describing bytes.
@@ -149,7 +147,7 @@ fn encode_bundle_with_auxiliary_roots(
     auxiliary_roots: &[AuxiliaryRoot],
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    out.extend_from_slice(&root.0.to_le_bytes());
+    out.extend_from_slice(&root.as_u64().to_le_bytes());
     out.extend_from_slice(&(schemas.len() as u32).to_le_bytes());
     for s in schemas {
         let b = schema_to_bytes(s);
@@ -162,7 +160,7 @@ fn encode_bundle_with_auxiliary_roots(
             let role = root.role.as_bytes();
             out.extend_from_slice(&(role.len() as u32).to_le_bytes());
             out.extend_from_slice(role);
-            out.extend_from_slice(&root.root.0.to_le_bytes());
+            out.extend_from_slice(&root.root.as_u64().to_le_bytes());
         }
     }
     out
@@ -174,7 +172,7 @@ fn encode_bundle_with_auxiliary_roots(
 /// [`Error`] for malformed or truncated input.
 pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
     let mut r = Reader::new(bytes);
-    let root = SchemaId(
+    let root = SchemaId::from_raw(
         r.read_u64()
             .map_err(|e| Error(format!("schema bundle root: {e:?}")))?,
     );
@@ -212,7 +210,7 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
             let role = std::str::from_utf8(role)
                 .map_err(|e| Error(format!("schema bundle auxiliary role utf8: {e}")))?
                 .to_string();
-            let root = SchemaId(
+            let root = SchemaId::from_raw(
                 r.read_u64()
                     .map_err(|e| Error(format!("schema bundle auxiliary root: {e:?}")))?,
             );
@@ -254,6 +252,60 @@ pub struct DecodeProgram {
     native: Option<Arc<NativeDecodeProgram>>,
 }
 
+pub struct Decoded<T> {
+    value: ManuallyDrop<T>,
+    retention: ManuallyDrop<DecodeRetention>,
+}
+
+unsafe impl<T: Send> Send for Decoded<T> {}
+
+pub struct DecodeRetention {
+    inner: typed::DecodeRetention,
+}
+
+unsafe impl Send for DecodeRetention {}
+
+impl DecodeRetention {
+    pub fn new(inner: typed::DecodeRetention) -> Self {
+        Self { inner }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+}
+
+impl<T> Decoded<T> {
+    pub fn new(value: T, retention: typed::DecodeRetention) -> Self {
+        Self {
+            value: ManuallyDrop::new(value),
+            retention: ManuallyDrop::new(DecodeRetention::new(retention)),
+        }
+    }
+
+    pub fn get(&self) -> &T {
+        &self.value
+    }
+
+    pub fn into_retention_and_value(self) -> (DecodeRetention, T) {
+        let mut this = ManuallyDrop::new(self);
+        unsafe {
+            let retention = ManuallyDrop::take(&mut this.retention);
+            let value = ManuallyDrop::take(&mut this.value);
+            (retention, value)
+        }
+    }
+}
+
+impl<T> Drop for Decoded<T> {
+    fn drop(&mut self) {
+        unsafe {
+            ManuallyDrop::drop(&mut self.value);
+            ManuallyDrop::drop(&mut self.retention);
+        }
+    }
+}
+
 impl DecodeProgram {
     fn new(lowered: Lowered) -> Self {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -290,6 +342,25 @@ impl DecodeProgram {
             .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
     }
 
+    unsafe fn decode_into_retaining(
+        &self,
+        bytes: &[u8],
+        base: *mut u8,
+        type_name: &str,
+    ) -> Result<typed::DecodeRetention, Error> {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            if let Some(native) = &self.native {
+                return unsafe { native.0.run(bytes, base) }
+                    .map(|()| typed::DecodeRetention::default())
+                    .map_err(|e| Error(format!("decode {type_name}: {e:?}")));
+            }
+        }
+
+        unsafe { typed::decode_with_retention(&self.lowered, bytes, base) }
+            .map_err(|e| Error(format!("decode {type_name}: {e:?}")))
+    }
+
     /// Whether this compatibility decode program uses the native JIT backend on
     /// this build target.
     pub fn uses_native_jit(&self) -> bool {
@@ -307,7 +378,8 @@ impl DecodeProgram {
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn native_decode_supported(lowered: &Lowered) -> bool {
-    decode_program_supported(&lowered.program)
+    phon_jit::native::available()
+        && decode_program_supported(&lowered.program)
         && lowered
             .blocks
             .values()
@@ -318,6 +390,7 @@ fn native_decode_supported(lowered: &Lowered) -> bool {
 fn decode_program_supported(program: &[MemOp]) -> bool {
     program.iter().all(|op| match op {
         MemOp::Scalar { .. }
+        | MemOp::ScalarRun(_)
         | MemOp::Bytes(_)
         | MemOp::Borrow(_)
         | MemOp::Default(_)
@@ -332,7 +405,9 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
             .all(|variant| decode_program_supported(&variant.payload)),
         MemOp::Map(m) => decode_program_supported(&m.key) && decode_program_supported(&m.value),
         MemOp::Result(r) => decode_program_supported(&r.ok) && decode_program_supported(&r.err),
-        MemOp::Pointer(p) => decode_program_supported(&p.pointee),
+        MemOp::Pointer(p) => {
+            !p.thunks.retain_decode_pointee && decode_program_supported(&p.pointee)
+        }
         MemOp::Opaque(_) | MemOp::Dynamic { .. } | MemOp::CallBlock { .. } => true,
     })
 }
@@ -355,8 +430,7 @@ unsafe impl Sync for DecodeProgram {}
 pub fn build_decode_program<'a, T: Facet<'a>>(
     writer: &SchemaBundle,
 ) -> Result<DecodeProgram, Error> {
-    let reader =
-        of::<T>().map_err(|e| Error(format!("derive {}: {e}", T::SHAPE.type_identifier)))?;
+    let reader = of::<T>().map_err(|e| derive_error(T::SHAPE, e))?;
     // The registry must resolve both the writer's refs and the reader's refs.
     let mut schemas = writer.schemas.clone();
     for s in &reader.schemas {
@@ -371,7 +445,7 @@ pub fn build_decode_program<'a, T: Facet<'a>>(
         &reader.descriptor_blocks,
         &reg,
     )
-    .map_err(|e| Error(format!("lower_decode {}: {e:?}", T::SHAPE.type_identifier)))?;
+    .map_err(|e| Error(format!("lower_decode {}: {e:?}", shape_name(T::SHAPE))))?;
     Ok(DecodeProgram::new(program))
 }
 
@@ -388,12 +462,23 @@ pub fn decode_with_program<'a, T: Facet<'a>>(
     // Safety: `program` was lowered for `T`'s descriptor; on `Ok`, `decode_with`
     // fully initializes the slot. Borrowed fields point into `bytes` (the `'a` tie).
     unsafe {
-        program.decode_into(
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), &shape_name(T::SHAPE))?;
+        Ok(slot.assume_init())
+    }
+}
+
+pub fn decode_with_program_retained<'a, T: Facet<'a>>(
+    program: &DecodeProgram,
+    bytes: &'a [u8],
+) -> Result<Decoded<T>, Error> {
+    let mut slot = MaybeUninit::<T>::uninit();
+    unsafe {
+        let retention = program.decode_into_retaining(
             bytes,
             slot.as_mut_ptr().cast::<u8>(),
-            T::SHAPE.type_identifier,
+            &shape_name(T::SHAPE),
         )?;
-        Ok(slot.assume_init())
+        Ok(Decoded::new(slot.assume_init(), retention))
     }
 }
 
@@ -413,11 +498,7 @@ pub fn decode_owned_with_program<T: Facet<'static>>(
     // the descriptor is fully owned (no borrowed leaves), so the decoded value owns
     // its data and does not reference `bytes`.
     unsafe {
-        program.decode_into(
-            bytes,
-            slot.as_mut_ptr().cast::<u8>(),
-            T::SHAPE.type_identifier,
-        )?;
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), &shape_name(T::SHAPE))?;
         Ok(slot.assume_init())
     }
 }

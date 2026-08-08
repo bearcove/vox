@@ -118205,7 +118205,7 @@ public protocol TestbedCaller: Sendable {
   ///  Helix broad trace-service query surface. Mirrors the live standalone
   ///  query return families as one generated bridge root.
   func helixTraceServiceSurface() async throws -> HelixTraceServiceSurface
-  ///  Tracey daemon status query, mirrored from the current roam
+  ///  Tracey daemon status query, mirrored from the current Vox
   ///  `TraceyDaemon::status` migration surface.
   func traceyStatus() async throws -> TraceyStatusResponse
   ///  Tracey uncovered-rules query.
@@ -118216,7 +118216,7 @@ public protocol TestbedCaller: Sendable {
   func traceyStale(req: TraceyStaleRequest) async throws -> TraceyStaleResponse
   ///  Tracey unmapped-code query.
   func traceyUnmapped(req: TraceyUnmappedRequest) async throws -> TraceyUnmappedResponse
-  ///  Tracey rule detail query, mirrored from the current roam
+  ///  Tracey rule detail query, mirrored from the current Vox
   ///  `TraceyDaemon::rule` migration surface.
   func traceyRule(ruleId: TraceyRuleId) async throws -> TraceyRuleInfo?
   ///  Tracey forward traceability dashboard query.
@@ -118253,7 +118253,7 @@ public protocol TestbedCaller: Sendable {
   func traceyHealth() async throws -> TraceyHealthResponse
   ///  Tracey daemon shutdown notification.
   func traceyShutdown() async throws
-  ///  Tracey validation query, mirrored from the current roam
+  ///  Tracey validation query, mirrored from the current Vox
   ///  `TraceyDaemon::validate` migration surface.
   func traceyValidate(req: TraceyValidateRequest) async throws -> TraceyValidationResult
   ///  Tracey LSP test-file classifier.
@@ -122042,7 +122042,7 @@ public protocol TestbedHandler: Sendable {
   ///  Helix broad trace-service query surface. Mirrors the live standalone
   ///  query return families as one generated bridge root.
   func helixTraceServiceSurface() async throws -> HelixTraceServiceSurface
-  ///  Tracey daemon status query, mirrored from the current roam
+  ///  Tracey daemon status query, mirrored from the current Vox
   ///  `TraceyDaemon::status` migration surface.
   func traceyStatus() async throws -> TraceyStatusResponse
   ///  Tracey uncovered-rules query.
@@ -122053,7 +122053,7 @@ public protocol TestbedHandler: Sendable {
   func traceyStale(req: TraceyStaleRequest) async throws -> TraceyStaleResponse
   ///  Tracey unmapped-code query.
   func traceyUnmapped(req: TraceyUnmappedRequest) async throws -> TraceyUnmappedResponse
-  ///  Tracey rule detail query, mirrored from the current roam
+  ///  Tracey rule detail query, mirrored from the current Vox
   ///  `TraceyDaemon::rule` migration surface.
   func traceyRule(ruleId: TraceyRuleId) async throws -> TraceyRuleInfo?
   ///  Tracey forward traceability dashboard query.
@@ -122090,7 +122090,7 @@ public protocol TestbedHandler: Sendable {
   func traceyHealth() async throws -> TraceyHealthResponse
   ///  Tracey daemon shutdown notification.
   func traceyShutdown() async throws
-  ///  Tracey validation query, mirrored from the current roam
+  ///  Tracey validation query, mirrored from the current Vox
   ///  `TraceyDaemon::validate` migration surface.
   func traceyValidate(req: TraceyValidateRequest) async throws -> TraceyValidationResult
   ///  Tracey LSP test-file classifier.

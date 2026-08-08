@@ -1,7 +1,8 @@
 [package]
 name = "vox-websocket"
-version.workspace = true
+version = "0.10.0-rc.5"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
@@ -15,15 +16,21 @@ description = "WebSocket transport for vox — message-framed Link over tungsten
 
 [package.metadata."docs.rs"]
 rustdoc-args = ["--html-in-header", "arborium-header.html"]
+features = ["axum"]
+
+[features]
+# Native-only: bridge an `axum` websocket route to a vox [`Link`].
+axum = ["dep:axum"]
 
 [dependencies]
 vox-types.workspace = true
+vox-core.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { workspace = true, features = ["net", "rt", "sync"] }
+tokio = { workspace = true, features = ["net", "rt", "sync", "macros"] }
 tokio-tungstenite.workspace = true
 futures-util.workspace = true
-vox-core.workspace = true
+axum = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen.workspace = true
@@ -37,7 +44,6 @@ web-sys = { workspace = true, features = [
 ] }
 futures-channel.workspace = true
 futures-util = { workspace = true, features = ["sink"] }
-getrandom = { workspace = true, features = ["wasm_js"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

@@ -17,20 +17,24 @@ use std::{
 };
 
 use facet::{Facet, PtrConst, Shape};
-pub use phon::api::{JitFallbackRecord, JitFallbackReport, MethodJitFallbackReport};
-use phon::derive::{Derived, of_shape};
+pub use phon::api::{
+    JitFallbackRecord, JitFallbackReport, JitShapeReport, MethodJitFallbackReport,
+    MethodJitShapeRecord, MethodJitShapeReport, MethodJitShapeSummary, NativeJitStats,
+};
+use phon::derive::{DeriveError, Derived, of_shape};
 use phon_engine::{Registry, typed};
-use phon_ir::Lowered;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use phon_ir::MemOp;
+use phon_ir::{Lowered, lowered_mem_program_stats};
 use vox_rt::sync::SyncMutex;
 
 pub mod schema;
 pub use schema::{
-    AuxiliaryRoot, DecodeProgram, SchemaBundle, build_decode_program, decode_compat,
-    decode_owned_with_program, decode_with_program, from_self_describing, parse_schema_bytes,
-    recursive_schema_ids_for_shape, schema_bytes, schema_bytes_for_shape,
-    schema_bytes_for_shape_with_auxiliary_roots, schema_id_for_shape, to_self_describing,
+    AuxiliaryRoot, DecodeProgram, Decoded, SchemaBundle, build_decode_program, decode_compat,
+    decode_owned_with_program, decode_with_program, decode_with_program_retained,
+    from_self_describing, parse_schema_bytes, recursive_schema_ids_for_shape, schema_bytes,
+    schema_bytes_for_shape, schema_bytes_for_shape_with_auxiliary_roots, schema_id_for_shape,
+    to_self_describing,
 };
 
 /// Opaque-passthrough sentinel: build an `OpaqueSerialize` that emits already-encoded
@@ -70,6 +74,14 @@ fn lower_derived(type_name: &str, derived: &Derived) -> Result<Lowered, Error> {
         .map_err(|e| Error(format!("lower {type_name}: {e:?}")))
 }
 
+fn shape_name(shape: &'static Shape) -> String {
+    shape.to_string()
+}
+
+fn derive_error(shape: &'static Shape, error: DeriveError) -> Error {
+    Error(format!("derive {}: {error}", shape_name(shape)))
+}
+
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 struct NativeEncodeProgram(phon_jit::native::NativeEncode);
 
@@ -95,9 +107,9 @@ struct TypedProgram {
 
 impl TypedProgram {
     fn for_shape(shape: &'static Shape) -> Result<Self, Error> {
-        let type_name = shape.type_identifier;
-        let derived = of_shape(shape).map_err(|e| Error(format!("derive {type_name}: {e}")))?;
-        let lowered = lower_derived(type_name, &derived)?;
+        let type_name = shape_name(shape);
+        let derived = of_shape(shape).map_err(|e| derive_error(shape, e))?;
+        let lowered = lower_derived(&type_name, &derived)?;
 
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
@@ -190,6 +202,27 @@ impl TypedProgram {
             report
         }
     }
+
+    fn jit_shape_report(&self) -> JitShapeReport {
+        let lowered = lowered_mem_program_stats(&self.lowered);
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            JitShapeReport::new(
+                lowered,
+                self.native_decode
+                    .as_ref()
+                    .map(|native| native.0.stats().into()),
+                self.native_encode
+                    .as_ref()
+                    .map(|native| native.0.stats().into()),
+            )
+        }
+
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            JitShapeReport::new(lowered, None, None)
+        }
+    }
 }
 
 // The lowered program and native executors are immutable after construction, and
@@ -217,7 +250,8 @@ fn typed_program_for_shape(shape: &'static Shape) -> Result<Arc<TypedProgram>, E
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn native_decode_supported(lowered: &Lowered) -> bool {
-    decode_program_supported(&lowered.program)
+    phon_jit::native::available()
+        && decode_program_supported(&lowered.program)
         && lowered
             .blocks
             .values()
@@ -226,7 +260,8 @@ fn native_decode_supported(lowered: &Lowered) -> bool {
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn native_encode_supported(lowered: &Lowered) -> bool {
-    encode_program_supported(&lowered.program)
+    phon_jit::native::available()
+        && encode_program_supported(&lowered.program)
         && lowered
             .blocks
             .values()
@@ -237,6 +272,7 @@ fn native_encode_supported(lowered: &Lowered) -> bool {
 fn decode_program_supported(program: &[MemOp]) -> bool {
     program.iter().all(|op| match op {
         MemOp::Scalar { .. }
+        | MemOp::ScalarRun(_)
         | MemOp::Bytes(_)
         | MemOp::Borrow(_)
         | MemOp::Default(_)
@@ -259,7 +295,7 @@ fn decode_program_supported(program: &[MemOp]) -> bool {
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn encode_program_supported(program: &[MemOp]) -> bool {
     program.iter().all(|op| match op {
-        MemOp::Scalar { .. } | MemOp::Bytes(_) | MemOp::Borrow(_) => true,
+        MemOp::Scalar { .. } | MemOp::ScalarRun(_) | MemOp::Bytes(_) | MemOp::Borrow(_) => true,
         MemOp::NativeInt { .. } => false,
         MemOp::Sequence(s) => encode_program_supported(&s.element),
         MemOp::Set(s) => encode_program_supported(&s.element),
@@ -322,6 +358,15 @@ pub fn jit_fallback_report_for_shape(shape: &'static Shape) -> Result<JitFallbac
     Ok(typed_program_for_shape(shape)?.jit_fallback_report())
 }
 
+/// Report lowered shape and native-JIT code-layout counts for a shape-erased
+/// generated bridge root.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema.
+pub fn jit_shape_report_for_shape(shape: &'static Shape) -> Result<JitShapeReport, Error> {
+    Ok(typed_program_for_shape(shape)?.jit_shape_report())
+}
+
 /// Report native-JIT fallback diagnostics scoped to a generated Vox method root.
 ///
 /// # Errors
@@ -334,6 +379,18 @@ pub fn method_jit_fallback_report_for_shape(
     Ok(jit_fallback_report_for_shape(shape)?.scoped(method, phase))
 }
 
+/// Report shape and native-JIT code-layout counts scoped to a generated Vox method root.
+///
+/// # Errors
+/// [`Error`] if `shape` cannot be lowered to a phon schema.
+pub fn method_jit_shape_report_for_shape(
+    shape: &'static Shape,
+    method: impl Into<String>,
+    phase: impl Into<String>,
+) -> Result<MethodJitShapeReport, Error> {
+    Ok(jit_shape_report_for_shape(shape)?.scoped(method, phase))
+}
+
 /// Decode `T` from phon-compact bytes, BORROWING from `bytes`: `&str`,
 /// `&[u8]`, `Cow`, and opaque payloads point INTO `bytes`, so the decoded value may
 /// not outlive it. The lifetime tie (`bytes: &'a [u8]`, `T: Facet<'a>`) enforces it.
@@ -344,14 +401,14 @@ pub fn method_jit_fallback_report_for_shape(
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
 pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error> {
-    let type_name = T::SHAPE.type_identifier;
+    let type_name = shape_name(T::SHAPE);
     let program = typed_program_for_shape(T::SHAPE)?;
     let mut slot = MaybeUninit::<T>::uninit();
     // Safety: `program` was built from `T`'s descriptor; on `Ok`, decode has fully
     // initialized the slot. Borrowed fields point into `bytes`, which outlives the
     // returned `T` by the `'a` tie.
     unsafe {
-        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), &type_name)?;
         Ok(slot.assume_init())
     }
 }
@@ -362,13 +419,13 @@ pub fn from_slice_borrowed<'a, T: Facet<'a>>(bytes: &'a [u8]) -> Result<T, Error
 /// # Errors
 /// [`Error`] if `T` cannot be lowered, or the bytes are malformed for it.
 pub fn from_slice<'a, T: Facet<'a>>(bytes: &[u8]) -> Result<T, Error> {
-    let type_name = T::SHAPE.type_identifier;
+    let type_name = shape_name(T::SHAPE);
     let program = typed_program_for_shape(T::SHAPE)?;
     let mut slot = MaybeUninit::<T>::uninit();
     // Safety: `program` was built from `T`'s descriptor; on `Ok`, decode has fully
     // initialized the slot.
     unsafe {
-        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), type_name)?;
+        program.decode_into(bytes, slot.as_mut_ptr().cast::<u8>(), &type_name)?;
         Ok(slot.assume_init())
     }
 }
@@ -500,6 +557,51 @@ mod tests {
         }
     }
 
+    #[test]
+    fn vox_wire_shapes_expose_method_scoped_shape_reports() {
+        let mut surface = MethodJitShapeReport::default();
+        for (name, shape) in [
+            ("Message", Message::SHAPE),
+            ("MessagePayload", MessagePayload::SHAPE),
+            ("RequestCall", RequestCall::SHAPE),
+            ("RequestMessage", RequestMessage::SHAPE),
+            ("SchemaMessage", SchemaMessage::SHAPE),
+            ("Payload", Payload::SHAPE),
+            ("DodecaParseResult", DodecaParseResult::SHAPE),
+        ] {
+            let report =
+                method_jit_shape_report_for_shape(shape, name, "wire").unwrap_or_else(|err| {
+                    panic!("failed to build JIT shape report for {name}: {err}");
+                });
+            assert_eq!(report.records.len(), 1);
+            let record = &report.records[0];
+            assert_eq!(record.method, name);
+            assert_eq!(record.phase, "wire");
+            if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+                assert!(record.decode_native.is_some(), "{name} decode stats");
+                assert!(record.encode_native.is_some(), "{name} encode stats");
+            } else {
+                assert!(record.decode_native.is_none(), "{name} decode stats");
+                assert!(record.encode_native.is_none(), "{name} encode stats");
+            }
+            surface.extend(report);
+        }
+
+        let summary = surface.summary();
+        assert_eq!(summary.root_count, surface.records.len());
+        assert!(summary.lowered.total.op_count > 0);
+        assert!(summary.lowered.total.scalar_op_count > 0);
+        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+            assert_eq!(summary.decode_native_count, summary.root_count);
+            assert_eq!(summary.encode_native_count, summary.root_count);
+            assert!(summary.decode_native.stencil_count >= summary.lowered.total.op_count);
+            assert!(summary.encode_native.stencil_count >= summary.lowered.total.op_count);
+        } else {
+            assert_eq!(summary.decode_native_count, 0);
+            assert_eq!(summary.encode_native_count, 0);
+        }
+    }
+
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     #[test]
     fn unsupported_native_int_program_reports_before_native_compile() {
@@ -581,9 +683,9 @@ mod tests {
     }
 
     fn interpreter_to_vec<'a, T: Facet<'a>>(value: &T) -> Vec<u8> {
-        let type_name = T::SHAPE.type_identifier;
+        let type_name = shape_name(T::SHAPE);
         let derived = of::<T>().expect("derive");
-        let lowered = lower_derived(type_name, &derived).expect("lower");
+        let lowered = lower_derived(&type_name, &derived).expect("lower");
         // Safety: `value` is a live `T`; `lowered` was built from `T`.
         unsafe { typed::encode_with(&lowered, (value as *const T).cast::<u8>()) }
     }
