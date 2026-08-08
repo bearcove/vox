@@ -31,6 +31,6 @@ vox-phon.workspace = true
 phon-codegen.workspace = true
 
 [dev-dependencies]
-facet = { path = "../../../facet" }
-facet-value = { path = "../../../facet-value" }
+facet.workspace = true
+facet-value.workspace = true
 spec-proto = { path = "../../spec/spec-proto" }

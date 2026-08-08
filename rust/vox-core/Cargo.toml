@@ -39,5 +39,5 @@ wasm-bindgen-futures.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-facet-testhelpers = { path = "../../../facet-testhelpers" }
+facet-testhelpers.workspace = true
 tracing-subscriber = { workspace = true }
