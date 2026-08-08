@@ -937,13 +937,13 @@ mod tests {
     // r[verify transport.iroh.cancel-safe]
     #[tokio::test]
     async fn send_cancel_before_capacity_does_not_enqueue() {
-        let (tx, mut rx) = mpsc::channel::<QueuedFrame>(1);
+        let (tx, mut rx) = mpsc::channel::<QueuedFrame>("cancel_before_capacity", 1);
         let link_tx = StreamLinkTx {
             tx,
-            writer_task: tokio::spawn(async { Ok(()) }),
+            writer_task: vox_rt::spawn(async { Ok(()) }),
         };
 
-        let (flushed, _wait_for_flush) = oneshot::channel();
+        let (flushed, _wait_for_flush) = oneshot::channel("first_flushed");
         link_tx
             .tx
             .try_send(QueuedFrame {
@@ -975,11 +975,11 @@ mod tests {
     // r[verify transport.iroh.cancel-safe]
     #[tokio::test]
     async fn send_cancel_after_enqueue_still_flushes_once() {
-        let (tx, mut rx) = mpsc::channel::<QueuedFrame>(1);
-        let (started_tx, started_rx) = oneshot::channel();
-        let (release_tx, release_rx) = oneshot::channel();
-        let (recorded_tx, recorded_rx) = oneshot::channel();
-        let writer_task = tokio::spawn(async move {
+        let (tx, mut rx) = mpsc::channel::<QueuedFrame>("cancel_after_enqueue", 1);
+        let (started_tx, started_rx) = oneshot::channel("writer_started");
+        let (release_tx, release_rx) = oneshot::channel("writer_release");
+        let (recorded_tx, recorded_rx) = oneshot::channel("frame_recorded");
+        let writer_task = vox_rt::spawn(async move {
             let frame = rx.recv().await.expect("queued frame");
             let _ = started_tx.send(());
             let _ = release_rx.await;
