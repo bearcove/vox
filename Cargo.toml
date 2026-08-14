@@ -66,12 +66,12 @@ subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
 vox-phon = { path = "rust/vox-phon", version = "0.10.0-rc.5" }
 
-phon = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
-phon-engine = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
-phon-ir = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
-phon-schema = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
-phon-jit = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
-phon-codegen = { git = "https://github.com/bearcove/phon-next", rev = "be6e6de5132c9eed3277e9345923117482028b65" }
+phon = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
+phon-engine = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
+phon-ir = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
+phon-schema = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
+phon-jit = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
+phon-codegen = { git = "https://github.com/bearcove/phon-next", branch = "deps/align-weavy-for-dibs" }
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "json", "ws"] }
 bitflags = "2.11.0"
@@ -95,14 +95,14 @@ xshell = "0.2"
 passfd = "0.1"
 
 # facet ecosystem
-facet = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8", features = ["camino", "reflect"] }
-facet-core = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-path = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-reflect = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-pretty = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8", default-features = false }
-facet-json = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-value = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-testhelpers = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
+facet = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs", features = ["camino", "reflect"] }
+facet-core = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
+facet-path = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
+facet-reflect = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
+facet-pretty = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs", default-features = false }
+facet-json = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
+facet-value = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
+facet-testhelpers = { git = "https://github.com/facet-rs/facet", branch = "deps/align-weavy-for-dibs" }
 
 # Futures utilities
 futures-channel = "0.3"
@@ -124,7 +124,7 @@ smallvec = "1.15.1"
 getrandom = { version = "0.4", features = ["wasm_js"] }
 zerocopy = { version = "0.8", features = ["derive"] }
 
-figue = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
+figue = { git = "https://github.com/bearcove/figue-next", branch = "deps/align-facet-for-dibs" }
 prettyplease = "0.2"
 insta = "1"
 unsynn = "0.3"
