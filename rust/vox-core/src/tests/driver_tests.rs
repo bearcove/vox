@@ -1744,6 +1744,71 @@ async fn keepalive_timeout_returns_cancelled_when_pongs_are_missing() {
     );
 }
 
+// r[verify connection.keepalive]
+// Happy path: when pongs actually round-trip, keepalive must NOT close an
+// otherwise-healthy connection. Regression guard — enabling keepalive by default
+// closed live connections because the peer never answered the ping with a pong,
+// so the first pong_timeout fired and killed the link (nonce=1). Same setup as
+// the timeout test but on a plain conduit (pongs flow), asserting the connection
+// SURVIVES several ping/pong cycles.
+#[tokio::test]
+async fn keepalive_keeps_a_healthy_connection_alive_when_pongs_flow() {
+    let (client_link, server_link) = memory_link_pair(64);
+    // Plain conduits on both ends: unlike the timeout test, pongs are delivered.
+    let client_conduit = BareConduit::new(client_link);
+    let server_conduit = BareConduit::new(server_link);
+
+    let server_task = vox_rt::task::spawn(
+        async move {
+            acceptor_conduit(server_conduit, test_acceptor_handshake())
+                .on_lane(BlockingHandler {
+                    was_cancelled: Arc::new(AtomicBool::new(false)),
+                })
+                .establish_connection()
+                .await
+                .expect("server handshake failed")
+        }
+        .named("server_setup"),
+    );
+
+    let caller = initiator_conduit(client_conduit, test_initiator_handshake())
+        .keepalive(ConnectionKeepaliveConfig {
+            ping_interval: std::time::Duration::from_millis(20),
+            pong_timeout: std::time::Duration::from_millis(50),
+        })
+        .establish::<TestLaneClient>()
+        .await
+        .expect("client handshake failed");
+
+    let _server_caller_guard = server_task.await.expect("server setup failed");
+
+    let call_task = vox_rt::task::spawn(
+        async move {
+            caller
+                .caller
+                .call(RequestCall {
+                    channels: Vec::new(),
+                    method_id: MethodId(1),
+                    args: Payload::outgoing(&123_u32),
+                    schemas: Default::default(),
+                    metadata: Default::default(),
+                })
+                .await
+        }
+        .named("client_call"),
+    );
+
+    // Well past several ping/pong cycles (20ms ping, 50ms pong window). With
+    // pongs flowing the connection stays up, so the BlockingHandler leaves the
+    // call PENDING — it must NOT resolve to ConnectionClosed. If the pong never
+    // round-trips, keepalive closes the link and the call resolves early.
+    let outcome = tokio::time::timeout(std::time::Duration::from_millis(300), call_task).await;
+    assert!(
+        outcome.is_err(),
+        "keepalive closed a healthy connection whose pongs were delivered — pong did not round-trip (got {outcome:?})"
+    );
+}
+
 // r[verify rpc.caller.liveness.public-handle-drop]
 // r[verify rpc.caller.liveness.explicit-shutdown-required]
 #[tokio::test]
