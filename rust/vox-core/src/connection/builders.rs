@@ -184,7 +184,16 @@ impl ConnectionConfig {
             metadata: vox_types::Metadata::default(),
             identity_resolver: Arc::new(AnonymousIdentityResolver),
             lane_acceptor: None,
-            keepalive: None,
+            // Keepalive on by default: proactive control-lane pings hold an idle
+            // connection open (so a quiet QUIC/relay path is not reaped by an
+            // idle timeout on an otherwise-healthy network), and a missed pong
+            // closes a genuinely dead connection promptly so the caller can
+            // reconnect instead of hanging on a half-open link. Callers can still
+            // override via `.keepalive(..)` on any connection builder.
+            keepalive: Some(ConnectionKeepaliveConfig {
+                ping_interval: std::time::Duration::from_secs(15),
+                pong_timeout: std::time::Duration::from_secs(20),
+            }),
             spawn_fn: default_spawn_fn(),
             connect_timeout: None,
             observer: None,
