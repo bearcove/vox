@@ -239,7 +239,8 @@ where
 
     fn split(self) -> (Self::Tx, Self::Rx) {
         let (tx_chan, mut rx_chan) = mpsc::channel::<QueuedFrame>("stream_link_tx", 128);
-        let (read_tx, read_rx) = mpsc::channel::<io::Result<Option<Backing>>>("stream_link_rx", 128);
+        let (read_tx, read_rx) =
+            mpsc::channel::<io::Result<Option<Backing>>>("stream_link_rx", 128);
         let mut reader = BufReader::new(self.reader);
         let mut writer = BufWriter::new(self.writer);
 
