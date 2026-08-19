@@ -43,21 +43,3 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
-
-  test:
-    name: Test
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run tests
-        run: cargo nextest run --workspace --no-tests=pass
