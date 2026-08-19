@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/vox.svg)](https://crates.io/crates/vox)
 [![documentation](https://docs.rs/vox/badge.svg)](https://docs.rs/vox)
-[![MIT/Apache-2.0 licensed](https://img.shields.io/crates/l/vox.svg)](https://github.com/facet-rs/facet/blob/main/LICENSE-MIT)
+[![MIT/Apache-2.0 licensed](https://img.shields.io/crates/l/vox.svg)](https://github.com/bearcove/vox/blob/main/LICENSE-MIT)
 
 vox is a Rust-native RPC framework where Rust traits *are*
 the schema. There is
@@ -80,13 +80,13 @@ match client.divide(10, 0).await? {
 
 ## Specification
 
-See the [spec](https://github.com/facet-rs/facet/tree/main/vox/docs/content/spec) for the formal protocol definition.
+See the [spec](https://github.com/bearcove/vox/tree/main/docs/content/spec) for the formal protocol definition.
 
 ## License
 
 Licensed under either of:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](https://github.com/facet-rs/facet/blob/main/LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license ([LICENSE-MIT](https://github.com/facet-rs/facet/blob/main/LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0 ([LICENSE-APACHE](https://github.com/bearcove/vox/blob/main/LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](https://github.com/bearcove/vox/blob/main/LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 at your option.
