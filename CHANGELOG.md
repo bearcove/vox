@@ -4,6 +4,12 @@ All notable changes to Vox are documented here.
 
 ## [Unreleased]
 
+## [0.10.0-rc.7](https://github.com/bearcove/vox/compare/vox-rt-v0.10.0-rc.5...vox-rt-v0.10.0-rc.7) - 2026-08-20
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.10.0-rc.6](https://github.com/facet-rs/facet/compare/vox-codegen-v0.10.0-rc.5...vox-codegen-v0.10.0-rc.6) - 2026-06-28
 
 ### Other

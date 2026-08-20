@@ -45,26 +45,26 @@ categories = ["network-programming", "asynchronous"]
 
 [workspace.dependencies]
 # Internal crates
-vox = { path = "rust/vox", version = "0.10.0-rc.5" }
-vox-types = { path = "rust/vox-types", version = "0.10.0-rc.5" }
-vox-rt = { path = "rust/vox-rt", version = "0.10.0-rc.5" }
-vox-rt-macros = { path = "rust/vox-rt-macros", version = "0.10.0-rc.5" }
-vox-schema = { path = "rust/vox-schema", version = "0.10.0-rc.5" }
-vox-macros-parse = { path = "rust/vox-macros-parse", version = "0.10.0-rc.5" }
-vox-macros-core = { path = "rust/vox-macros-core", version = "0.10.0-rc.5" }
-vox-service-macros = { path = "rust/vox-macros", version = "0.10.0-rc.5" }
-vox-core = { path = "rust/vox-core", version = "0.10.0-rc.5" }
-vox-stream = { path = "rust/vox-stream", version = "0.10.0-rc.5" }
-vox-fdpass = { path = "rust/vox-fdpass", version = "0.10.0-rc.5" }
-vox-codegen = { path = "rust/vox-codegen", version = "0.10.0-rc.6" }
-vox-websocket = { path = "rust/vox-websocket", version = "0.10.0-rc.5" }
-vox-inprocess = { path = "rust/vox-inprocess", version = "0.10.0-rc.5" }
+vox = { path = "rust/vox", version = "0.10.0-rc.7" }
+vox-types = { path = "rust/vox-types", version = "0.10.0-rc.7" }
+vox-rt = { path = "rust/vox-rt", version = "0.10.0-rc.7" }
+vox-rt-macros = { path = "rust/vox-rt-macros", version = "0.10.0-rc.7" }
+vox-schema = { path = "rust/vox-schema", version = "0.10.0-rc.7" }
+vox-macros-parse = { path = "rust/vox-macros-parse", version = "0.10.0-rc.7" }
+vox-macros-core = { path = "rust/vox-macros-core", version = "0.10.0-rc.7" }
+vox-service-macros = { path = "rust/vox-macros", version = "0.10.0-rc.7" }
+vox-core = { path = "rust/vox-core", version = "0.10.0-rc.7" }
+vox-stream = { path = "rust/vox-stream", version = "0.10.0-rc.7" }
+vox-fdpass = { path = "rust/vox-fdpass", version = "0.10.0-rc.7" }
+vox-codegen = { path = "rust/vox-codegen", version = "0.10.0-rc.7" }
+vox-websocket = { path = "rust/vox-websocket", version = "0.10.0-rc.7" }
+vox-inprocess = { path = "rust/vox-inprocess", version = "0.10.0-rc.7" }
 vox-iroh = { path = "rust/vox-iroh", version = "0.10.0-rc.5" }
-vox-local = { path = "rust/vox-local", version = "0.10.0-rc.5" }
-vox-ffi = { path = "rust/vox-ffi", version = "0.10.0-rc.5" }
+vox-local = { path = "rust/vox-local", version = "0.10.0-rc.7" }
+vox-ffi = { path = "rust/vox-ffi", version = "0.10.0-rc.7" }
 subject-rust = { path = "rust/subject-rust", version = "0.2.2" }
 spec-proto = { path = "spec/spec-proto", version = "0.2.2" }
-vox-phon = { path = "rust/vox-phon", version = "0.10.0-rc.5" }
+vox-phon = { path = "rust/vox-phon", version = "0.10.0-rc.7" }
 
 phon = "0.2.0-rc.6"
 phon-engine = "0.2.0-rc.6"
