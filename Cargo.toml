@@ -95,14 +95,14 @@ xshell = "0.2"
 passfd = "0.1"
 
 # facet ecosystem
-facet = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8", features = ["camino", "reflect"] }
-facet-core = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-path = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-reflect = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-pretty = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8", default-features = false }
-facet-json = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-value = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
-facet-testhelpers = { git = "https://github.com/facet-rs/facet", rev = "5705fa6c51289bea49f5729c52dc5e23cedce4f8" }
+facet = { version = "0.50.0-rc.7", features = ["camino", "reflect"] }
+facet-core = "0.50.0-rc.7"
+facet-path = "0.50.0-rc.7"
+facet-reflect = "0.50.0-rc.7"
+facet-pretty = { version = "0.50.0-rc.7", default-features = false }
+facet-json = "0.50.0-rc.7"
+facet-value = "0.50.0-rc.7"
+facet-testhelpers = "0.50.0-rc.7"
 
 # Futures utilities
 futures-channel = "0.3"
