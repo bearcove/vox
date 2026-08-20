@@ -25,7 +25,7 @@ use phon_ir::Lowered;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use phon_ir::MemOp;
 use phon_schema::bytes::Reader;
-use phon_schema::{Schema, SchemaId, schema_from_bytes, schema_to_bytes};
+use phon_schema::{DecodeLimits, Schema, SchemaId, schema_from_bytes, schema_to_bytes};
 
 use crate::{Error, derive_error, shape_name};
 
@@ -188,7 +188,15 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
         let slice = r
             .read_slice(len)
             .map_err(|e| Error(format!("schema bundle entry body: {e:?}")))?;
-        schemas.push(schema_from_bytes(slice).map_err(|e| Error(format!("schema decode: {e:?}")))?);
+        let (schema, consumed) = schema_from_bytes(slice, DecodeLimits::DEFAULT)
+            .map_err(|e| Error(format!("schema decode: {e:?}")))?;
+        if consumed != slice.len() {
+            return Err(Error(format!(
+                "schema decode consumed {consumed} of {} bytes",
+                slice.len()
+            )));
+        }
+        schemas.push(schema);
     }
 
     let auxiliary_roots = if r.remaining() == 0 {

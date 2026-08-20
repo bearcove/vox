@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.2](https://github.com/bearcove/vox/compare/ur-taking-me-with-you-v8.0.1...ur-taking-me-with-you-v8.0.2) - 2026-08-20
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [8.0.1] - 2026-06-19
 
 ### Other
