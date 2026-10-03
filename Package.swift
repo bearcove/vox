@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
   name: "vox",
   platforms: [
-    .macOS(.v15)
+    .macOS(.v15),
+    .iOS(.v18),
   ],
   products: [
     .library(name: "VoxRuntime", targets: ["VoxRuntime"])
@@ -12,7 +13,7 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/bearcove/phon.git",
-      revision: "429b72badcc5e827613f9245c153cd91c0458f4f"),
+      revision: "a991d13c1cac3b092cae19efbf562c6a2610ac3d"),
     .package(url: "https://github.com/apple/swift-nio.git", from: "2.101.3"),
   ],
   targets: [

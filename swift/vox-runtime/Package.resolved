@@ -6,7 +6,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bearcove/phon.git",
       "state" : {
-        "revision" : "429b72badcc5e827613f9245c153cd91c0458f4f"
+        "revision" : "a991d13c1cac3b092cae19efbf562c6a2610ac3d"
       }
     },
     {

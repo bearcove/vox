@@ -4,13 +4,14 @@ import PackageDescription
 let package = Package(
   name: "subject-swift",
   platforms: [
-    .macOS(.v15)
+    .macOS(.v15),
+    .iOS(.v18),
   ],
   dependencies: [
     .package(path: "../vox-runtime"),
     .package(
       url: "https://github.com/bearcove/phon.git",
-      revision: "429b72badcc5e827613f9245c153cd91c0458f4f"),
+      revision: "a991d13c1cac3b092cae19efbf562c6a2610ac3d"),
   ],
   targets: [
     .executableTarget(
