@@ -100,7 +100,7 @@ pub fn generate_phon_service(service: &ServiceDescriptor) -> String {
         "// phon schemas for this service (registry + per-method roots + channel metadata).\n",
     );
     out.push_str(
-        "import { Registry, schemaFromBytes, hexToBytes } from \"@bearcove/phon-schema\";\n",
+        "import { Registry, schemaFromBytes, hexToBytes, parseSchemaBundle } from \"@bearcove/phon-schema\";\n",
     );
     out.push_str("import type { Primitive } from \"@bearcove/phon-schema\";\n\n");
 
