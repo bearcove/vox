@@ -3109,9 +3109,9 @@ dependencies = [
 
 [[package]]
 name = "phon"
-version = "0.2.0-rc.6"
+version = "0.2.0-rc.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96baf4b89c1be4fac9366797fabfa991a58b52c411bbc51a302172e35581064c"
+checksum = "5a696aa38571033f7c5a0511ae3af329ec3d3e611948c9f094d5588fb94e75d6"
 dependencies = [
  "facet",
  "facet-value",
@@ -3134,9 +3134,9 @@ dependencies = [
 
 [[package]]
 name = "phon-engine"
-version = "0.2.0-rc.6"
+version = "0.2.0-rc.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59113b9f56d5d091907124e6e375a2346dfac315e77317f2c78a6f7d7b9f6584"
+checksum = "d96c6b8b293b99b5d24b08f3fd9f7720831fcf5a0fbf0663d8ad3d4f7ef51204"
 dependencies = [
  "facet-value",
  "phon-ir",
@@ -3146,9 +3146,9 @@ dependencies = [
 
 [[package]]
 name = "phon-ir"
-version = "0.2.0-rc.6"
+version = "0.2.0-rc.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fca473a57d533e3b127bb6ad8965bbabfec4511229d1b8d931dea64ba57438a"
+checksum = "1245075aaf80d7a3809082386bdabcdb1dc273fde88599209ae07e17d429de0e"
 dependencies = [
  "phon-schema",
  "weavy",
@@ -3156,9 +3156,9 @@ dependencies = [
 
 [[package]]
 name = "phon-jit"
-version = "0.2.0-rc.6"
+version = "0.2.0-rc.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc3b82ced5acec5cc538785c1e9abb027b525d27101210e763d97030540777d4"
+checksum = "7ec3c3c82e9844b228ecb12ebe3c5ca14901168ee420fa8259f1675e04bbd733"
 dependencies = [
  "copypatch",
  "phon-ir",
@@ -4330,7 +4330,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -5298,9 +5298,12 @@ dependencies = [
 
 [[package]]
 name = "weavy"
-version = "0.2.2"
+version = "0.2.3-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30261027ea4225cf7c8287aa70bd103c1e78508606c77caf24bb468326ce7b5f"
+checksum = "02a7fcadcbd0f12cd098f64637c46d9b4195f36490cb5ad2ffa2f4e867d15abb"
+dependencies = [
+ "copypatch",
+]
 
 [[package]]
 name = "web-sys"
