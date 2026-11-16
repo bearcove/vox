@@ -544,6 +544,9 @@ pub struct ConnectionHandle {
     control_tx: mpsc::UnboundedSender<DropControlRequest>,
     peer_identity: PeerIdentity,
     peer_evidence: PeerEvidence,
+    /// The limits this side configured for the connection (and advertised in
+    /// the handshake). `open_lane` uses them as its default lane limits.
+    default_lane_settings: ConnectionSettings,
     _control_caller: Option<crate::Caller>,
 }
 
@@ -569,7 +572,9 @@ impl ConnectionHandle {
         }
     }
 
-    /// Open a typed service lane on this connection using default lane limits.
+    /// Open a typed service lane on this connection using this side's
+    /// configured connection limits (`max_concurrent_requests`,
+    /// `initial_channel_credit`; 64 and 16 unless configured on the builder).
     ///
     /// Sends `vox-service` metadata automatically from the client's
     /// `SERVICE_NAME`. Creates a `Driver` and spawns it, returning
@@ -577,8 +582,8 @@ impl ConnectionHandle {
     pub async fn open_lane<Client: crate::FromVoxLane>(&self) -> Result<Client, ConnectionError> {
         self.open_lane_with_settings(ConnectionSettings {
             parity: Parity::Odd,
-            max_concurrent_requests: 64,
-            initial_channel_credit: vox_types::DEFAULT_INITIAL_CHANNEL_CREDIT,
+            max_concurrent_requests: self.default_lane_settings.max_concurrent_requests,
+            initial_channel_credit: self.default_lane_settings.initial_channel_credit,
         })
         .await
     }
@@ -2076,7 +2081,10 @@ impl Connection {
             return;
         }
 
-        // Derive settings: opposite parity, same limits for now.
+        // Derive settings: opposite parity. The request limit is this side's
+        // own configured limit (what it advertised in the handshake), not an
+        // echo of the opener's: each peer advertises the number of requests
+        // *it* will accept, and the opener learns ours from LaneAccept.
         let open = open.get();
         if open.connection_settings.initial_channel_credit == 0 {
             let rejection = LaneRejection::with_message(
@@ -2099,7 +2107,7 @@ impl Connection {
 
         let our_settings = ConnectionSettings {
             parity: open.connection_settings.parity.other(),
-            max_concurrent_requests: open.connection_settings.max_concurrent_requests,
+            max_concurrent_requests: self.local_connection_settings.max_concurrent_requests,
             initial_channel_credit: open.connection_settings.initial_channel_credit,
         };
 

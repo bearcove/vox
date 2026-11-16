@@ -1581,14 +1581,57 @@ async fn outbound_max_concurrent_requests_waits_for_peer_limit() {
     );
 }
 
+/// Counts invocations; each call waits for a unit on `gate`, then echoes.
+#[derive(Clone)]
+struct GatedHandler {
+    started: Arc<std::sync::atomic::AtomicUsize>,
+    gate: Arc<tokio::sync::Semaphore>,
+}
+
+impl Handler<crate::DriverReplySink> for GatedHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        self.started.fetch_add(1, Ordering::SeqCst);
+        let value: u32 = match &call.get().args {
+            Payload::Encoded(bytes) => vox_phon::from_slice(bytes).expect("deserialize args"),
+            _ => panic!("expected incoming payload"),
+        };
+        self.gate.acquire().await.expect("gate open").forget();
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+async fn wait_until(what: &str, mut condition: impl FnMut() -> bool) {
+    for _ in 0..200 {
+        if condition() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("timed out waiting for: {what}");
+}
+
+// A peer that ignores our limit gets that one request rejected; the
+// connection and the request already in flight are unaffected.
 // r[verify rpc.flow-control.max-concurrent-requests]
 // r[verify rpc.flow-control.max-concurrent-requests.inbound]
 // r[verify rpc.flow-control]
 #[tokio::test]
-async fn inbound_max_concurrent_requests_violation_closes_connection() {
+async fn inbound_max_concurrent_requests_violation_rejects_only_the_offender() {
     let (client_conduit, server_conduit) = message_conduit_pair();
 
-    let was_cancelled = Arc::new(AtomicBool::new(false));
+    let started = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
     let (client_guard, server_guard, _server_connection) = captured_test_lane_pair_with_settings(
         client_conduit,
         server_conduit,
@@ -1599,52 +1642,54 @@ async fn inbound_max_concurrent_requests_violation_closes_connection() {
             max_concurrent_requests: 1,
             initial_channel_credit: 16,
         },
-        BlockingHandler { was_cancelled },
+        GatedHandler {
+            started: Arc::clone(&started),
+            gate: Arc::clone(&gate),
+        },
     )
     .await;
+    // Raw sends bypass the sender's own limiter: this is the misbehaving peer.
     let client_sender = client_guard.caller.driver().connection_sender().clone();
 
-    let first_arg = 1_u32;
-    client_sender
-        .send(ConnectionMessage::Request(RequestMessage {
-            id: RequestId(1),
-            body: RequestBody::Call(RequestCall {
-                channels: Vec::new(),
-                method_id: MethodId(1),
-                args: Payload::outgoing(&first_arg),
-                schemas: Default::default(),
-                metadata: Default::default(),
-            }),
-        }))
-        .await
-        .expect("send first raw call");
-    wait_for_outstanding_requests(&server_guard.caller, 1).await;
+    send_raw_control_lane_call(&client_sender, RequestId(1), 1).await;
+    wait_until("first call to start", || {
+        started.load(Ordering::SeqCst) == 1
+    })
+    .await;
 
-    let second_arg = 2_u32;
-    client_sender
-        .send(ConnectionMessage::Request(RequestMessage {
-            id: RequestId(3),
-            body: RequestBody::Call(RequestCall {
-                channels: Vec::new(),
-                method_id: MethodId(1),
-                args: Payload::outgoing(&second_arg),
-                schemas: Default::default(),
-                metadata: Default::default(),
-            }),
-        }))
-        .await
-        .expect("send second raw call");
-
-    tokio::time::timeout(Duration::from_millis(500), server_guard.caller.closed())
-        .await
-        .expect("server connection should close after inbound limit violation");
-    let server_snapshot = server_guard.caller.debug_snapshot();
+    send_raw_control_lane_call(&client_sender, RequestId(3), 2).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
     assert_eq!(
-        server_snapshot.lanes[0].close_reason,
-        Some(vox_types::ConnectionCloseReason::Protocol)
+        started.load(Ordering::SeqCst),
+        1,
+        "the over-limit request must not reach the handler"
+    );
+    assert!(
+        server_guard.caller.debug_snapshot().lanes[0]
+            .close_reason
+            .is_none(),
+        "the connection must survive an over-limit request"
+    );
+    assert!(
+        client_guard.caller.debug_snapshot().lanes[0]
+            .close_reason
+            .is_none()
     );
 
-    drop(server_guard);
+    // The request that was in flight completes, freeing the slot, and a
+    // well-behaved call now goes through the same connection.
+    gate.add_permits(2);
+    wait_until("slot to free", || {
+        server_guard.caller.debug_snapshot().lanes[0].outstanding_requests == 0
+    })
+    .await;
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(2), echo_call(&client_guard.caller, 7))
+            .await
+            .expect("call after rejection should complete")
+            .expect("call after rejection should succeed"),
+        7
+    );
 }
 
 // r[verify rpc.request.id-allocation]
@@ -2780,4 +2825,412 @@ async fn proxy_lanes_forwards_calls_without_service_specific_proxy_code() {
     proxy_driver_task.abort();
     guest_b_task.abort();
     host_for_a_task.abort();
+}
+
+// ---------------------------------------------------------------------------
+// Request-limit regression tests
+// ---------------------------------------------------------------------------
+
+/// Replies with its argument after `delay`.
+#[derive(Clone, Copy)]
+struct SleepyEchoHandler {
+    delay: Duration,
+}
+
+impl Handler<crate::DriverReplySink> for SleepyEchoHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let value: u32 = match &call.get().args {
+            Payload::Encoded(bytes) => vox_phon::from_slice(bytes).expect("deserialize args"),
+            _ => panic!("expected incoming payload"),
+        };
+        tokio::time::sleep(self.delay).await;
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+async fn echo_call(caller: &crate::Caller, value: u32) -> Result<u32, VoxError> {
+    let response = caller
+        .call(RequestCall {
+            channels: Vec::new(),
+            method_id: MethodId(1),
+            args: Payload::outgoing(&value),
+            schemas: Default::default(),
+            metadata: Default::default(),
+        })
+        .await?;
+    match &response.get().ret {
+        Payload::Encoded(bytes) => Ok(vox_phon::from_slice(bytes).expect("deserialize response")),
+        _ => panic!("expected incoming payload"),
+    }
+}
+
+// r[verify rpc.flow-control.max-concurrent-requests.outbound]
+// r[verify rpc.flow-control.max-concurrent-requests.counting]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn n_concurrent_calls_all_answered_beyond_the_limit() {
+    let (client_guard, server_guard, _server_connection) =
+        captured_test_lane_pair(SleepyEchoHandler {
+            delay: Duration::from_millis(20),
+        })
+        .await;
+
+    for n in 63_u32..=200 {
+        let calls = (0..n).map(|i| echo_call(&client_guard.caller, i));
+        let results = futures_util::future::join_all(calls).await;
+        for (i, result) in results.into_iter().enumerate() {
+            assert_eq!(
+                result.unwrap_or_else(|e| panic!("n={n}: call {i} failed: {e:?}")),
+                i as u32,
+                "n={n}"
+            );
+        }
+        assert!(
+            server_guard.caller.debug_snapshot().lanes[0]
+                .close_reason
+                .is_none(),
+            "connection closed at n={n}"
+        );
+    }
+}
+
+// A tiny limit makes the race deterministic in practice: with limit 2 and an
+// instantly-replying handler, every call completion immediately frees a slot
+// that the sender refills before the receiver has retired the finished handler.
+// r[verify rpc.flow-control.max-concurrent-requests.outbound]
+// r[verify rpc.flow-control.max-concurrent-requests.counting]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn small_limit_with_instant_replies_never_trips_the_receiver() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let (client_guard, server_guard, _server_connection) = captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        initiator_handshake_with_request_limits(2, 2),
+        acceptor_handshake_with_request_limits(2, 2),
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 2,
+            initial_channel_credit: 16,
+        },
+        SleepyEchoHandler {
+            delay: Duration::ZERO,
+        },
+    )
+    .await;
+
+    for round in 0..20 {
+        let calls = (0..200_u32).map(|i| echo_call(&client_guard.caller, i));
+        for (i, result) in futures_util::future::join_all(calls)
+            .await
+            .into_iter()
+            .enumerate()
+        {
+            assert_eq!(
+                result.unwrap_or_else(|e| panic!("round {round}: call {i} failed: {e:?}")),
+                i as u32
+            );
+        }
+    }
+    assert!(
+        server_guard.caller.debug_snapshot().lanes[0]
+            .close_reason
+            .is_none()
+    );
+}
+
+/// Replies at once, then keeps running for a long time. The request is no
+/// longer live once it has been answered, even though the handler is.
+#[derive(Clone, Copy)]
+struct ReplyThenLingerHandler;
+
+impl Handler<crate::DriverReplySink> for ReplyThenLingerHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let value: u32 = match &call.get().args {
+            Payload::Encoded(bytes) => vox_phon::from_slice(bytes).expect("deserialize args"),
+            _ => panic!("expected incoming payload"),
+        };
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
+}
+
+// Root cause regression: the receiver used to count a request until the
+// handler *future* was reaped by the driver loop, which runs after the
+// response is already on the wire. The sender, seeing the response, frees
+// its permit and sends the next call into a receiver that still counts the
+// previous one. Here the handler outlives its reply, so the old accounting
+// would reject (and close the connection) on the second call, every time.
+// r[verify rpc.flow-control.max-concurrent-requests.counting]
+// r[verify rpc.flow-control.max-concurrent-requests.live]
+// r[verify rpc.flow-control.max-concurrent-requests.inbound]
+#[tokio::test]
+async fn answered_request_stops_counting_even_if_handler_keeps_running() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let (client_guard, server_guard, _server_connection) = captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        initiator_handshake_with_request_limits(1, 1),
+        acceptor_handshake_with_request_limits(1, 1),
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 1,
+            initial_channel_credit: 16,
+        },
+        ReplyThenLingerHandler,
+    )
+    .await;
+
+    for i in 0..10_u32 {
+        let result =
+            tokio::time::timeout(Duration::from_secs(2), echo_call(&client_guard.caller, i))
+                .await
+                .unwrap_or_else(|_| panic!("call {i} timed out"));
+        assert_eq!(
+            result.unwrap_or_else(|e| panic!("call {i} failed: {e:?}")),
+            i
+        );
+    }
+    assert!(
+        server_guard.caller.debug_snapshot().lanes[0]
+            .close_reason
+            .is_none()
+    );
+}
+
+/// Call 0 never returns until cancelled; every other call echoes.
+#[derive(Clone, Copy)]
+struct HangOnZeroHandler;
+
+impl Handler<crate::DriverReplySink> for HangOnZeroHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let value: u32 = match &call.get().args {
+            Payload::Encoded(bytes) => vox_phon::from_slice(bytes).expect("deserialize args"),
+            _ => panic!("expected incoming payload"),
+        };
+        if value == 0 {
+            let _reply = reply;
+            std::future::pending::<()>().await;
+            return;
+        }
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+// Dropping a call future mid-flight must neither leak its permit nor release
+// it while the peer still has the request live: the caller sends Cancel and
+// the permit comes back when the peer has retired the request.
+// r[verify rpc.flow-control.max-concurrent-requests.counting]
+// r[verify rpc.flow-control.max-concurrent-requests.live]
+// r[verify rpc.cancel]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn dropped_calls_release_their_permits_without_overrunning_the_peer() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let (client_guard, server_guard, _server_connection) = captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        initiator_handshake_with_request_limits(2, 2),
+        acceptor_handshake_with_request_limits(2, 2),
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 2,
+            initial_channel_credit: 16,
+        },
+        HangOnZeroHandler,
+    )
+    .await;
+
+    // 100 abandoned calls against a limit of 2: if any permit leaked, the
+    // third would wait forever.
+    for i in 0..100 {
+        let abandoned =
+            tokio::time::timeout(Duration::from_millis(5), echo_call(&client_guard.caller, 0))
+                .await;
+        assert!(
+            abandoned.is_err(),
+            "call 0 should still be in flight (i={i})"
+        );
+    }
+    // Both slots are usable again, concurrently.
+    let (a, b) = tokio::time::timeout(Duration::from_secs(5), async {
+        tokio::join!(
+            echo_call(&client_guard.caller, 1),
+            echo_call(&client_guard.caller, 2)
+        )
+    })
+    .await
+    .expect("permits leaked: calls could not get a slot");
+    assert_eq!((a.unwrap(), b.unwrap()), (1, 2));
+    wait_until("peer to retire cancelled requests", || {
+        server_guard.caller.debug_snapshot().lanes[0].outstanding_requests == 0
+    })
+    .await;
+    assert!(
+        server_guard.caller.debug_snapshot().lanes[0]
+            .close_reason
+            .is_none(),
+        "abandoning calls must never overrun the peer's limit"
+    );
+}
+
+// Same, but the call is dropped while it is still waiting for a permit.
+// r[verify rpc.flow-control.max-concurrent-requests.outbound]
+#[tokio::test]
+async fn calls_dropped_while_waiting_for_a_permit_do_not_leak() {
+    let (client_conduit, server_conduit) = message_conduit_pair();
+    let started = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    let (client_guard, _server_guard, _server_connection) = captured_test_lane_pair_with_settings(
+        client_conduit,
+        server_conduit,
+        initiator_handshake_with_request_limits(1, 1),
+        acceptor_handshake_with_request_limits(1, 1),
+        ConnectionSettings {
+            parity: Parity::Odd,
+            max_concurrent_requests: 1,
+            initial_channel_credit: 16,
+        },
+        GatedHandler {
+            started: Arc::clone(&started),
+            gate: Arc::clone(&gate),
+        },
+    )
+    .await;
+
+    let caller = client_guard.caller.clone();
+    let holder = tokio::spawn(async move { echo_call(&caller, 1).await });
+    wait_until("holder to start", || started.load(Ordering::SeqCst) == 1).await;
+
+    for _ in 0..50 {
+        let waiting =
+            tokio::time::timeout(Duration::from_millis(2), echo_call(&client_guard.caller, 9))
+                .await;
+        assert!(waiting.is_err(), "must wait for the single permit");
+    }
+    assert_eq!(
+        started.load(Ordering::SeqCst),
+        1,
+        "waiters must not be sent"
+    );
+
+    gate.add_permits(10);
+    assert_eq!(holder.await.unwrap().unwrap(), 1);
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(2), echo_call(&client_guard.caller, 5))
+            .await
+            .expect("permit should be free")
+            .unwrap(),
+        5
+    );
+}
+
+/// Records the peak number of requests running at once.
+#[derive(Clone)]
+struct PeakHandler {
+    running: Arc<std::sync::atomic::AtomicUsize>,
+    peak: Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl Handler<crate::DriverReplySink> for PeakHandler {
+    async fn handle(
+        &self,
+        call: SelfRef<RequestCall<'static>>,
+        reply: crate::DriverReplySink,
+        _schemas: std::sync::Arc<vox_types::SchemaRecvTracker>,
+    ) {
+        let value: u32 = match &call.get().args {
+            Payload::Encoded(bytes) => vox_phon::from_slice(bytes).expect("deserialize args"),
+            _ => panic!("expected incoming payload"),
+        };
+        let now = self.running.fetch_add(1, Ordering::SeqCst) + 1;
+        self.peak.fetch_max(now, Ordering::SeqCst);
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        self.running.fetch_sub(1, Ordering::SeqCst);
+        reply
+            .send_reply(RequestResponse {
+                ret: Payload::outgoing(&value),
+                schemas: Default::default(),
+                metadata: Default::default(),
+            })
+            .await;
+    }
+}
+
+// The limit is application-configurable on the acceptor's builder, carried by
+// the handshake, and the opener honours it (it is not the opener's own number).
+// r[verify rpc.flow-control.max-concurrent-requests.default]
+// r[verify rpc.flow-control.max-concurrent-requests.outbound]
+#[tokio::test]
+async fn configured_acceptor_limit_is_carried_and_honoured() {
+    let (client_link, server_link) = memory_link_pair(64);
+    let running = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let peak = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let handler = PeakHandler {
+        running: Arc::clone(&running),
+        peak: Arc::clone(&peak),
+    };
+
+    let server = tokio::spawn(async move {
+        acceptor_on(server_link)
+            .max_concurrent_requests(3)
+            .on_lane(handler)
+            .establish_connection()
+            .await
+            .expect("server establish")
+    });
+    let client = initiator_on(client_link)
+        .max_concurrent_requests(500)
+        .establish_connection()
+        .await
+        .expect("client establish");
+    let _server = server.await.expect("server task");
+    let lane = client
+        .open_lane::<TestLaneClient>()
+        .await
+        .expect("open lane");
+
+    let calls = (0..60_u32).map(|i| echo_call(&lane.caller, i));
+    for (i, result) in futures_util::future::join_all(calls)
+        .await
+        .into_iter()
+        .enumerate()
+    {
+        assert_eq!(result.expect("call"), i as u32);
+    }
+    assert_eq!(
+        peak.load(Ordering::SeqCst),
+        3,
+        "exactly the acceptor's configured limit may run at once"
+    );
 }

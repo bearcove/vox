@@ -417,15 +417,39 @@ weight = 12
 
 > r[rpc.flow-control.max-concurrent-requests.inbound]
 >
-> If a peer receives a request attempt that exceeds its own advertised
-> `max_concurrent_requests` for that lane, it MUST treat that as a
-> protocol violation.
+> If a peer receives a request attempt that would exceed its own advertised
+> `max_concurrent_requests` for that lane, it MUST NOT dispatch that request
+> to a handler and MUST answer it with a `Cancelled` error response. The
+> violation is scoped to that one request: the receiver MUST NOT tear down the
+> connection on this ground, and every other request on the lane is
+> unaffected.
+>
+> This is deliberately not a connection-level protocol error (see
+> `r[connection.protocol-error]`). The offending request is self-contained and
+> identified, rejecting it leaves no shared state inconsistent, and
+> request-flow counting is the one place where a sender and receiver can
+> legitimately disagree for a moment (a response and the next request cross on
+> the wire). Closing the connection would turn a one-request overflow into a
+> failure of every in-flight call. A rejected request never ran, so the caller
+> may retry it.
 
 > r[rpc.flow-control.max-concurrent-requests.counting]
 >
 > `max_concurrent_requests` counts live request attempts. A later call issued
 > after an earlier request attempt failed consumes its own unit of request
 > concurrency while the later request attempt is live.
+
+> r[rpc.flow-control.max-concurrent-requests.live]
+>
+> A request attempt is live from the moment the caller sends it until the
+> caller has received a response for it (including an error or `Cancelled`
+> response). A caller MUST keep counting the attempt as live if it stops
+> waiting for the response (for example because the call was dropped or timed
+> out); it MAY send `Cancel` (see `r[rpc.cancel]`), but the unit is only
+> released once the peer's response arrives. The callee stops counting an
+> attempt no later than the moment it sends the response, and when it
+> processes a `Cancel`; it MUST NOT keep counting an answered request
+> for as long as its handler happens to keep running.
 
 > r[rpc.flow-control.max-concurrent-requests.connection-failure]
 >
@@ -438,7 +462,11 @@ weight = 12
 
 > r[rpc.flow-control.max-concurrent-requests.default]
 >
-> The default limit is carried in `ConnectionSettings`, which is embedded
+> The limit is configurable by the application on each side (for Rust,
+> `max_concurrent_requests(..)` on the connection builders, or the
+> `ConnectionSettings` passed when opening a lane). A peer advertises the limit
+> it will accept; it is not an echo of the other side's choice. The default
+> limit is carried in `ConnectionSettings`, which is embedded
 > in `Hello` and `HelloYourself` for connection defaults and control lane ID 0
 > settings, and in `LaneOpen` and `LaneAccept` for service lanes. See
 > `r[lane.settings]`.
@@ -603,6 +631,8 @@ weight = 12
 > A caller may send `CancelRequest` to indicate it is no longer interested
 > in the response. The handler SHOULD stop processing the request, but
 > a response may still arrive — the caller MUST be prepared to ignore it.
+> Dropping or abandoning a call is such a case: the Rust runtime sends
+> `Cancel` for a request whose call future is dropped before its response.
 
 > r[rpc.cancel.channels]
 >

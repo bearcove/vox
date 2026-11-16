@@ -591,6 +591,7 @@ impl<C> ConnectionInitiatorBuilder<C> {
         let peer_identity = handshake_result.peer_identity.clone();
         let peer_evidence = handshake_result.peer_evidence.clone();
         validate_negotiated_connection_settings(&config.connection_settings, &handshake_result)?;
+        let default_lane_settings = config.connection_settings.clone();
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("connection.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("connection.close", 4);
@@ -620,6 +621,7 @@ impl<C> ConnectionInitiatorBuilder<C> {
             control_tx,
             peer_identity,
             peer_evidence,
+            default_lane_settings,
             _control_caller: Some(control_caller),
         };
         (config.spawn_fn)(Box::pin(async move { connection.run().await }));
@@ -1063,6 +1065,7 @@ impl<C> ConnectionAcceptorBuilder<C> {
         let peer_identity = handshake_result.peer_identity.clone();
         let peer_evidence = handshake_result.peer_evidence.clone();
         validate_negotiated_connection_settings(&config.connection_settings, &handshake_result)?;
+        let default_lane_settings = config.connection_settings.clone();
         let (tx, rx) = conduit.split();
         let (open_tx, open_rx) = mpsc::channel::<OpenRequest>("connection.open", 4);
         let (close_tx, close_rx) = mpsc::channel::<CloseRequest>("connection.close", 4);
@@ -1092,6 +1095,7 @@ impl<C> ConnectionAcceptorBuilder<C> {
             control_tx,
             peer_identity,
             peer_evidence,
+            default_lane_settings,
             _control_caller: Some(control_caller),
         };
         (config.spawn_fn)(Box::pin(async move { connection.run().await }));

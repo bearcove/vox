@@ -4,6 +4,30 @@ All notable changes to Vox are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Request limit: a connection no longer dies when a caller runs more than
+  `max_concurrent_requests` (default 64) calls at once. Two accounting races
+  caused it. The receiver kept counting a request until its handler future was
+  reaped, which happens after the response is on the wire, so a sender that had
+  just received a response could legitimately send into a receiver that still
+  counted the old request. And a call future dropped mid-flight (a timeout, a
+  `select!`) released its permit while the peer still had the request live.
+  The receiver now stops counting a request when it replies or is cancelled,
+  and the sender holds the permit until the peer's response arrives; dropping a
+  call future sends `Cancel`.
+- A request over the receiver's limit is now rejected on its own with a
+  `Cancelled` error and the connection stays up (spec:
+  `r[rpc.flow-control.max-concurrent-requests.inbound]`). It used to close the
+  whole connection as a protocol violation.
+- The lane request limit is configurable on each side: the acceptor advertises
+  its own configured `max_concurrent_requests` in `LaneAccept` instead of
+  echoing the opener's, and `open_lane()` uses the connection's configured
+  limits instead of a hard-coded 64.
+- `vox-phon`: schema bundle parsing treated phon-schema's owned-byte count as a
+  consumed-byte count, failing every schema bundle (and so every handshake) on
+  phon-schema 0.2.0-rc.6.
+
 ## [0.10.0-rc.7](https://github.com/bearcove/vox/compare/vox-rt-v0.10.0-rc.5...vox-rt-v0.10.0-rc.7) - 2026-08-20
 
 ### Other

@@ -50,7 +50,18 @@ struct PendingResponse {
     fds: vox_types::FrameFds,
 }
 
-type ResponseSlot = vox_rt::sync::oneshot::Sender<Result<PendingResponse, VoxError>>;
+// r[impl rpc.flow-control.max-concurrent-requests.live]
+/// A live outbound request attempt: where to deliver its response, plus the
+/// unit of the peer's `max_concurrent_requests` it occupies.
+///
+/// The permit lives in the slot, not in the calling future: the request stays
+/// live on the peer until the response arrives (or the request is cancelled
+/// and the peer says so), even if the caller's future is dropped first.
+// r[impl rpc.flow-control.max-concurrent-requests.counting]
+struct ResponseSlot {
+    tx: vox_rt::sync::oneshot::Sender<Result<PendingResponse, VoxError>>,
+    permit: vox_rt::sync::OwnedSemaphorePermit,
+}
 
 async fn send_vox_error_response(
     sender: ConnectionSender,
@@ -470,6 +481,12 @@ struct DriverShared {
     outbound_request_limit: Semaphore,
     // r[impl rpc.flow-control.max-concurrent-requests.inbound]
     local_max_concurrent_requests: u32,
+    /// Inbound request attempts that count against
+    /// `local_max_concurrent_requests`: from the moment the call is accepted
+    /// until its response is about to be sent (or it is cancelled or fails).
+    /// This is deliberately not the handler's lifetime: a handler may reply
+    /// and keep running, or hand the reply sink to another task and return.
+    inbound_live: SyncMutex<HashSet<RequestId>>,
     peer_request_parity: Parity,
     observer: Option<VoxObserverHandle>,
 }
@@ -1085,6 +1102,15 @@ impl ReplySink for DriverReplySink {
             },
             "vox driver sending reply"
         );
+        // r[impl rpc.flow-control.max-concurrent-requests.live]
+        // The request stops counting against the inbound limit before the
+        // response can reach the peer: once the peer sees the response it may
+        // immediately reuse the slot, and we must already have freed it.
+        self.binder
+            .shared
+            .inbound_live
+            .lock()
+            .remove(&self.request_id);
         self.binder.shared.mark_outbound_progress();
         self.binder.shared.mark_request_progress(self.request_id);
 
@@ -1897,6 +1923,48 @@ impl ChannelBinder for DriverCaller {
     }
 }
 
+/// Dropped with a call future that has not finished.
+///
+/// * Before the request was written: the slot (and its permit) is retired, the
+///   peer never heard of the request.
+/// * After: the peer has it live, so the permit stays in the slot and the
+///   driver is asked to send `Cancel`. The slot is retired when the peer's
+///   response (normally `Cancelled`) arrives, which is when the peer's own
+///   count drops.
+// r[impl rpc.cancel]
+struct AbandonedCallGuard {
+    shared: Arc<DriverShared>,
+    local_control_tx: mpsc::UnboundedSender<DriverLocalControl>,
+    req_id: RequestId,
+    sent: bool,
+}
+
+impl Drop for AbandonedCallGuard {
+    fn drop(&mut self) {
+        let mut pending = self.shared.pending_responses.lock();
+        if !pending.contains_key(&self.req_id) {
+            // Answered, failed or timed out: already retired.
+            return;
+        }
+        if self.sent {
+            drop(pending);
+            let _ = self
+                .local_control_tx
+                .send(DriverLocalControl::CancelRequest {
+                    request_id: self.req_id,
+                });
+        } else {
+            pending.remove(&self.req_id);
+            drop(pending);
+            self.shared.finish_request(
+                self.req_id,
+                RequestDebugState::Failed,
+                RequestTerminationReason::Cancelled,
+            );
+        }
+    }
+}
+
 impl DriverCaller {
     // r[impl rpc.debug.snapshot]
     pub fn debug_snapshot(&self) -> VoxDebugSnapshot {
@@ -1926,7 +1994,7 @@ impl DriverCaller {
     ) -> CallResult {
         // r[impl rpc.flow-control.max-concurrent-requests.outbound]
         // r[impl rpc.flow-control.max-concurrent-requests.counting]
-        let _request_permit = self
+        let request_permit = self
             .shared
             .outbound_request_limit
             .acquire_owned()
@@ -1984,7 +2052,22 @@ impl DriverCaller {
         // Register the response slot before sending, so the driver can
         // route the response even if it arrives before we start awaiting.
         let (tx, rx) = vox_rt::sync::oneshot::channel("driver.response");
-        self.shared.pending_responses.lock().insert(req_id, tx);
+        // The permit moves into the slot: it is released when the slot is
+        // retired (response, cancellation, failure), not when this future
+        // happens to be dropped.
+        self.shared.pending_responses.lock().insert(
+            req_id,
+            ResponseSlot {
+                tx,
+                permit: request_permit,
+            },
+        );
+        let mut abandon_guard = AbandonedCallGuard {
+            shared: Arc::clone(&self.shared),
+            local_control_tx: self.local_control_tx.clone(),
+            req_id,
+            sent: false,
+        };
         self.shared.start_request(
             req_id,
             call.method_id,
@@ -2048,6 +2131,7 @@ impl DriverCaller {
             finish_request(RpcOutcome::SendFailed);
             return Err(VoxError::SendFailed);
         }
+        abandon_guard.sent = true;
         self.shared.mark_request_progress(req_id);
         tracing::debug!(
             conn_id = ?self.sender.lane_id(),
@@ -2187,6 +2271,10 @@ enum DriverLocalControl {
     GrantCredit {
         channel_id: ChannelId,
         additional: u32,
+    },
+    /// The caller's future was dropped while the request was live on the peer.
+    CancelRequest {
+        request_id: RequestId,
     },
 }
 
@@ -2383,6 +2471,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     peer_settings.max_concurrent_requests as usize,
                 ),
                 local_max_concurrent_requests: local_settings.max_concurrent_requests,
+                inbound_live: SyncMutex::new("driver.inbound_live", HashSet::new()),
                 peer_request_parity: peer_settings.parity,
                 observer,
             }),
@@ -2434,7 +2523,9 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         let expired = self.shared.expired_idle_request_ids();
         for req_id in expired {
             let pending_response = { self.shared.pending_responses.lock().remove(&req_id) };
-            if let Some(tx) = pending_response {
+            if let Some(ResponseSlot { tx, permit }) = pending_response {
+                // Hold the permit until Cancel is on the wire, so no later
+                // call can overtake it.
                 self.shared.finish_request(
                     req_id,
                     RequestDebugState::TimedOut,
@@ -2449,10 +2540,12 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                         }),
                     }))
                     .await;
+                drop(permit);
                 let _ = tx.send(Err(VoxError::TimedOut));
                 continue;
             }
 
+            self.shared.inbound_live.lock().remove(&req_id);
             let Some(in_flight) = self.in_flight_handlers.remove(&req_id) else {
                 self.shared.finish_request(
                     req_id,
@@ -2564,6 +2657,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     tracing::trace!(%req_id, in_flight_found, ?reply_disposition, "failures_rx computed disposition");
                     // Clean up the handler tracking entry.
                     self.in_flight_handlers.remove(&req_id);
+                    self.shared.inbound_live.lock().remove(&req_id);
                     let termination = match disposition {
                         FailureDisposition::Cancelled => RequestTerminationReason::Cancelled,
                         FailureDisposition::Indeterminate => RequestTerminationReason::Failed,
@@ -2583,7 +2677,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                         FailureDisposition::Cancelled => VoxError::Cancelled,
                         FailureDisposition::Indeterminate => VoxError::Indeterminate,
                     };
-                    if let Some(tx) = pending {
+                    if let Some(ResponseSlot { tx, .. }) = pending {
                         let _ = tx.send(Err(vox_error));
                     } else {
                         let response_shape = in_flight_method_id.and_then(|method_id| {
@@ -2705,6 +2799,26 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     }))
                     .await;
             }
+            DriverLocalControl::CancelRequest { request_id } => {
+                // Skip if the response raced the drop.
+                if self
+                    .shared
+                    .pending_responses
+                    .lock()
+                    .contains_key(&request_id)
+                {
+                    self.shared.mark_outbound_progress();
+                    let _ = self
+                        .sender
+                        .send(ConnectionMessage::Request(RequestMessage {
+                            id: request_id,
+                            body: RequestBody::Cancel(RequestCancel {
+                                metadata: Default::default(),
+                            }),
+                        }))
+                        .await;
+                }
+            }
             DriverLocalControl::GrantCredit {
                 channel_id,
                 additional,
@@ -2771,7 +2885,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                     ConnectionMessage::Request(r) => r,
                     _ => unreachable!(),
                 });
-                self.handle_request(msg, schemas, fds);
+                self.handle_request(msg, schemas, fds).await;
             }
             ConnectionMessage::Channel(_) => {
                 let msg = msg.map(|m| match m {
@@ -2822,7 +2936,7 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
         }
     }
 
-    fn handle_request(
+    async fn handle_request(
         &mut self,
         msg: SelfRef<RequestMessage<'static>>,
         schemas: Arc<vox_types::SchemaRecvTracker>,
@@ -2848,14 +2962,42 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 self.protocol_violation(format!("duplicate live request id {:?}", req_id));
                 return;
             }
-            if self.in_flight_handlers.len() >= self.shared.local_max_concurrent_requests as usize {
-                // r[impl rpc.flow-control.max-concurrent-requests.inbound]
-                self.protocol_violation(format!(
-                    "max_concurrent_requests exceeded for request id {:?} (limit {}, in-flight {})",
+            // r[impl rpc.flow-control.max-concurrent-requests.inbound]
+            let live = {
+                let mut live = self.shared.inbound_live.lock();
+                if live.len() >= self.shared.local_max_concurrent_requests as usize {
+                    Err(live.len())
+                } else {
+                    live.insert(req_id);
+                    Ok(())
+                }
+            };
+            if let Err(live) = live {
+                // Reject only this request. The call never reaches the
+                // handler and the connection, with every other call on it,
+                // carries on.
+                tracing::warn!(
+                    conn_id = ?self.sender.lane_id(),
+                    ?req_id,
+                    limit = self.shared.local_max_concurrent_requests,
+                    live,
+                    "rejecting request over max_concurrent_requests"
+                );
+                let method_id = match &msg_ref.body {
+                    RequestBody::Call(call) => call.method_id,
+                    _ => unreachable!(),
+                };
+                let response_shape = self
+                    .handler
+                    .response_wire_shape(method_id)
+                    .map(|shape| (method_id, shape));
+                send_vox_error_response(
+                    self.sender.clone(),
                     req_id,
-                    self.shared.local_max_concurrent_requests,
-                    self.in_flight_handlers.len()
-                ));
+                    response_shape,
+                    VoxError::Cancelled,
+                )
+                .await;
                 return;
             }
 
@@ -2941,7 +3083,10 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
                 req_id
             );
             tracing::trace!(%req_id, "driver received response");
-            if let Some(tx) = self.shared.pending_responses.lock().remove(&req_id) {
+            let slot = self.shared.pending_responses.lock().remove(&req_id);
+            if let Some(ResponseSlot { tx, permit }) = slot {
+                // The peer has answered: its count for this request is gone.
+                drop(permit);
                 vox_types::dlog!("[driver] routing response to waiter: req={:?}", req_id);
                 tracing::trace!(%req_id, "routing response to pending oneshot");
                 self.shared.mark_request_progress(req_id);
@@ -2960,6 +3105,9 @@ impl<H: Handler<DriverReplySink>> Driver<H> {
             // r[impl rpc.cancel.channels]
             tracing::trace!(%req_id, in_flight = self.in_flight_handlers.contains_key(&req_id), "received cancel");
             // A cancel aborts the in-flight handler for this request, if any.
+            // It also ends the request's life for counting purposes right now,
+            // so a call the peer sends after seeing our reply is not rejected.
+            self.shared.inbound_live.lock().remove(&req_id);
             if let Some(in_flight) = self.in_flight_handlers.remove(&req_id) {
                 tracing::trace!(%req_id, "aborting handler");
                 self.shared.mark_request_progress(req_id);
