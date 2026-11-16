@@ -188,14 +188,10 @@ pub fn parse_schema_bytes(bytes: &[u8]) -> Result<SchemaBundle, Error> {
         let slice = r
             .read_slice(len)
             .map_err(|e| Error(format!("schema bundle entry body: {e:?}")))?;
-        let (schema, consumed) = schema_from_bytes(slice, DecodeLimits::DEFAULT)
+        // The second element is the decoder's owned-byte budget use, not a
+        // consumed-byte count; `schema_from_bytes` already rejects trailing bytes.
+        let (schema, _owned_bytes) = schema_from_bytes(slice, DecodeLimits::DEFAULT)
             .map_err(|e| Error(format!("schema decode: {e:?}")))?;
-        if consumed != slice.len() {
-            return Err(Error(format!(
-                "schema decode consumed {consumed} of {} bytes",
-                slice.len()
-            )));
-        }
         schemas.push(schema);
     }
 
